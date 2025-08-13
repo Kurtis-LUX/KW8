@@ -1,0 +1,6 @@
+/* Importa il file delle animazioni */
+@import './animations.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
