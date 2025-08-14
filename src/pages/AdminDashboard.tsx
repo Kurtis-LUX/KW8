@@ -1754,7 +1754,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
         {/* Athlete Modal */}
         {showAthleteModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
+              {/* X Button to close without saving */}
+              <button
+                onClick={() => setShowAthleteModal(false)}
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <X size={24} />
+              </button>
+              
               <h2 className="text-2xl font-bold text-navy-900 mb-6">
                 {selectedAthlete ? 'Modifica Atleta' : 'Nuovo Atleta'}
               </h2>
@@ -1762,7 +1770,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-navy-700 font-medium mb-2">Nome Completo</label>
+                    <label className="block text-navy-700 font-medium mb-2">Nome Completo *</label>
                     <input
                       type="text"
                       name="name"
@@ -1773,7 +1781,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                     />
                   </div>
                   <div>
-                    <label className="block text-navy-700 font-medium mb-2">Email</label>
+                    <label className="block text-navy-700 font-medium mb-2">Email *</label>
                     <input
                       type="email"
                       name="email"
@@ -1783,19 +1791,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                       required
                     />
                   </div>
-                </div>
-                
-                <div>
-                  <label className="block text-navy-700 font-medium mb-2">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={athleteForm.password}
-                    onChange={handleAthleteFormChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    required={!selectedAthlete}
-                    placeholder={selectedAthlete ? '(Lascia vuoto per non modificare)' : ''}
-                  />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1897,7 +1892,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                       onChange={handleAthleteFormChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                       max="9999-12-31"
+                      disabled={athleteForm.paymentStatus === 'pending'}
                     />
+                    {athleteForm.paymentStatus === 'pending' && (
+                      <p className="text-sm text-gray-500 mt-1">La data verrà impostata automaticamente quando lo stato sarà "Pagato"</p>
+                    )}
                   </div>
                 </div>
                 
@@ -1934,6 +1933,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                         accept=".pdf,.jpg,.jpeg,.png"
                       />
                       <p className="text-sm text-gray-500">Formati accettati: PDF, JPG, PNG</p>
+                      {athleteForm.membershipStatus === 'pending' && (
+                        <p className="text-sm text-gray-500">La data di tesseramento verrà impostata automaticamente quando lo stato sarà "Attivo"</p>
+                      )}
                     </div>
                   </div>
                   <div>
