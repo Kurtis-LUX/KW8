@@ -91,6 +91,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     paymentStatus: 'pending', // required - default "in attesa"
     lastPaymentDate: '', // optional
     membershipStatus: 'pending', // required - default "in attesa"
+    membershipDate: '', // optional
     membershipFilePath: '', // optional
     invoiceFilePath: '' // optional
   });
@@ -308,6 +309,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       paymentStatus: 'pending',
       lastPaymentDate: '',
       membershipStatus: 'pending',
+      membershipDate: '',
       membershipFilePath: '',
       invoiceFilePath: ''
     });
@@ -330,6 +332,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       paymentStatus: athlete.paymentStatus || 'pending',
       lastPaymentDate: athlete.lastPaymentDate || '',
       membershipStatus: athlete.membershipStatus || 'pending',
+      membershipDate: athlete.membershipDate || '',
       membershipFilePath: athlete.membershipFilePath || '',
       invoiceFilePath: athlete.invoiceFilePath || ''
     });
@@ -401,6 +404,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       paymentStatus: athleteForm.paymentStatus,
       lastPaymentDate: athleteForm.lastPaymentDate,
       membershipStatus: athleteForm.membershipStatus,
+      membershipDate: athleteForm.membershipDate,
       membershipFilePath: athleteForm.membershipFilePath,
       invoiceFilePath: athleteForm.invoiceFilePath
     };
