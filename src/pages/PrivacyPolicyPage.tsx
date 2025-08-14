@@ -8,7 +8,7 @@ const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onNavigate }) => 
   return (
     <div className="bg-white p-6">
       <h1 className="text-3xl font-bold text-navy-700 mb-2">Privacy Policy</h1>
-      <p className="text-gray-600 mb-6">Ultimo aggiornamento: Gennaio 2025</p>
+      <p className="text-gray-600 mb-6">Ultimo aggiornamento: Agosto 2025</p>
       <div className="max-w-none">
           <div className="prose max-w-none">
             <h2 className="text-2xl font-bold text-navy-700 mb-4">1. Informazioni Generali</h2>

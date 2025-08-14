@@ -125,7 +125,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="mt-4">© KW8 2025</div>
             <div className="mt-2 text-gray-400 text-xs">
               <div>Powered by: Simeone Luca</div>
-              <div>For info: simeoneluca13@gmail.com</div>
+              <div>Info: simeoneluca13@gmail.com</div>
             </div>
           </div>
         </div>
