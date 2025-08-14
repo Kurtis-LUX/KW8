@@ -82,23 +82,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     id: '',
     name: '', // required
     email: '', // required
-    password: '', // required
     birthDate: '', // required
     gender: 'M', // required
     fiscalCode: '', // required
     birthPlace: '', // required
     address: '', // required
     notes: '', // optional
-    paymentStatus: 'pending', // required
-    lastPaymentDate: '', // required
-    membershipStatus: 'pending', // required
-    membershipFilePath: '', // required
+    paymentStatus: 'pending', // required - default "in attesa"
+    lastPaymentDate: '', // optional
+    membershipStatus: 'pending', // required - default "in attesa"
+    membershipFilePath: '', // optional
     invoiceFilePath: '' // optional
   });
 
   // Validazione del form atleta
   const validateAthleteForm = () => {
-    const requiredFields = ['name', 'email', 'password', 'birthDate', 'gender', 'fiscalCode', 'birthPlace', 'address', 'paymentStatus', 'lastPaymentDate', 'membershipStatus', 'membershipFilePath'];
+    const requiredFields = ['name', 'email', 'birthDate', 'gender', 'fiscalCode', 'birthPlace', 'address', 'paymentStatus', 'membershipStatus'];
     const missingFields = requiredFields.filter(field => !athleteForm[field as keyof typeof athleteForm]);
     
     if (missingFields.length > 0) {
@@ -242,7 +241,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
   // Gestione del form atleta
   const handleAthleteFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setAthleteForm(prev => ({ ...prev, [name]: value }));
+    setAthleteForm(prev => {
+      const updated = { ...prev, [name]: value };
+      
+      // Gestione automatica delle date
+      if (name === 'paymentStatus') {
+        if (value === 'paid') {
+          updated.lastPaymentDate = new Date().toISOString().split('T')[0];
+        } else if (value === 'pending') {
+          updated.lastPaymentDate = '';
+        }
+      }
+      
+      if (name === 'membershipStatus') {
+        if (value === 'active') {
+          updated.membershipDate = new Date().toISOString().split('T')[0];
+        } else if (value === 'pending') {
+          updated.membershipDate = '';
+        }
+      }
+      
+      return updated;
+    });
   };
 
   // Gestione del form scheda
@@ -279,7 +299,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       id: '',
       name: '',
       email: '',
-      password: '',
       birthDate: '',
       gender: 'M',
       fiscalCode: '',
@@ -302,7 +321,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       id: athlete.id,
       name: athlete.name,
       email: athlete.email,
-      password: athlete.password || '',
       birthDate: athlete.birthDate || '',
       gender: athlete.gender || 'M',
       fiscalCode: athlete.fiscalCode || '',
@@ -371,7 +389,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       id: athleteForm.id || `user-${Date.now()}`,
       email: athleteForm.email,
       name: athleteForm.name,
-      password: athleteForm.password,
+      password: selectedAthlete?.password || 'defaultPassword123',
       role: 'atleta',
       workoutPlans: selectedAthlete?.workoutPlans || [],
       birthDate: athleteForm.birthDate,
@@ -613,7 +631,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       const updatedAthlete = { 
         ...athlete, 
         membershipStatus: newStatus,
-        membershipDate: newStatus !== 'pending' ? new Date().toISOString().split('T')[0] : athlete.membershipDate
+        membershipDate: newStatus === 'active' ? new Date().toISOString().split('T')[0] : ''
       };
       DB.saveUser(updatedAthlete);
       loadData();
@@ -627,7 +645,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       const updatedAthlete = { 
         ...athlete, 
         paymentStatus: newStatus,
-        lastPaymentDate: newStatus !== 'pending' ? new Date().toISOString().split('T')[0] : athlete.lastPaymentDate
+        lastPaymentDate: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : ''
       };
       DB.saveUser(updatedAthlete);
       loadData();
@@ -1089,7 +1107,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Note</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pagamento</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tesseramento</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schede</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Azioni</th>
                   </tr>
                 </thead>
@@ -1125,9 +1142,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                             <option value="paid">Pagato</option>
                             <option value="pending">In attesa</option>
                           </select>
-                          {athlete.lastPaymentDate && (
-                            <div className="text-xs text-gray-500 mt-1">{athlete.lastPaymentDate}</div>
-                          )}
+                          {athlete.paymentStatus === 'paid' && athlete.lastPaymentDate && (
+            <div className="text-xs text-gray-500 mt-1">{athlete.lastPaymentDate}</div>
+          )}
                           {athlete.paymentStatus === 'paid' && athlete.invoiceFilePath && (
                             <div className="text-xs text-blue-500 mt-1 cursor-pointer">Visualizza fattura</div>
                           )}
@@ -1143,20 +1160,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                             <option value="active">Attivo</option>
                             <option value="pending">In attesa</option>
                           </select>
-                          {athlete.membershipFilePath && (
-                            <div className="text-xs text-blue-500 mt-1 cursor-pointer">Visualizza file</div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <span className="text-sm text-gray-500 mr-2">{athlete.workoutPlans.length}</span>
-                            <button 
-                              onClick={() => openAssignModal(athlete)}
-                              className="text-blue-600 hover:text-blue-800 text-sm"
-                            >
-                              Assegna
-                            </button>
-                          </div>
+                          {athlete.membershipStatus === 'active' && athlete.membershipDate && (
+            <div className="text-xs text-gray-500 mt-1">{athlete.membershipDate}</div>
+          )}
+          {athlete.membershipFilePath && (
+            <div className="text-xs text-blue-500 mt-1 cursor-pointer">Visualizza file</div>
+          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">
@@ -1178,7 +1187,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={12} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={11} className="px-6 py-4 text-center text-gray-500">
                         Nessun atleta trovato
                       </td>
                     </tr>
