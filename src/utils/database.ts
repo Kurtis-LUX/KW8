@@ -49,6 +49,18 @@ export interface WorkoutPlan {
   updatedAt: string;
   difficulty?: number; // 1-5 stelle
   targetMuscles?: string[];
+  folderId?: string; // ID della cartella contenitore
+}
+
+export interface WorkoutFolder {
+  id: string;
+  name: string;
+  icon: string; // Nome dell'icona Lucide React
+  parentId?: string; // ID della cartella padre (per sotto-cartelle)
+  order: number;
+  createdAt: string;
+  updatedAt: string;
+  isExpanded?: boolean; // Stato di espansione nell'UI
 }
 
 export interface Exercise {
@@ -161,8 +173,66 @@ const DB = {
   
   deleteWorkoutPlan: (planId: string): void => {
     const plans = DB.getWorkoutPlans();
-    const filteredPlans = plans.filter(p => p.id !== planId);
-    localStorage.setItem('kw8_workout_plans', JSON.stringify(filteredPlans));
+    const filteredPlans = plans.filter(plan => plan.id !== planId);
+    localStorage.setItem('kw8_workoutPlans', JSON.stringify(filteredPlans));
+  },
+
+  // Cartelle
+  getWorkoutFolders: (): WorkoutFolder[] => {
+    const folders = localStorage.getItem('kw8_workoutFolders');
+    return folders ? JSON.parse(folders) : [];
+  },
+
+  getWorkoutFolderById: (id: string): WorkoutFolder | null => {
+    const folders = DB.getWorkoutFolders();
+    return folders.find(folder => folder.id === id) || null;
+  },
+
+  saveWorkoutFolder: (folder: WorkoutFolder): void => {
+    const folders = DB.getWorkoutFolders();
+    const existingFolderIndex = folders.findIndex(f => f.id === folder.id);
+    
+    if (existingFolderIndex >= 0) {
+      folders[existingFolderIndex] = { ...folder, updatedAt: new Date().toISOString() };
+    } else {
+      folders.push({ ...folder, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    }
+    
+    localStorage.setItem('kw8_workoutFolders', JSON.stringify(folders));
+  },
+
+  deleteWorkoutFolder: (folderId: string): void => {
+    const folders = DB.getWorkoutFolders();
+    const plans = DB.getWorkoutPlans();
+    
+    // Rimuovi la cartella
+    const filteredFolders = folders.filter(folder => folder.id !== folderId);
+    
+    // Sposta le schede della cartella eliminata nella root
+    const updatedPlans = plans.map(plan => 
+      plan.folderId === folderId ? { ...plan, folderId: undefined } : plan
+    );
+    
+    // Sposta le sotto-cartelle nella cartella padre o root
+    const parentFolder = folders.find(f => f.id === folderId);
+    const updatedFolders = filteredFolders.map(folder => 
+      folder.parentId === folderId 
+        ? { ...folder, parentId: parentFolder?.parentId }
+        : folder
+    );
+    
+    localStorage.setItem('kw8_workoutFolders', JSON.stringify(updatedFolders));
+    localStorage.setItem('kw8_workoutPlans', JSON.stringify(updatedPlans));
+  },
+
+  getWorkoutPlansByFolderId: (folderId?: string): WorkoutPlan[] => {
+    const plans = DB.getWorkoutPlans();
+    return plans.filter(plan => plan.folderId === folderId);
+  },
+
+  getSubfolders: (parentId?: string): WorkoutFolder[] => {
+    const folders = DB.getWorkoutFolders();
+    return folders.filter(folder => folder.parentId === parentId);
   },
   
   // Abbonamenti

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Search, Plus, Edit, Trash2, Download, Upload, User as UserIcon, FileText, CheckCircle, XCircle, X, ChevronUp, ChevronDown, Grid, List, Copy, Filter, SortAsc, SortDesc, Play, Image, Music, Tag, Calendar, Clock, Target, Star, Eye, EyeOff, GripVertical } from 'lucide-react';
-import DB, { User, WorkoutPlan, Exercise } from '../utils/database';
+import { ArrowLeft, Search, Plus, Edit, Trash2, Download, Upload, User as UserIcon, FileText, CheckCircle, XCircle, X, ChevronUp, ChevronDown, Grid, List, Copy, Filter, SortAsc, SortDesc, Play, Image, Music, Tag, Calendar, Clock, Target, Star, Eye, EyeOff, GripVertical, Folder, FolderOpen, FolderPlus, Settings, Home, Briefcase, Heart, Zap, Shield, Award, Book, Users, Activity } from 'lucide-react';
+import DB, { User, WorkoutPlan, Exercise, WorkoutFolder } from '../utils/database';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -76,6 +76,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
   const [showMembershipDetails, setShowMembershipDetails] = useState(false);
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [showRevenueDetails, setShowRevenueDetails] = useState(false);
+
+  // Stati per la gestione delle cartelle
+  const [workoutFolders, setWorkoutFolders] = useState<WorkoutFolder[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [folderForm, setFolderForm] = useState({
+    id: '',
+    name: '',
+    icon: 'Folder',
+    parentId: '',
+    order: 0
+  });
+  const [draggedItem, setDraggedItem] = useState<{type: 'workout' | 'folder', id: string} | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [showDeleteFolderModal, setShowDeleteFolderModal] = useState(false);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
 
   // Form data per la creazione/modifica di atleti
   const [athleteForm, setAthleteForm] = useState({
@@ -158,6 +174,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     // Carica tutte le schede di allenamento
     const allWorkoutPlans = DB.getWorkoutPlans();
     setWorkoutPlans(allWorkoutPlans);
+
+    // Carica tutte le cartelle
+    const allFolders = DB.getWorkoutFolders();
+    setWorkoutFolders(allFolders);
   };
 
   // Filtra gli atleti in base al termine di ricerca e ai filtri
@@ -656,6 +676,166 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     }
   };
 
+  // Funzioni per la gestione delle cartelle
+  const openNewFolderModal = (parentId?: string) => {
+    setFolderForm({
+      id: '',
+      name: '',
+      icon: 'Folder',
+      parentId: parentId || '',
+      order: workoutFolders.length
+    });
+    setShowFolderModal(true);
+  };
+
+  const openEditFolderModal = (folder: WorkoutFolder) => {
+    setFolderForm({
+      id: folder.id,
+      name: folder.name,
+      icon: folder.icon,
+      parentId: folder.parentId || '',
+      order: folder.order
+    });
+    setShowFolderModal(true);
+  };
+
+  const saveFolder = () => {
+    if (!folderForm.name.trim()) return;
+
+    const folderData: WorkoutFolder = {
+      id: folderForm.id || `folder-${Date.now()}`,
+      name: folderForm.name.trim(),
+      icon: folderForm.icon,
+      parentId: folderForm.parentId || undefined,
+      order: folderForm.order,
+      createdAt: folderForm.id ? workoutFolders.find(f => f.id === folderForm.id)?.createdAt || new Date().toISOString() : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isExpanded: true
+    };
+
+    DB.saveWorkoutFolder(folderData);
+    setShowFolderModal(false);
+    loadData();
+  };
+
+  const deleteFolder = (folderId: string) => {
+    setFolderToDelete(folderId);
+    setShowDeleteFolderModal(true);
+  };
+
+  const confirmDeleteFolder = () => {
+    if (folderToDelete) {
+      DB.deleteWorkoutFolder(folderToDelete);
+      loadData();
+      setShowDeleteFolderModal(false);
+      setFolderToDelete(null);
+    };
+  };
+
+  const toggleFolderExpansion = (folderId: string) => {
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+
+  // Gestione drag & drop per cartelle e schede
+  const handleDragStart = (e: React.DragEvent, type: 'workout' | 'folder', id: string) => {
+    setDraggedItem({ type, id });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDropOnFolder = (e: React.DragEvent, targetFolderId: string) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+
+    if (draggedItem.type === 'workout') {
+      // Sposta scheda in cartella
+      const workout = workoutPlans.find(w => w.id === draggedItem.id);
+      if (workout) {
+        const updatedWorkout = { ...workout, folderId: targetFolderId };
+        DB.saveWorkoutPlan(updatedWorkout);
+        loadData();
+      }
+    } else if (draggedItem.type === 'folder') {
+      // Sposta cartella in altra cartella (sotto-cartella)
+      const folder = workoutFolders.find(f => f.id === draggedItem.id);
+      if (folder && folder.id !== targetFolderId) {
+        const updatedFolder = { ...folder, parentId: targetFolderId };
+        DB.saveWorkoutFolder(updatedFolder);
+        loadData();
+      }
+    }
+
+    setDraggedItem(null);
+  };
+
+  const handleDropOnRoot = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+
+    if (draggedItem.type === 'workout') {
+      // Sposta scheda nella root
+      const workout = workoutPlans.find(w => w.id === draggedItem.id);
+      if (workout) {
+        const updatedWorkout = { ...workout, folderId: undefined };
+        DB.saveWorkoutPlan(updatedWorkout);
+        loadData();
+      }
+    } else if (draggedItem.type === 'folder') {
+      // Sposta cartella nella root
+      const folder = workoutFolders.find(f => f.id === draggedItem.id);
+      if (folder) {
+        const updatedFolder = { ...folder, parentId: undefined };
+        DB.saveWorkoutFolder(updatedFolder);
+        loadData();
+      }
+    }
+
+    setDraggedItem(null);
+  };
+
+  // Funzioni di utilità per le cartelle
+  const getIconComponent = (iconName: string) => {
+    const iconMap: { [key: string]: any } = {
+      Folder, FolderOpen, Home, Briefcase, Heart, Zap, Shield, Award, Book, Users, Activity, Settings
+    };
+    return iconMap[iconName] || Folder;
+  };
+
+  const getDepth = (folder?: WorkoutFolder): number => {
+    if (!folder || !folder.parentId) return 0;
+    const parent = workoutFolders.find(f => f.id === folder.parentId);
+    return 1 + getDepth(parent);
+  };
+
+  const buildFolderTree = (parentId?: string): (WorkoutFolder | WorkoutPlan)[] => {
+    const folders = workoutFolders.filter(f => f.parentId === parentId).sort((a, b) => a.order - b.order);
+    const plans = workoutPlans.filter(p => p.folderId === parentId).sort((a, b) => a.order - b.order);
+    
+    const result: (WorkoutFolder | WorkoutPlan)[] = [];
+    
+    folders.forEach(folder => {
+      result.push(folder);
+      if (expandedFolders.has(folder.id)) {
+        result.push(...buildFolderTree(folder.id));
+      }
+    });
+    
+    result.push(...plans);
+    return result;
+  };
+
   // Funzione per applicare i filtri
 
 
@@ -1085,10 +1265,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                   </ul>
                   {statistics.paidThisMonth.length === 0 && (
                     <p className="text-gray-500 italic">Nessun pagamento ricevuto questo mese</p>
-                  )}
-                </div>
-              </div>
-            )}
+                  )}              </div>
+            </div>
+          </div>
+        )}
 
 
           </div>
@@ -1432,325 +1612,194 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
 
                 </div>
                 
-                {/* Pulsante Nuova Scheda */}
-                <div className="flex justify-end">
+                {/* Pulsanti Crea cartella e Nuova Scheda */}
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => openNewFolderModal(selectedFolder || undefined)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2"
+                  >
+                    <FolderPlus size={20} />
+                    <span>Crea Cartella</span>
+                  </button>
                   <button
                     onClick={() => openNewWorkoutPlanModal()}
                     className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-all duration-300 flex items-center space-x-2"
                   >
                     <Plus size={20} />
-                    <span>Nuova Scheda</span>
+                    <span>Crea Programma</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Lista/Griglia schede */}
+            {/* Struttura ad albero con cartelle e schede */}
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              {filteredWorkoutPlans.length > 0 ? (
-                <div className={workoutViewMode === 'grid' 
-                  ? 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8 p-8'
-                  : 'divide-y divide-gray-200'
-                }>
-                  {filteredWorkoutPlans.map((plan, index) => (
-                    <div
-                      key={plan.id}
-                      draggable
-                      onDragStart={() => handleWorkoutDragStart(plan)}
-                      onDragOver={handleWorkoutDragOver}
-                      onDrop={() => handleWorkoutDrop(index)}
-                      className={workoutViewMode === 'grid'
-                        ? 'group bg-white border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-300 cursor-move'
-                        : 'group flex items-center p-6 hover:bg-gray-50 transition-colors cursor-move'
-                      }
-                    >
-                      {workoutViewMode === 'grid' ? (
-                        /* Vista griglia espansa */
-                        <div className="p-8">
-                          {/* Header con drag handle e azioni */}
-                          <div className="flex items-start justify-between mb-6">
-                            <div className="flex items-center space-x-3">
-                              <GripVertical size={18} className="text-gray-400 group-hover:text-gray-600" />
-                              <div className="flex-1">
-                                <h3 className="text-xl font-bold text-navy-900 group-hover:text-red-600 transition-colors mb-2">
-                                  {plan.name}
-                                </h3>
-                                <div className="flex items-center flex-wrap gap-2">
-                                  <span className={`px-3 py-1 text-sm font-medium rounded-full ${
-                                    plan.status === 'published'
-                                      ? 'bg-green-100 text-green-800'
-                                      : plan.status === 'draft'
-                                      ? 'bg-yellow-100 text-yellow-800'
-                                      : 'bg-gray-100 text-gray-800'
-                                  }`}>
-                                    {plan.status === 'published' ? 'Pubblicata' : 
-                                     plan.status === 'draft' ? 'Bozza' : 'Archiviata'}
-                                  </span>
-                                  {plan.category && (
-                                    <span className="px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full">
-                                      {plan.category}
-                                    </span>
-                                  )}
-                                  {plan.difficulty && (
-                                    <div className="flex items-center space-x-1 px-3 py-1 bg-yellow-50 rounded-full">
-                                      {[...Array(5)].map((_, i) => (
-                                        <Star
-                                          key={i}
-                                          size={14}
-                                          className={i < (['beginner', 'intermediate', 'advanced', 'expert'].indexOf(plan.difficulty || 'beginner') + 1)
-                                            ? 'text-yellow-400 fill-current'
-                                            : 'text-gray-300'
-                                          }
-                                        />
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
+              <div 
+                className="p-6"
+                onDragOver={handleDragOver}
+                onDrop={handleDropOnRoot}
+              >
+                {workoutFolders.length === 0 && workoutPlans.filter(p => !p.folderId).length === 0 ? (
+                  <div className="text-center py-12">
+                    <Folder className="mx-auto mb-4 text-gray-400" size={64} />
+                    <h3 className="text-xl font-bold text-navy-900 mb-2">Nessuna cartella o scheda</h3>
+                    <p className="text-gray-600 mb-6">Inizia creando la tua prima cartella o scheda di allenamento</p>
+                    <div className="flex justify-center space-x-4">
+                      <button
+                        onClick={() => openNewFolderModal()}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-300 flex items-center space-x-2"
+                      >
+                        <FolderPlus size={20} />
+                        <span>Crea Prima Cartella</span>
+                      </button>
+                      <button
+                        onClick={() => openNewWorkoutPlanModal()}
+                        className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg transition-all duration-300 flex items-center space-x-2"
+                      >
+                        <Plus size={20} />
+                        <span>Crea Prima Scheda</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {buildFolderTree(undefined).map((item, index) => {
+                      const isFolder = 'icon' in item;
+                      const depth = isFolder ? getDepth(item as WorkoutFolder) : getDepth(workoutFolders.find(f => f.id === (item as WorkoutPlan).folderId) || undefined);
+                      
+                      if (isFolder) {
+                        const folder = item as WorkoutFolder;
+                        const IconComponent = getIconComponent(folder.icon);
+                        const isExpanded = expandedFolders.has(folder.id);
+                        
+                        return (
+                          <div
+                            key={folder.id}
+                            className="group"
+                            style={{ marginLeft: `${depth * 24}px` }}
+                          >
+                            <div
+                              className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-gray-200"
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, 'folder', folder.id)}
+                              onDragOver={handleDragOver}
+                              onDrop={(e) => handleDropOnFolder(e, folder.id)}
+                            >
+                              <div className="flex items-center space-x-3 flex-1">
+                                <button
+                                  onClick={() => toggleFolderExpansion(folder.id)}
+                                  className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                >
+                                  {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                                </button>
+                                <GripVertical size={16} className="text-gray-400 group-hover:text-gray-600" />
+                                <IconComponent size={20} className="text-blue-600" />
+                                <span className="font-medium text-navy-900">{folder.name}</span>
+                                <span className="text-sm text-gray-500">
+                                  ({DB.getWorkoutPlansByFolderId(folder.id).length + DB.getSubfolders(folder.id).length} elementi)
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openNewFolderModal(folder.id);
+                                  }}
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  title="Crea sotto-cartella"
+                                >
+                                  <FolderPlus size={16} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openEditFolderModal(folder);
+                                  }}
+                                  className="p-2 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                  title="Modifica cartella"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteFolder(folder.id);
+                                  }}
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Elimina cartella"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
                               </div>
                             </div>
-                            <div className="flex flex-col space-y-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <div className="flex space-x-1">
-                                <button
-                                  onClick={() => updateWorkoutStatus(plan.id, plan.status === 'published' ? 'draft' : 'published')}
-                                  className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                  title={plan.status === 'published' ? 'Metti in bozza' : 'Pubblica'}
-                                >
-                                  {plan.status === 'published' ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
-                                <button
-                                  onClick={() => duplicateWorkoutPlan(plan)}
-                                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title="Duplica scheda"
-                                >
-                                  <Copy size={18} />
-                                </button>
+                          </div>
+                        );
+                      } else {
+                        const plan = item as WorkoutPlan;
+                        return (
+                          <div
+                            key={plan.id}
+                            className="group"
+                            style={{ marginLeft: `${depth * 24 + 24}px` }}
+                          >
+                            <div
+                              className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-200"
+                              draggable
+                              onDragStart={(e) => handleDragStart(e, 'workout', plan.id)}
+                            >
+                              <div className="flex items-center space-x-3 flex-1">
+                                <GripVertical size={16} className="text-gray-400 group-hover:text-gray-600" />
+                                <FileText size={20} className="text-red-600" />
+                                <div className="flex-1">
+                                  <h3 className="font-medium text-navy-900">{plan.name}</h3>
+                                  <div className="flex items-center space-x-4 text-sm text-gray-500">
+                                    <span>Coach: {plan.coach}</span>
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      plan.status === 'published'
+                                        ? 'bg-green-100 text-green-800'
+                                        : plan.status === 'draft'
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : 'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {plan.status === 'published' ? 'Pubblicata' : 
+                                       plan.status === 'draft' ? 'Bozza' : 'Archiviata'}
+                                    </span>
+                                    {plan.exercises && (
+                                      <span>{plan.exercises.length} esercizi</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex space-x-1">
+                              <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
                                   onClick={() => openEditWorkoutPlanModal(plan)}
-                                  className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                  title="Modifica"
+                                  className="p-2 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                                  title="Modifica scheda"
                                 >
-                                  <Edit size={18} />
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={() => duplicateWorkoutPlan(plan.id)}
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  title="Duplica scheda"
+                                >
+                                  <Copy size={16} />
                                 </button>
                                 <button
                                   onClick={() => deleteWorkoutPlan(plan.id)}
-                                  className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Elimina"
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Elimina scheda"
                                 >
-                                  <Trash2 size={18} />
+                                  <Trash2 size={16} />
                                 </button>
                               </div>
                             </div>
                           </div>
-
-                          {/* Descrizione espansa */}
-                          <div className="mb-6">
-                            <p className="text-gray-700 text-base leading-relaxed">
-                              {plan.description || 'Nessuna descrizione disponibile'}
-                            </p>
-                          </div>
-
-                          {/* Statistiche principali */}
-                          <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <UserIcon size={16} className="text-red-600" />
-                                <span className="text-sm font-medium text-gray-700">Coach</span>
-                              </div>
-                              <p className="text-lg font-bold text-navy-900">{plan.coach}</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Calendar size={16} className="text-blue-600" />
-                                <span className="text-sm font-medium text-gray-700">Durata</span>
-                              </div>
-                              <p className="text-lg font-bold text-navy-900">{plan.duration} giorni</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Target size={16} className="text-green-600" />
-                                <span className="text-sm font-medium text-gray-700">Esercizi</span>
-                              </div>
-                              <p className="text-lg font-bold text-navy-900">{plan.exercises.length}</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-lg p-4">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <Clock size={16} className="text-purple-600" />
-                                <span className="text-sm font-medium text-gray-700">Creata</span>
-                              </div>
-                              <p className="text-lg font-bold text-navy-900">
-                                {plan.createdAt ? new Date(plan.createdAt).toLocaleDateString('it-IT') : 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Media preview espanso */}
-                          {plan.mediaFiles && plan.mediaFiles.length > 0 && (
-                            <div className="mb-6">
-                              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
-                                <Image size={16} />
-                                <span>File Media ({plan.mediaFiles.length})</span>
-                              </h4>
-                              <div className="grid grid-cols-2 gap-2">
-                                {plan.mediaFiles.slice(0, 4).map((media, idx) => (
-                                  <div key={idx} className="flex items-center space-x-2 p-2 bg-gray-50 rounded-lg text-sm">
-                                    {media.type === 'video' && <Play size={14} className="text-red-600" />}
-                                    {media.type === 'image' && <Image size={14} className="text-blue-600" />}
-                                    {media.type === 'audio' && <Music size={14} className="text-green-600" />}
-                                    <span className="truncate text-gray-700">{media.name}</span>
-                                  </div>
-                                ))}
-                                {plan.mediaFiles.length > 4 && (
-                                  <div className="flex items-center justify-center p-2 bg-gray-100 rounded-lg text-sm text-gray-600">
-                                    +{plan.mediaFiles.length - 4} altri
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Tags espansi */}
-                          {plan.tags && plan.tags.length > 0 && (
-                            <div className="mb-6">
-                              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center space-x-2">
-                                <Tag size={16} />
-                                <span>Tags</span>
-                              </h4>
-                              <div className="flex flex-wrap gap-2">
-                                {plan.tags.map((tag, idx) => (
-                                  <span key={idx} className="inline-flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full hover:bg-gray-200 transition-colors">
-                                    <Tag size={12} />
-                                    <span>{tag}</span>
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Azioni rapide */}
-                          <div className="flex space-x-2 pt-4 border-t border-gray-200">
-                            <button
-                              onClick={() => openEditWorkoutPlanModal(plan)}
-                              className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
-                            >
-                              <Edit size={16} />
-                              <span>Modifica</span>
-                            </button>
-                            <button
-                              onClick={() => duplicateWorkoutPlan(plan)}
-                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
-                            >
-                              <Copy size={16} />
-                              <span>Duplica</span>
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        /* Vista lista */
-                        <>
-                          <div className="flex items-center space-x-4 flex-1">
-                            <GripVertical size={16} className="text-gray-400 group-hover:text-gray-600" />
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-3">
-                                <h3 className="text-lg font-bold text-navy-900 group-hover:text-red-600 transition-colors truncate">
-                                  {plan.name}
-                                </h3>
-                                <span className={`px-2 py-1 text-xs font-medium rounded-full whitespace-nowrap ${
-                                  plan.status === 'published'
-                                    ? 'bg-green-100 text-green-800'
-                                    : plan.status === 'draft'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {plan.status === 'published' ? 'Pubblicata' : 
-                                   plan.status === 'draft' ? 'Bozza' : 'Archiviata'}
-                                </span>
-                                {plan.category && (
-                                  <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full whitespace-nowrap">
-                                    {plan.category}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-gray-600 text-sm mt-1 truncate">
-                                {plan.description || 'Nessuna descrizione disponibile'}
-                              </p>
-                            </div>
-                            
-                            <div className="flex items-center space-x-6 text-sm text-gray-600">
-                              <div className="flex items-center space-x-1">
-                                <UserIcon size={14} />
-                                <span>{plan.coach}</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Calendar size={14} />
-                                <span>{plan.duration}g</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <Target size={14} />
-                                <span>{plan.exercises.length}</span>
-                              </div>
-                              {plan.mediaFiles && plan.mediaFiles.length > 0 && (
-                                <div className="flex items-center space-x-1">
-                                  <Image size={14} />
-                                  <span>{plan.mediaFiles.length}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => updateWorkoutStatus(plan.id, plan.status === 'published' ? 'draft' : 'published')}
-                              className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                              title={plan.status === 'published' ? 'Metti in bozza' : 'Pubblica'}
-                            >
-                              {plan.status === 'published' ? <EyeOff size={16} /> : <Eye size={16} />}
-                            </button>
-                            <button
-                              onClick={() => duplicateWorkoutPlan(plan)}
-                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Duplica scheda"
-                            >
-                              <Copy size={16} />
-                            </button>
-                            <button
-                              onClick={() => openEditWorkoutPlanModal(plan)}
-                              className="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                              title="Modifica"
-                            >
-                              <Edit size={16} />
-                            </button>
-                            <button
-                              onClick={() => deleteWorkoutPlan(plan.id)}
-                              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Elimina"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-gray-400 mb-4">
-                    <FileText size={48} className="mx-auto" />
+                        );
+                      }
+                    })}
                   </div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nessuna scheda trovata</h3>
-                  <p className="text-gray-600 mb-6">Inizia creando la tua prima scheda di allenamento</p>
-                  <button
-                    onClick={() => openNewWorkoutPlanModal()}
-                    className="inline-flex items-center space-x-2 bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    <Plus size={20} />
-                    <span>Crea Prima Scheda</span>
-                  </button>
-                </div>
-              )}
+                )}              </div>
             </div>
           </div>
         )}
@@ -2350,6 +2399,94 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                 </button>
                 <button
                   onClick={confirmDeleteWorkoutPlan}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-300"
+                >
+                  Elimina
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Folder Modal */}
+        {showFolderModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl p-8 max-w-md w-full mx-4">
+              <h2 className="text-2xl font-bold text-navy-900 mb-6">
+                {folderForm.id ? 'Modifica Cartella' : 'Nuova Cartella'}
+              </h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-navy-700 font-medium mb-2">Nome Cartella</label>
+                  <input
+                    type="text"
+                    value={folderForm.name}
+                    onChange={(e) => setFolderForm({...folderForm, name: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    placeholder="Inserisci il nome della cartella"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-navy-700 font-medium mb-2">Icona</label>
+                  <select
+                    value={folderForm.icon}
+                    onChange={(e) => setFolderForm({...folderForm, icon: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  >
+                    <option value="Folder">📁 Cartella</option>
+                    <option value="Home">🏠 Casa</option>
+                    <option value="Briefcase">💼 Lavoro</option>
+                    <option value="Heart">❤️ Cuore</option>
+                    <option value="Zap">⚡ Energia</option>
+                    <option value="Shield">🛡️ Scudo</option>
+                    <option value="Award">🏆 Premio</option>
+                    <option value="Book">📚 Libro</option>
+                    <option value="Users">👥 Utenti</option>
+                    <option value="Activity">📊 Attività</option>
+                    <option value="Target">🎯 Obiettivo</option>
+                    <option value="Star">⭐ Stella</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-4 mt-8">
+                <button
+                  onClick={() => setShowFolderModal(false)}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-navy-700 hover:bg-gray-50 transition-colors duration-300"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={saveFolder}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-300"
+                >
+                  Salva
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Folder Modal */}
+        {showDeleteFolderModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Conferma Eliminazione Cartella</h3>
+              <p className="text-gray-600 mb-6">
+                Sei sicuro di voler eliminare questa cartella? Tutte le schede e sottocartelle contenute verranno spostate nella cartella principale.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteFolderModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-300"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={confirmDeleteFolder}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-300"
                 >
                   Elimina
