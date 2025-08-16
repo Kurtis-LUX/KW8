@@ -25,8 +25,10 @@ export interface User {
   membershipDate?: string;
   invoiceFilePath?: string;
   ipAddress?: string;
-  certificatoMedico?: boolean;
+  certificatoMedico?: boolean; // Manteniamo per compatibilità
+  certificatoMedicoStato?: 'Valido' | 'Mancante' | 'Scaduto';
   certificatoMedicoFile?: string;
+  dataCertificato?: string;
 }
 
 export interface WorkoutPlan {

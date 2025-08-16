@@ -20,9 +20,11 @@ import CookieConsent from './components/CookieConsent';
 import CookieSettings from './components/CookieSettings';
 import Modal from './components/Modal';
 import AdminDashboard from './pages/AdminDashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 import DB from './utils/database';
 import initializeData from './utils/initData';
 import { User } from './utils/database';
+import { authService } from './services/authService';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -42,37 +44,29 @@ function App() {
     // Inizializza il database con dati di esempio
     initializeData();
     
-    // Verifica automatica delle credenziali admin e correzione se necessario
-    const testResult = DB.verifyCredentials('kw8@gmail.com', 'kw8@182');
-    if (!testResult.success) {
-      // Reset del database se l'admin non può accedere
-      localStorage.removeItem('kw8_initialized');
-      localStorage.removeItem('kw8_data_initialized');
-      DB.initializeDatabase();
-      initializeData();
-    }
-    
     // Controlla se l'utente ha già dato il consenso ai cookie
     const hasConsent = localStorage.getItem('cookieConsent');
     if (hasConsent) {
       setShowCookieConsent(false);
     }
     
-    // Controlla se c'è un utente loggato
-    const loggedInUser = localStorage.getItem('currentUser');
-    if (loggedInUser) {
-      setCurrentUser(JSON.parse(loggedInUser));
-    } else {
-      // Controlla auto-login per admin
-      const autoLoginData = DB.getAutoLogin();
-      if (autoLoginData) {
-        const loginResult = DB.verifyCredentials(autoLoginData.email, autoLoginData.password);
-        if (loginResult.success && loginResult.user) {
-          setCurrentUser(loginResult.user);
-          localStorage.setItem('currentUser', JSON.stringify(loginResult.user));
+    // Auto-login sicuro con JWT
+    const checkAutoLogin = async () => {
+      try {
+        const user = await authService.autoLogin();
+        if (user) {
+          setCurrentUser(user);
+          localStorage.setItem('currentUser', JSON.stringify(user));
         }
+      } catch (error) {
+        console.error('Auto-login failed:', error);
+        // Rimuovi dati di sessione non validi
+        localStorage.removeItem('currentUser');
+        authService.logout();
       }
-    }
+    };
+    
+    checkAutoLogin();
   }, []);
 
   const handleNavigation = (page: string, plan?: string) => {
@@ -136,18 +130,14 @@ function App() {
   }
 
   if (currentPage === 'admin-dashboard') {
-    return currentUser && currentUser.role === 'admin' ? 
-      <AdminDashboard onNavigate={handleNavigation} currentUser={currentUser} /> : 
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
-        <p className="mt-4">Non hai i permessi per accedere a questa pagina.</p>
-        <button 
-          onClick={() => handleNavigation('home')} 
-          className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
-        >
-          Torna alla home
-        </button>
-      </div>;
+    return (
+      <ProtectedRoute 
+        requireAdmin={true}
+        onUnauthorized={() => handleNavigation('auth')}
+      >
+        <AdminDashboard onNavigate={handleNavigation} currentUser={currentUser} />
+      </ProtectedRoute>
+    );
   }
 
   const handleCookieAccept = () => {

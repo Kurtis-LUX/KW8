@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ArrowLeft, User as UserIcon, Mail, Lock, Eye, EyeOff, Calendar, MapPin, CreditCard, FileText } from 'lucide-react';
 import Modal from '../components/Modal';
 import { googleAuthService, GoogleUser } from '../services/googleAuth';
+import { authService } from '../services/authService';
 
 interface AuthPageProps {
   onNavigate: (page: string) => void;
@@ -37,18 +38,22 @@ const AuthPage: React.FC<AuthPageProps> = ({ onNavigate, onLogin }) => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
 
-  // Auto-login effect
+  // Auto-login effect con JWT
   useEffect(() => {
-    const autoLoginData = DB.getAutoLogin();
-    if (autoLoginData && onLogin) {
-      const result = DB.verifyCredentials(autoLoginData.email, autoLoginData.password);
-      if (result.success && result.user) {
-        onLogin(result.user);
-        onNavigate('home');
-      } else {
-        DB.clearAutoLogin();
+    const checkAutoLogin = async () => {
+      try {
+        const user = await authService.autoLogin();
+        if (user && onLogin) {
+          onLogin(user);
+          onNavigate('home');
+        }
+      } catch (error) {
+        console.error('Auto-login failed:', error);
+        authService.logout();
       }
-    }
+    };
+    
+    checkAutoLogin();
   }, [onLogin, onNavigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,54 +99,41 @@ const AuthPage: React.FC<AuthPageProps> = ({ onNavigate, onLogin }) => {
     // Check IP session
     DB.clearSessionOnIPChange();
     
-    setTimeout(() => {
+    const handleAuthOperation = async () => {
       if (isLogin) {
         // Login
-        if (isAdmin) {
-          // Verifica credenziali admin usando email
-          const result = DB.verifyCredentials(formData.email, formData.password);
+        // Login sicuro con JWT
+        try {
+          const result = await authService.login(formData.email, formData.password);
           
-          if (result.success && result.user && result.user.role === 'admin') {
-            // Set IP for session management and auto-login
-            DB.setAutoLogin(formData.email, formData.password);
-            
-            if (onLogin) {
-              onLogin(result.user);
-            }
+          // Verifica il ruolo se è richiesto admin
+          if (isAdmin && result.user.role !== 'admin') {
             setIsSubmitting(false);
-            showModal('Login admin effettuato con successo!', false);
-            setTimeout(() => {
-              onNavigate('home');
-            }, 2000);
-          } else {
-            setIsSubmitting(false);
-            showModal('Email o password non corretti');
+            showModal('Accesso negato: privilegi di amministratore richiesti');
+            return;
           }
-        } else {
-          // Login atleta
-          const result = DB.verifyCredentials(formData.email, formData.password);
           
-          if (result.success) {
-            if (result.user && result.user.role === 'atleta') {
-              // Set IP for session management and auto-login
-              DB.setAutoLogin(formData.email, formData.password);
-              
-              if (onLogin) {
-                onLogin(result.user);
-              }
-              setIsSubmitting(false);
-              showModal('Login effettuato con successo!', false);
-              setTimeout(() => {
-                onNavigate('home');
-              }, 2000);
-            } else {
-              setIsSubmitting(false);
-              showModal('Questo account non è un account atleta.');
-            }
-          } else {
+          if (!isAdmin && result.user.role !== 'atleta') {
             setIsSubmitting(false);
-            showModal('Email o password non corretti.');
+            showModal('Questo account non è un account atleta.');
+            return;
           }
+          
+          if (onLogin) {
+            onLogin(result.user);
+          }
+          
+          setIsSubmitting(false);
+          showModal(`Login ${isAdmin ? 'admin' : 'atleta'} effettuato con successo!`, false);
+          
+          setTimeout(() => {
+            onNavigate('home');
+          }, 2000);
+          
+        } catch (error) {
+          setIsSubmitting(false);
+          const errorMessage = error instanceof Error ? error.message : 'Email o password non corretti';
+          showModal(errorMessage);
         }
       } else {
         // Registrazione (solo per atleti)
@@ -182,6 +174,11 @@ const AuthPage: React.FC<AuthPageProps> = ({ onNavigate, onLogin }) => {
           onNavigate('home');
         }, 2000);
       }
+    };
+    
+    // Esegui l'operazione di autenticazione con un piccolo delay
+    setTimeout(() => {
+      handleAuthOperation();
     }, 1500);
   };
 

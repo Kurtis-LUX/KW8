@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Search, Plus, Edit, Trash2, Download, Upload, User as UserIcon, FileText, CheckCircle, XCircle, X, ChevronUp, ChevronDown, Grid, List, Copy, Filter, SortAsc, SortDesc, Play, Image, Music, Tag, Calendar, Clock, Target, Star, Eye, EyeOff, GripVertical, Folder, FolderOpen, FolderPlus, Settings, Home, Briefcase, Heart, Zap, Shield, Award, Book, Users, Activity } from 'lucide-react';
-import DB, { User, WorkoutPlan, Exercise, WorkoutFolder } from '../utils/database';
+import hybridDB from '../utils/hybridDatabase';
+import { User, WorkoutPlan, Exercise, WorkoutFolder } from '../utils/database';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -34,6 +35,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
   const [showDeleteWorkoutModal, setShowDeleteWorkoutModal] = useState<boolean>(false);
   const [showFolderModal, setShowFolderModal] = useState<boolean>(false);
   const [showDeleteFolderModal, setShowDeleteFolderModal] = useState<boolean>(false);
+  const [showValidationModal, setShowValidationModal] = useState<boolean>(false);
+  const [validationMessage, setValidationMessage] = useState<string>('');
   
   // Stati filtri
   const [showAthleteFilters, setShowAthleteFilters] = useState<boolean>(false);
@@ -103,7 +106,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     membershipFilePath: '',
     invoiceFilePath: '',
     certificatoMedico: false,
-    certificatoMedicoFile: ''
+    certificatoMedicoStato: 'Mancante' as 'Valido' | 'Mancante' | 'Scaduto',
+    certificatoMedicoFile: '',
+    dataCertificato: ''
   });
   
   const [workoutPlanForm, setWorkoutPlanForm] = useState({
@@ -154,16 +159,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
   const loadData = async (): Promise<void> => {
     try {
       // Carica tutti gli atleti
-      const allUsers = DB.getUsers();
+      const allUsers = await hybridDB.getUsers();
       const athleteUsers = allUsers.filter(user => user.role === 'atleta');
       setAthletes(athleteUsers);
       
       // Carica tutte le schede di allenamento
-      const allWorkoutPlans = DB.getWorkoutPlans();
+      const allWorkoutPlans = await hybridDB.getWorkoutPlans();
       setWorkoutPlans(allWorkoutPlans);
       
       // Carica tutte le cartelle
-      const allFolders = DB.getWorkoutFolders();
+      const allFolders = await hybridDB.getWorkoutFolders();
       setWorkoutFolders(allFolders);
     } catch (error) {
       console.error('Errore durante il caricamento dei dati:', error);
@@ -202,7 +207,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     const missingFields = requiredFields.filter(field => !athleteForm[field as keyof typeof athleteForm]);
     
     if (missingFields.length > 0) {
-      alert('I seguenti campi sono obbligatori: ' + missingFields.join(', '));
+      setValidationMessage('I seguenti campi sono obbligatori: ' + missingFields.join(', '));
+      setShowValidationModal(true);
       return false;
     }
     return true;
@@ -227,7 +233,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       membershipFilePath: '',
       invoiceFilePath: '',
       certificatoMedico: false,
-      certificatoMedicoFile: ''
+      certificatoMedicoStato: 'Mancante',
+      certificatoMedicoFile: '',
+      dataCertificato: ''
     });
     setSelectedAthlete(null);
     setShowAthleteModal(true);
@@ -251,7 +259,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       membershipFilePath: athlete.membershipFilePath || '',
       invoiceFilePath: athlete.invoiceFilePath || '',
       certificatoMedico: athlete.certificatoMedico || false,
-      certificatoMedicoFile: athlete.certificatoMedicoFile || ''
+      certificatoMedicoStato: athlete.certificatoMedicoStato || 'Mancante',
+      certificatoMedicoFile: athlete.certificatoMedicoFile || '',
+      dataCertificato: athlete.dataCertificato || ''
     });
     setSelectedAthlete(athlete);
     setShowAthleteModal(true);
@@ -325,14 +335,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
         membershipFilePath: athleteForm.membershipFilePath,
         invoiceFilePath: athleteForm.invoiceFilePath,
         certificatoMedico: athleteForm.certificatoMedico,
-        certificatoMedicoFile: athleteForm.certificatoMedicoFile
+        certificatoMedicoFile: athleteForm.certificatoMedicoFile,
+        dataCertificato: athleteForm.dataCertificato
       };
       
-      DB.saveUser(newAthlete);
+      await hybridDB.saveUser(newAthlete);
       setShowAthleteModal(false);
       await loadData();
     } catch (error) {
       console.error('Errore durante il salvataggio dell\'atleta:', error);
+    }
+  };
+
+  const deleteAthlete = async (athleteId: string): Promise<void> => {
+    try {
+      if (window.confirm('Sei sicuro di voler eliminare questo atleta? Questa azione non può essere annullata.')) {
+        await hybridDB.deleteUser(athleteId);
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Errore durante l\'eliminazione dell\'atleta:', error);
     }
   };
   
@@ -365,7 +387,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
         targetMuscles: []
       };
       
-      DB.saveWorkoutPlan(newWorkoutPlan);
+      await hybridDB.saveWorkoutPlan(newWorkoutPlan);
       
       // Assegna automaticamente la scheda se è stato selezionato un atleta
       if (workoutPlanForm.userId) {
@@ -376,7 +398,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
           
           if (!updatedAthlete.workoutPlans.includes(newWorkoutPlan.id)) {
             updatedAthlete.workoutPlans.push(newWorkoutPlan.id);
-            DB.saveUser(updatedAthlete);
+            await hybridDB.saveUser(updatedAthlete);
           }
         }
       }
@@ -428,7 +450,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
   const confirmDeleteWorkoutPlan = async (): Promise<void> => {
     try {
       if (workoutToDelete) {
-        DB.deleteWorkoutPlan(workoutToDelete);
+        await hybridDB.deleteWorkoutPlan(workoutToDelete);
         await loadData();
         setWorkoutToDelete(null);
         setShowDeleteWorkoutModal(false);
@@ -461,7 +483,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
           membershipStatus: newStatus,
           membershipDate: newStatus === 'active' ? new Date().toISOString().split('T')[0] : ''
         };
-        DB.saveUser(updatedAthlete);
+        await hybridDB.saveUser(updatedAthlete);
         await loadData();
       }
     } catch (error) {
@@ -478,7 +500,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
           paymentStatus: newStatus,
           lastPaymentDate: newStatus === 'paid' ? new Date().toISOString().split('T')[0] : ''
         };
-        DB.saveUser(updatedAthlete);
+        await hybridDB.saveUser(updatedAthlete);
         await loadData();
       }
     } catch (error) {
@@ -486,15 +508,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     }
   }, [athletes]);
 
-  const handleCertificatoMedicoChange = useCallback(async (athleteId: string, hasCertificato: boolean) => {
+  const handleCertificatoMedicoChange = useCallback(async (athleteId: string, stato: 'Valido' | 'Mancante' | 'Scaduto') => {
     try {
       const athlete = athletes.find(a => a.id === athleteId);
       if (athlete) {
         const updatedAthlete = {
           ...athlete,
-          certificatoMedico: hasCertificato
+          certificatoMedicoStato: stato,
+          certificatoMedico: stato === 'Valido', // Manteniamo compatibilità
+          dataCertificato: stato === 'Valido' ? new Date().toISOString().split('T')[0] : ''
         };
-        DB.saveUser(updatedAthlete);
+        await hybridDB.saveUser(updatedAthlete);
         await loadData();
       }
     } catch (error) {
@@ -503,29 +527,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
   }, [athletes]);
   
   // Funzione per reset database atleti (SOLO PER SVILUPPO)
-  const resetAthleteDatabase = async (): Promise<void> => {
-    try {
-      if (window.confirm('ATTENZIONE: Questa operazione eliminerà TUTTI gli atleti dal database. Continuare?')) {
-        // Ottieni tutti gli utenti
-        const allUsers = DB.getUsers();
-        
-        // Filtra solo gli atleti e li elimina
-        const athletesToDelete = allUsers.filter(user => user.role === 'atleta');
-        
-        for (const athlete of athletesToDelete) {
-          DB.deleteUser(athlete.id);
-        }
-        
-        // Ricarica i dati
-        await loadData();
-        
-        alert(`Database reset completato. Eliminati ${athletesToDelete.length} atleti.`);
-      }
-    } catch (error) {
-      console.error('Errore durante il reset del database:', error);
-      alert('Errore durante il reset del database.');
-    }
-  };
+
 
   // Funzione per pulire i filtri atleti
   const clearAthleteFilters = useCallback(() => {
@@ -724,16 +726,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-navy-900">Gestione Atleti</h2>
-                
-                {/* Pulsante Reset Database - SOLO PER SVILUPPO */}
-                <button
-                  onClick={resetAthleteDatabase}
-                  className="flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors duration-300 text-sm"
-                  title="Reset database atleti (solo per sviluppo)"
-                >
-                  <Trash2 size={16} />
-                  <span>Reset DB</span>
-                </button>
               </div>
               
               {/* Filtri Avanzati */}
@@ -988,17 +980,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                           </td>
                           <td className="py-4 px-4">
                             <select
-                              value={athlete.certificatoMedico ? 'presente' : 'mancante'}
-                              onChange={(e) => handleCertificatoMedicoChange(athlete.id, e.target.value === 'presente')}
+                              value={athlete.certificatoMedicoStato || 'Mancante'}
+                              onChange={(e) => handleCertificatoMedicoChange(athlete.id, e.target.value as 'Valido' | 'Mancante' | 'Scaduto')}
                               className={`px-3 py-1 rounded-full text-xs font-medium border-0 cursor-pointer ${
-                                athlete.certificatoMedico
+                                athlete.certificatoMedicoStato === 'Valido'
                                   ? 'bg-green-100 text-green-800'
+                                  : athlete.certificatoMedicoStato === 'Scaduto'
+                                  ? 'bg-yellow-100 text-yellow-800'
                                   : 'bg-red-100 text-red-800'
                               }`}
                             >
-                              <option value="mancante">Mancante</option>
-                              <option value="presente">Presente</option>
+                              <option value="Mancante">Mancante</option>
+                              <option value="Valido">Valido</option>
+                              <option value="Scaduto">Scaduto</option>
                             </select>
+                            {athlete.dataCertificato && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(athlete.dataCertificato).toLocaleDateString('it-IT')}
+                              </p>
+                            )}
                             {athlete.certificatoMedicoFile && (
                               <p className="text-xs text-gray-500 mt-1">
                                 File caricato
@@ -1014,7 +1014,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                               >
                                 <Edit size={16} />
                               </button>
-                              {/* funzione rimossa - deleteAthlete */}
+                              <button
+                                onClick={() => deleteAthlete(athlete.id)}
+                                className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-all duration-300"
+                                title="Elimina atleta"
+                              >
+                                <Trash2 size={16} />
+                              </button>
                               {/* funzione rimossa - openAssignWorkoutModal */}
                             </div>
                           </td>
@@ -1285,13 +1291,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                 <div>
                   <label className="block text-navy-700 font-medium mb-2">Certificato Medico</label>
                   <select
-                    value={athleteForm.certificatoMedico ? 'presente' : 'mancante'}
-                    onChange={(e) => setAthleteForm({...athleteForm, certificatoMedico: e.target.value === 'presente'})}
+                    value={athleteForm.certificatoMedicoStato || 'Mancante'}
+                    onChange={(e) => {
+                      const stato = e.target.value as 'Valido' | 'Mancante' | 'Scaduto';
+                      setAthleteForm({
+                        ...athleteForm, 
+                        certificatoMedicoStato: stato,
+                        certificatoMedico: stato === 'Valido',
+                        dataCertificato: stato === 'Valido' ? new Date().toISOString().split('T')[0] : ''
+                      });
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   >
-                    <option value="mancante">Mancante</option>
-                    <option value="presente">Presente</option>
+                    <option value="Mancante">Mancante</option>
+                    <option value="Valido">Valido</option>
+                    <option value="Scaduto">Scaduto</option>
                   </select>
+                  {athleteForm.dataCertificato && (
+                    <p className="text-sm text-gray-600 mt-2">
+                      Data certificato: {new Date(athleteForm.dataCertificato).toLocaleDateString('it-IT')}
+                    </p>
+                  )}
                 </div>
                 
                 <div>
@@ -1498,6 +1518,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-300"
                 >
                   Elimina
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal di validazione */}
+        {showValidationModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-red-600">Errore di Validazione</h3>
+                <button
+                  onClick={() => setShowValidationModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-gray-700 mb-6">{validationMessage}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowValidationModal(false)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-300"
+                >
+                  OK
                 </button>
               </div>
             </div>

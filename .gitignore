@@ -23,4 +23,20 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
 autopush.py
