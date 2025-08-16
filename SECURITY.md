@@ -50,7 +50,7 @@ Tutti gli endpoint admin ora richiedono autenticazione:
 JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
 
 # Database
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/kw8_fitness
+MONGODB_URI=<YOUR_MONGODB_URI>
 
 # CORS
 FRONTEND_URL=https://kw8-fitness.vercel.app

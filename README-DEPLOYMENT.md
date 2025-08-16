@@ -103,7 +103,7 @@ vercel --prod
 3. Ottieni la connection string
 4. Aggiungi le variabili d'ambiente su Vercel:
    ```
-   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/kw8
+   MONGODB_URI=<YOUR_MONGODB_URI>
    ```
 
 5. Aggiorna gli endpoint API per usare MongoDB:
