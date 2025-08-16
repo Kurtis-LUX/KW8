@@ -25,6 +25,8 @@ export interface User {
   membershipDate?: string;
   invoiceFilePath?: string;
   ipAddress?: string;
+  certificatoMedico?: boolean;
+  certificatoMedicoFile?: string;
 }
 
 export interface WorkoutPlan {

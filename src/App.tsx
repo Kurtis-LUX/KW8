@@ -75,15 +75,12 @@ function App() {
     }
   }, []);
 
-  const handleNavigation = (page: string, planType?: string) => {
-    // Scroll sempre in cima alla pagina per navigazioni reali
-    if (!['privacy', 'terms', 'cookie-policy', 'privacy-policy', 'cookie-settings'].includes(page)) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleNavigation = (page: string, plan?: string) => {
+    if (plan) {
+      setSelectedPlan(plan);
     }
     
-    if (page === 'cookie-settings') {
-      setShowCookieSettings(true);
-    } else if (page === 'privacy') {
+    if (page === 'privacy') {
       setShowPrivacyModal(true);
     } else if (page === 'terms') {
       setShowTermsModal(true);
@@ -91,17 +88,13 @@ function App() {
       setShowCookiePolicyModal(true);
     } else if (page === 'privacy-policy') {
       setShowPrivacyPolicyModal(true);
-    } else if (page === 'admin-dashboard' && (!currentUser || currentUser.role !== 'admin')) {
-      // Reindirizza alla home se non è un admin
-      setCurrentPage('home');
+    } else if (page === 'cookie-settings') {
+      setShowCookieSettings(true);
     } else {
       setCurrentPage(page);
-      if (planType) {
-        setSelectedPlan(planType);
-      }
     }
   };
-  
+
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     localStorage.setItem('currentUser', JSON.stringify(user));
@@ -118,8 +111,9 @@ function App() {
     }
   };
 
+  // Gestione delle pagine
   if (currentPage === 'payment') {
-    return <PaymentPage planType={selectedPlan} onNavigate={handleNavigation} />;
+    return <PaymentPage onNavigate={handleNavigation} selectedPlan={selectedPlan} currentUser={currentUser} />;
   }
 
   if (currentPage === 'auth') {
@@ -127,11 +121,20 @@ function App() {
   }
 
   if (currentPage === 'workouts') {
-    return <WorkoutsPage onNavigate={handleNavigation} currentUser={currentUser} />;
+    return currentUser ? 
+      <WorkoutsPage onNavigate={handleNavigation} currentUser={currentUser} /> : 
+      <div className="p-8 text-center">
+        <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
+        <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
+        <button 
+          onClick={() => handleNavigation('auth')} 
+          className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+        >
+          Accedi
+        </button>
+      </div>;
   }
 
-
-  
   if (currentPage === 'admin-dashboard') {
     return currentUser && currentUser.role === 'admin' ? 
       <AdminDashboard onNavigate={handleNavigation} currentUser={currentUser} /> : 
@@ -260,23 +263,6 @@ function App() {
       >
         <PrivacyPolicyPage onNavigate={() => {}} />
       </Modal>
-       
-       {/* Cookie Consent e Settings */}
-       {showCookieConsent && (
-         <CookieConsent 
-           onAccept={() => setShowCookieConsent(false)}
-           onDecline={() => setShowCookieConsent(false)}
-           onShowPrivacyModal={() => setShowPrivacyModal(true)}
-           onShowCookiePolicyModal={() => setShowCookiePolicyModal(true)}
-         />
-       )}
-       
-       {showCookieSettings && (
-         <CookieSettings 
-           onClose={() => setShowCookieSettings(false)}
-           currentUser={currentUser}
-         />
-       )}
     </div>
   );
 }
