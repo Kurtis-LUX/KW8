@@ -89,6 +89,7 @@ export interface Subscription {
 const DB = {
   // Utenti
   getUsers: (): User[] => {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
     const users = localStorage.getItem('kw8_users');
     return users ? JSON.parse(users) : [];
   },
@@ -104,6 +105,7 @@ const DB = {
   },
   
   saveUser: (user: User): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
     const users = DB.getUsers();
     const existingUserIndex = users.findIndex(u => u.id === user.id);
     
@@ -124,7 +126,8 @@ const DB = {
   
   // Piani di allenamento
   getWorkoutPlans: (): WorkoutPlan[] => {
-    const plans = localStorage.getItem('kw8_workout_plans');
+    if (typeof window === 'undefined' || !window.localStorage) return [];
+    const plans = localStorage.getItem('kw8_workoutPlans');
     const workoutPlans = plans ? JSON.parse(plans) : [];
     
     // Aggiorna le schede esistenti con le nuove proprietà se mancanti
@@ -146,7 +149,7 @@ const DB = {
     
     // Salva le schede aggiornate se sono state modificate
     if (updatedPlans.length > 0 && JSON.stringify(updatedPlans) !== JSON.stringify(workoutPlans)) {
-      localStorage.setItem('kw8_workout_plans', JSON.stringify(updatedPlans));
+      localStorage.setItem('kw8_workoutPlans', JSON.stringify(updatedPlans));
     }
     
     return updatedPlans;
@@ -163,6 +166,7 @@ const DB = {
   },
   
   saveWorkoutPlan: (plan: WorkoutPlan): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
     const plans = DB.getWorkoutPlans();
     const existingPlanIndex = plans.findIndex(p => p.id === plan.id);
     
@@ -172,7 +176,7 @@ const DB = {
       plans.push(plan);
     }
     
-    localStorage.setItem('kw8_workout_plans', JSON.stringify(plans));
+    localStorage.setItem('kw8_workoutPlans', JSON.stringify(plans));
   },
   
   deleteWorkoutPlan: (planId: string): void => {
@@ -183,6 +187,7 @@ const DB = {
 
   // Cartelle
   getWorkoutFolders: (): WorkoutFolder[] => {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
     const folders = localStorage.getItem('kw8_workoutFolders');
     return folders ? JSON.parse(folders) : [];
   },
@@ -193,6 +198,7 @@ const DB = {
   },
 
   saveWorkoutFolder: (folder: WorkoutFolder): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
     const folders = DB.getWorkoutFolders();
     const existingFolderIndex = folders.findIndex(f => f.id === folder.id);
     
@@ -206,6 +212,7 @@ const DB = {
   },
 
   deleteWorkoutFolder: (folderId: string): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
     const folders = DB.getWorkoutFolders();
     const plans = DB.getWorkoutPlans();
     
@@ -241,6 +248,7 @@ const DB = {
   
   // Abbonamenti
   getSubscriptions: (): Subscription[] => {
+    if (typeof window === 'undefined' || !window.localStorage) return [];
     const subscriptions = localStorage.getItem('kw8_subscriptions');
     return subscriptions ? JSON.parse(subscriptions) : [];
   },
@@ -251,6 +259,7 @@ const DB = {
   },
   
   saveSubscription: (subscription: Subscription): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
     const subscriptions = DB.getSubscriptions();
     const existingSubIndex = subscriptions.findIndex(s => s.id === subscription.id);
     
@@ -265,6 +274,7 @@ const DB = {
   
   // Inizializzazione del database con dati predefiniti
   initializeDatabase: (): void => {
+    if (typeof window === 'undefined' || !window.localStorage) return;
     // Verifica se il database è già stato inizializzato
     if (localStorage.getItem('kw8_initialized')) return;
     

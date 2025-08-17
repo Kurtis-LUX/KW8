@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 // Funzione per inizializzare il database con dati di esempio
 export const initializeData = () => {
   // Verifica se il database è già stato inizializzato con dati di esempio
+  if (typeof window === 'undefined' || !window.localStorage) return;
   if (localStorage.getItem('kw8_data_initialized')) return;
   
   // Crea abbonamenti predefiniti
@@ -192,7 +193,9 @@ export const initializeData = () => {
   workoutPlans.forEach(plan => DB.saveWorkoutPlan(plan));
   
   // Segna il database come inizializzato con dati di esempio
-  localStorage.setItem('kw8_data_initialized', 'true');
+  if (typeof window !== 'undefined' && window.localStorage) {
+    localStorage.setItem('kw8_data_initialized', 'true');
+  }
 };
 
 export default initializeData;

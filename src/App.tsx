@@ -38,35 +38,44 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
-    // Inizializza il database con le configurazioni di base
-    DB.initializeDatabase();
-    
-    // Inizializza il database con dati di esempio
-    initializeData();
-    
-    // Controlla se l'utente ha già dato il consenso ai cookie
-    const hasConsent = localStorage.getItem('cookieConsent');
-    if (hasConsent) {
-      setShowCookieConsent(false);
-    }
-    
-    // Auto-login sicuro con JWT
-    const checkAutoLogin = async () => {
+    const initializeApp = async () => {
       try {
-        const user = await authService.autoLogin();
-        if (user) {
-          setCurrentUser(user);
-          localStorage.setItem('currentUser', JSON.stringify(user));
+        // Inizializza il database con le configurazioni di base
+        DB.initializeDatabase();
+        
+        // Inizializza il database con dati di esempio
+        initializeData();
+        
+        // Controlla se l'utente ha già dato il consenso ai cookie
+        const hasConsent = localStorage.getItem('cookieConsent');
+        if (hasConsent) {
+          setShowCookieConsent(false);
         }
+        
+        // Auto-login sicuro con JWT
+        const checkAutoLogin = async () => {
+          try {
+            const user = await authService.autoLogin();
+            if (user) {
+              setCurrentUser(user);
+              localStorage.setItem('currentUser', JSON.stringify(user));
+            }
+          } catch (error) {
+            console.error('Auto-login failed:', error);
+            // Rimuovi dati di sessione non validi
+            localStorage.removeItem('currentUser');
+            authService.logout();
+          }
+        };
+        
+        await checkAutoLogin();
       } catch (error) {
-        console.error('Auto-login failed:', error);
-        // Rimuovi dati di sessione non validi
-        localStorage.removeItem('currentUser');
-        authService.logout();
+        console.error('App initialization failed:', error);
+        // Fallback per evitare schermata bianca
       }
     };
     
-    checkAutoLogin();
+    initializeApp();
   }, []);
 
   const handleNavigation = (page: string, plan?: string) => {
