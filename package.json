@@ -11,6 +11,7 @@
     "dev:frontend": "vite",
     "dev:api": "node server.cjs",
     "build": "vite build",
+    "start": "vite",
     "lint": "eslint .",
     "preview": "vite preview"
   },
