@@ -166,7 +166,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     };
     
     initializeData();
-  }, [currentUser, onNavigate]);
+  }, [currentUser]);
 
   // Funzione per convertire i dati del database nel formato TreeItem
   const convertToTreeData = (folders: WorkoutFolder[], workoutPlans: WorkoutPlan[]) => {

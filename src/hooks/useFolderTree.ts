@@ -40,9 +40,6 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
   const [folderHistory, setFolderHistory] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  // Stato per forzare il re-render quando i dati cambiano
-  const [dataVersion, setDataVersion] = useState(0);
 
   // Calcola gli elementi correnti basati sulla cartella selezionata
   const currentItems = useMemo(() => {
@@ -51,13 +48,12 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
       return currentFolder?.children || [];
     }
     return rootItems;
-  }, [currentFolderId, rootItems, treeManager, dataVersion]);
+  }, [currentFolderId, rootItems, treeManager]);
 
   // Aggiorna lo stato quando cambia il tree manager
   const refreshData = useCallback(() => {
     try {
       setRootItems([...treeManager.getRootItems()]);
-      setDataVersion(prev => prev + 1); // Forza il re-render
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore sconosciuto');
@@ -69,15 +65,16 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
     setIsLoading(true);
     try {
       treeManager.loadData(data);
-      refreshData();
+      setRootItems([...treeManager.getRootItems()]);
       setCurrentFolderId(null);
       setFolderHistory([]);
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nel caricamento dei dati');
     } finally {
       setIsLoading(false);
     }
-  }, [treeManager, refreshData]);
+  }, [treeManager]);
 
   // Navigazione
   const navigateToFolder = useCallback((folderId: string | null) => {
@@ -126,35 +123,31 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
     try {
       const actualParentId = parentId !== undefined ? parentId : currentFolderId;
       const newFolder = treeManager.createFolder(name, actualParentId, icon);
-      refreshData();
+      setRootItems([...treeManager.getRootItems()]);
       return newFolder;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nella creazione della cartella');
       throw err;
     }
-  }, [currentFolderId, treeManager, refreshData]);
+  }, [currentFolderId, treeManager]);
 
-  const createProgram = useCallback((
-    title: string,
-    parentId?: string | null,
-    options?: Partial<Pick<ProgramItem, 'description' | 'difficulty' | 'status' | 'duration' | 'exercises'>>
-  ): ProgramItem => {
+  const createProgram = useCallback((title: string, parentId?: string | null, options?: Partial<Pick<ProgramItem, 'description' | 'difficulty' | 'status' | 'duration' | 'exercises'>>): ProgramItem => {
     try {
       const actualParentId = parentId !== undefined ? parentId : currentFolderId;
       const newProgram = treeManager.createProgram(title, actualParentId, options);
-      refreshData();
+      setRootItems([...treeManager.getRootItems()]);
       return newProgram;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nella creazione del programma');
       throw err;
     }
-  }, [currentFolderId, treeManager, refreshData]);
+  }, [currentFolderId, treeManager]);
 
   const moveItem = useCallback((itemId: string, newParentId: string | null): boolean => {
     try {
       const success = treeManager.moveItem(itemId, newParentId);
       if (success) {
-        refreshData();
+        setRootItems([...treeManager.getRootItems()]);
       } else {
         setError('Impossibile spostare l\'elemento');
       }
@@ -163,13 +156,13 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
       setError(err instanceof Error ? err.message : 'Errore nello spostamento dell\'elemento');
       return false;
     }
-  }, [treeManager, refreshData]);
+  }, [treeManager]);
 
   const renameItem = useCallback((itemId: string, newName: string): boolean => {
     try {
       const success = treeManager.renameItem(itemId, newName);
       if (success) {
-        refreshData();
+        setRootItems([...treeManager.getRootItems()]);
       } else {
         setError('Impossibile rinominare l\'elemento');
       }
@@ -178,13 +171,13 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
       setError(err instanceof Error ? err.message : 'Errore nella rinomina dell\'elemento');
       return false;
     }
-  }, [treeManager, refreshData]);
+  }, [treeManager]);
 
   const changeFolderIcon = useCallback((folderId: string, newIcon: string): boolean => {
     try {
       const success = treeManager.changeFolderIcon(folderId, newIcon);
       if (success) {
-        refreshData();
+        setRootItems([...treeManager.getRootItems()]);
       } else {
         setError('Impossibile cambiare l\'icona della cartella');
       }
@@ -193,7 +186,7 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
       setError(err instanceof Error ? err.message : 'Errore nel cambio dell\'icona');
       return false;
     }
-  }, [treeManager, refreshData]);
+  }, [treeManager]);
 
   const deleteItem = useCallback((itemId: string): boolean => {
     try {
@@ -204,7 +197,7 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
           setCurrentFolderId(null);
           setFolderHistory([]);
         }
-        refreshData();
+        setRootItems([...treeManager.getRootItems()]);
       } else {
         setError('Impossibile eliminare l\'elemento');
       }
@@ -213,7 +206,7 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
       setError(err instanceof Error ? err.message : 'Errore nell\'eliminazione dell\'elemento');
       return false;
     }
-  }, [currentFolderId, treeManager, refreshData]);
+  }, [currentFolderId, treeManager]);
 
   // Utilità
   const searchItems = useCallback((query: string): TreeItem[] => {

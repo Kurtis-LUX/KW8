@@ -20,8 +20,6 @@ export default defineConfig({
     sourcemap: false
   },
   server: {
-    hmr: {
-      overlay: false
-    }
+    hmr: false
   }
 });
