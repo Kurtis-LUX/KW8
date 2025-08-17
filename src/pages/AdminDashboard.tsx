@@ -2,6 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowLeft, Search, Plus, Edit, Trash2, Download, Upload, User as UserIcon, FileText, CheckCircle, XCircle, X, ChevronUp, ChevronDown, Grid, List, Copy, Filter, SortAsc, SortDesc, Play, Image, Music, Tag, Calendar, Clock, Target, Star, Eye, EyeOff, GripVertical, Folder, FolderOpen, FolderPlus, Settings, Home, Briefcase, Heart, Zap, Shield, Award, Book, Users, Activity } from 'lucide-react';
 import hybridDB from '../utils/hybridDatabase';
 import { User, WorkoutPlan, Exercise, WorkoutFolder } from '../utils/database';
+import { useFolderTree } from '../hooks/useFolderTree';
+import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import FolderComponent from '../components/Folder';
+import CreateButtons from '../components/CreateButtons';
+import FolderBreadcrumb from '../components/FolderBreadcrumb';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -68,6 +73,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
   const [showMembershipDetails, setShowMembershipDetails] = useState<boolean>(false);
   const [showPaymentDetails, setShowPaymentDetails] = useState<boolean>(false);
   const [showRevenueDetails, setShowRevenueDetails] = useState<boolean>(false);
+  
+  // Hook per gestione albero cartelle e schede
+  const folderTree = useFolderTree();
+  
+  // Hook per drag and drop
+  const dragAndDrop = useDragAndDrop({
+    onDrop: folderTree.moveItem
+  });
   
   // Stati filtri
   const [filters, setFilters] = useState({
@@ -154,24 +167,141 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
     
     initializeData();
   }, [currentUser, onNavigate]);
+
+  // Funzione per convertire i dati del database nel formato TreeItem
+  const convertToTreeData = (folders: WorkoutFolder[], workoutPlans: WorkoutPlan[]) => {
+    console.log('🔄 Conversione dati:', { folders: folders.length, plans: workoutPlans.length });
+    const treeItems: any[] = [];
+    
+    // Converti le cartelle
+    folders.forEach(folder => {
+      console.log('📁 Aggiunta cartella:', folder.name, folder.id);
+      treeItems.push({
+        id: folder.id,
+        type: 'folder',
+        name: folder.name,
+        icon: folder.icon || 'Folder',
+        parentId: folder.parentId || null,
+        children: [],
+        order: folder.order || 0,
+        createdAt: folder.createdAt || new Date().toISOString(),
+        updatedAt: folder.updatedAt || new Date().toISOString()
+      });
+    });
+    
+    // Converti i programmi di allenamento
+    workoutPlans.forEach(plan => {
+      console.log('📋 Aggiunto programma:', plan.name, plan.id);
+      treeItems.push({
+        id: plan.id,
+        type: 'program',
+        title: plan.name,
+        description: plan.description || '',
+        parentId: plan.folderId || null,
+        difficulty: plan.difficulty || 1,
+        status: plan.status || 'draft',
+        duration: plan.duration || 30,
+        exercises: plan.exercises || [],
+        order: plan.order || 0,
+        createdAt: plan.createdAt || new Date().toISOString(),
+        updatedAt: plan.updatedAt || new Date().toISOString()
+      });
+    });
+    
+    console.log('✅ Dati convertiti:', treeItems.length, 'elementi totali');
+    return treeItems;
+   };
+
+   // Funzioni per creare cartelle e programmi con salvataggio nel database
+   const handleCreateFolder = async (name: string, parentId?: string | null) => {
+     try {
+       console.log('🆕 Creazione nuova cartella:', { name, parentId });
+       const newFolder: WorkoutFolder = {
+         id: `folder-${Date.now()}`,
+         name: name || 'Nuova Cartella',
+         icon: 'Folder',
+         parentId: parentId || null,
+         order: workoutFolders.length,
+         createdAt: new Date().toISOString(),
+         updatedAt: new Date().toISOString()
+       };
+       
+       console.log('💾 Salvataggio cartella nel database...');
+       await hybridDB.saveWorkoutFolder(newFolder);
+       console.log('🔄 Ricaricamento dati dopo creazione cartella...');
+       await loadData(); // Ricarica tutti i dati
+       console.log('✅ Cartella creata con successo!');
+       return newFolder;
+     } catch (error) {
+       console.error('❌ Errore durante la creazione della cartella:', error);
+       throw error;
+     }
+   };
+
+   const handleCreateProgram = async (title: string, parentId?: string | null) => {
+     try {
+       console.log('🆕 Creazione nuovo programma:', { title, parentId });
+       const newProgram: WorkoutPlan = {
+         id: `workout-${Date.now()}`,
+         name: title || 'Nuovo Programma',
+         description: '',
+         coach: currentUser?.name || '',
+         duration: 30,
+         startDate: new Date().toISOString().split('T')[0],
+         userId: '',
+         exercises: [],
+         category: 'strength',
+         status: 'draft',
+         mediaFiles: { images: [], videos: [], audio: [] },
+         tags: [],
+         order: workoutPlans.length,
+         createdAt: new Date().toISOString(),
+         updatedAt: new Date().toISOString(),
+         difficulty: 1,
+         targetMuscles: [],
+         folderId: parentId || null
+       };
+       
+       console.log('💾 Salvataggio programma nel database...');
+       await hybridDB.saveWorkoutPlan(newProgram);
+       console.log('🔄 Ricaricamento dati dopo creazione programma...');
+       await loadData(); // Ricarica tutti i dati
+       console.log('✅ Programma creato con successo!');
+       return newProgram;
+     } catch (error) {
+       console.error('❌ Errore durante la creazione del programma:', error);
+       throw error;
+     }
+   };
   
   // Funzione per caricare i dati dal database
   const loadData = async (): Promise<void> => {
     try {
+      console.log('🔄 Inizio caricamento dati dal database...');
+      
       // Carica tutti gli atleti
       const allUsers = await hybridDB.getUsers();
       const athleteUsers = allUsers.filter(user => user.role === 'atleta');
       setAthletes(athleteUsers);
+      console.log('👥 Atleti caricati:', athleteUsers.length);
       
       // Carica tutte le schede di allenamento
       const allWorkoutPlans = await hybridDB.getWorkoutPlans();
       setWorkoutPlans(allWorkoutPlans);
+      console.log('📋 Programmi caricati:', allWorkoutPlans.length);
       
       // Carica tutte le cartelle
       const allFolders = await hybridDB.getWorkoutFolders();
       setWorkoutFolders(allFolders);
+      console.log('📁 Cartelle caricate:', allFolders.length);
+      
+      // Sincronizza i dati con il folderTree hook
+      const treeData = convertToTreeData(allFolders, allWorkoutPlans);
+      console.log('🌳 Sincronizzazione con folderTree...');
+      folderTree.loadData(treeData);
+      console.log('✅ Caricamento dati completato!');
     } catch (error) {
-      console.error('Errore durante il caricamento dei dati:', error);
+      console.error('❌ Errore durante il caricamento dei dati:', error);
       throw error;
     }
   };
@@ -711,7 +841,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
             </div>
             
             <button
-              onClick={activeTab === 'athletes' ? openNewAthleteModal : openNewWorkoutPlanModal}
+              onClick={activeTab === 'athletes' ? openNewAthleteModal : () => handleCreateProgram('Nuovo Programma', folderTree.currentFolderId)}
               className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors duration-300"
             >
               <Plus size={20} />
@@ -1037,57 +1167,69 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
         {activeTab === 'workouts' && (
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             <div className="p-6">
-              <h2 className="text-2xl font-bold text-navy-900 mb-6">Gestione Schede</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-navy-900">Gestione Schede</h2>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => setWorkoutViewMode(workoutViewMode === 'grid' ? 'list' : 'grid')}
+                    className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-300"
+                  >
+                    {workoutViewMode === 'grid' ? <List size={16} /> : <Grid size={16} />}
+                    <span>{workoutViewMode === 'grid' ? 'Lista' : 'Griglia'}</span>
+                  </button>
+                </div>
+              </div>
               
-              {filteredWorkoutPlans.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-                  <p className="text-gray-500">Nessuna scheda trovata</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredWorkoutPlans.map((plan) => (
-                    <div key={plan.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-300">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold text-navy-900">{plan.name}</h3>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => openEditWorkoutPlanModal(plan)}
-                            className="text-blue-600 hover:text-blue-800 transition-colors duration-300"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => deleteWorkoutPlan(plan.id)}
-                            className="text-red-600 hover:text-red-800 transition-colors duration-300"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <p className="text-sm text-gray-600 mb-2">Coach: {plan.coach}</p>
-                      <p className="text-sm text-gray-600 mb-2">Durata: {plan.duration} min</p>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          plan.status === 'published'
-                            ? 'bg-green-100 text-green-800'
-                            : plan.status === 'draft'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {plan.status === 'published' ? 'Pubblicata' : plan.status === 'draft' ? 'Bozza' : 'Archiviata'}
-                        </span>
-                        
-                        <span className="text-gray-500">
-                          Difficoltà: {plan.difficulty || 1}/5
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Breadcrumb per navigazione cartelle */}
+              <FolderBreadcrumb
+                currentPath={folderTree.currentPath}
+                onNavigateToFolder={folderTree.navigateToFolder}
+                onNavigateBack={folderTree.navigateBack}
+                onNavigateHome={() => folderTree.navigateToFolder(null)}
+              />
+              
+              {/* Pulsanti per creare cartelle e programmi */}
+              <CreateButtons
+                onCreateFolder={handleCreateFolder}
+                onCreateProgram={handleCreateProgram}
+                currentFolderId={folderTree.currentFolderId}
+              />
+              
+              {/* Contenuto cartelle e schede */}
+              <div className="mt-6">
+                {(() => {
+                  console.log('🔍 Rendering currentItems:', folderTree.currentItems.length, 'elementi');
+                  console.log('📋 Elementi attuali:', folderTree.currentItems.map(item => ({ id: item.id, type: item.type, name: item.name || item.title })));
+                  return null;
+                })()}
+                {folderTree.currentItems.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText size={48} className="mx-auto text-gray-400 mb-4" />
+                    <p className="text-gray-500">
+                      {folderTree.currentFolderId ? 'Questa cartella è vuota' : 'Nessuna cartella o scheda trovata'}
+                    </p>
+                  </div>
+                ) : (
+                  <FolderComponent
+                    items={folderTree.currentItems}
+                    viewMode={workoutViewMode}
+                    onNavigateToFolder={folderTree.navigateToFolder}
+                    onRenameItem={folderTree.renameItem}
+                    onDeleteItem={folderTree.deleteItem}
+                    onCreateSubfolder={(parentId) => handleCreateFolder('Nuova Cartella', parentId)}
+                    onCreateProgram={(parentId) => handleCreateProgram('Nuovo Programma', parentId)}
+                    onEditProgram={openEditWorkoutPlanModal}
+                    onDragStart={dragAndDrop.handleDragStart}
+                    onDragEnd={dragAndDrop.handleDragEnd}
+                    onDragOver={dragAndDrop.handleDragOver}
+                    onDragEnter={dragAndDrop.handleDragEnter}
+                    onDragLeave={dragAndDrop.handleDragLeave}
+                    onDrop={dragAndDrop.handleDrop}
+                    dragOverZone={dragAndDrop.dragState.dragOverZone}
+                    canDrop={dragAndDrop.canDrop}
+                  />
+                )}
+              </div>
             </div>
           </div>
         )}
