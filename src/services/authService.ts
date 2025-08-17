@@ -21,9 +21,36 @@ interface VerifyResponse {
 class AuthService {
   private readonly TOKEN_KEY = 'kw8_auth_token';
   private readonly USER_KEY = 'kw8_current_user';
-  private readonly API_BASE_URL = process.env.NODE_ENV === 'production' 
-    ? 'https://kw8-fitness.vercel.app/api'
-    : 'http://localhost:3001/api';
+  
+  // Funzione per rilevare dinamicamente l'ambiente
+  private getApiBaseUrl(): string {
+    if (typeof window === 'undefined') {
+      // Server-side rendering
+      return 'https://kw8-fitness.vercel.app/api';
+    }
+    
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    
+    // Se siamo su Vercel o dominio di produzione
+    if (hostname.includes('vercel.app') || hostname.includes('kw8-fitness')) {
+      return 'https://kw8-fitness.vercel.app/api';
+    }
+    
+    // Se siamo in locale (localhost o 127.0.0.1)
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'http://localhost:3001/api';
+    }
+    
+    // Fallback per altri casi
+    return process.env.NODE_ENV === 'production' 
+      ? 'https://kw8-fitness.vercel.app/api'
+      : 'http://localhost:3001/api';
+  }
+  
+  private get API_BASE_URL(): string {
+    return this.getApiBaseUrl();
+  }
 
   // Login con credenziali
   async login(email: string, password: string): Promise<LoginResponse> {

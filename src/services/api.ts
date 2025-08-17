@@ -1,9 +1,32 @@
 // Servizio API per gestire le operazioni CRUD con backend remoto
 import { authService } from './authService';
 
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://kw8-fitness.vercel.app/api' // URL di produzione Vercel
-  : 'http://localhost:3001/api'; // Server di sviluppo locale
+// Funzione per rilevare dinamicamente l'ambiente
+function getApiBaseUrl(): string {
+  if (typeof window === 'undefined') {
+    // Server-side rendering
+    return 'https://kw8-fitness.vercel.app/api';
+  }
+  
+  const hostname = window.location.hostname;
+  
+  // Se siamo su Vercel o dominio di produzione
+  if (hostname.includes('vercel.app') || hostname.includes('kw8-fitness')) {
+    return 'https://kw8-fitness.vercel.app/api';
+  }
+  
+  // Se siamo in locale (localhost o 127.0.0.1)
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:3001/api';
+  }
+  
+  // Fallback per altri casi
+  return process.env.NODE_ENV === 'production' 
+    ? 'https://kw8-fitness.vercel.app/api'
+    : 'http://localhost:3001/api';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface ApiResponse<T> {
   success: boolean;
