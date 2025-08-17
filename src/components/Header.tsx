@@ -63,8 +63,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
       onLogout();
     }
     setShowUserMenu(false);
-    // Ricarica la pagina dopo il logout
-    window.location.reload();
   };
   
   const toggleUserMenu = () => {

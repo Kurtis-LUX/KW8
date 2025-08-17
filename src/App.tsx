@@ -98,6 +98,7 @@ function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('currentUser');
+    authService.logout(); // Pulisce i token JWT
     DB.clearAutoLogin(); // Rimuove l'auto-login
     // Se l'utente è in una pagina riservata, reindirizza alla home
     if (currentPage === 'workouts' || currentPage === 'admin-dashboard') {

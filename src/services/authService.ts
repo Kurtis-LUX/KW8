@@ -98,7 +98,24 @@ class AuthService {
         return null;
       }
 
-      const data: VerifyResponse = await response.json();
+      // Verifica che la risposta contenga contenuto
+      const responseText = await response.text();
+      if (!responseText) {
+        console.error('Risposta vuota dal server per verify');
+        this.logout();
+        return null;
+      }
+
+      let data: VerifyResponse;
+      try {
+        data = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('Errore nel parsing JSON per verify:', jsonError);
+        console.error('Risposta ricevuta:', responseText);
+        this.logout();
+        return null;
+      }
+      
       return data;
     } catch (error) {
       console.error('Token verification error:', error);
