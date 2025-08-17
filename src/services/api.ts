@@ -5,14 +5,14 @@ import { authService } from './authService';
 function getApiBaseUrl(): string {
   if (typeof window === 'undefined') {
     // Server-side rendering
-    return 'https://kw8-fitness.vercel.app/api';
+    return 'https://kw8.vercel.app/api';
   }
   
   const hostname = window.location.hostname;
   
   // Se siamo su Vercel o dominio di produzione
-  if (hostname.includes('vercel.app') || hostname.includes('kw8-fitness')) {
-    return 'https://kw8-fitness.vercel.app/api';
+  if (hostname.includes('vercel.app') || hostname.includes('kw8')) {
+    return 'https://kw8.vercel.app/api';
   }
   
   // Se siamo in locale (localhost o 127.0.0.1)
@@ -22,7 +22,7 @@ function getApiBaseUrl(): string {
   
   // Fallback per altri casi
   return process.env.NODE_ENV === 'production' 
-    ? 'https://kw8-fitness.vercel.app/api'
+    ? 'https://kw8.vercel.app/api'
     : 'http://localhost:3001/api';
 }
 
