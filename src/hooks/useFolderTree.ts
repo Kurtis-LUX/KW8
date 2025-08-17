@@ -46,14 +46,10 @@ export const useFolderTree = (initialData?: TreeItem[]): UseFolderTreeReturn => 
 
   // Calcola gli elementi correnti basati sulla cartella selezionata
   const currentItems = useMemo(() => {
-    console.log('🔄 Ricalcolo currentItems:', { currentFolderId, rootItemsLength: rootItems.length, dataVersion });
     if (currentFolderId) {
       const currentFolder = treeManager.findItem(currentFolderId) as FolderItem;
-      const items = currentFolder?.children || [];
-      console.log('📁 Elementi nella cartella corrente:', items.length);
-      return items;
+      return currentFolder?.children || [];
     }
-    console.log('🏠 Elementi root:', rootItems.length);
     return rootItems;
   }, [currentFolderId, rootItems, treeManager, dataVersion]);
 

@@ -40,7 +40,6 @@ export class FolderTreeManager {
 
   // Carica i dati nell'albero
   loadData(items: TreeItem[]): void {
-    console.log('🌳 FolderTreeManager: Caricamento dati...', items.length, 'elementi');
     this.items.clear();
     this.rootItems = [];
 
@@ -56,19 +55,13 @@ export class FolderTreeManager {
     items.forEach(item => {
       if (item.parentId === null) {
         this.rootItems.push(item);
-        console.log('🏠 Elemento root aggiunto:', item.type, item.name || item.title);
       } else {
         const parent = this.items.get(item.parentId);
         if (parent && parent.type === 'folder') {
           parent.children.push(item);
-          console.log('📁 Elemento aggiunto alla cartella:', item.type, item.name || item.title, '-> parent:', parent.name);
-        } else {
-          console.warn('⚠️ Parent non trovato per:', item.type, item.name || item.title, 'parentId:', item.parentId);
         }
       }
     });
-    
-    console.log('✅ FolderTreeManager: Caricamento completato. Root items:', this.rootItems.length);
   }
 
   // Ottieni tutti gli elementi root
@@ -100,18 +93,13 @@ export class FolderTreeManager {
     };
 
     this.items.set(newFolder.id, newFolder);
-    console.log('📁 FolderTreeManager: Creata nuova cartella:', newFolder.name, 'ID:', newFolder.id, 'Parent:', parentId);
 
     if (parentId === null) {
       this.rootItems.push(newFolder);
-      console.log('🏠 Cartella aggiunta al root');
     } else {
       const parent = this.items.get(parentId);
       if (parent && parent.type === 'folder') {
         parent.children.push(newFolder);
-        console.log('📁 Cartella aggiunta alla parent:', parent.name);
-      } else {
-        console.warn('⚠️ Parent non trovato per la nuova cartella:', parentId);
       }
     }
 
@@ -139,18 +127,13 @@ export class FolderTreeManager {
     };
 
     this.items.set(newProgram.id, newProgram);
-    console.log('🏋️ FolderTreeManager: Creato nuovo programma:', newProgram.title, 'ID:', newProgram.id, 'Parent:', parentId);
 
     if (parentId === null) {
       this.rootItems.push(newProgram);
-      console.log('🏠 Programma aggiunto al root');
     } else {
       const parent = this.items.get(parentId);
       if (parent && parent.type === 'folder') {
         parent.children.push(newProgram);
-        console.log('📁 Programma aggiunto alla parent:', parent.name);
-      } else {
-        console.warn('⚠️ Parent non trovato per il nuovo programma:', parentId);
       }
     }
 

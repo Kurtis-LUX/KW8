@@ -170,12 +170,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
 
   // Funzione per convertire i dati del database nel formato TreeItem
   const convertToTreeData = (folders: WorkoutFolder[], workoutPlans: WorkoutPlan[]) => {
-    console.log('🔄 Conversione dati:', { folders: folders.length, plans: workoutPlans.length });
     const treeItems: any[] = [];
     
     // Converti le cartelle
     folders.forEach(folder => {
-      console.log('📁 Aggiunta cartella:', folder.name, folder.id);
       treeItems.push({
         id: folder.id,
         type: 'folder',
@@ -208,7 +206,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       });
     });
     
-    console.log('✅ Dati convertiti:', treeItems.length, 'elementi totali');
     return treeItems;
    };
 
@@ -226,11 +223,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
          updatedAt: new Date().toISOString()
        };
        
-       console.log('💾 Salvataggio cartella nel database...');
        await hybridDB.saveWorkoutFolder(newFolder);
-       console.log('🔄 Ricaricamento dati dopo creazione cartella...');
        await loadData(); // Ricarica tutti i dati
-       console.log('✅ Cartella creata con successo!');
        return newFolder;
      } catch (error) {
        console.error('❌ Errore durante la creazione della cartella:', error);
@@ -262,11 +256,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
          folderId: parentId || null
        };
        
-       console.log('💾 Salvataggio programma nel database...');
        await hybridDB.saveWorkoutPlan(newProgram);
-       console.log('🔄 Ricaricamento dati dopo creazione programma...');
        await loadData(); // Ricarica tutti i dati
-       console.log('✅ Programma creato con successo!');
        return newProgram;
      } catch (error) {
        console.error('❌ Errore durante la creazione del programma:', error);
@@ -277,7 +268,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
   // Funzione per caricare i dati dal database
   const loadData = async (): Promise<void> => {
     try {
-      console.log('🔄 Inizio caricamento dati dal database...');
+
       
       // Carica tutti gli atleti
       const allUsers = await hybridDB.getUsers();
@@ -293,13 +284,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
       // Carica tutte le cartelle
       const allFolders = await hybridDB.getWorkoutFolders();
       setWorkoutFolders(allFolders);
-      console.log('📁 Cartelle caricate:', allFolders.length);
       
       // Sincronizza i dati con il folderTree hook
       const treeData = convertToTreeData(allFolders, allWorkoutPlans);
-      console.log('🌳 Sincronizzazione con folderTree...');
       folderTree.loadData(treeData);
-      console.log('✅ Caricamento dati completato!');
     } catch (error) {
       console.error('❌ Errore durante il caricamento dei dati:', error);
       throw error;
@@ -1197,11 +1185,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate, currentUser
               
               {/* Contenuto cartelle e schede */}
               <div className="mt-6">
-                {(() => {
-                  console.log('🔍 Rendering currentItems:', folderTree.currentItems.length, 'elementi');
-                  console.log('📋 Elementi attuali:', folderTree.currentItems.map(item => ({ id: item.id, type: item.type, name: item.name || item.title })));
-                  return null;
-                })()}
+
                 {folderTree.currentItems.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText size={48} className="mx-auto text-gray-400 mb-4" />
