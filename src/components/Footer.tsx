@@ -129,7 +129,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 className="flex items-center space-x-3 text-navy-700 hover:text-red-600 transition-all duration-300 py-1 hover:translate-x-2"
               >
                 <Mail size={18} />
-                <span>info@kw8palestra.it</span>
+                <span>krossingweight@gmail.it</span>
               </a>
             </div>
           )}
