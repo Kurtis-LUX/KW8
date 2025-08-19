@@ -23,7 +23,7 @@ const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onNavigate }) => 
               <p className="text-gray-700"><strong>Palestra KW8</strong></p>
               <p className="text-gray-700">Via Roma 123, 00100 Roma (RM)</p>
               <p className="text-gray-700">Email: privacy@palestrakw8.it</p>
-              <p className="text-gray-700">Telefono: +39 123 456 7890</p>
+              <p className="text-gray-700">Telefono: 3338346546 (Coach Giuseppe Pandolfo), 3315374473 (Coach Saverio Di Maria)</p>
             </div>
 
             <h2 className="text-2xl font-bold text-navy-700 mb-4">3. Dati Raccolti</h2>
@@ -110,7 +110,7 @@ const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onNavigate }) => 
             </p>
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-gray-700"><strong>Email:</strong> privacy@palestrakw8.it</p>
-              <p className="text-gray-700"><strong>Telefono:</strong> +39 123 456 7890</p>
+              <p className="text-gray-700"><strong>Telefono:</strong> 3338346546 (Coach Giuseppe Pandolfo), 3315374473 (Coach Saverio Di Maria)</p>
               <p className="text-gray-700"><strong>Indirizzo:</strong> Via Roma 123, 00100 Roma (RM)</p>
             </div>
           </div>

@@ -7,7 +7,9 @@ import GymAreasSection from './components/GymAreasSection';
 import ScheduleSection from './components/ScheduleSection';
 import LocationSection from './components/LocationSection';
 import StaffSection from './components/StaffSection';
+import NewsletterSection from './components/NewsletterSection';
 import SocialSection from './components/SocialSection';
+import TrustpilotSection from './components/TrustpilotSection';
 import Footer from './components/Footer';
 import PaymentPage from './pages/PaymentPage';
 import AuthPage from './pages/AuthPage';
@@ -77,6 +79,23 @@ function App() {
     
     initializeApp();
   }, []);
+
+  // Blocca lo scroll della pagina quando qualsiasi modal è aperto
+  useEffect(() => {
+    const isAnyModalOpen = showCookieSettings || showPrivacyModal || showTermsModal || 
+                          showCookiePolicyModal || showPrivacyPolicyModal;
+    
+    if (isAnyModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup quando il componente viene smontato
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showCookieSettings, showPrivacyModal, showTermsModal, showCookiePolicyModal, showPrivacyPolicyModal]);
 
   const handleNavigation = (page: string, plan?: string) => {
     if (plan) {
@@ -177,55 +196,15 @@ function App() {
         />
       )}
       <HeroSection />
-      
-      {/* Separatore decorativo */}
-      <div className="w-full py-4 flex justify-center bg-white">
-        <div className="w-32 h-1 bg-red-600 rounded-full"></div>
-      </div>
-      
       <StatisticsSection />
-      
-      {/* Separatore decorativo */}
-      <div className="w-full py-4 flex justify-center bg-white">
-        <div className="w-32 h-1 bg-red-600 rounded-full"></div>
-      </div>
-      
       <SubscriptionSection onNavigate={handleNavigation} />
-      
-      {/* Separatore decorativo */}
-      <div className="w-full py-4 flex justify-center bg-white">
-        <div className="w-32 h-1 bg-red-600 rounded-full"></div>
-      </div>
-      
       <GymAreasSection />
-      
-      {/* Separatore decorativo */}
-      <div className="w-full py-4 flex justify-center bg-white">
-        <div className="w-32 h-1 bg-red-600 rounded-full"></div>
-      </div>
-      
       <ScheduleSection />
-      
-      {/* Separatore decorativo */}
-      <div className="w-full py-4 flex justify-center bg-white">
-        <div className="w-32 h-1 bg-red-600 rounded-full"></div>
-      </div>
-      
       <LocationSection />
-      
-      {/* Separatore decorativo */}
-      <div className="w-full py-4 flex justify-center bg-white">
-        <div className="w-32 h-1 bg-red-600 rounded-full"></div>
-      </div>
-      
       <StaffSection />
-      
-      {/* Separatore decorativo */}
-      <div className="w-full py-4 flex justify-center bg-white">
-        <div className="w-32 h-1 bg-red-600 rounded-full"></div>
-      </div>
-      
+      <NewsletterSection />
       <SocialSection />
+      <TrustpilotSection />
       <Footer onNavigate={handleNavigation} />
       
       {/* Modal per Privacy */}

@@ -1,6 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 const HeroSection: React.FC = () => {
+  const [displayText, setDisplayText] = useState('');
+  const fullText = 'CROSS YOUR LIMITS.';
+  
+  useEffect(() => {
+    let currentIndex = 0;
+    const typingInterval = setInterval(() => {
+      if (currentIndex <= fullText.length) {
+        setDisplayText(fullText.slice(0, currentIndex));
+        currentIndex++;
+      } else {
+        clearInterval(typingInterval);
+      }
+    }, 100);
+    
+    return () => clearInterval(typingInterval);
+  }, []);
   const scrollToStatistics = () => {
     const element = document.getElementById('statistiche');
     if (element) {
@@ -23,8 +39,8 @@ const HeroSection: React.FC = () => {
       
       {/* Content */}
       <div className="relative z-10 text-center text-white px-4">
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 tracking-wider animate-fadeInSlideUp animate-bounce-subtle">
-          CROSS YOUR LIMITS.
+        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 tracking-wider animate-fadeInSlideUp animate-bounce-subtle" style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}>
+          <span style={{ fontFamily: 'Bebas Neue, cursive' }}>{displayText}</span><span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>
         </h1>
         
         <button

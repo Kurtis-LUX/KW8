@@ -1,0 +1,93 @@
+<svg width="300" height="400" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="400" fill="#f8f9fa"/>
+  
+  <!-- Grid lines for measurement -->
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e9ecef" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="300" height="400" fill="url(#grid)" opacity="0.3"/>
+  
+  <!-- Title -->
+  <text x="150" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#27ae60">DOPO</text>
+  
+  <!-- Body outline - fit figure -->
+  <!-- Head -->
+  <circle cx="150" cy="80" r="25" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Hair -->
+  <path d="M 125 65 Q 150 50 175 65 Q 175 75 150 75 Q 125 75 125 65" fill="#8b4513"/>
+  
+  <!-- Face features - more confident expression -->
+  <circle cx="140" cy="75" r="2" fill="#2c3e50"/>
+  <circle cx="160" cy="75" r="2" fill="#2c3e50"/>
+  <path d="M 142 85 Q 150 92 158 85" stroke="#2c3e50" stroke-width="2" fill="none"/>
+  
+  <!-- Neck -->
+  <rect x="142" y="105" width="16" height="15" fill="#fdbcb4"/>
+  
+  <!-- Torso - athletic build -->
+  <ellipse cx="150" cy="175" rx="35" ry="65" fill="#4a90e2" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Muscle definition lines -->
+  <line x1="135" y1="140" x2="135" y2="210" stroke="#2c3e50" stroke-width="1" opacity="0.3"/>
+  <line x1="150" y1="140" x2="150" y2="210" stroke="#2c3e50" stroke-width="1" opacity="0.3"/>
+  <line x1="165" y1="140" x2="165" y2="210" stroke="#2c3e50" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Arms - muscular -->
+  <ellipse cx="105" cy="155" rx="12" ry="40" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  <ellipse cx="195" cy="155" rx="12" ry="40" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Bicep definition -->
+  <ellipse cx="105" cy="145" rx="8" ry="15" fill="#f4a688" stroke="#2c3e50" stroke-width="1"/>
+  <ellipse cx="195" cy="145" rx="8" ry="15" fill="#f4a688" stroke="#2c3e50" stroke-width="1"/>
+  
+  <!-- Hands -->
+  <circle cx="105" cy="195" r="7" fill="#fdbcb4" stroke="#2c3e50" stroke-width="1"/>
+  <circle cx="195" cy="195" r="7" fill="#fdbcb4" stroke="#2c3e50" stroke-width="1"/>
+  
+  <!-- Legs - toned -->
+  <ellipse cx="135" cy="285" rx="15" ry="50" fill="#2c3e50" stroke="#2c3e50" stroke-width="2"/>
+  <ellipse cx="165" cy="285" rx="15" ry="50" fill="#2c3e50" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Leg muscle definition -->
+  <line x1="135" y1="250" x2="135" y2="320" stroke="#1a252f" stroke-width="1" opacity="0.5"/>
+  <line x1="165" y1="250" x2="165" y2="320" stroke="#1a252f" stroke-width="1" opacity="0.5"/>
+  
+  <!-- Feet -->
+  <ellipse cx="135" cy="345" rx="12" ry="8" fill="#654321" stroke="#2c3e50" stroke-width="1"/>
+  <ellipse cx="165" cy="345" rx="12" ry="8" fill="#654321" stroke="#2c3e50" stroke-width="1"/>
+  
+  <!-- Weight indicator -->
+  <text x="50" y="120" font-family="Arial, sans-serif" font-size="12" fill="#27ae60" font-weight="bold">70kg</text>
+  <text x="50" y="140" font-family="Arial, sans-serif" font-size="10" fill="#7f8c8d">Massa grassa: 17%</text>
+  
+  <!-- Measurement lines -->
+  <line x1="20" y1="105" x2="280" y2="105" stroke="#27ae60" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="20" y1="240" x2="280" y2="240" stroke="#27ae60" stroke-width="1" stroke-dasharray="5,5"/>
+  
+  <!-- Arrows and measurements -->
+  <path d="M 25 105 L 25 240" stroke="#27ae60" stroke-width="2" marker-end="url(#arrowhead-green)" marker-start="url(#arrowhead-green)"/>
+  <text x="10" y="175" font-family="Arial, sans-serif" font-size="10" fill="#27ae60" transform="rotate(-90 10 175)">135cm</text>
+  
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+  
+  <!-- Achievement indicators -->
+  <rect x="200" y="300" width="80" height="80" fill="#fff" stroke="#27ae60" stroke-width="2" rx="5"/>
+  <text x="240" y="315" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#27ae60">RISULTATI</text>
+  <text x="240" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">-15kg peso</text>
+  <text x="240" y="342" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">-8% massa grassa</text>
+  <text x="240" y="354" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">+25% forza</text>
+  <text x="240" y="366" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Energia +100%</text>
+  
+  <!-- Success checkmark -->
+  <circle cx="240" cy="375" r="8" fill="#27ae60"/>
+  <path d="M 236 375 L 239 378 L 244 372" stroke="#fff" stroke-width="2" fill="none"/>
+</svg>

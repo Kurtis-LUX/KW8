@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FolderPlus, Plus, X, Folder, FileText } from 'lucide-react';
 import { FOLDER_ICONS } from '../utils/folderTree';
 import type { FolderItem, ProgramItem } from '../utils/folderTree';
@@ -32,6 +32,20 @@ const CreateFolderModal: React.FC<CreateFolderModalProps> = ({ isOpen, onClose, 
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('📁');
   const [errors, setErrors] = useState<{ name?: string }>({});
+
+  // Blocca lo scroll della pagina quando il modal è aperto
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup quando il componente viene smontato
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,6 +170,20 @@ const CreateProgramModal: React.FC<CreateProgramModalProps> = ({ isOpen, onClose
     duration: 60
   });
   const [errors, setErrors] = useState<{ title?: string; duration?: string }>({});
+
+  // Blocca lo scroll della pagina quando il modal è aperto
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup quando il componente viene smontato
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

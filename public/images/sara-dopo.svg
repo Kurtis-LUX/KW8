@@ -1,0 +1,102 @@
+<svg width="300" height="400" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="400" fill="#f8f9fa"/>
+  
+  <!-- Grid lines for measurement -->
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e9ecef" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="300" height="400" fill="url(#grid)" opacity="0.3"/>
+  
+  <!-- Title -->
+  <text x="150" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#27ae60">DOPO</text>
+  
+  <!-- Body outline - toned figure -->
+  <!-- Head -->
+  <circle cx="150" cy="80" r="22" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Hair - longer for female -->
+  <path d="M 128 65 Q 150 45 172 65 Q 175 85 150 90 Q 125 85 128 65" fill="#8b4513"/>
+  <path d="M 125 75 Q 120 95 125 110" stroke="#8b4513" stroke-width="3" fill="none"/>
+  <path d="M 175 75 Q 180 95 175 110" stroke="#8b4513" stroke-width="3" fill="none"/>
+  
+  <!-- Face features - confident smile -->
+  <circle cx="142" cy="76" r="2" fill="#2c3e50"/>
+  <circle cx="158" cy="76" r="2" fill="#2c3e50"/>
+  <path d="M 144 86 Q 150 92 156 86" stroke="#2c3e50" stroke-width="2" fill="none"/>
+  
+  <!-- Neck -->
+  <rect x="143" y="102" width="14" height="12" fill="#fdbcb4"/>
+  
+  <!-- Torso - athletic build -->
+  <ellipse cx="150" cy="170" rx="30" ry="55" fill="#e91e63" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Muscle definition lines -->
+  <line x1="140" y1="140" x2="140" y2="200" stroke="#2c3e50" stroke-width="1" opacity="0.3"/>
+  <line x1="150" y1="140" x2="150" y2="200" stroke="#2c3e50" stroke-width="1" opacity="0.3"/>
+  <line x1="160" y1="140" x2="160" y2="200" stroke="#2c3e50" stroke-width="1" opacity="0.3"/>
+  
+  <!-- Arms - toned -->
+  <ellipse cx="115" cy="150" rx="12" ry="35" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  <ellipse cx="185" cy="150" rx="12" ry="35" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Muscle definition on arms -->
+  <ellipse cx="115" cy="140" rx="8" ry="12" fill="#f4a688" stroke="#2c3e50" stroke-width="1"/>
+  <ellipse cx="185" cy="140" rx="8" ry="12" fill="#f4a688" stroke="#2c3e50" stroke-width="1"/>
+  
+  <!-- Hands -->
+  <circle cx="115" cy="185" r="6" fill="#fdbcb4" stroke="#2c3e50" stroke-width="1"/>
+  <circle cx="185" cy="185" r="6" fill="#fdbcb4" stroke="#2c3e50" stroke-width="1"/>
+  
+  <!-- Legs - toned -->
+  <ellipse cx="135" cy="280" rx="15" ry="50" fill="#2c3e50" stroke="#2c3e50" stroke-width="2"/>
+  <ellipse cx="165" cy="280" rx="15" ry="50" fill="#2c3e50" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Leg muscle definition -->
+  <line x1="135" y1="245" x2="135" y2="315" stroke="#1a252f" stroke-width="1" opacity="0.5"/>
+  <line x1="165" y1="245" x2="165" y2="315" stroke="#1a252f" stroke-width="1" opacity="0.5"/>
+  
+  <!-- Feet -->
+  <ellipse cx="135" cy="340" rx="10" ry="6" fill="#654321" stroke="#2c3e50" stroke-width="1"/>
+  <ellipse cx="165" cy="340" rx="10" ry="6" fill="#654321" stroke="#2c3e50" stroke-width="1"/>
+  
+  <!-- Weight indicator -->
+  <text x="50" y="120" font-family="Arial, sans-serif" font-size="12" fill="#27ae60" font-weight="bold">55kg</text>
+  <text x="50" y="140" font-family="Arial, sans-serif" font-size="10" fill="#7f8c8d">Massa muscolare: alta</text>
+  
+  <!-- Measurement lines -->
+  <line x1="20" y1="102" x2="280" y2="102" stroke="#27ae60" stroke-width="1" stroke-dasharray="5,5"/>
+  <line x1="20" y1="225" x2="280" y2="225" stroke="#27ae60" stroke-width="1" stroke-dasharray="5,5"/>
+  
+  <!-- Arrows and measurements -->
+  <path d="M 25 102 L 25 225" stroke="#27ae60" stroke-width="2" marker-end="url(#arrowhead-green)" marker-start="url(#arrowhead-green)"/>
+  <text x="10" y="165" font-family="Arial, sans-serif" font-size="10" fill="#27ae60" transform="rotate(-90 10 165)">123cm</text>
+  
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+  
+  <!-- Achievement indicators -->
+  <rect x="200" y="290" width="85" height="85" fill="#fff" stroke="#27ae60" stroke-width="2" rx="5"/>
+  <text x="242" y="305" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#27ae60">RISULTATI</text>
+  <text x="242" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">+3kg massa</text>
+  <text x="242" y="332" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">+40% forza</text>
+  <text x="242" y="344" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">+60% resistenza</text>
+  <text x="242" y="356" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Tono muscolare</text>
+  <text x="242" y="368" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Definizione</text>
+  
+  <!-- Success checkmark -->
+  <circle cx="242" cy="375" r="8" fill="#27ae60"/>
+  <path d="M 238 375 L 241 378 L 246 372" stroke="#fff" stroke-width="2" fill="none"/>
+  
+  <!-- Strength indicators -->
+  <circle cx="115" cy="150" r="18" fill="none" stroke="#27ae60" stroke-width="2" opacity="0.7"/>
+  <circle cx="185" cy="150" r="18" fill="none" stroke="#27ae60" stroke-width="2" opacity="0.7"/>
+  <text x="95" y="125" font-family="Arial, sans-serif" font-size="8" fill="#27ae60" font-weight="bold">Tonico</text>
+  <text x="175" y="125" font-family="Arial, sans-serif" font-size="8" fill="#27ae60" font-weight="bold">Tonico</text>
+</svg>

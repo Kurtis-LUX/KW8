@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe } from 'lucide-react';
 
 import { User } from '../utils/database';
+import RulesSection from './RulesSection';
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -13,6 +14,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showRulesModal, setShowRulesModal] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState('it');
   
   // Aggiungi event listener per lo scroll
   useEffect(() => {
@@ -24,7 +27,31 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Blocca lo scroll della pagina quando il menu mobile è aperto
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup quando il componente viene smontato
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMenuOpen]);
+
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  const handleShowRules = () => {
+    setShowRulesModal(true);
+    setIsMenuOpen(false);
+  };
+
+  const toggleLanguage = () => {
+    setCurrentLanguage(currentLanguage === 'it' ? 'en' : 'it');
+    setIsMenuOpen(false);
+  };
 
   const scrollToSection = (sectionId: string) => {
     if (onNavigate) {
@@ -70,7 +97,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   };
 
   const handleSubscribe = () => {
-    scrollToSection('abbonamenti');
+    scrollToSection('informazioni');
   };
 
   return (
@@ -88,6 +115,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   onNavigate('home');
                 }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+                // Refresh della pagina dopo un breve delay per permettere la navigazione
+                setTimeout(() => {
+                  window.location.reload();
+                }, 100);
               }}
             />
           </div>
@@ -189,7 +220,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               <img 
                 src="/images/logo.png" 
                 alt="KW8 Logo" 
-                className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105"
+                className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer"
+                onClick={() => {
+                  if (onNavigate) {
+                    onNavigate('home');
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  // Refresh della pagina dopo un breve delay per permettere la navigazione
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 100);
+                  setIsMenuOpen(false); // Chiude il menu mobile
+                }}
               />
             </div>
             <button
@@ -200,50 +242,59 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
             </button>
           </div>
           
-          <nav className="px-8 py-8">
-            <ul className="space-y-6">
+          <nav className="px-4 sm:px-8 py-6 sm:py-8 overflow-y-auto max-h-[calc(100vh-100px)]">
+            <ul className="space-y-4 sm:space-y-6">
               <li>
                 <button
                   onClick={() => currentUser ? toggleUserMenu() : handleNavigation('auth')}
-                  className="flex items-center space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
-                  <UserIcon size={24} />
+                  <UserIcon size={20} className="sm:w-6 sm:h-6" />
                   <span>{currentUser ? `${currentUser.name || 'Profilo'} ${currentUser.role === 'admin' ? '(Admin)' : ''}` : 'Accedi'}</span>
                 </button>
               </li>
               <li>
                 <button
-                  onClick={() => scrollToSection('abbonamenti')}
-                  className="flex items-center space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                  onClick={() => scrollToSection('informazioni')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
-                  <CreditCard size={24} />
-                  <span>Abbonamenti</span>
+                  <Mail size={20} className="sm:w-6 sm:h-6" />
+                  <span>Informazioni</span>
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => scrollToSection('posizione')}
-                  className="flex items-center space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
-                  <MapPin size={24} />
+                  <MapPin size={20} className="sm:w-6 sm:h-6" />
                   <span>Posizione</span>
                 </button>
               </li>
               <li>
                 <button
                   onClick={() => scrollToSection('staff')}
-                  className="flex items-center space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
-                  <Users size={24} />
+                  <Users size={20} className="sm:w-6 sm:h-6" />
                   <span>Coach</span>
                 </button>
               </li>
               <li>
                 <button
-                  onClick={() => handleNavigation('workouts')}
-                  className="flex items-center space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                  onClick={handleShowRules}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
-                  <FileText size={24} />
+                  <BookOpen size={20} className="sm:w-6 sm:h-6" />
+                  <span>Regole</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleNavigation('workouts')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <FileText size={20} className="sm:w-6 sm:h-6" />
                   <span>Schede</span>
                 </button>
               </li>
@@ -252,9 +303,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                 <li>
                   <button
                     onClick={() => handleNavigation('cookie-settings')}
-                    className="flex items-center space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                   >
-                    <FileText size={24} />
+                    <FileText size={20} className="sm:w-6 sm:h-6" />
                     <span>Impostazioni Cookie</span>
                   </button>
                 </li>
@@ -264,21 +315,34 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                 <li>
                   <button
                     onClick={() => handleNavigation('admin-dashboard')}
-                    className="flex items-center space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                   >
-                    <Users size={24} />
+                    <Users size={20} className="sm:w-6 sm:h-6" />
                     <span>Dashboard Admin</span>
                   </button>
                 </li>
               )}
               
+              <li>
+                <button
+                  onClick={toggleLanguage}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <Globe size={20} className="sm:w-6 sm:h-6" />
+                  <span className="flex items-center space-x-2">
+                    <span>Lingua</span>
+                    <span className="text-2xl">{currentLanguage === 'it' ? '🇮🇹' : '🇬🇧'}</span>
+                  </span>
+                </button>
+              </li>
+              
               {currentUser && (
                 <li>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center space-x-4 text-red-600 hover:text-red-700 transition-all duration-300 text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-red-600 hover:text-red-700 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                   >
-                    <UserIcon size={24} />
+                    <UserIcon size={20} className="sm:w-6 sm:h-6" />
                     <span>Logout</span>
                   </button>
                 </li>
@@ -286,6 +350,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
             </ul>
           </nav>
         </div>
+
+      {/* Rules Modal */}
+      <RulesSection 
+        isOpen={showRulesModal} 
+        onClose={() => setShowRulesModal(false)} 
+      />
     </>
   );
 };

@@ -7,13 +7,23 @@ interface FooterProps {
 
 const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const [closingSection, setClosingSection] = useState<string | null>(null);
 
   const toggleSection = (section: string) => {
-    setOpenSection(openSection === section ? null : section);
+    if (openSection === section) {
+      setClosingSection(section);
+      setTimeout(() => {
+        setOpenSection(null);
+        setClosingSection(null);
+      }, 300);
+    } else {
+      setOpenSection(section);
+      setClosingSection(null);
+    }
   };
 
   return (
-    <footer className="bg-gradient-to-t from-gray-50 to-white border-t border-gray-200">
+    <footer className="bg-gray-100 border-t border-gray-200">
       <div className="container mx-auto px-4 py-8">
         {/* Legal Section */}
         <div className="mb-6">
@@ -28,8 +38,10 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             }
           </button>
           
-          {openSection === 'legal' && (
-            <div className="mt-3 space-y-3 pl-6 animate-fadeIn">
+          {(openSection === 'legal' || closingSection === 'legal') && (
+            <div className={`mt-3 space-y-3 pl-6 transition-all duration-300 ${
+              closingSection === 'legal' ? 'animate-fadeOut opacity-0 transform -translate-y-2' : 'animate-fadeIn'
+            }`}>
               <button 
                 onClick={() => onNavigate?.('privacy-policy')}
                 className="block text-navy-700 hover:text-red-600 transition-all duration-300 py-1 hover:translate-x-2 text-left"
@@ -59,8 +71,10 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             }
           </button>
           
-          {openSection === 'cookie' && (
-            <div className="mt-3 space-y-3 pl-6 animate-fadeIn">
+          {(openSection === 'cookie' || closingSection === 'cookie') && (
+            <div className={`mt-3 space-y-3 pl-6 transition-all duration-300 ${
+              closingSection === 'cookie' ? 'animate-fadeOut opacity-0 transform -translate-y-2' : 'animate-fadeIn'
+            }`}>
               <button 
                 onClick={() => onNavigate?.('cookie-policy')}
                 className="block text-navy-700 hover:text-red-600 transition-all duration-300 py-1 hover:translate-x-2 text-left"
@@ -90,14 +104,23 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             }
           </button>
           
-          {openSection === 'contacts' && (
-            <div className="mt-3 space-y-4 pl-6 animate-fadeIn">
+          {(openSection === 'contacts' || closingSection === 'contacts') && (
+            <div className={`mt-3 space-y-4 pl-6 transition-all duration-300 ${
+              closingSection === 'contacts' ? 'animate-fadeOut opacity-0 transform -translate-y-2' : 'animate-fadeIn'
+            }`}>
               <a 
-                href="tel:+1234567890" 
+                href="tel:+393338346546" 
                 className="flex items-center space-x-3 text-navy-700 hover:text-red-600 transition-all duration-300 py-1 hover:translate-x-2"
               >
                 <Phone size={18} />
-                <span>+39 123 456 7890</span>
+                <span className="text-sm sm:text-base">3338346546 (Giuseppe)</span>
+              </a>
+              <a 
+                href="tel:+393315374473" 
+                className="flex items-center space-x-3 text-navy-700 hover:text-red-600 transition-all duration-300 py-1 hover:translate-x-2"
+              >
+                <Phone size={18} />
+                <span className="text-sm sm:text-base">3315374473 (Saverio)</span>
               </a>
               <a 
                 href="mailto:info@kw8palestra.it" 
@@ -113,16 +136,16 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         {/* Copyright */}
         <div className="border-t border-gray-200 pt-8 mt-6">
           <div className="text-center text-navy-700 text-sm font-medium flex flex-col items-center justify-center">
-            <div className="flex items-center justify-center space-x-6 mb-8 flex-wrap">
-              <img src="/images/logo.png" alt="KW8 Logo" className="h-10 w-auto" />
-              <img src="/images/coni.svg.png" alt="CONI Logo" className="h-10 w-auto" />
-              <img src="/images/fiam.png" alt="FIAM Logo" className="h-10 w-auto" />
-              <img src="/images/acsi.png" alt="ACSI Logo" className="h-10 w-auto" />
-              <img src="/images/karatelogo.JPG" alt="Karate Logo" className="h-10 w-auto" />
-              <img src="/images/opes.png" alt="OPES Logo" className="h-10 w-auto" />
-              <img src="/images/nonsolofitness.webp" alt="Non Solo Fitness Logo" className="h-10 w-auto" />
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:flex md:items-center md:justify-center gap-4 sm:gap-6 mb-8">
+              <img src="/images/logo.png" alt="KW8 Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+              <img src="/images/coni.svg.png" alt="CONI Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+              <img src="/images/fiam.png" alt="FIAM Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+              <img src="/images/acsi.png" alt="ACSI Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+              <img src="/images/karatelogo.JPG" alt="Karate Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+              <img src="/images/opes.png" alt="OPES Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+              <img src="/images/nonsolofitness.webp" alt="Non Solo Fitness Logo" className="h-8 sm:h-10 w-auto mx-auto" />
             </div>
-            <div className="mt-4">© KW8 2025</div>
+            <div className="mt-4">© KW8 2025 - Ogni diritto riservato.</div>
             <div className="mt-2 text-gray-400 text-xs">
               <div>Powered by: Simeone Luca</div>
               <div>Info: simeoneluca13@gmail.com</div>

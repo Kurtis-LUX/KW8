@@ -93,7 +93,7 @@ const TermsPage: React.FC<TermsPageProps> = ({ onNavigate }) => {
             </p>
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="text-gray-700"><strong>Email:</strong> info@palestrakw8.it</p>
-              <p className="text-gray-700"><strong>Telefono:</strong> +39 123 456 7890</p>
+              <p className="text-gray-700"><strong>Telefono:</strong> 3338346546 (Coach Giuseppe Pandolfo), 3315374473 (Coach Saverio Di Maria)</p>
               <p className="text-gray-700"><strong>Indirizzo:</strong> Via Roma 123, 00100 Roma (RM)</p>
             </div>
           </div>
