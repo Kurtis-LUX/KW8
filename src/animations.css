@@ -23,7 +23,7 @@
 }
 
 .animate-fadeInSlideUp {
-  animation: fadeInSlideUp 1.2s ease-out 0.5s forwards;
+  animation: fadeInSlideUp 1.2s ease-out forwards;
 }
 
 /* Alias per fadeInUp */
