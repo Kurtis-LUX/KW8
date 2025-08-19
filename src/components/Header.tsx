@@ -123,23 +123,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
             />
           </div>
 
-          {/* Central CTA - Positioned in the center of the page */}
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
-            <button 
-              onClick={handleSubscribe}
-              className="hidden md:block bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
-            >
-              {t.subscribeNow}
-            </button>
-          </div>
 
-          {/* Mobile CTA */}
-          <button 
-            onClick={handleSubscribe}
-            className="md:hidden bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded text-sm transition-all duration-300 transform hover:scale-105"
-          >
-            {t.subscribeNow}
-          </button>
 
           {/* User Profile / Login Button */}
           <div className="flex items-center space-x-4">
