@@ -151,6 +151,12 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="mt-2 text-gray-400 text-xs">
               <div>Powered by: Simeone Luca</div>
               <div>Info: simeoneluca13@gmail.com</div>
+              <button 
+                onClick={() => onNavigate?.('email-test')}
+                className="mt-2 text-blue-500 hover:text-blue-700 underline text-xs"
+              >
+                🧪 Test Email System
+              </button>
             </div>
           </div>
         </div>

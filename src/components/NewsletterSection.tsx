@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import emailService from '../services/emailService';
 import { useLanguageContext } from '../contexts/LanguageContext';
+import { EmailDebugger } from '../utils/emailDebugger';
 
 const NewsletterSection: React.FC = () => {
   const { t } = useLanguageContext();
@@ -13,7 +14,16 @@ const NewsletterSection: React.FC = () => {
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const isValid = emailRegex.test(email.trim());
+    
+    // Debug dettagliato quando la validazione fallisce
+    if (!isValid) {
+      EmailDebugger.logDetailedValidation(email);
+    } else {
+      console.log('✅ Email valida:', email.trim());
+    }
+    
+    return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

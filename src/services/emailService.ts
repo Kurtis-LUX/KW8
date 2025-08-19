@@ -1,4 +1,7 @@
-// Servizio per l'invio di email
+import emailjs from '@emailjs/browser';
+import { getEmailConfig, validateEmailConfig, type EmailJSConfig } from '../config/emailConfig';
+
+// Interfacce per i dati email
 export interface EmailData {
   to: string;
   subject: string;
@@ -9,45 +12,73 @@ export interface EmailData {
 export interface NewsletterSubscription {
   email: string;
   timestamp: string;
-  source: 'website';
+  source: string;
 }
 
 class EmailService {
-  private apiEndpoint = 'https://api.emailjs.com/api/v1.0/email/send';
-  private serviceId = 'service_kw8gym'; // Da configurare su EmailJS
-  private templateId = 'template_newsletter'; // Da configurare su EmailJS
-  private publicKey = 'YOUR_EMAILJS_PUBLIC_KEY'; // Da configurare
+  private serviceId: string;
+  private templateId: string;
+  private publicKey: string;
+  private isInitialized = false;
+
+  constructor() {
+    const config = getEmailConfig();
+    this.serviceId = config.serviceId;
+    this.templateId = config.templateId;
+    this.publicKey = config.publicKey;
+    this.initializeEmailJS();
+  }
+
+  private initializeEmailJS() {
+    try {
+      // Valida la configurazione
+      const config = { serviceId: this.serviceId, templateId: this.templateId, publicKey: this.publicKey };
+      if (!validateEmailConfig(config)) {
+        throw new Error('Configurazione EmailJS non valida');
+      }
+
+      // Inizializza EmailJS con la chiave pubblica
+      emailjs.init(this.publicKey);
+      this.isInitialized = true;
+      console.log('EmailJS inizializzato correttamente con:', {
+        serviceId: this.serviceId,
+        templateId: this.templateId,
+        publicKey: this.publicKey.substring(0, 8) + '...'
+      });
+    } catch (error) {
+      console.error('Errore nell\'inizializzazione di EmailJS:', error);
+      this.isInitialized = false;
+    }
+  }
 
   // Metodo per inviare email di benvenuto newsletter
   async sendNewsletterWelcome(email: string): Promise<boolean> {
+    if (!this.isInitialized) {
+      console.error('EmailJS non è inizializzato correttamente');
+      return false;
+    }
+
     try {
       const templateParams = {
         to_email: email,
         to_name: email.split('@')[0],
-        gym_name: 'KW8 Palestra',
-        gym_address: 'Via Roma 123, 00100 Roma (RM)',
+        gym_name: 'KW8',
+        gym_address: 'Via Pietro Nenni, 96010 Sortino SR',
         gym_phone: '3338346546',
         unsubscribe_link: `${window.location.origin}/unsubscribe?email=${encodeURIComponent(email)}`
       };
 
-      const response = await fetch(this.apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          service_id: this.serviceId,
-          template_id: this.templateId,
-          user_id: this.publicKey,
-          template_params: templateParams
-        })
-      });
+      const result = await emailjs.send(
+        this.serviceId,
+        this.templateId,
+        templateParams
+      );
 
-      if (response.ok) {
+      if (result.status === 200) {
         console.log('Email di benvenuto inviata con successo a:', email);
         return true;
       } else {
-        console.error('Errore nell\'invio email:', response.statusText);
+        console.error('Errore nell\'invio email:', result.text);
         return false;
       }
     } catch (error) {
@@ -98,6 +129,11 @@ class EmailService {
 
   // Metodo per inviare email generiche
   async sendEmail(emailData: EmailData): Promise<boolean> {
+    if (!this.isInitialized) {
+      console.error('EmailJS non è inizializzato correttamente');
+      return false;
+    }
+
     try {
       // Per ora usa EmailJS, ma può essere sostituito con altri servizi
       const templateParams = {
@@ -107,20 +143,13 @@ class EmailService {
         text_content: emailData.text || emailData.html.replace(/<[^>]*>/g, '')
       };
 
-      const response = await fetch(this.apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          service_id: this.serviceId,
-          template_id: 'template_generic',
-          user_id: this.publicKey,
-          template_params: templateParams
-        })
-      });
+      const result = await emailjs.send(
+        this.serviceId,
+        'template_generic',
+        templateParams
+      );
 
-      return response.ok;
+      return result.status === 200;
     } catch (error) {
       console.error('Errore durante l\'invio email:', error);
       return false;
@@ -132,6 +161,23 @@ class EmailService {
     this.serviceId = serviceId;
     this.templateId = templateId;
     this.publicKey = publicKey;
+    // Reinizializza EmailJS con la nuova chiave
+    this.initializeEmailJS();
+  }
+
+  // Metodo per verificare se EmailJS è inizializzato
+  isEmailJSReady(): boolean {
+    return this.isInitialized;
+  }
+
+  // Metodo per ottenere le credenziali correnti
+  getCredentials() {
+    return {
+      serviceId: this.serviceId,
+      templateId: this.templateId,
+      publicKey: this.publicKey,
+      isInitialized: this.isInitialized
+    };
   }
 }
 

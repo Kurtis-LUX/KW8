@@ -255,7 +255,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               </li>
               <li>
                 <button
-                  onClick={() => scrollToSection('informazioni')}
+                  onClick={() => scrollToSection('aree')}
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <Mail size={20} className="sm:w-6 sm:h-6" />
