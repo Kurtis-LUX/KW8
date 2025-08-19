@@ -44,9 +44,14 @@ const HeroSection: React.FC = () => {
       <div className="relative z-10 text-center text-white px-4">
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 tracking-wider animate-fadeInSlideUp" style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}>
           <span style={{ fontFamily: 'Bebas Neue, cursive' }}>
-            <span className="text-white animate-bounce-subtle">CROSS</span>{' '}
-            <span className="text-white animate-bounce-subtle">YOUR</span>{' '}
-            <span className="text-red-500 animate-bounce-subtle">LIMITS.</span>
+            {displayText.split(' ').map((word, index) => {
+              if (word === 'CROSS' || word === 'YOUR') {
+                return <span key={index} className="text-white">{word}</span>;
+              } else if (word === 'LIMITS.') {
+                return <span key={index} className="text-red-500">{word}</span>;
+              }
+              return <span key={index}>{word}</span>;
+            }).reduce((prev, curr, index) => [prev, ' ', curr])}
           </span>
           <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>
         </h1>
