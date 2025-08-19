@@ -44,8 +44,8 @@ const HeroSection: React.FC = () => {
       <div className="relative z-10 text-center text-white px-4">
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 tracking-wider animate-fadeInSlideUp animate-bounce-subtle" style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}>
           <span style={{ fontFamily: 'Bebas Neue, cursive' }}>
-            <span className="text-blue-900">CROSS</span>{' '}
-            <span className="text-blue-900">YOUR</span>{' '}
+            <span className="text-white">CROSS</span>{' '}
+            <span className="text-white">YOUR</span>{' '}
             <span className="text-red-500">LIMITS.</span>
           </span>
           <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>
