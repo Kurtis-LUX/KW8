@@ -27,6 +27,7 @@ import DB from './utils/database';
 import initializeData from './utils/initData';
 import { User } from './utils/database';
 import { authService } from './services/authService';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -136,36 +137,51 @@ function App() {
 
   // Gestione delle pagine
   if (currentPage === 'payment') {
-    return <PaymentPage onNavigate={handleNavigation} selectedPlan={selectedPlan} currentUser={currentUser} />;
+    return (
+      <LanguageProvider>
+        <PaymentPage onNavigate={handleNavigation} selectedPlan={selectedPlan} currentUser={currentUser} />
+      </LanguageProvider>
+    );
   }
 
   if (currentPage === 'auth') {
-    return <AuthPage onNavigate={handleNavigation} onLogin={handleLogin} />;
+    return (
+      <LanguageProvider>
+        <AuthPage onNavigate={handleNavigation} onLogin={handleLogin} />
+      </LanguageProvider>
+    );
   }
 
   if (currentPage === 'workouts') {
-    return currentUser ? 
-      <WorkoutsPage onNavigate={handleNavigation} currentUser={currentUser} /> : 
-      <div className="p-8 text-center">
-        <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
-        <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
-        <button 
-          onClick={() => handleNavigation('auth')} 
-          className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
-        >
-          Accedi
-        </button>
-      </div>;
+    return (
+      <LanguageProvider>
+        {currentUser ? 
+          <WorkoutsPage onNavigate={handleNavigation} currentUser={currentUser} /> : 
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
+            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
+            <button 
+              onClick={() => handleNavigation('auth')} 
+              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+            >
+              Accedi
+            </button>
+          </div>
+        }
+      </LanguageProvider>
+    );
   }
 
   if (currentPage === 'admin-dashboard') {
     return (
-      <ProtectedRoute 
-        requireAdmin={true}
-        onUnauthorized={() => handleNavigation('auth')}
-      >
-        <AdminDashboard onNavigate={handleNavigation} currentUser={currentUser} />
-      </ProtectedRoute>
+      <LanguageProvider>
+        <ProtectedRoute 
+          requireAdmin={true}
+          onUnauthorized={() => handleNavigation('auth')}
+        >
+          <AdminDashboard onNavigate={handleNavigation} currentUser={currentUser} />
+        </ProtectedRoute>
+      </LanguageProvider>
     );
   }
 
@@ -180,32 +196,33 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen">
-      <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} />
-      {showCookieConsent && (
-        <CookieConsent 
-          onAccept={handleCookieAccept} 
-          onDecline={handleCookieDecline}
-          onNavigate={handleNavigation}
-        />
-      )}
-      {showCookieSettings && (
-        <CookieSettings 
-          onClose={() => setShowCookieSettings(false)} 
-          currentUser={currentUser} 
-        />
-      )}
-      <HeroSection />
-      <StatisticsSection />
-      <SubscriptionSection onNavigate={handleNavigation} />
-      <GymAreasSection />
-      <ScheduleSection />
-      <LocationSection />
-      <StaffSection />
-      <NewsletterSection />
-      <SocialSection />
-      <TrustpilotSection />
-      <Footer onNavigate={handleNavigation} />
+    <LanguageProvider>
+      <div className="min-h-screen">
+        <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} />
+        {showCookieConsent && (
+          <CookieConsent 
+            onAccept={handleCookieAccept} 
+            onDecline={handleCookieDecline}
+            onNavigate={handleNavigation}
+          />
+        )}
+        {showCookieSettings && (
+          <CookieSettings 
+            onClose={() => setShowCookieSettings(false)} 
+            currentUser={currentUser} 
+          />
+        )}
+        <HeroSection />
+        <StatisticsSection />
+        <SubscriptionSection onNavigate={handleNavigation} />
+        <GymAreasSection />
+        <ScheduleSection />
+        <LocationSection />
+        <StaffSection />
+        <NewsletterSection />
+        <SocialSection />
+        <TrustpilotSection />
+        <Footer onNavigate={handleNavigation} />
       
       {/* Modal per Privacy */}
       <Modal 
@@ -242,7 +259,8 @@ function App() {
       >
         <PrivacyPolicyPage onNavigate={() => {}} />
       </Modal>
-    </div>
+      </div>
+    </LanguageProvider>
   );
 }
 

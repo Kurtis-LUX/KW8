@@ -1,114 +1,98 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar, TrendingUp } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, TrendingUp, User } from 'lucide-react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 interface SubscriptionSectionProps {
   onNavigate?: (page: string, planType?: string) => void;
 }
 
 const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate }) => {
+  const { t } = useLanguageContext();
   const [currentCase, setCurrentCase] = useState(0);
 
-  const beforeAfterCases = [
+  const transformationCases = [
     {
-      beforeImage: '/images/marco-prima.svg',
-      afterImage: '/images/marco-dopo.svg',
-      title: 'Trasformazione Marco',
-      description: 'Perdita di 15kg in 6 mesi',
-      duration: '6 mesi',
+      name: t.transformations?.marco?.name || 'Marco',
+      title: t.transformations?.marco?.title || 'Trasformazione Marco',
+      description: t.transformations?.marco?.description || 'Perdita di 15kg in 6 mesi',
+      duration: t.transformations?.marco?.duration || '6 mesi',
       progress: 85,
+      icon: '💪',
       stats: [
-        { label: 'Peso perso', value: '15kg' },
-        { label: 'Massa grassa', value: '-8%' },
-        { label: 'Forza', value: '+25%' }
+        { label: t.transformations?.marco?.stats?.weightLost || 'Peso perso', value: '15kg' },
+        { label: t.transformations?.marco?.stats?.bodyFat || 'Massa grassa', value: '-8%' },
+        { label: t.transformations?.marco?.stats?.strength || 'Forza', value: '+25%' }
       ]
     },
     {
-      beforeImage: '/images/sara-prima.svg',
-      afterImage: '/images/sara-dopo.svg',
-      title: 'Miglioramento Sara',
-      description: 'Guadagno massa muscolare',
-      duration: '4 mesi',
+      name: t.transformations?.sara?.name || 'Sara',
+      title: t.transformations?.sara?.title || 'Miglioramento Sara',
+      description: t.transformations?.sara?.description || 'Guadagno massa muscolare',
+      duration: t.transformations?.sara?.duration || '4 mesi',
       progress: 92,
+      icon: '🏋️‍♀️',
       stats: [
-        { label: 'Massa muscolare', value: '+3kg' },
-        { label: 'Forza', value: '+40%' },
-        { label: 'Resistenza', value: '+60%' }
+        { label: t.transformations?.sara?.stats?.muscleMass || 'Massa muscolare', value: '+3kg' },
+        { label: t.transformations?.sara?.stats?.strength || 'Forza', value: '+40%' },
+        { label: t.transformations?.sara?.stats?.endurance || 'Resistenza', value: '+60%' }
       ]
     },
     {
-      beforeImage: '/images/giuseppe-prima.svg',
-      afterImage: '/images/giuseppe-dopo.svg',
-      title: 'Recupero Giuseppe',
-      description: 'Risoluzione dolori alla schiena',
-      duration: '3 mesi',
+      name: t.transformations?.giuseppe?.name || 'Giuseppe',
+      title: t.transformations?.giuseppe?.title || 'Recupero Giuseppe',
+      description: t.transformations?.giuseppe?.description || 'Risoluzione dolori alla schiena',
+      duration: t.transformations?.giuseppe?.duration || '3 mesi',
       progress: 95,
+      icon: '🧘‍♂️',
       stats: [
-        { label: 'Dolore', value: '-90%' },
-        { label: 'Mobilità', value: '+70%' },
-        { label: 'Postura', value: '+80%' }
+        { label: t.transformations?.giuseppe?.stats?.pain || 'Dolore', value: '-90%' },
+        { label: t.transformations?.giuseppe?.stats?.mobility || 'Mobilità', value: '+70%' },
+        { label: t.transformations?.giuseppe?.stats?.posture || 'Postura', value: '+80%' }
       ]
     }
   ];
 
   const nextCase = () => {
-    setCurrentCase((prev) => (prev + 1) % beforeAfterCases.length);
+    setCurrentCase((prev) => (prev + 1) % transformationCases.length);
   };
 
   const prevCase = () => {
-    setCurrentCase((prev) => (prev - 1 + beforeAfterCases.length) % beforeAfterCases.length);
+    setCurrentCase((prev) => (prev - 1 + transformationCases.length) % transformationCases.length);
   };
 
   return (
     <section id="informazioni" className="py-20 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4">
         <h2 className="text-4xl md:text-5xl font-bold text-navy-900 text-center mb-16 animate-fadeInUp">
-          CASI DI MIGLIORAMENTO FISICO
+          {t.transformations?.title || 'CASI DI MIGLIORAMENTO FISICO'}
         </h2>
 
-        {/* Before/After Cases Slider */}
+        {/* Transformation Cases Slider */}
         <div className="mb-8">
-          
           <div className="max-w-4xl mx-auto">
             <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden">
               {/* Slider Container */}
               <div className="relative">
                 <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentCase * 100}%)` }}>
-                  {beforeAfterCases.map((case_, index) => (
+                  {transformationCases.map((case_, index) => (
                     <div key={index} className="w-full flex-shrink-0">
-                      <div className="p-4 md:p-6">
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h4 className="text-lg md:text-xl font-bold text-navy-900">{case_.title}</h4>
-                            <p className="text-sm text-navy-700">{case_.description}</p>
-                          </div>
-                          <div className="flex items-center space-x-2 text-sm text-red-600">
+                      <div className="p-6 md:p-8">
+                        {/* Header with Icon */}
+                        <div className="text-center mb-6">
+                          <div className="text-6xl mb-4">{case_.icon}</div>
+                          <h4 className="text-2xl md:text-3xl font-bold text-navy-900 mb-2">{case_.title}</h4>
+                          <p className="text-lg text-navy-700 mb-4">{case_.description}</p>
+                          <div className="flex items-center justify-center space-x-2 text-sm text-red-600">
                             <Calendar size={16} />
                             <span className="font-semibold">{case_.duration}</span>
                           </div>
                         </div>
 
-                        {/* Before/After Images */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                          <div className="relative">
-                            <img 
-                              src={case_.beforeImage} 
-                              alt={`${case_.title} - Prima`}
-                              className="w-full h-40 sm:h-32 md:h-40 object-cover rounded-lg"
-                            />
-                            <div className="absolute top-2 left-2 bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                              PRIMA
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <img 
-                              src={case_.afterImage} 
-                              alt={`${case_.title} - Dopo`}
-                              className="w-full h-40 sm:h-32 md:h-40 object-cover rounded-lg"
-                            />
-                            <div className="absolute top-2 left-2 bg-green-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                              DOPO
-                            </div>
+                        {/* User Icon and Name */}
+                        <div className="flex items-center justify-center mb-6">
+                          <div className="flex items-center space-x-3 bg-gray-50 px-4 py-2 rounded-full">
+                            <User size={20} className="text-navy-700" />
+                            <span className="font-semibold text-navy-900">{case_.name}</span>
                           </div>
                         </div>
 
@@ -160,7 +144,7 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
 
               {/* Dots Indicator */}
               <div className="flex justify-center space-x-2 p-4 bg-gray-50">
-                {beforeAfterCases.map((_, index) => (
+                {transformationCases.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentCase(index)}

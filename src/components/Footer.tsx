@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Phone, Mail } from 'lucide-react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 interface FooterProps {
   onNavigate?: (page: string) => void;
 }
 
 const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+  const { t } = useLanguageContext();
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [closingSection, setClosingSection] = useState<string | null>(null);
 
@@ -31,7 +33,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             onClick={() => toggleSection('legal')}
             className="flex items-center justify-between w-full py-4 text-left text-navy-900 font-semibold hover:text-red-600 transition-all duration-300 rounded-lg hover:bg-gray-50 px-2"
           >
-            <span>Legale</span>
+            <span>{t.legal}</span>
             {openSection === 'legal' ? 
               <ChevronUp size={20} className="transition-transform duration-300" /> : 
               <ChevronDown size={20} className="transition-transform duration-300" />
@@ -52,7 +54,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate?.('terms')}
                 className="block text-navy-700 hover:text-red-600 transition-all duration-300 py-1 hover:translate-x-2 text-left"
               >
-                Termini e condizioni
+                {t.termsAndConditions}
               </button>
             </div>
           )}
@@ -64,7 +66,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             onClick={() => toggleSection('cookie')}
             className="flex items-center justify-between w-full py-4 text-left text-navy-900 font-semibold hover:text-red-600 transition-all duration-300 rounded-lg hover:bg-gray-50 px-2"
           >
-            <span>Cookie</span>
+            <span>{t.cookies}</span>
             {openSection === 'cookie' ? 
               <ChevronUp size={20} className="transition-transform duration-300" /> : 
               <ChevronDown size={20} className="transition-transform duration-300" />
@@ -79,13 +81,13 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 onClick={() => onNavigate?.('cookie-policy')}
                 className="block text-navy-700 hover:text-red-600 transition-all duration-300 py-1 hover:translate-x-2 text-left"
               >
-                Informativa sui cookie
+                {t.cookiePolicy}
               </button>
               <button 
                 onClick={() => onNavigate?.('cookie-settings')}
                 className="block text-navy-700 hover:text-red-600 transition-all duration-300 py-1 hover:translate-x-2 text-left"
               >
-                Gestisci preferenze
+                {t.managePreferences}
               </button>
             </div>
           )}
@@ -97,7 +99,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             onClick={() => toggleSection('contacts')}
             className="flex items-center justify-between w-full py-4 text-left text-navy-900 font-semibold hover:text-red-600 transition-all duration-300 rounded-lg hover:bg-gray-50 px-2"
           >
-            <span>Contatti</span>
+            <span>{t.contacts}</span>
             {openSection === 'contacts' ? 
               <ChevronUp size={20} className="transition-transform duration-300" /> : 
               <ChevronDown size={20} className="transition-transform duration-300" />
@@ -145,7 +147,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <img src="/images/opes.png" alt="OPES Logo" className="h-8 sm:h-10 w-auto mx-auto" />
               <img src="/images/nonsolofitness.webp" alt="Non Solo Fitness Logo" className="h-8 sm:h-10 w-auto mx-auto" />
             </div>
-            <div className="mt-4">© KW8 2025 - Ogni diritto riservato.</div>
+            <div className="mt-4">{t.copyright}</div>
             <div className="mt-2 text-gray-400 text-xs">
               <div>Powered by: Simeone Luca</div>
               <div>Info: simeoneluca13@gmail.com</div>

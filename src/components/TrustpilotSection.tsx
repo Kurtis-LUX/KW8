@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 const TrustpilotSection: React.FC = () => {
+  const { t } = useLanguageContext();
   const [currentReview, setCurrentReview] = useState(0);
 
   const reviews = [
@@ -73,7 +75,7 @@ const TrustpilotSection: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-navy-900 mb-8 animate-fadeInUp">
-            COSA DICONO I NOSTRI CLIENTI
+            {t.whatOurClientsSay}
           </h2>
           
           {/* Trustpilot Logo e Rating */}
@@ -90,7 +92,7 @@ const TrustpilotSection: React.FC = () => {
               </div>
             </div>
             <p className="text-navy-700 font-semibold">
-              Eccellente • {reviews.length} recensioni
+              {t.excellent} • {reviews.length} {t.reviews}
             </p>
           </div>
         </div>
@@ -175,7 +177,7 @@ const TrustpilotSection: React.FC = () => {
         {/* CTA */}
         <div className="text-center mt-12">
           <p className="text-navy-700 mb-6 text-lg">
-            Unisciti ai nostri clienti soddisfatti!
+            {t.joinSatisfiedClients}
           </p>
           <a
             href="https://www.trustpilot.com"
@@ -183,7 +185,7 @@ const TrustpilotSection: React.FC = () => {
             rel="noopener noreferrer"
             className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
-            <span>Vedi tutte le recensioni</span>
+            <span>{t.seeAllReviews}</span>
           </a>
         </div>
       </div>

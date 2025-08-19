@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Calendar, MapPin } from 'lucide-react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 const ScheduleSection: React.FC = () => {
+  const { t } = useLanguageContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -26,7 +28,7 @@ const ScheduleSection: React.FC = () => {
   };
 
   const daysOfWeek = ['domenica', 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato'];
-  const dayNames = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+  const dayNames = [t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday];
   
   // Ordine per visualizzazione: Lunedì-Sabato, poi Domenica
   const displayOrder = [1, 2, 3, 4, 5, 6, 0]; // Indici per riordinare i giorni
@@ -80,7 +82,7 @@ const ScheduleSection: React.FC = () => {
   return (
     <section className="py-12 bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold text-navy-900 mb-8 animate-fadeInUp">ORARI</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-navy-900 mb-8 animate-fadeInUp">{t.schedules}</h2>
         
         {/* Data e Ora Attuale */}
         <div className="max-w-6xl mx-auto mb-6">
@@ -106,20 +108,20 @@ const ScheduleSection: React.FC = () => {
                 <div className={`w-2 h-2 rounded-full ${
                   isCurrentlyOpen() ? 'bg-green-500' : 'bg-red-500'
                 }`}></div>
-                <span>{isCurrentlyOpen() ? 'APERTO ORA' : 'CHIUSO ORA'}</span>
+                <span>{isCurrentlyOpen() ? t.openNow : t.closedNow}</span>
               </div>
               
               <div className="text-center sm:text-right">
-                <h3 className="text-sm font-bold text-navy-900 mb-1">Oggi - {dayNames[currentDate.getDay()]}</h3>
+                <h3 className="text-sm font-bold text-navy-900 mb-1">{t.today} - {dayNames[currentDate.getDay()]}</h3>
                 <div className="text-xs">
                   {todaySchedule.isOpen ? (
                     <div className="text-navy-700">
-                      <span><strong>Mattina:</strong> {todaySchedule.open}</span>
+                      <span><strong>{t.morning}:</strong> {todaySchedule.open}</span>
                       <span className="mx-2">•</span>
-                      <span><strong>Sera:</strong> {todaySchedule.close}</span>
+                      <span><strong>{t.evening}:</strong> {todaySchedule.close}</span>
                     </div>
                   ) : (
-                    <span className="text-red-600 font-semibold">Chiuso</span>
+                    <span className="text-red-600 font-semibold">{t.closed}</span>
                   )}
                 </div>
               </div>
@@ -127,7 +129,7 @@ const ScheduleSection: React.FC = () => {
 
             {/* Orari Settimanali */}
             <div className="bg-white rounded-xl shadow-lg p-4">
-              <h3 className="text-xl font-bold text-navy-900 mb-4">Orari Settimanali</h3>
+              <h3 className="text-xl font-bold text-navy-900 mb-4">{t.weeklySchedule}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                 {/* Giorni Lunedì-Sabato */}
                 {displayOrder.slice(0, 6).map((dayIndex) => {
@@ -146,14 +148,14 @@ const ScheduleSection: React.FC = () => {
                       {schedule.isOpen ? (
                         <div className="text-xs text-navy-700">
                           <div className="mb-1">
-                            <span className="font-semibold">Mattina:</span><br className="sm:hidden" /> {schedule.open}
+                            <span className="font-semibold">{t.morning}:</span><br className="sm:hidden" /> {schedule.open}
                           </div>
                           <div>
-                            <span className="font-semibold">Sera:</span><br className="sm:hidden" /> {schedule.close}
+                            <span className="font-semibold">{t.evening}:</span><br className="sm:hidden" /> {schedule.close}
                           </div>
                         </div>
                       ) : (
-                        <span className="text-red-600 font-semibold text-xs">CHIUSO</span>
+                        <span className="text-red-600 font-semibold text-xs">{t.closed}</span>
                       )}
                     </div>
                   );
@@ -178,14 +180,14 @@ const ScheduleSection: React.FC = () => {
                         {schedule.isOpen ? (
                           <div className="text-sm text-navy-700">
                             <div className="mb-1">
-                              <span className="font-semibold">Mattina:</span> {schedule.open}
+                              <span className="font-semibold">{t.morning}:</span> {schedule.open}
                             </div>
                             <div>
-                              <span className="font-semibold">Sera:</span> {schedule.close}
+                              <span className="font-semibold">{t.evening}:</span> {schedule.close}
                             </div>
                           </div>
                         ) : (
-                          <span className="text-red-600 font-semibold text-sm">CHIUSO</span>
+                          <span className="text-red-600 font-semibold text-sm">{t.closed}</span>
                         )}
                       </div>
                     </div>
@@ -201,7 +203,7 @@ const ScheduleSection: React.FC = () => {
             href="tel:+393338346546" 
             className="bg-navy-900 hover:bg-navy-800 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center space-x-2"
           >
-            <span>CHIAMACI ORA</span>
+            <span>{t.callNow}</span>
           </a>
         </div>
       </div>

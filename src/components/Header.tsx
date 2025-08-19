@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe } from 'lucide-react';
-
 import { User } from '../utils/database';
 import RulesSection from './RulesSection';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -15,7 +15,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState('it');
+  const { language, setLanguage, t } = useLanguageContext();
   
   // Aggiungi event listener per lo scroll
   useEffect(() => {
@@ -49,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   };
 
   const toggleLanguage = () => {
-    setCurrentLanguage(currentLanguage === 'it' ? 'en' : 'it');
+    setLanguage(language === 'it' ? 'en' : 'it');
     setIsMenuOpen(false);
   };
 
@@ -129,7 +129,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               onClick={handleSubscribe}
               className="hidden md:block bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
             >
-              ISCRIVITI ORA
+              {t.subscribeNow}
             </button>
           </div>
 
@@ -138,7 +138,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
             onClick={handleSubscribe}
             className="md:hidden bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded text-sm transition-all duration-300 transform hover:scale-105"
           >
-            ISCRIVITI ORA
+            {t.subscribeNow}
           </button>
 
           {/* User Profile / Login Button */}
@@ -181,7 +181,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                       onClick={() => handleNavigation('cookie-settings')}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Impostazioni Cookie
+                      {t.header.cookieSettings}
                     </button>
                     <button
                       onClick={handleLogout}
@@ -250,7 +250,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <UserIcon size={20} className="sm:w-6 sm:h-6" />
-                  <span>{currentUser ? `${currentUser.name || 'Profilo'} ${currentUser.role === 'admin' ? '(Admin)' : ''}` : 'Accedi'}</span>
+                  <span>{currentUser ? `${currentUser.name || t.header.profile} ${currentUser.role === 'admin' ? '(Admin)' : ''}` : t.header.profile}</span>
                 </button>
               </li>
               <li>
@@ -259,7 +259,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <Mail size={20} className="sm:w-6 sm:h-6" />
-                  <span>Informazioni</span>
+                  <span>{t.header.information}</span>
                 </button>
               </li>
               <li>
@@ -268,7 +268,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <MapPin size={20} className="sm:w-6 sm:h-6" />
-                  <span>Posizione</span>
+                  <span>{t.header.location}</span>
                 </button>
               </li>
               <li>
@@ -277,7 +277,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <Users size={20} className="sm:w-6 sm:h-6" />
-                  <span>Coach</span>
+                  <span>{t.header.staff}</span>
                 </button>
               </li>
               <li>
@@ -286,7 +286,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <BookOpen size={20} className="sm:w-6 sm:h-6" />
-                  <span>Regole</span>
+                  <span>{t.header.rules}</span>
                 </button>
               </li>
               <li>
@@ -295,7 +295,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <FileText size={20} className="sm:w-6 sm:h-6" />
-                  <span>Schede</span>
+                  <span>{t.header.workouts}</span>
                 </button>
               </li>
               
@@ -306,7 +306,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                     className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <FileText size={20} className="sm:w-6 sm:h-6" />
-                    <span>Impostazioni Cookie</span>
+                    <span>{t.header.cookieSettings}</span>
                   </button>
                 </li>
               )}
@@ -318,7 +318,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                     className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Users size={20} className="sm:w-6 sm:h-6" />
-                    <span>Dashboard Admin</span>
+                    <span>{t.header.adminDashboard}</span>
                   </button>
                 </li>
               )}
@@ -330,8 +330,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                 >
                   <Globe size={20} className="sm:w-6 sm:h-6" />
                   <span className="flex items-center space-x-2">
-                    <span>Lingua</span>
-                    <span className="text-2xl">{currentLanguage === 'it' ? '🇮🇹' : '🇬🇧'}</span>
+                    <span>{t.header.language}</span>
+                    <span className="text-2xl">{language === 'it' ? '🇮🇹' : '🇬🇧'}</span>
                   </span>
                 </button>
               </li>
@@ -343,7 +343,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                     className="flex items-center space-x-3 sm:space-x-4 text-red-600 hover:text-red-700 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <UserIcon size={20} className="sm:w-6 sm:h-6" />
-                    <span>Logout</span>
+                    <span>{t.header.logout}</span>
                   </button>
                 </li>
               )}

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { X, Award, Dumbbell, Zap, Shield, Heart } from 'lucide-react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 const StaffSection: React.FC = () => {
+  const { t } = useLanguageContext();
   const [selectedCoach, setSelectedCoach] = useState<number | null>(null);
 
   // Gestione chiusura modal con ESC
@@ -96,7 +98,7 @@ const StaffSection: React.FC = () => {
       <section id="staff" className="py-16 bg-gradient-to-b from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl md:text-5xl font-bold text-navy-900 text-center mb-12 animate-fadeInUp">
-            STAFF / COACH
+            {t.ourTeam}
           </h2>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -155,7 +157,7 @@ const StaffSection: React.FC = () => {
                 <img 
                   src={staff[selectedCoach].image} 
                   alt={staff[selectedCoach].name}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-white shadow-lg"
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-white shadow-lg"
                 />
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold">{staff[selectedCoach].name}</h3>
@@ -169,7 +171,7 @@ const StaffSection: React.FC = () => {
               <div className="mb-3">
                 <h4 className="text-base sm:text-lg font-bold text-navy-900 flex items-center">
                   <Award className="mr-2" size={18} />
-                  Certificazioni e Competenze
+                  {t.certifications}
                 </h4>
               </div>
 
@@ -196,7 +198,7 @@ const StaffSection: React.FC = () => {
                   onClick={() => setSelectedCoach(null)}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
                 >
-                  Chiudi
+                  {t.closeCertifications}
                 </button>
               </div>
             </div>

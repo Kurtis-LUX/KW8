@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Calendar, Zap, Dumbbell, User, Salad, Shield, Clock, Brain, Heart } from 'lucide-react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 const StatisticsSection: React.FC = () => {
+  const { t } = useLanguageContext();
   const [animatedNumbers, setAnimatedNumbers] = useState({ subscribers: 0, years: 0 });
   const [hasAnimated, setHasAnimated] = useState(false);
 
@@ -62,19 +64,19 @@ const StatisticsSection: React.FC = () => {
   }, [hasAnimated]);
 
   const statistics = [
-    { number: '200+', label: 'iscritti' },
-    { number: '5', label: 'anni di attività' }
+    { number: '200+', label: t.subscribers },
+    { number: '5', label: t.yearsOfActivity }
   ];
 
   const values = [
-    { icon: Zap, title: 'Più energia', description: 'Aumenta i tuoi livelli di energia e vitalità quotidiana' },
-    { icon: Dumbbell, title: 'Estetica', description: 'Miglioramento dell\'aspetto fisico e della forma' },
-    { icon: User, title: 'Postura', description: 'Correzione della postura e allineamento corporeo' },
-    { icon: Salad, title: 'Alimentazione', description: 'Consulenza nutrizionale personalizzata' },
-    { icon: Shield, title: 'Autodifesa', description: 'Tecniche di difesa personale e sicurezza' },
-    { icon: Clock, title: 'Disciplina', description: 'Sviluppo della disciplina e costanza' },
-    { icon: Brain, title: 'Gestione dello stress', description: 'Tecniche per ridurre stress e ansia' },
-    { icon: Heart, title: 'Benessere mentale', description: 'Miglioramento dell\'equilibrio psico-fisico e autostima' }
+    { icon: Zap, title: t.moreEnergy, description: t.moreEnergyDesc },
+    { icon: Dumbbell, title: t.aesthetics, description: t.aestheticsDesc },
+    { icon: User, title: t.posture, description: t.postureDesc },
+    { icon: Salad, title: t.nutrition, description: t.nutritionDesc },
+    { icon: Shield, title: t.selfDefense, description: t.selfDefenseDesc },
+    { icon: Clock, title: t.discipline, description: t.disciplineDesc },
+    { icon: Brain, title: t.stressManagement, description: t.stressManagementDesc },
+    { icon: Heart, title: t.mentalWellbeing, description: t.mentalWellbeingDesc }
   ];
 
   return (

@@ -1,7 +1,10 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 const LocationSection: React.FC = () => {
+  const { t } = useLanguageContext();
+  
   const openGoogleMaps = () => {
     window.open('https://maps.app.goo.gl/TkgDHdRp58FS4XbF6', '_blank');
   };
@@ -9,7 +12,7 @@ const LocationSection: React.FC = () => {
   return (
     <section id="posizione" className="py-20 bg-gradient-to-b from-white to-gray-50">
       <div className="container mx-auto px-4 text-center">
-        <h2 className="text-4xl md:text-5xl font-bold text-navy-900 mb-16 animate-fadeInUp">DOVE CI TROVIAMO?</h2>
+        <h2 className="text-4xl md:text-5xl font-bold text-navy-900 mb-16 animate-fadeInUp">{t.whereAreWe}</h2>
         
         <div className="max-w-4xl mx-auto mb-12">
           <div className="relative w-full h-96 rounded-xl shadow-2xl overflow-hidden">
@@ -35,7 +38,7 @@ const LocationSection: React.FC = () => {
           onClick={openGoogleMaps}
           className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center space-x-2"
         >
-          <span>APRI SU GOOGLE MAPS</span>
+          <span>{t.openOnGoogleMaps}</span>
           <ExternalLink size={20} className="transition-transform duration-300 group-hover:translate-x-1" />
         </button>
       </div>

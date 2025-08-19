@@ -1,36 +1,38 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Dumbbell, Zap, Shield, Heart } from 'lucide-react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 const GymAreasSection: React.FC = () => {
+  const { t } = useLanguageContext();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const areas = [
     {
       id: 'sala-pesi',
-      title: 'SALA PESI',
+      title: t.weightRoom,
       icon: Dumbbell,
-      description: 'Attrezzature professionali per il bodybuilding e il powerlifting. Ambiente dedicato alla crescita muscolare con supporto personalizzato.',
+      description: t.weightRoomDesc,
       image: '/images/sala pesi.jpg'
     },
     {
       id: 'crosstraining',
-    title: 'CROSS TRAINING',
+      title: t.crossfit,
       icon: Zap,
-      description: 'Allenamento funzionale ad alta intensità. Box dedicato con attrezzature specifiche per WOD coinvolgenti e sfidanti.',
+      description: t.crossfitDesc,
       image: '/images/crossfit.jpg'
     },
     {
       id: 'karate',
-      title: 'KARATE',
+      title: t.karate,
       icon: Shield,
-      description: 'Arte marziale tradizionale per autodifesa e disciplina mentale. Tatami professionale e corso per tutte le età.',
+      description: t.karateDesc,
       image: '/images/karate.jpg'
     },
     {
       id: 'yoga',
-      title: 'YOGA',
+      title: t.yoga,
       icon: Heart,
-      description: 'Spazio tranquillo per la pratica dello yoga. Ambiente rilassante per il benessere fisico e mentale.',
+      description: t.yogaDesc,
       image: '/images/yoga.jpg'
     }
   ];
@@ -47,7 +49,7 @@ const GymAreasSection: React.FC = () => {
     <section className="py-20 bg-gradient-to-b from-white to-gray-50">
       <div className="container mx-auto px-4">
         <h2 className="text-4xl md:text-5xl font-bold text-navy-900 text-center mb-16 animate-fadeInUp">
-          AREE DELLA PALESTRA
+          {t.gymAreas}
         </h2>
 
         <div className="relative max-w-4xl mx-auto">

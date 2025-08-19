@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import emailService from '../services/emailService';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 const NewsletterSection: React.FC = () => {
+  const { t } = useLanguageContext();
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -18,13 +20,13 @@ const NewsletterSection: React.FC = () => {
     e.preventDefault();
     
     if (!email.trim()) {
-      setErrorMessage('Inserisci un indirizzo email');
+      setErrorMessage(t.enterEmail);
       setShowError(true);
       return;
     }
     
     if (!validateEmail(email)) {
-      setErrorMessage('Inserisci un indirizzo email valido');
+      setErrorMessage(t.enterValidEmail);
       setShowError(true);
       return;
     }
@@ -46,13 +48,13 @@ const NewsletterSection: React.FC = () => {
         }, 5000);
       } else {
         // Email già iscritta
-        setErrorMessage('Questa email è già iscritta alla newsletter.');
+        setErrorMessage(t.emailAlreadySubscribed);
         setShowError(true);
       }
       
     } catch (error) {
       console.error('Errore durante l\'iscrizione:', error);
-      setErrorMessage('Errore durante l\'invio. Riprova più tardi.');
+      setErrorMessage(t.subscribeError);
       setShowError(true);
     } finally {
       setIsSubmitting(false);
@@ -75,8 +77,7 @@ const NewsletterSection: React.FC = () => {
                 Newsletter KW8
               </h3>
               <p className="text-navy-700 leading-relaxed">
-                Inserisci la tua email per ricevere informazioni automatiche sulla palestra, 
-                aggiornamenti sui nostri servizi ed eventi speciali.
+                {t.newsletterDescription}
               </p>
             </div>
             
@@ -87,7 +88,7 @@ const NewsletterSection: React.FC = () => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Inserisci la tua email"
+                  placeholder={t.enterYourEmail}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300"
                   disabled={isSubmitting}
                 />
@@ -105,10 +106,10 @@ const NewsletterSection: React.FC = () => {
                 {isSubmitting ? (
                   <>
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2 inline-block"></div>
-                    INVIO IN CORSO...
+                    {t.sending}
                   </>
                 ) : (
-                  'ISCRIVITI ALLA NEWSLETTER'
+                  t.subscribeToNewsletter
                 )}
               </button>
             </form>
@@ -118,7 +119,7 @@ const NewsletterSection: React.FC = () => {
               <div className="mt-4 p-4 bg-green-100 border border-green-400 rounded-lg flex items-center">
                 <CheckCircle className="text-green-600 mr-2" size={20} />
                 <span className="text-green-700 font-medium">
-                  Perfetto! Ti abbiamo inviato un'email di benvenuto con tutte le informazioni sulla palestra.
+                  {t.subscriptionSuccess}
                 </span>
               </div>
             )}
@@ -132,7 +133,7 @@ const NewsletterSection: React.FC = () => {
             )}
             
             <p className="text-xs text-gray-600 text-center mt-4">
-              Non invieremo spam. Puoi annullare l'iscrizione in qualsiasi momento.
+              {t.noSpamPolicy}
             </p>
           </div>
         </div>

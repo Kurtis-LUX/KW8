@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguageContext } from '../contexts/LanguageContext';
 
 const HeroSection: React.FC = () => {
+  const { t } = useLanguageContext();
   const [displayText, setDisplayText] = useState('');
-  const fullText = 'CROSS YOUR LIMITS.';
+  const fullText = t.heroTitle;
   
   useEffect(() => {
+    setDisplayText(''); // Reset text when language changes
     let currentIndex = 0;
     const typingInterval = setInterval(() => {
       if (currentIndex <= fullText.length) {
@@ -16,7 +19,7 @@ const HeroSection: React.FC = () => {
     }, 100);
     
     return () => clearInterval(typingInterval);
-  }, []);
+  }, [fullText]);
   const scrollToStatistics = () => {
     const element = document.getElementById('statistiche');
     if (element) {
@@ -47,7 +50,7 @@ const HeroSection: React.FC = () => {
           onClick={scrollToStatistics}
           className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl animate-pulse-subtle"
         >
-          SCOPRI DI PIÙ
+          {t.discoverMore}
         </button>
       </div>
     </section>
