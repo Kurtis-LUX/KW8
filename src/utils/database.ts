@@ -305,12 +305,12 @@ const DB = {
       }
     ];
     
-    // Crea l'utente admin predefinito
+    // Crea l'utente admin predefinito (CAMBIARE IN PRODUZIONE)
     const adminUser: User = {
       id: 'admin-1',
-      email: 'kw8@gmail.com',
+      email: 'admin@example.com',
       name: 'Amministratore',
-      password: 'kw8@182',
+      password: 'CHANGE_IN_PRODUCTION',
       role: 'admin',
       workoutPlans: [],
       birthDate: '',

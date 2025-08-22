@@ -93,6 +93,8 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           )}
         </div>
 
+
+
         {/* Contacts Section */}
         <div className="mb-8">
           <button

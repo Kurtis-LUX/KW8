@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import emailService from '../services/emailService';
 import { useLanguageContext } from '../contexts/LanguageContext';
-import { EmailDebugger } from '../utils/emailDebugger';
+
 
 const NewsletterSection: React.FC = () => {
   const { t } = useLanguageContext();
@@ -18,7 +18,7 @@ const NewsletterSection: React.FC = () => {
     
     // Debug dettagliato quando la validazione fallisce
     if (!isValid) {
-      EmailDebugger.logDetailedValidation(email);
+      console.log('❌ Email non valida:', email.trim());
     } else {
       console.log('✅ Email valida:', email.trim());
     }
@@ -40,6 +40,9 @@ const NewsletterSection: React.FC = () => {
       setShowError(true);
       return;
     }
+
+    console.log('Tentativo di iscrizione newsletter per:', email);
+    setIsSubmitting(true);
     
     setIsSubmitting(true);
     setShowError(false);

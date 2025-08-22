@@ -23,7 +23,8 @@ import CookieSettings from './components/CookieSettings';
 import Modal from './components/Modal';
 import AdminDashboard from './pages/AdminDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
-import EmailTestPanel from './components/EmailTestPanel';
+
+
 import DB from './utils/database';
 import initializeData from './utils/initData';
 import { User } from './utils/database';
@@ -199,7 +200,7 @@ function App() {
                 ← Torna alla Home
               </button>
             </div>
-            <EmailTestPanel />
+            
           </div>
         </div>
       </LanguageProvider>

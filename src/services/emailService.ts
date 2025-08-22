@@ -31,22 +31,19 @@ class EmailService {
 
   private initializeEmailJS() {
     try {
-      // Valida la configurazione
+      if (typeof emailjs === 'undefined') {
+        throw new Error('EmailJS non è disponibile');
+      }
+      
       const config = { serviceId: this.serviceId, templateId: this.templateId, publicKey: this.publicKey };
       if (!validateEmailConfig(config)) {
         throw new Error('Configurazione EmailJS non valida');
       }
 
-      // Inizializza EmailJS con la chiave pubblica
       emailjs.init(this.publicKey);
       this.isInitialized = true;
-      console.log('EmailJS inizializzato correttamente con:', {
-        serviceId: this.serviceId,
-        templateId: this.templateId,
-        publicKey: this.publicKey.substring(0, 8) + '...'
-      });
     } catch (error) {
-      console.error('Errore nell\'inizializzazione di EmailJS:', error);
+      console.error('Errore inizializzazione EmailJS:', error instanceof Error ? error.message : 'Errore sconosciuto');
       this.isInitialized = false;
     }
   }
@@ -54,7 +51,7 @@ class EmailService {
   // Metodo per inviare email di benvenuto newsletter
   async sendNewsletterWelcome(email: string): Promise<boolean> {
     if (!this.isInitialized) {
-      console.error('EmailJS non è inizializzato correttamente');
+      console.error('EmailJS non inizializzato');
       return false;
     }
 
@@ -67,22 +64,16 @@ class EmailService {
         gym_phone: '3338346546',
         unsubscribe_link: `${window.location.origin}/unsubscribe?email=${encodeURIComponent(email)}`
       };
-
+      
       const result = await emailjs.send(
         this.serviceId,
         this.templateId,
         templateParams
       );
 
-      if (result.status === 200) {
-        console.log('Email di benvenuto inviata con successo a:', email);
-        return true;
-      } else {
-        console.error('Errore nell\'invio email:', result.text);
-        return false;
-      }
-    } catch (error) {
-      console.error('Errore durante l\'invio email:', error);
+      return result.status === 200;
+    } catch (error: any) {
+      console.error('Errore invio email:', error instanceof Error ? error.message : 'Errore sconosciuto');
       return false;
     }
   }
@@ -90,7 +81,6 @@ class EmailService {
   // Metodo per salvare l'iscrizione alla newsletter
   async subscribeToNewsletter(email: string): Promise<boolean> {
     try {
-      // Salva nel localStorage
       const existingEmails = JSON.parse(localStorage.getItem('newsletterEmails') || '[]');
       const subscriptions = JSON.parse(localStorage.getItem('newsletterSubscriptions') || '[]');
       
@@ -107,22 +97,22 @@ class EmailService {
         subscriptions.push(subscription);
         localStorage.setItem('newsletterSubscriptions', JSON.stringify(subscriptions));
         
-        // Invia email di benvenuto
-        const emailSent = await this.sendNewsletterWelcome(email);
-        
-        if (emailSent) {
-          console.log('Iscrizione completata e email inviata per:', email);
-        } else {
-          console.log('Iscrizione salvata ma email non inviata per:', email);
+        if (!this.isInitialized) {
+          this.reinitialize();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          if (!this.isInitialized) {
+            return true; // Iscrizione salvata comunque
+          }
         }
         
+        await this.sendNewsletterWelcome(email);
         return true;
       } else {
-        console.log('Email già iscritta:', email);
         return false;
       }
     } catch (error) {
-      console.error('Errore durante l\'iscrizione:', error);
+      console.error('Errore iscrizione newsletter:', error instanceof Error ? error.message : 'Errore sconosciuto');
       return false;
     }
   }
@@ -170,14 +160,31 @@ class EmailService {
     return this.isInitialized;
   }
 
-  // Metodo per ottenere le credenziali correnti
-  getCredentials() {
-    return {
-      serviceId: this.serviceId,
-      templateId: this.templateId,
-      publicKey: this.publicKey,
-      isInitialized: this.isInitialized
-    };
+  // Metodo per re-inizializzare EmailJS se necessario
+  reinitialize(): void {
+    this.isInitialized = false;
+    this.initializeEmailJS();
+  }
+
+  // Metodo per pulire le email registrate nella newsletter
+  clearNewsletterSubscriptions(): void {
+    try {
+      localStorage.removeItem('newsletterEmails');
+      localStorage.removeItem('newsletterSubscriptions');
+    } catch (error) {
+      console.error('Errore pulizia newsletter:', error);
+    }
+  }
+
+  // Metodo per ottenere le email registrate
+  getNewsletterSubscriptions(): NewsletterSubscription[] {
+    try {
+      const subscriptions = localStorage.getItem('newsletterSubscriptions');
+      return subscriptions ? JSON.parse(subscriptions) : [];
+    } catch (error) {
+      console.error('Errore recupero newsletter:', error);
+      return [];
+    }
   }
 }
 
