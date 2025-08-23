@@ -6,7 +6,7 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|assets/|images/|manifest\\.json|sw\\.js|test-mobile\\.html).*)",
       "destination": "/index.html"
     }
   ]
