@@ -130,7 +130,7 @@ const StaffSection: React.FC = () => {
         }`}
       >
         <div className="container mx-auto px-4">
-          <h2 className={`text-4xl md:text-5xl font-bold text-navy-900 text-center mb-12 transition-all duration-800 transform ${
+          <h2 className={`text-4xl md:text-5xl font-bold text-blue-900 text-center mb-12 transition-all duration-800 transform ${
             isVisible 
               ? 'translate-y-0 opacity-100 scale-100' 
               : 'translate-y-8 opacity-0 scale-95'
@@ -166,20 +166,20 @@ const StaffSection: React.FC = () => {
                     />
                     <div className={`absolute inset-0 transition-opacity duration-500 flex items-center justify-center ${
                       index === 0 ? 'bg-red-600 bg-opacity-0 group-hover:bg-opacity-70' :
-                      index === 1 ? 'bg-navy-900 bg-opacity-0 group-hover:bg-opacity-70' :
+                      index === 1 ? 'bg-blue-900 bg-opacity-0 group-hover:bg-opacity-70' :
                       index === 2 ? 'bg-yellow-400 bg-opacity-0 group-hover:bg-opacity-70' :
                       'bg-white bg-opacity-0 group-hover:bg-opacity-70'
                     }`}>
                       <Icon className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                         index === 0 ? 'text-white' :
                         index === 1 ? 'text-white' :
-                        index === 2 ? 'text-navy-900' :
-                        'text-navy-900'
+                        index === 2 ? 'text-blue-900' :
+                        'text-blue-900'
                       }`} size={32} />
                     </div>
                   </div>
                   
-                  <h3 className="text-lg font-bold text-navy-900 mb-2 group-hover:text-red-600 transition-colors duration-300">
+                  <h3 className="text-lg font-bold text-blue-900 mb-2 group-hover:text-red-600 transition-colors duration-300">
                     {member.name}
                   </h3>
                   
@@ -204,7 +204,7 @@ const StaffSection: React.FC = () => {
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl max-h-[95vh] sm:max-h-[90vh] w-full overflow-hidden">
             {/* Header */}
             <div className={`bg-gradient-to-r ${
-              staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'from-navy-900 to-navy-800' :
+              staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'from-blue-900 to-blue-800' :
               staff[selectedCoach].name === 'Saverio Di Maria' ? 'from-red-600 to-red-700' :
               staff[selectedCoach].role.includes('Karate') ? 'from-yellow-500 to-yellow-600' :
               staff[selectedCoach].role.includes('Yoga') ? 'from-white to-gray-100 text-gray-800' :
@@ -233,7 +233,7 @@ const StaffSection: React.FC = () => {
             {/* Content Compatto */}
             <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(95vh-180px)] sm:max-h-[calc(90vh-180px)]">
               <div className="mb-3">
-                <h4 className="text-base sm:text-lg font-bold text-navy-900 flex items-center">
+                <h4 className="text-base sm:text-lg font-bold text-blue-900 flex items-center">
                   <Award className="mr-2" size={18} />
                   {t.certifications}
                 </h4>
@@ -243,7 +243,7 @@ const StaffSection: React.FC = () => {
                 {staff[selectedCoach].certifications.map((cert, index) => {
                   const Icon = staff[selectedCoach].icon;
                   const iconColor = 
-                    staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'text-navy-900' :
+                    staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'text-blue-900' :
                     staff[selectedCoach].name === 'Saverio Di Maria' ? 'text-red-600' :
                     staff[selectedCoach].role.includes('Karate') ? 'text-yellow-500' :
                     staff[selectedCoach].role.includes('Yoga') ? 'text-gray-600' :

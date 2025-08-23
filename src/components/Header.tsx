@@ -109,7 +109,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
             <img 
               src="/images/logo.png" 
               alt="KW8 Logo" 
-              className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer"
+              className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer filter drop-shadow-lg"
               onClick={() => {
                 if (onNavigate) {
                   onNavigate('home');

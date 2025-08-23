@@ -180,8 +180,8 @@ const GymAreasSection: React.FC = () => {
                 
                 switch(area.id) {
                   case 'sala-pesi': // sala pesi
-                    overlayColor = 'bg-navy-900 bg-opacity-30';
-                    iconColor = 'text-navy-900';
+                    overlayColor = 'bg-blue-900 bg-opacity-70';
+                    iconColor = 'text-blue-100';
                     textColor = 'text-white';
                     break;
                   case 'crosstraining':
@@ -200,7 +200,7 @@ const GymAreasSection: React.FC = () => {
                     textColor = 'text-white';
                     break;
                   default:
-                    overlayColor = 'bg-navy-900 bg-opacity-30';
+                    overlayColor = 'bg-gray-900 bg-opacity-30';
                     iconColor = 'text-red-600';
                     textColor = 'text-white';
                 }
