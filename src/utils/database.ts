@@ -85,13 +85,69 @@ export interface Subscription {
   features: string[];
 }
 
-// Funzioni per interagire con il database
+// Funzioni per interagire con il database con fallback per mobile
 const DB = {
+  // Controllo compatibilità storage
+  isStorageAvailable: (): boolean => {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) return false;
+      const test = '__storage_test__';
+      localStorage.setItem(test, test);
+      localStorage.removeItem(test);
+      return true;
+    } catch (e) {
+      console.warn('⚠️ localStorage not available:', e);
+      return false;
+    }
+  },
+  
+  // Fallback storage in memoria per dispositivi con problemi
+  memoryStorage: new Map<string, string>(),
+  
+  // Metodi storage unificati
+  getItem: (key: string): string | null => {
+    if (DB.isStorageAvailable()) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        console.warn('⚠️ localStorage.getItem failed:', e);
+      }
+    }
+    return DB.memoryStorage.get(key) || null;
+  },
+  
+  setItem: (key: string, value: string): void => {
+    if (DB.isStorageAvailable()) {
+      try {
+        localStorage.setItem(key, value);
+        return;
+      } catch (e) {
+        console.warn('⚠️ localStorage.setItem failed, using memory storage:', e);
+      }
+    }
+    DB.memoryStorage.set(key, value);
+  },
+  
+  removeItem: (key: string): void => {
+    if (DB.isStorageAvailable()) {
+      try {
+        localStorage.removeItem(key);
+      } catch (e) {
+        console.warn('⚠️ localStorage.removeItem failed:', e);
+      }
+    }
+    DB.memoryStorage.delete(key);
+  },
+  
   // Utenti
   getUsers: (): User[] => {
-    if (typeof window === 'undefined' || !window.localStorage) return [];
-    const users = localStorage.getItem('kw8_users');
-    return users ? JSON.parse(users) : [];
+    try {
+      const users = DB.getItem('kw8_users');
+      return users ? JSON.parse(users) : [];
+    } catch (e) {
+      console.error('❌ Error parsing users data:', e);
+      return [];
+    }
   },
   
   getUserById: (id: string): User | null => {
@@ -105,54 +161,67 @@ const DB = {
   },
   
   saveUser: (user: User): void => {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    const users = DB.getUsers();
-    const existingUserIndex = users.findIndex(u => u.id === user.id);
-    
-    if (existingUserIndex >= 0) {
-      users[existingUserIndex] = user;
-    } else {
-      users.push(user);
+    try {
+      const users = DB.getUsers();
+      const existingUserIndex = users.findIndex(u => u.id === user.id);
+      
+      if (existingUserIndex >= 0) {
+        users[existingUserIndex] = user;
+      } else {
+        users.push(user);
+      }
+      
+      DB.setItem('kw8_users', JSON.stringify(users));
+      console.log('✅ User saved successfully:', user.email);
+    } catch (e) {
+      console.error('❌ Error saving user:', e);
     }
-    
-    localStorage.setItem('kw8_users', JSON.stringify(users));
   },
   
   deleteUser: (userId: string): void => {
-    const users = DB.getUsers();
-    const filteredUsers = users.filter(u => u.id !== userId);
-    localStorage.setItem('kw8_users', JSON.stringify(filteredUsers));
+    try {
+      const users = DB.getUsers();
+      const filteredUsers = users.filter(u => u.id !== userId);
+      DB.setItem('kw8_users', JSON.stringify(filteredUsers));
+      console.log('✅ User deleted successfully:', userId);
+    } catch (e) {
+      console.error('❌ Error deleting user:', e);
+    }
   },
   
   // Piani di allenamento
   getWorkoutPlans: (): WorkoutPlan[] => {
-    if (typeof window === 'undefined' || !window.localStorage) return [];
-    const plans = localStorage.getItem('kw8_workoutPlans');
-    const workoutPlans = plans ? JSON.parse(plans) : [];
-    
-    // Aggiorna le schede esistenti con le nuove proprietà se mancanti
-    const updatedPlans = workoutPlans.map((plan: any, index: number) => {
-      const now = new Date().toISOString();
-      return {
-        ...plan,
-        category: plan.category || 'strength',
-        status: plan.status || 'published',
-        mediaFiles: plan.mediaFiles || { images: [], videos: [], audio: [] },
-        tags: plan.tags || [],
-        order: plan.order !== undefined ? plan.order : index,
-        createdAt: plan.createdAt || now,
-        updatedAt: plan.updatedAt || now,
-        difficulty: plan.difficulty || 'beginner',
-        targetMuscles: plan.targetMuscles || []
-      };
-    });
-    
-    // Salva le schede aggiornate se sono state modificate
-    if (updatedPlans.length > 0 && JSON.stringify(updatedPlans) !== JSON.stringify(workoutPlans)) {
-      localStorage.setItem('kw8_workoutPlans', JSON.stringify(updatedPlans));
+    try {
+      const plans = DB.getItem('kw8_workoutPlans');
+      const workoutPlans = plans ? JSON.parse(plans) : [];
+      
+      // Aggiorna le schede esistenti con le nuove proprietà se mancanti
+      const updatedPlans = workoutPlans.map((plan: any, index: number) => {
+        const now = new Date().toISOString();
+        return {
+          ...plan,
+          category: plan.category || 'strength',
+          status: plan.status || 'published',
+          mediaFiles: plan.mediaFiles || { images: [], videos: [], audio: [] },
+          tags: plan.tags || [],
+          order: plan.order !== undefined ? plan.order : index,
+          createdAt: plan.createdAt || now,
+          updatedAt: plan.updatedAt || now,
+          difficulty: plan.difficulty || 'beginner',
+          targetMuscles: plan.targetMuscles || []
+        };
+      });
+      
+      // Salva le schede aggiornate se sono state modificate
+      if (updatedPlans.length > 0 && JSON.stringify(updatedPlans) !== JSON.stringify(workoutPlans)) {
+        DB.setItem('kw8_workoutPlans', JSON.stringify(updatedPlans));
+      }
+      
+      return updatedPlans;
+    } catch (e) {
+      console.error('❌ Error parsing workout plans data:', e);
+      return [];
     }
-    
-    return updatedPlans;
   },
   
   getWorkoutPlanById: (id: string): WorkoutPlan | null => {
@@ -166,30 +235,43 @@ const DB = {
   },
   
   saveWorkoutPlan: (plan: WorkoutPlan): void => {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    const plans = DB.getWorkoutPlans();
-    const existingPlanIndex = plans.findIndex(p => p.id === plan.id);
-    
-    if (existingPlanIndex >= 0) {
-      plans[existingPlanIndex] = plan;
-    } else {
-      plans.push(plan);
+    try {
+      const plans = DB.getWorkoutPlans();
+      const existingPlanIndex = plans.findIndex(p => p.id === plan.id);
+      
+      if (existingPlanIndex >= 0) {
+        plans[existingPlanIndex] = plan;
+      } else {
+        plans.push(plan);
+      }
+      
+      DB.setItem('kw8_workoutPlans', JSON.stringify(plans));
+      console.log('✅ Workout plan saved successfully:', plan.name);
+    } catch (e) {
+      console.error('❌ Error saving workout plan:', e);
     }
-    
-    localStorage.setItem('kw8_workoutPlans', JSON.stringify(plans));
   },
   
   deleteWorkoutPlan: (planId: string): void => {
-    const plans = DB.getWorkoutPlans();
-    const filteredPlans = plans.filter(plan => plan.id !== planId);
-    localStorage.setItem('kw8_workoutPlans', JSON.stringify(filteredPlans));
+    try {
+      const plans = DB.getWorkoutPlans();
+      const filteredPlans = plans.filter(plan => plan.id !== planId);
+      DB.setItem('kw8_workoutPlans', JSON.stringify(filteredPlans));
+      console.log('✅ Workout plan deleted successfully:', planId);
+    } catch (e) {
+      console.error('❌ Error deleting workout plan:', e);
+    }
   },
 
   // Cartelle
   getWorkoutFolders: (): WorkoutFolder[] => {
-    if (typeof window === 'undefined' || !window.localStorage) return [];
-    const folders = localStorage.getItem('kw8_workoutFolders');
-    return folders ? JSON.parse(folders) : [];
+    try {
+      const folders = DB.getItem('kw8_workoutFolders');
+      return folders ? JSON.parse(folders) : [];
+    } catch (e) {
+      console.error('❌ Error parsing workout folders data:', e);
+      return [];
+    }
   },
 
   getWorkoutFolderById: (id: string): WorkoutFolder | null => {
@@ -198,42 +280,50 @@ const DB = {
   },
 
   saveWorkoutFolder: (folder: WorkoutFolder): void => {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    const folders = DB.getWorkoutFolders();
-    const existingFolderIndex = folders.findIndex(f => f.id === folder.id);
-    
-    if (existingFolderIndex >= 0) {
-      folders[existingFolderIndex] = { ...folder, updatedAt: new Date().toISOString() };
-    } else {
-      folders.push({ ...folder, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    try {
+      const folders = DB.getWorkoutFolders();
+      const existingFolderIndex = folders.findIndex(f => f.id === folder.id);
+      
+      if (existingFolderIndex >= 0) {
+        folders[existingFolderIndex] = { ...folder, updatedAt: new Date().toISOString() };
+      } else {
+        folders.push({ ...folder, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      }
+      
+      DB.setItem('kw8_workoutFolders', JSON.stringify(folders));
+      console.log('✅ Workout folder saved successfully:', folder.name);
+    } catch (e) {
+      console.error('❌ Error saving workout folder:', e);
     }
-    
-    localStorage.setItem('kw8_workoutFolders', JSON.stringify(folders));
   },
 
   deleteWorkoutFolder: (folderId: string): void => {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    const folders = DB.getWorkoutFolders();
-    const plans = DB.getWorkoutPlans();
-    
-    // Rimuovi la cartella
-    const filteredFolders = folders.filter(folder => folder.id !== folderId);
-    
-    // Sposta le schede della cartella eliminata nella root
-    const updatedPlans = plans.map(plan => 
-      plan.folderId === folderId ? { ...plan, folderId: undefined } : plan
-    );
-    
-    // Sposta le sotto-cartelle nella cartella padre o root
-    const parentFolder = folders.find(f => f.id === folderId);
-    const updatedFolders = filteredFolders.map(folder => 
-      folder.parentId === folderId 
-        ? { ...folder, parentId: parentFolder?.parentId }
-        : folder
-    );
-    
-    localStorage.setItem('kw8_workoutFolders', JSON.stringify(updatedFolders));
-    localStorage.setItem('kw8_workoutPlans', JSON.stringify(updatedPlans));
+    try {
+      const folders = DB.getWorkoutFolders();
+      const plans = DB.getWorkoutPlans();
+      
+      // Rimuovi la cartella
+      const filteredFolders = folders.filter(folder => folder.id !== folderId);
+      
+      // Sposta le schede della cartella eliminata nella root
+      const updatedPlans = plans.map(plan => 
+        plan.folderId === folderId ? { ...plan, folderId: undefined } : plan
+      );
+      
+      // Sposta le sotto-cartelle nella cartella padre o root
+      const parentFolder = folders.find(f => f.id === folderId);
+      const updatedFolders = filteredFolders.map(folder => 
+        folder.parentId === folderId 
+          ? { ...folder, parentId: parentFolder?.parentId }
+          : folder
+      );
+      
+      DB.setItem('kw8_workoutFolders', JSON.stringify(updatedFolders));
+      DB.setItem('kw8_workoutPlans', JSON.stringify(updatedPlans));
+      console.log('✅ Workout folder deleted successfully:', folderId);
+    } catch (e) {
+      console.error('❌ Error deleting workout folder:', e);
+    }
   },
 
   getWorkoutPlansByFolderId: (folderId?: string): WorkoutPlan[] => {
@@ -248,9 +338,13 @@ const DB = {
   
   // Abbonamenti
   getSubscriptions: (): Subscription[] => {
-    if (typeof window === 'undefined' || !window.localStorage) return [];
-    const subscriptions = localStorage.getItem('kw8_subscriptions');
-    return subscriptions ? JSON.parse(subscriptions) : [];
+    try {
+      const subscriptions = DB.getItem('kw8_subscriptions');
+      return subscriptions ? JSON.parse(subscriptions) : [];
+    } catch (e) {
+      console.error('❌ Error parsing subscriptions data:', e);
+      return [];
+    }
   },
   
   getSubscriptionById: (id: string): Subscription | null => {
@@ -259,77 +353,24 @@ const DB = {
   },
   
   saveSubscription: (subscription: Subscription): void => {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    const subscriptions = DB.getSubscriptions();
-    const existingSubIndex = subscriptions.findIndex(s => s.id === subscription.id);
-    
-    if (existingSubIndex >= 0) {
-      subscriptions[existingSubIndex] = subscription;
-    } else {
-      subscriptions.push(subscription);
+    try {
+      const subscriptions = DB.getSubscriptions();
+      const existingSubIndex = subscriptions.findIndex(s => s.id === subscription.id);
+      
+      if (existingSubIndex >= 0) {
+        subscriptions[existingSubIndex] = subscription;
+      } else {
+        subscriptions.push(subscription);
+      }
+      
+      DB.setItem('kw8_subscriptions', JSON.stringify(subscriptions));
+      console.log('✅ Subscription saved successfully:', subscription.type);
+    } catch (e) {
+      console.error('❌ Error saving subscription:', e);
     }
-    
-    localStorage.setItem('kw8_subscriptions', JSON.stringify(subscriptions));
   },
   
-  // Inizializzazione del database con dati predefiniti
-  initializeDatabase: (): void => {
-    if (typeof window === 'undefined' || !window.localStorage) return;
-    // Verifica se il database è già stato inizializzato
-    if (localStorage.getItem('kw8_initialized')) return;
-    
-    // Abbonamenti predefiniti
-    const defaultSubscriptions: Subscription[] = [
-      {
-        id: '1',
-        type: 'standard',
-        price: 39.99,
-        duration: 1,
-        features: [
-          'Accesso illimitato alla sala pesi',
-          'Accesso alle lezioni di gruppo',
-          'Armadietto personale',
-          'Consulenza nutrizionale mensile'
-        ]
-      },
-      {
-        id: '2',
-        type: 'entry-flex',
-        price: 29.99,
-        duration: 1,
-        features: [
-          'Accesso limitato alla sala pesi (8:00-16:00)',
-          'Accesso alle lezioni di gruppo base',
-          'Armadietto condiviso'
-        ]
-      }
-    ];
-    
-    // Crea l'utente admin predefinito (CAMBIARE IN PRODUZIONE)
-    const adminUser: User = {
-      id: 'admin-1',
-      email: 'admin@example.com',
-      name: 'Amministratore',
-      password: 'CHANGE_IN_PRODUCTION',
-      role: 'admin',
-      workoutPlans: [],
-      birthDate: '',
-      gender: 'M',
-      fiscalCode: '',
-      birthPlace: '',
-      address: ''
-    };
-    
-    // Salva l'admin nel database
-    const users = DB.getUsers();
-    if (!users.find(u => u.role === 'admin')) {
-      users.push(adminUser);
-      localStorage.setItem('kw8_users', JSON.stringify(users));
-    }
-    
-    localStorage.setItem('kw8_subscriptions', JSON.stringify(defaultSubscriptions));
-    localStorage.setItem('kw8_initialized', 'true');
-  },
+  // Nota: initializeDatabase è definito più avanti nel file
   
   // Verifica le credenziali dell'utente
   verifyCredentials: (email: string, password: string): { user: User | null, success: boolean, message: string } => {
@@ -357,14 +398,14 @@ const DB = {
   saveCookiePreferences: (userId: string, preferences: any): void => {
     if (!userId) return;
     
-    localStorage.setItem(`kw8_cookie_preferences_${userId}`, JSON.stringify(preferences));
+    DB.setItem(`kw8_cookie_preferences_${userId}`, JSON.stringify(preferences));
   },
   
   // Ottieni le preferenze dei cookie (solo per utenti loggati)
   getCookiePreferences: (userId: string): any => {
     if (!userId) return null;
     
-    const preferences = localStorage.getItem(`kw8_cookie_preferences_${userId}`);
+    const preferences = DB.getItem(`kw8_cookie_preferences_${userId}`);
     return preferences ? JSON.parse(preferences) : null;
   },
 
@@ -543,14 +584,14 @@ const DB = {
   },
 
   setUserIP: (ip: string): void => {
-    localStorage.setItem('userIP', ip);
-    localStorage.setItem('sessionTimestamp', Date.now().toString());
+    DB.setItem('userIP', ip);
+    DB.setItem('sessionTimestamp', Date.now().toString());
   },
 
   checkIPSession: (): boolean => {
-    const storedIP = localStorage.getItem('userIP');
+    const storedIP = DB.getItem('userIP');
     const currentIP = DB.getCurrentIP();
-    const sessionTimestamp = localStorage.getItem('sessionTimestamp');
+    const sessionTimestamp = DB.getItem('sessionTimestamp');
     
     // Verifica se l'IP è cambiato o se la sessione è scaduta (24 ore)
     if (!storedIP || !sessionTimestamp) return false;
@@ -564,10 +605,10 @@ const DB = {
 
   clearSessionOnIPChange: (): void => {
     if (!DB.checkIPSession()) {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('userIP');
-      localStorage.removeItem('sessionTimestamp');
-      localStorage.removeItem('autoLogin');
+      DB.removeItem('currentUser');
+      DB.removeItem('userIP');
+      DB.removeItem('sessionTimestamp');
+      DB.removeItem('autoLogin');
     }
   },
 
@@ -580,12 +621,12 @@ const DB = {
       ip: currentIP,
       timestamp: Date.now()
     };
-    localStorage.setItem('autoLogin', JSON.stringify(loginData));
+    DB.setItem('autoLogin', JSON.stringify(loginData));
     DB.setUserIP(currentIP);
   },
 
   getAutoLogin: (): { email: string, password: string } | null => {
-    const autoLoginData = localStorage.getItem('autoLogin');
+    const autoLoginData = DB.getItem('autoLogin');
     if (!autoLoginData) return null;
     
     try {
@@ -615,7 +656,86 @@ const DB = {
   },
 
   clearAutoLogin: (): void => {
-    localStorage.removeItem('autoLogin');
+    DB.removeItem('autoLogin');
+    DB.removeItem('userIP');
+    DB.removeItem('sessionTimestamp');
+  },
+  
+  // Inizializzazione del database con controlli di compatibilità
+  initializeDatabase: async (): Promise<void> => {
+    console.log('🔧 Initializing database...');
+    
+    // Verifica compatibilità storage
+    const storageAvailable = DB.isStorageAvailable();
+    console.log('💾 Storage available:', storageAvailable);
+    
+    if (!storageAvailable) {
+      console.warn('⚠️ localStorage not available, using memory storage fallback');
+      console.warn('⚠️ Data will be lost on page refresh');
+    }
+    
+    // Test di scrittura/lettura
+    try {
+      const testKey = '__db_test__';
+      const testValue = 'test_value_' + Date.now();
+      
+      DB.setItem(testKey, testValue);
+      const retrievedValue = DB.getItem(testKey);
+      DB.removeItem(testKey);
+      
+      if (retrievedValue === testValue) {
+        console.log('✅ Database read/write test passed');
+      } else {
+        console.error('❌ Database read/write test failed');
+      }
+    } catch (e) {
+      console.error('❌ Database test failed:', e);
+    }
+    
+    // Informazioni di debug per mobile
+    console.log('📱 Mobile Debug Info:', {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      language: navigator.language,
+      onLine: navigator.onLine,
+      cookieEnabled: navigator.cookieEnabled,
+      memoryStorageEntries: DB.memoryStorage.size,
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio
+      },
+      connection: (navigator as any).connection ? {
+        effectiveType: (navigator as any).connection.effectiveType,
+        downlink: (navigator as any).connection.downlink,
+        rtt: (navigator as any).connection.rtt
+      } : 'not available'
+    });
+    
+    // Verifica dati esistenti
+    const users = DB.getUsers();
+    const plans = DB.getWorkoutPlans();
+    console.log('💾 Database Statistics:', {
+      users: users.length,
+      workoutPlans: plans.length
+    });
+    
+    // Test di performance per dispositivi lenti
+    const performanceStart = performance.now();
+    try {
+      // Test di lettura/scrittura multipla
+      for (let i = 0; i < 5; i++) {
+        DB.setItem(`perf_test_${i}`, `test_data_${i}`);
+        DB.getItem(`perf_test_${i}`);
+        DB.removeItem(`perf_test_${i}`);
+      }
+      const performanceEnd = performance.now();
+      console.log(`⚡ Storage performance test: ${(performanceEnd - performanceStart).toFixed(2)}ms`);
+    } catch (e) {
+      console.warn('⚠️ Storage performance test failed:', e);
+    }
+    
+    console.log('✅ Database initialization completed');
   }
 };
 

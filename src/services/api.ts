@@ -35,50 +35,113 @@ export interface ApiResponse<T> {
 }
 
 class ApiService {
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  private readonly TIMEOUT_MS = 15000; // 15 secondi per mobile
+  private readonly MAX_RETRIES = 3;
+  
+  private async requestWithTimeout<T>(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
     try {
-      // Aggiungi automaticamente l'header di autorizzazione se disponibile
-      const authHeaders = authService.getAuthHeader();
-      
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-          ...options.headers,
-        },
-        credentials: 'include',
+      const response = await fetch(url, {
         ...options,
+        signal: controller.signal,
       });
-
-      const data = await response.json();
-
-      // Se ricevi un errore 401, il token potrebbe essere scaduto
-      if (response.status === 401) {
-        authService.logout();
-        return {
-          success: false,
-          error: 'Sessione scaduta. Effettua nuovamente il login.',
-        };
-      }
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || `HTTP error! status: ${response.status}`,
-        };
-      }
-
-      return {
-        success: true,
-        data: data,
-      };
+      clearTimeout(timeoutId);
+      return response;
     } catch (error) {
-      console.error('API request failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      };
+      clearTimeout(timeoutId);
+      throw error;
     }
+  }
+  
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+      try {
+        console.log(`🌐 API Request attempt ${attempt}/${this.MAX_RETRIES}: ${endpoint}`);
+        
+        // Aggiungi automaticamente l'header di autorizzazione se disponibile
+        const authHeaders = authService.getAuthHeader();
+        
+        const response = await this.requestWithTimeout(`${API_BASE_URL}${endpoint}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+            ...options.headers,
+          },
+          credentials: 'include',
+          ...options,
+        }, this.TIMEOUT_MS);
+
+        const data = await response.json();
+
+        // Se ricevi un errore 401, il token potrebbe essere scaduto
+        if (response.status === 401) {
+          authService.logout();
+          return {
+            success: false,
+            error: 'Sessione scaduta. Effettua nuovamente il login.',
+          };
+        }
+
+        if (!response.ok) {
+          // Non fare retry per errori client (4xx)
+          if (response.status >= 400 && response.status < 500) {
+            return {
+              success: false,
+              error: data.error || `HTTP error! status: ${response.status}`,
+            };
+          }
+          
+          // Per errori server (5xx), prova di nuovo
+          throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        }
+
+        console.log(`✅ API Request successful: ${endpoint}`);
+        return {
+          success: true,
+          data: data,
+        };
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error('Unknown error');
+        console.warn(`⚠️ API Request attempt ${attempt} failed:`, lastError.message);
+        
+        // Non fare retry per errori di autenticazione o client
+        if (lastError.message.includes('401') || lastError.message.includes('403')) {
+          break;
+        }
+        
+        // Se non è l'ultimo tentativo, aspetta prima di riprovare
+        if (attempt < this.MAX_RETRIES) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000); // Exponential backoff, max 5s
+          console.log(`🔄 Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    // Tutti i tentativi falliti
+    console.error('❌ All API request attempts failed:', lastError?.message);
+    return {
+      success: false,
+      error: this.getErrorMessage(lastError),
+    };
+  }
+  
+  private getErrorMessage(error: Error | null): string {
+    if (!error) return 'Unknown error occurred';
+    
+    if (error.name === 'AbortError') {
+      return 'Richiesta interrotta per timeout. Controlla la connessione.';
+    }
+    
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      return 'Errore di connessione. Controlla la rete e riprova.';
+    }
+    
+    return error.message || 'Errore sconosciuto';
   }
 
   // Users API (richiede autenticazione admin)

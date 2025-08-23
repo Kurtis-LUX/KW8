@@ -50,9 +50,9 @@ function App() {
         console.log('📱 Mobile debug - localStorage available:', typeof localStorage !== 'undefined');
         console.log('📱 Mobile debug - sessionStorage available:', typeof sessionStorage !== 'undefined');
         
-        // Inizializza il database con le configurazioni di base
+        // Inizializza il database con le configurazioni di base e controlli di compatibilità
         console.log('💾 Initializing database...');
-        DB.initializeDatabase();
+        await DB.initializeDatabase();
         console.log('💾 Database initialized');
         
         // Inizializza il database con dati di esempio

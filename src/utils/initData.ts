@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 export const initializeData = () => {
   // Verifica se il database è già stato inizializzato con dati di esempio
   if (typeof window === 'undefined' || !window.localStorage) return;
-  if (localStorage.getItem('kw8_data_initialized')) return;
+  if (DB.getItem('kw8_data_initialized')) return;
   
   // Crea abbonamenti predefiniti
   const subscriptions: Subscription[] = [
@@ -194,7 +194,7 @@ export const initializeData = () => {
   
   // Segna il database come inizializzato con dati di esempio
   if (typeof window !== 'undefined' && window.localStorage) {
-    localStorage.setItem('kw8_data_initialized', 'true');
+    DB.setItem('kw8_data_initialized', 'true');
   }
 };
 
