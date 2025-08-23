@@ -174,29 +174,34 @@ const GymAreasSection: React.FC = () => {
                 const Icon = area.icon;
                 
                 // Definisci colori specifici per ogni area
-                let overlayColor = 'bg-navy-900 bg-opacity-60';
-                let iconColor = 'text-white';
+                let overlayColor = 'bg-navy-900 bg-opacity-30';
+                let iconColor = 'text-red-600';
                 let textColor = 'text-white';
                 
                 switch(area.id) {
+                  case 'sala-pesi': // sala pesi
+                    overlayColor = 'bg-red-600 bg-opacity-30';
+                    iconColor = 'text-red-600';
+                    textColor = 'text-white';
+                    break;
                   case 'crosstraining':
-                    overlayColor = 'bg-red-600 bg-opacity-70';
-                    iconColor = 'text-white';
+                    overlayColor = 'bg-blue-600 bg-opacity-30';
+                    iconColor = 'text-blue-600';
                     textColor = 'text-white';
                     break;
                   case 'karate':
-                    overlayColor = 'bg-white bg-opacity-90';
-                    iconColor = 'text-navy-900';
-                    textColor = 'text-navy-900';
+                    overlayColor = 'bg-yellow-400 bg-opacity-30';
+                    iconColor = 'text-yellow-400';
+                    textColor = 'text-white';
                     break;
                   case 'yoga':
-                    overlayColor = 'bg-yellow-400 bg-opacity-80';
-                    iconColor = 'text-navy-900';
-                    textColor = 'text-navy-900';
+                    overlayColor = 'bg-white bg-opacity-30';
+                    iconColor = 'text-white';
+                    textColor = 'text-white';
                     break;
                   default:
-                    overlayColor = 'bg-navy-900 bg-opacity-60';
-                    iconColor = 'text-white';
+                    overlayColor = 'bg-navy-900 bg-opacity-30';
+                    iconColor = 'text-red-600';
                     textColor = 'text-white';
                 }
                 

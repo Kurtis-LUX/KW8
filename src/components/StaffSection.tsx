@@ -203,7 +203,13 @@ const StaffSection: React.FC = () => {
           <div className="absolute inset-0 bg-black bg-opacity-50" onClick={() => setSelectedCoach(null)}></div>
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl max-h-[95vh] sm:max-h-[90vh] w-full overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 sm:p-6 relative">
+            <div className={`bg-gradient-to-r ${
+              staff[selectedCoach].role.includes('Sala Pesi') ? 'from-red-600 to-red-700' :
+              staff[selectedCoach].role.includes('Cross training') ? 'from-blue-600 to-blue-700' :
+              staff[selectedCoach].role.includes('Karate') ? 'from-yellow-500 to-yellow-600' :
+              staff[selectedCoach].role.includes('Yoga') ? 'from-white to-gray-100 text-gray-800' :
+              'from-red-600 to-red-700'
+            } text-white p-4 sm:p-6 relative`}>
               <button
                 onClick={() => setSelectedCoach(null)}
                 className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:text-gray-200 transition-colors p-2 rounded-full hover:bg-white/10"
@@ -236,9 +242,15 @@ const StaffSection: React.FC = () => {
               <div className="space-y-2">
                 {staff[selectedCoach].certifications.map((cert, index) => {
                   const Icon = staff[selectedCoach].icon;
+                  const iconColor = 
+                    staff[selectedCoach].role.includes('Sala Pesi') ? 'text-red-600' :
+                    staff[selectedCoach].role.includes('Cross training') ? 'text-blue-600' :
+                    staff[selectedCoach].role.includes('Karate') ? 'text-yellow-500' :
+                    staff[selectedCoach].role.includes('Yoga') ? 'text-gray-600' :
+                    'text-red-600';
                   return (
                     <div key={index} className="flex items-start space-x-3 p-3 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100 hover:shadow-md transition-all duration-300">
-                      <Icon className="text-red-600 flex-shrink-0 mt-0.5" size={16} />
+                      <Icon className={`${iconColor} flex-shrink-0 mt-0.5`} size={16} />
                       <span className="text-sm text-navy-700 leading-relaxed">{cert}</span>
                     </div>
                   );
@@ -254,7 +266,13 @@ const StaffSection: React.FC = () => {
                 </span>
                 <button
                   onClick={() => setSelectedCoach(null)}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto"
+                  className={`${
+                    staff[selectedCoach].role.includes('Sala Pesi') ? 'bg-red-600 hover:bg-red-700' :
+                    staff[selectedCoach].role.includes('Cross training') ? 'bg-blue-600 hover:bg-blue-700' :
+                    staff[selectedCoach].role.includes('Karate') ? 'bg-yellow-500 hover:bg-yellow-600' :
+                    staff[selectedCoach].role.includes('Yoga') ? 'bg-gray-600 hover:bg-gray-700' :
+                    'bg-red-600 hover:bg-red-700'
+                  } text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto`}
                 >
                   {t.closeCertifications}
                 </button>
