@@ -96,7 +96,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
 
 
         {/* Contacts Section */}
-        <div className="mb-8">
+        <div id="contatti" className="mb-8">
           <button
             onClick={() => toggleSection('contacts')}
             className="flex items-center justify-between w-full py-4 text-left text-navy-900 font-semibold hover:text-red-600 transition-all duration-300 rounded-lg hover:bg-gray-50 px-2"

@@ -165,10 +165,10 @@ const StaffSection: React.FC = () => {
                       className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                     <div className={`absolute inset-0 transition-opacity duration-500 flex items-center justify-center ${
-                      index === 0 ? 'bg-blue-900 bg-opacity-0 group-hover:bg-opacity-70' :
-                      index === 1 ? 'bg-red-600 bg-opacity-0 group-hover:bg-opacity-70' :
-                      index === 2 ? 'bg-white bg-opacity-0 group-hover:bg-opacity-70' :
-                      'bg-yellow-400 bg-opacity-0 group-hover:bg-opacity-70'
+                      index === 0 ? 'bg-red-600 bg-opacity-0 group-hover:bg-opacity-70' :
+                      index === 1 ? 'bg-navy-900 bg-opacity-0 group-hover:bg-opacity-70' :
+                      index === 2 ? 'bg-yellow-400 bg-opacity-0 group-hover:bg-opacity-70' :
+                      'bg-white bg-opacity-0 group-hover:bg-opacity-70'
                     }`}>
                       <Icon className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                         index === 0 ? 'text-white' :
@@ -204,8 +204,8 @@ const StaffSection: React.FC = () => {
           <div className="relative bg-white rounded-2xl shadow-2xl max-w-2xl max-h-[95vh] sm:max-h-[90vh] w-full overflow-hidden">
             {/* Header */}
             <div className={`bg-gradient-to-r ${
-              staff[selectedCoach].role.includes('Sala Pesi') ? 'from-red-600 to-red-700' :
-              staff[selectedCoach].role.includes('Cross training') ? 'from-blue-600 to-blue-700' :
+              staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'from-navy-900 to-navy-800' :
+              staff[selectedCoach].name === 'Saverio Di Maria' ? 'from-red-600 to-red-700' :
               staff[selectedCoach].role.includes('Karate') ? 'from-yellow-500 to-yellow-600' :
               staff[selectedCoach].role.includes('Yoga') ? 'from-white to-gray-100 text-gray-800' :
               'from-red-600 to-red-700'
@@ -243,8 +243,8 @@ const StaffSection: React.FC = () => {
                 {staff[selectedCoach].certifications.map((cert, index) => {
                   const Icon = staff[selectedCoach].icon;
                   const iconColor = 
-                    staff[selectedCoach].role.includes('Sala Pesi') ? 'text-red-600' :
-                    staff[selectedCoach].role.includes('Cross training') ? 'text-blue-600' :
+                    staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'text-navy-900' :
+                    staff[selectedCoach].name === 'Saverio Di Maria' ? 'text-red-600' :
                     staff[selectedCoach].role.includes('Karate') ? 'text-yellow-500' :
                     staff[selectedCoach].role.includes('Yoga') ? 'text-gray-600' :
                     'text-red-600';
