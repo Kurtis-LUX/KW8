@@ -35,6 +35,7 @@ const LocationSection: React.FC = () => {
 
   return (
     <section 
+      id="posizione"
       ref={sectionRef}
       className={`py-20 bg-white transition-all duration-1000 transform ${
         isVisible 

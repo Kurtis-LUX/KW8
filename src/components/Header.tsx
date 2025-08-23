@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell } from 'lucide-react';
 import { User } from '../utils/database';
 import RulesSection from './RulesSection';
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -239,11 +239,20 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               </li>
               <li>
                 <button
-                  onClick={() => scrollToSection('statistiche')}
+                  onClick={() => scrollToSection('informazioni')}
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <Mail size={20} className="sm:w-6 sm:h-6" />
                   <span>{t.header.information}</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => scrollToSection('aree')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <Dumbbell size={20} className="sm:w-6 sm:h-6" />
+                  <span>Aree</span>
                 </button>
               </li>
               <li>

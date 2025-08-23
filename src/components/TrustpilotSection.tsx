@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, ChevronLeft, ChevronRight, Quote, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
 const TrustpilotSection: React.FC = () => {
   const { t } = useLanguageContext();
   const [currentReview, setCurrentReview] = useState(0);
+  const [showTransaction, setShowTransaction] = useState(false);
+  const [transactionType, setTransactionType] = useState<'in' | 'out'>('in');
 
   const reviews = [
     {
@@ -51,11 +53,23 @@ const TrustpilotSection: React.FC = () => {
 
   const nextReview = () => {
     setCurrentReview((prev) => (prev + 1) % reviews.length);
+    triggerTransaction();
   };
 
   const prevReview = () => {
     setCurrentReview((prev) => (prev - 1 + reviews.length) % reviews.length);
+    triggerTransaction();
   };
+
+  const triggerTransaction = () => {
+    setTransactionType(Math.random() > 0.5 ? 'in' : 'out');
+    setShowTransaction(true);
+    setTimeout(() => setShowTransaction(false), 2000);
+  };
+
+  useEffect(() => {
+    triggerTransaction();
+  }, []);
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, index) => (
@@ -97,83 +111,37 @@ const TrustpilotSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Transazioni */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
-          {/* Transazioni in Entrata */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 border border-green-200">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="bg-green-600 p-3 rounded-full">
-                  <TrendingUp className="text-white" size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-green-800">Transazioni in Entrata</h3>
-                  <p className="text-green-600 text-sm">Nuovi iscritti questo mese</p>
-                </div>
-              </div>
-              <ArrowUpRight className="text-green-600" size={20} />
-            </div>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-green-700">Nuovi membri</span>
-                <span className="font-bold text-green-800 text-lg">+47</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-green-700">Rinnovi</span>
-                <span className="font-bold text-green-800 text-lg">+23</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-green-700">Upgrade abbonamenti</span>
-                <span className="font-bold text-green-800 text-lg">+12</span>
-              </div>
-              <div className="border-t border-green-300 pt-3 mt-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-green-800 font-semibold">Totale</span>
-                  <span className="font-bold text-green-800 text-xl">+82</span>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Transazioni in Uscita */}
-          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-8 border border-red-200">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="bg-red-600 p-3 rounded-full">
-                  <TrendingDown className="text-white" size={24} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-red-800">Transazioni in Uscita</h3>
-                  <p className="text-red-600 text-sm">Disiscrizioni questo mese</p>
-                </div>
-              </div>
-              <ArrowDownLeft className="text-red-600" size={20} />
-            </div>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-red-700">Disiscrizioni</span>
-                <span className="font-bold text-red-800 text-lg">-8</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-red-700">Mancati rinnovi</span>
-                <span className="font-bold text-red-800 text-lg">-5</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-red-700">Downgrade</span>
-                <span className="font-bold text-red-800 text-lg">-2</span>
-              </div>
-              <div className="border-t border-red-300 pt-3 mt-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-red-800 font-semibold">Totale</span>
-                  <span className="font-bold text-red-800 text-xl">-15</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Reviews Slider */}
         <div className="relative max-w-4xl mx-auto">
+          {/* Transazioni Animate */}
+          {showTransaction && (
+            <div className={`absolute top-4 right-4 z-20 animate-bounce ${
+              transactionType === 'in' ? 'text-green-600' : 'text-red-600'
+            }`}>
+              <div className={`flex items-center space-x-2 px-4 py-2 rounded-full ${
+                transactionType === 'in' 
+                  ? 'bg-green-100 border border-green-300' 
+                  : 'bg-red-100 border border-red-300'
+              }`}>
+                {transactionType === 'in' ? (
+                  <>
+                    <TrendingUp size={20} />
+                    <ArrowUpRight size={16} />
+                    <span className="text-sm font-bold">+1 Nuovo Cliente</span>
+                  </>
+                ) : (
+                  <>
+                    <TrendingDown size={20} />
+                    <ArrowDownLeft size={16} />
+                    <span className="text-sm font-bold">-1 Disiscrizione</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          
           <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 relative overflow-hidden">
             {/* Quote Icon */}
             <div className="absolute top-6 left-6 text-red-600 opacity-20">

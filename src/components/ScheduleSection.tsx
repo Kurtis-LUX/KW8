@@ -105,6 +105,7 @@ const ScheduleSection: React.FC = () => {
 
   return (
     <section 
+      id="orari"
       ref={sectionRef}
       className={`py-12 bg-white transition-all duration-1000 transform ${
         isVisible 

@@ -128,6 +128,7 @@ const GymAreasSection: React.FC = () => {
 
   return (
     <section 
+      id="aree"
       ref={sectionRef}
       className={`py-20 bg-white transition-all duration-1000 transform ${
         isVisible 
@@ -171,6 +172,34 @@ const GymAreasSection: React.FC = () => {
             >
               {areas.map((area, index) => {
                 const Icon = area.icon;
+                
+                // Definisci colori specifici per ogni area
+                let overlayColor = 'bg-navy-900 bg-opacity-60';
+                let iconColor = 'text-white';
+                let textColor = 'text-white';
+                
+                switch(area.id) {
+                  case 'crosstraining':
+                    overlayColor = 'bg-red-600 bg-opacity-70';
+                    iconColor = 'text-white';
+                    textColor = 'text-white';
+                    break;
+                  case 'karate':
+                    overlayColor = 'bg-white bg-opacity-90';
+                    iconColor = 'text-navy-900';
+                    textColor = 'text-navy-900';
+                    break;
+                  case 'yoga':
+                    overlayColor = 'bg-yellow-400 bg-opacity-80';
+                    iconColor = 'text-navy-900';
+                    textColor = 'text-navy-900';
+                    break;
+                  default:
+                    overlayColor = 'bg-navy-900 bg-opacity-60';
+                    iconColor = 'text-white';
+                    textColor = 'text-white';
+                }
+                
                 return (
                   <div key={index} className="w-full flex-shrink-0 relative">
                     <div className="relative h-96">
@@ -179,11 +208,11 @@ const GymAreasSection: React.FC = () => {
                         alt={area.title}
                         className="w-full h-full object-cover transition-transform duration-700"
                       />
-                      <div className="absolute inset-0 bg-navy-900 bg-opacity-60 flex items-center justify-center transition-opacity duration-500">
-                        <div className="text-center text-white p-8">
-                          <Icon size={64} className="mx-auto mb-6 text-red-600 animate-bounce-subtle" />
-                          <h3 className="text-3xl font-bold mb-6 tracking-wide">{area.title}</h3>
-                          <p className="text-lg max-w-md leading-relaxed">{area.description}</p>
+                      <div className={`absolute inset-0 ${overlayColor} flex items-center justify-center transition-opacity duration-500`}>
+                        <div className="text-center p-8">
+                          <Icon size={64} className={`mx-auto mb-6 ${iconColor} animate-bounce-subtle`} />
+                          <h3 className={`text-3xl font-bold mb-6 tracking-wide ${textColor}`}>{area.title}</h3>
+                          <p className={`text-lg max-w-md leading-relaxed ${textColor}`}>{area.description}</p>
                         </div>
                       </div>
                     </div>
