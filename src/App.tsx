@@ -44,11 +44,14 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        console.log('🔧 App initialization started');
         // Inizializza il database con le configurazioni di base
         DB.initializeDatabase();
+        console.log('💾 Database initialized');
         
         // Inizializza il database con dati di esempio
-        initializeData();
+        await initializeData();
+        console.log('📊 Data initialized');
         
         // Controlla se l'utente ha già dato il consenso ai cookie
         const hasConsent = localStorage.getItem('cookieConsent');
@@ -59,10 +62,14 @@ function App() {
         // Auto-login sicuro con JWT
         const checkAutoLogin = async () => {
           try {
+            console.log('🔐 Checking authentication');
             const user = await authService.autoLogin();
             if (user) {
               setCurrentUser(user);
               localStorage.setItem('currentUser', JSON.stringify(user));
+              console.log('👤 User authenticated:', user.email);
+            } else {
+              console.log('👤 No authenticated user');
             }
           } catch (error) {
             console.error('Auto-login failed:', error);
@@ -73,8 +80,9 @@ function App() {
         };
         
         await checkAutoLogin();
+        console.log('✅ App initialization completed');
       } catch (error) {
-        console.error('App initialization failed:', error);
+        console.error('❌ App initialization failed:', error);
         // Fallback per evitare schermata bianca
       }
     };

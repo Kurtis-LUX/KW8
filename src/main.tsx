@@ -12,7 +12,14 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>
 );
 
+// Debug logging for mobile
+console.log('🚀 Main.tsx loaded');
+console.log('📱 User Agent:', navigator.userAgent);
+console.log('🌐 Window size:', window.innerWidth, 'x', window.innerHeight);
+
+// Temporarily disable service worker for debugging
 // Register service worker for PWA
+/*
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
@@ -24,3 +31,4 @@ if ('serviceWorker' in navigator) {
       });
   });
 }
+*/
