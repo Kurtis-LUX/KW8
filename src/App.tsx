@@ -40,6 +40,8 @@ function App() {
   const [showCookiePolicyModal, setShowCookiePolicyModal] = useState(false);
   const [showPrivacyPolicyModal, setShowPrivacyPolicyModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [appInitialized, setAppInitialized] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -81,9 +83,13 @@ function App() {
         
         await checkAutoLogin();
         console.log('✅ App initialization completed');
+        setAppInitialized(true);
       } catch (error) {
         console.error('❌ App initialization failed:', error);
-        // Fallback per evitare schermata bianca
+        setInitError(error instanceof Error ? error.message : 'Unknown error');
+        // Fallback per dispositivi mobili - forza il rendering anche in caso di errore
+        console.log('🔄 Forcing app render despite initialization error');
+        setAppInitialized(true); // Forza il rendering anche con errori
       }
     };
     
@@ -222,6 +228,23 @@ function App() {
     // Cookie rifiutati
     // Qui puoi aggiungere logica per disabilitare i cookie non essenziali
   };
+
+  // Mostra loading o errore durante l'inizializzazione
+  if (!appInitialized) {
+    return (
+      <LanguageProvider>
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-navy-800 mx-auto mb-4"></div>
+            <p className="text-lg text-gray-600">Caricamento in corso...</p>
+            {initError && (
+              <p className="text-red-500 mt-2 text-sm">Errore: {initError}</p>
+            )}
+          </div>
+        </div>
+      </LanguageProvider>
+    );
+  }
 
   return (
     <LanguageProvider>
