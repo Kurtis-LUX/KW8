@@ -27,6 +27,13 @@ try {
       </StrictMode>
     );
     console.log('✅ React app rendered successfully');
+    
+    // Nascondi il fallback di caricamento
+    const fallback = document.getElementById('loading-fallback');
+    if (fallback) {
+      fallback.style.display = 'none';
+      console.log('✅ Loading fallback hidden');
+    }
   }
 } catch (error) {
   console.error('❌ Critical error in main.tsx:', error);
