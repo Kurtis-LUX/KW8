@@ -20,11 +20,11 @@ let workoutFolders = [];
 let adminUsers = [
   {
     id: '1',
-    email: 'kw8@gmail.com',
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // kw8@182
+    email: 'admin@example.com',
+    password: '$2a$10$PLACEHOLDER_HASH_CHANGE_IN_PRODUCTION', // Change in production
     role: 'admin',
     nome: 'Admin',
-    cognome: 'KW8'
+    cognome: 'User'
   }
 ];
 
@@ -41,7 +41,7 @@ const generateToken = (user) => {
 // Utility per verificare password (semplificato)
 const verifyPassword = (password, hash) => {
   // Per sviluppo, accetta sia la password in chiaro che l'hash
-  return password === 'kw8@182' || password === hash;
+  return password === 'CHANGE_IN_PRODUCTION' || password === hash;
 };
 
 // Auth endpoints
@@ -162,7 +162,7 @@ app.all('/api/*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 API Development Server running on http://localhost:${PORT}`);
   console.log(`📡 Serving API routes for frontend at http://localhost:5173`);
-  console.log(`🔐 Admin login: kw8@gmail.com / kw8@182`);
+  console.log(`🔐 Admin login: admin@example.com / CHANGE_IN_PRODUCTION`);
 });
 
 module.exports = app;

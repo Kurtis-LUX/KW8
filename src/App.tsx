@@ -11,6 +11,7 @@ import NewsletterSection from './components/NewsletterSection';
 import SocialSection from './components/SocialSection';
 import TrustpilotSection from './components/TrustpilotSection';
 import Footer from './components/Footer';
+import SectionSeparator from './components/SectionSeparator';
 import PaymentPage from './pages/PaymentPage';
 import AuthPage from './pages/AuthPage';
 import WorkoutsPage from './pages/WorkoutsPage';
@@ -218,7 +219,7 @@ function App() {
 
   return (
     <LanguageProvider>
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-white">
         <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} />
         {showCookieConsent && (
           <CookieConsent 
@@ -235,13 +236,19 @@ function App() {
         )}
         <HeroSection />
         <StatisticsSection />
-        <SubscriptionSection onNavigate={handleNavigation} />
+        <SectionSeparator variant="black" />
         <GymAreasSection />
+        <SectionSeparator variant="black" />
         <ScheduleSection />
+        <SectionSeparator variant="black" />
         <LocationSection />
+        <SectionSeparator variant="black" />
         <StaffSection />
+        <SectionSeparator variant="black" />
+        <SubscriptionSection onNavigate={handleNavigation} />
         <NewsletterSection />
         <TrustpilotSection />
+        <SectionSeparator variant="default" />
         <SocialSection />
         <Footer onNavigate={handleNavigation} />
       

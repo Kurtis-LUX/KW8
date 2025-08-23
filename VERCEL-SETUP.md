@@ -11,7 +11,7 @@ Per il corretto funzionamento dell'applicazione su Vercel, è necessario configu
 JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
 
 # Frontend URL per CORS (OBBLIGATORIO)
-FRONTEND_URL=https://kw8-fitness.vercel.app
+FRONTEND_URL=https://kw8.vercel.app
 
 # Environment
 NODE_ENV=production
@@ -24,7 +24,7 @@ NODE_ENV=production
 MONGODB_URI=your_mongodb_connection_string
 
 # CORS aggiuntivo
-CORS_ORIGIN=https://kw8-fitness.vercel.app
+CORS_ORIGIN=https://kw8.vercel.app
 
 # Session
 SESSION_TIMEOUT=24h
@@ -64,17 +64,17 @@ vercel --prod
 ### Test delle API
 ```bash
 # Health check
-curl https://kw8-fitness.vercel.app/api/health
+curl https://kw8.vercel.app/api/health
 
 # Test login (dovrebbe restituire errore di credenziali, non CORS)
-curl -X POST https://kw8-fitness.vercel.app/api/auth/login \
+curl -X POST https://kw8.vercel.app/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"test@test.com","password":"test"}'
 ```
 
 ### Credenziali Admin di Default
-- **Email**: `kw8@gmail.com`
-- **Password**: `kw8@182`
+- **Email**: `admin@example.com`
+- **Password**: `CHANGE_IN_PRODUCTION`
 
 ## Troubleshooting
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight, Quote, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
 const TrustpilotSection: React.FC = () => {
@@ -70,7 +70,7 @@ const TrustpilotSection: React.FC = () => {
   const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
 
   return (
-    <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+    <section className="py-20 bg-white">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
@@ -94,6 +94,81 @@ const TrustpilotSection: React.FC = () => {
             <p className="text-navy-700 font-semibold">
               {t.excellent} • {reviews.length} {t.reviews}
             </p>
+          </div>
+        </div>
+
+        {/* Transazioni */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
+          {/* Transazioni in Entrata */}
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 border border-green-200">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="bg-green-600 p-3 rounded-full">
+                  <TrendingUp className="text-white" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-green-800">Transazioni in Entrata</h3>
+                  <p className="text-green-600 text-sm">Nuovi iscritti questo mese</p>
+                </div>
+              </div>
+              <ArrowUpRight className="text-green-600" size={20} />
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-green-700">Nuovi membri</span>
+                <span className="font-bold text-green-800 text-lg">+47</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-green-700">Rinnovi</span>
+                <span className="font-bold text-green-800 text-lg">+23</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-green-700">Upgrade abbonamenti</span>
+                <span className="font-bold text-green-800 text-lg">+12</span>
+              </div>
+              <div className="border-t border-green-300 pt-3 mt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-green-800 font-semibold">Totale</span>
+                  <span className="font-bold text-green-800 text-xl">+82</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Transazioni in Uscita */}
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-8 border border-red-200">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="bg-red-600 p-3 rounded-full">
+                  <TrendingDown className="text-white" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-red-800">Transazioni in Uscita</h3>
+                  <p className="text-red-600 text-sm">Disiscrizioni questo mese</p>
+                </div>
+              </div>
+              <ArrowDownLeft className="text-red-600" size={20} />
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-red-700">Disiscrizioni</span>
+                <span className="font-bold text-red-800 text-lg">-8</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-red-700">Mancati rinnovi</span>
+                <span className="font-bold text-red-800 text-lg">-5</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-red-700">Downgrade</span>
+                <span className="font-bold text-red-800 text-lg">-2</span>
+              </div>
+              <div className="border-t border-red-300 pt-3 mt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-red-800 font-semibold">Totale</span>
+                  <span className="font-bold text-red-800 text-xl">-15</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

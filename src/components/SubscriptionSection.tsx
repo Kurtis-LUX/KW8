@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Calendar, TrendingUp, User } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
@@ -9,6 +9,30 @@ interface SubscriptionSectionProps {
 const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate }) => {
   const { t } = useLanguageContext();
   const [currentCase, setCurrentCase] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      {
+        threshold: 0.2,
+        rootMargin: '50px'
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
 
   const transformationCases = [
     {
@@ -61,16 +85,38 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
   };
 
   return (
-    <section id="informazioni" className="py-20 bg-gradient-to-b from-gray-50 to-white">
+    <section 
+      ref={sectionRef}
+      id="informazioni" 
+      className={`py-20 bg-white transition-all duration-1000 transform ${
+        isVisible 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-8'
+      }`}
+    >
       <div className="container mx-auto px-4">
-        <h2 className="text-4xl md:text-5xl font-bold text-navy-900 text-center mb-16 animate-fadeInUp">
+        <h2 className={`text-4xl md:text-5xl font-bold text-navy-900 text-center mb-16 transition-all duration-800 transform ${
+          isVisible 
+            ? 'translate-y-0 opacity-100 scale-100' 
+            : 'translate-y-8 opacity-0 scale-95'
+        }`}>
           {t.transformations?.title || 'CASI DI MIGLIORAMENTO FISICO'}
         </h2>
 
         {/* Transformation Cases Slider */}
-        <div className="mb-8">
+        <div className={`mb-8 transition-all duration-1000 transform ${
+          isVisible 
+            ? 'translate-y-0 opacity-100 scale-100' 
+            : 'translate-y-16 opacity-0 scale-95'
+        }`}
+        style={{ transitionDelay: '300ms' }}>
           <div className="max-w-4xl mx-auto">
-            <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className={`relative bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-700 transform ${
+              isVisible 
+                ? 'rotate-0 scale-100' 
+                : 'rotate-1 scale-95'
+            }`}
+            style={{ transitionDelay: '500ms' }}>
               {/* Slider Container */}
               <div className="relative">
                 <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentCase * 100}%)` }}>
@@ -130,20 +176,35 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
                 {/* Navigation Arrows */}
                 <button
                   onClick={prevCase}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-navy-900 rounded-full p-2 shadow-lg transition-all duration-300 hover:scale-110"
+                  className={`absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-navy-900 rounded-full p-2 shadow-lg transition-all duration-500 hover:scale-110 ${
+                    isVisible 
+                      ? 'translate-x-0 opacity-100' 
+                      : '-translate-x-8 opacity-0'
+                  }`}
+                  style={{ transitionDelay: '700ms' }}
                 >
                   <ChevronLeft size={20} />
                 </button>
                 <button
                   onClick={nextCase}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-navy-900 rounded-full p-2 shadow-lg transition-all duration-300 hover:scale-110"
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-navy-900 rounded-full p-2 shadow-lg transition-all duration-500 hover:scale-110 ${
+                    isVisible 
+                      ? 'translate-x-0 opacity-100' 
+                      : 'translate-x-8 opacity-0'
+                  }`}
+                  style={{ transitionDelay: '700ms' }}
                 >
                   <ChevronRight size={20} />
                 </button>
               </div>
 
               {/* Dots Indicator */}
-              <div className="flex justify-center space-x-2 p-4 bg-gray-50">
+              <div className={`flex justify-center space-x-2 p-4 bg-gray-50 transition-all duration-600 transform ${
+                isVisible 
+                  ? 'translate-y-0 opacity-100' 
+                  : 'translate-y-4 opacity-0'
+              }`}
+              style={{ transitionDelay: '900ms' }}>
                 {transformationCases.map((_, index) => (
                   <button
                     key={index}

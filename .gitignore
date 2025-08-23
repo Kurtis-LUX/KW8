@@ -39,4 +39,24 @@ dist-ssr
 *.sqlite
 *.sqlite3
 
+# Backup files
+*.backup
+*.bak
+
+# Temporary files
+*.tmp
+*.temp
+data-cleaner.html
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# Scripts
 autopush.py
+*.py
+
+# IDE files
+*.swp
+*.swo
+*~

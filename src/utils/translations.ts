@@ -68,6 +68,9 @@ export interface Translations {
   thursday: string;
   friday: string;
   saturday: string;
+  openNow: string;
+  closedNow: string;
+  today: string;
 
   // Location Section
   whereWeAre: string;
@@ -235,13 +238,13 @@ export const translations: Record<'it' | 'en', Translations> = {
     mentalWellbeingDesc: 'Miglioramento dell\'equilibrio psico-fisico e autostima',
 
     // Staff Section
-    ourTeam: 'Il nostro team',
+    ourTeam: 'IL NOSTRO TEAM',
     certifications: 'Certificazioni',
     closeCertifications: 'Chiudi Certificazioni',
 
     // Gym Areas Section
-    gymAreas: 'Le nostre aree',
-    crossfit: 'CrossFit',
+    gymAreas: 'LE NOSTRE AREE',
+    crossfit: 'Cross training',
     crossfitDesc: 'Allenamento funzionale ad alta intensità per migliorare forza, resistenza e agilità.',
     weightRoom: 'Sala Pesi',
     weightRoomDesc: 'Attrezzature moderne per l\'allenamento con i pesi e il bodybuilding.',
@@ -251,7 +254,7 @@ export const translations: Record<'it' | 'en', Translations> = {
     yogaDesc: 'Pratiche per il benessere fisico e mentale, flessibilità e rilassamento.',
 
     // Schedule Section
-    schedules: 'Orari',
+    schedules: 'ORARI',
     schedulesDesc: 'Scopri gli orari delle nostre attività e prenota la tua sessione di allenamento.',
     morning: 'Mattina',
     evening: 'Sera',
@@ -263,6 +266,9 @@ export const translations: Record<'it' | 'en', Translations> = {
     thursday: 'Giovedì',
     friday: 'Venerdì',
     saturday: 'Sabato',
+    openNow: 'APERTO',
+    closedNow: 'CHIUSO',
+    today: 'Oggi',
 
     // Location Section
     whereWeAre: 'Dove siamo',
@@ -428,13 +434,13 @@ export const translations: Record<'it' | 'en', Translations> = {
     mentalWellbeingDesc: 'Improvement of psycho-physical balance and self-esteem',
 
     // Staff Section
-    ourTeam: 'Our team',
+    ourTeam: 'OUR TEAM',
     certifications: 'Certifications',
     closeCertifications: 'Close Certifications',
 
     // Gym Areas Section
-    gymAreas: 'Our areas',
-    crossfit: 'CrossFit',
+    gymAreas: 'OUR AREAS',
+    crossfit: 'Cross training',
     crossfitDesc: 'High-intensity functional training to improve strength, endurance and agility.',
     weightRoom: 'Weight Room',
     weightRoomDesc: 'Modern equipment for weight training and bodybuilding.',
@@ -444,7 +450,7 @@ export const translations: Record<'it' | 'en', Translations> = {
     yogaDesc: 'Practices for physical and mental wellbeing, flexibility and relaxation.',
 
     // Schedule Section
-    schedules: 'Schedules',
+    schedules: 'SCHEDULES',
     schedulesDesc: 'Discover the schedules of our activities and book your training session.',
     morning: 'Morning',
     evening: 'Evening',
@@ -456,6 +462,9 @@ export const translations: Record<'it' | 'en', Translations> = {
     thursday: 'Thursday',
     friday: 'Friday',
     saturday: 'Saturday',
+    openNow: 'OPEN',
+    closedNow: 'CLOSED',
+    today: 'Today',
 
     // Location Section
     whereWeAre: 'Where we are',

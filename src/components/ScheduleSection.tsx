@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Clock, Calendar, MapPin } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
@@ -6,6 +6,8 @@ const ScheduleSection: React.FC = () => {
   const { t } = useLanguageContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   // Aggiorna l'ora ogni secondo
   useEffect(() => {
@@ -14,6 +16,28 @@ const ScheduleSection: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      {
+        threshold: 0.15,
+        rootMargin: '40px'
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
   }, []);
 
   // Orari della palestra
@@ -80,13 +104,28 @@ const ScheduleSection: React.FC = () => {
   };
 
   return (
-    <section className="py-12 bg-gradient-to-b from-gray-50 to-white">
+    <section 
+      ref={sectionRef}
+      className={`py-12 bg-white transition-all duration-1000 transform ${
+        isVisible 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-8'
+      }`}
+    >
       <div className="container mx-auto px-4 text-center">
-        <h2 className="text-3xl md:text-4xl font-bold text-navy-900 mb-8 animate-fadeInUp">{t.schedules}</h2>
+        <h2 className={`text-3xl md:text-4xl font-bold text-navy-900 mb-8 transition-all duration-800 delay-100 transform ${
+          isVisible 
+            ? 'translate-y-0 opacity-100' 
+            : '-translate-y-8 opacity-0'
+        }`}>{t.schedules}</h2>
         
         {/* Data e Ora Attuale */}
-        <div className="max-w-6xl mx-auto mb-6">
-          <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+        <div className={`max-w-6xl mx-auto mb-6 transition-all duration-900 delay-300 transform ${
+          isVisible 
+            ? 'translate-x-0 opacity-100' 
+            : '-translate-x-10 opacity-0'
+        }`}>
+          <div className="bg-gray-50 rounded-xl shadow-lg p-4 mb-4 border border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6 mb-4">
               <div className="flex items-center space-x-2">
                 <Calendar className="text-red-600" size={20} />
@@ -128,7 +167,11 @@ const ScheduleSection: React.FC = () => {
             </div>
 
             {/* Orari Settimanali */}
-            <div className="bg-white rounded-xl shadow-lg p-4">
+            <div className={`bg-gray-50 rounded-xl shadow-lg p-4 border border-gray-200 transition-all duration-1000 delay-500 transform ${
+              isVisible 
+                ? 'translate-y-0 opacity-100' 
+                : 'translate-y-10 opacity-0'
+            }`}>
               <h3 className="text-xl font-bold text-navy-900 mb-4">{t.weeklySchedule}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
                 {/* Giorni Lunedì-Sabato */}
@@ -198,7 +241,11 @@ const ScheduleSection: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-center">
+        <div className={`flex justify-center transition-all duration-800 delay-700 transform ${
+          isVisible 
+            ? 'translate-y-0 opacity-100' 
+            : 'translate-y-8 opacity-0'
+        }`}>
           <a 
             href="tel:+393338346546" 
             className="bg-navy-900 hover:bg-navy-800 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center space-x-2"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import emailService from '../services/emailService';
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -11,6 +11,30 @@ const NewsletterSection: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '50px'
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -72,14 +96,29 @@ const NewsletterSection: React.FC = () => {
   };
 
   return (
-    <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+    <section 
+      ref={sectionRef}
+      className={`py-20 bg-blue-900 transition-all duration-1000 transform ${
+        isVisible 
+          ? 'translate-y-0 opacity-100' 
+          : 'translate-y-10 opacity-0'
+      }`}
+    >
       <div className="container mx-auto px-4">
-        <h2 className="text-4xl md:text-5xl font-bold text-navy-900 text-center mb-16 animate-fadeInUp">
+        <h2 className={`text-4xl md:text-5xl font-bold text-white text-center mb-16 transition-all duration-1000 delay-300 transform ${
+          isVisible 
+            ? 'translate-y-0 opacity-100' 
+            : 'translate-y-10 opacity-0'
+        }`}>
           RIMANI AGGIORNATO
         </h2>
 
         {/* Newsletter Subscription */}
-        <div className="max-w-2xl mx-auto">
+        <div className={`max-w-2xl mx-auto transition-all duration-1000 delay-500 transform ${
+          isVisible 
+            ? 'translate-y-0 opacity-100' 
+            : 'translate-y-10 opacity-0'
+        }`}>
           <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
             <div className="text-center mb-8">
               <Mail className="mx-auto mb-4 text-red-600" size={48} />

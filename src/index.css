@@ -4,3 +4,14 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Assicura che body e html abbiano sfondo bianco */
+html, body {
+  background-color: white;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  background-color: white;
+}

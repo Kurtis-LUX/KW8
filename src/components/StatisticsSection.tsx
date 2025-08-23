@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users, Calendar, Zap, Dumbbell, User, Salad, Shield, Clock, Brain, Heart } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
@@ -6,12 +6,40 @@ const StatisticsSection: React.FC = () => {
   const { t } = useLanguageContext();
   const [animatedNumbers, setAnimatedNumbers] = useState({ subscribers: 0, years: 0 });
   const [hasAnimated, setHasAnimated] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const startAnimation = () => {
-      if (!hasAnimated) {
-        setHasAnimated(true);
-        
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+        if (entry.isIntersecting && !hasAnimated) {
+          startAnimation();
+        }
+      },
+      {
+        threshold: 0.2,
+        rootMargin: '50px'
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, [hasAnimated]);
+
+  const startAnimation = () => {
+    if (!hasAnimated) {
+      setHasAnimated(true);
+      
+      // Ritardo per sincronizzare con la transizione di entrata
+      setTimeout(() => {
         // Animazione per gli iscritti (200)
         let subscriberCount = 0;
         const subscriberInterval = setInterval(() => {
@@ -33,35 +61,9 @@ const StatisticsSection: React.FC = () => {
           }
           setAnimatedNumbers(prev => ({ ...prev, years: yearCount }));
         }, 200);
-      }
-    };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          startAnimation();
-        }
-      },
-      { threshold: 0.3 }
-    );
-
-    const section = document.getElementById('statistiche');
-    if (section) {
-      observer.observe(section);
-      
-      // Fallback: se la sezione è già visibile, avvia l'animazione
-      const rect = section.getBoundingClientRect();
-      if (rect.top < window.innerHeight && rect.bottom > 0) {
-        setTimeout(startAnimation, 500);
-      }
+      }, 500); // Ritardo di 500ms per sincronizzare con la transizione
     }
-
-    return () => {
-      if (section) {
-        observer.unobserve(section);
-      }
-    };
-  }, [hasAnimated]);
+  };
 
   const statistics = [
     { number: '200+', label: t.subscribers },
@@ -80,7 +82,15 @@ const StatisticsSection: React.FC = () => {
   ];
 
   return (
-    <section id="statistiche" className="py-16 bg-gradient-to-b from-white to-gray-50">
+    <section 
+      ref={sectionRef}
+      id="statistiche" 
+      className={`py-16 bg-gradient-to-b from-white to-gray-50 transition-all duration-1000 transform ${
+        isVisible 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-8'
+      }`}
+    >
       <div className="container mx-auto px-4">
         {/* Statistics */}
         <div className="text-center mb-16">
@@ -91,7 +101,10 @@ const StatisticsSection: React.FC = () => {
                 : animatedNumbers.years.toString();
               
               return (
-                <div key={index} className="text-center transform hover:scale-110 transition-transform duration-300">
+                <div 
+                  key={index} 
+                  className="text-center transform hover:scale-110 transition-all duration-300"
+                >
                   <div className="text-5xl md:text-6xl font-bold text-navy-900 mb-2 transition-all duration-300">
                     {displayNumber}
                   </div>
@@ -105,12 +118,25 @@ const StatisticsSection: React.FC = () => {
         </div>
 
         {/* Values */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {values.map((value, index) => {
             const Icon = value.icon;
             return (
-              <div key={index} className="text-center p-4 rounded-xl bg-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100">
-                <div className="flex justify-center mb-3 transform hover:scale-110 transition-transform duration-300">
+              <div 
+                key={index} 
+                className={`text-center p-4 rounded-xl bg-white hover:shadow-xl transition-all duration-700 transform hover:-translate-y-2 border border-gray-100 ${
+                  isVisible 
+                    ? 'translate-y-0 opacity-100 scale-100' 
+                    : 'translate-y-8 opacity-0 scale-90'
+                }`}
+                style={{ transitionDelay: `${600 + index * 100}ms` }}
+              >
+                <div className={`flex justify-center mb-3 transform hover:scale-110 transition-all duration-500 ${
+                  isVisible 
+                    ? 'rotate-0 scale-100' 
+                    : 'rotate-180 scale-0'
+                }`}
+                style={{ transitionDelay: `${800 + index * 100}ms` }}>
                   <Icon size={40} className="text-red-600 drop-shadow-sm" />
                 </div>
                 <h3 className="text-lg font-bold text-navy-900 mb-2">

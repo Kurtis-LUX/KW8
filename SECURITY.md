@@ -1,7 +1,7 @@
 # Piano di Sicurezza - KW8 Fitness Application
 
 ## Panoramica
-Questo documento descrive le implementazioni di sicurezza adottate per trasformare l'applicazione KW8 Fitness da un sistema con autenticazione hardcoded a un sistema sicuro, scalabile e pronto per la produzione.
+Questo documento descrive le implementazioni di sicurezza adottate per trasformare l'applicazione KW8 da un sistema con autenticazione hardcoded a un sistema sicuro, scalabile e pronto per la produzione.
 
 ## 🔐 Sistema di Autenticazione Implementato
 

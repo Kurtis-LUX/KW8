@@ -39,7 +39,7 @@
 }
 
 .animate-pulse {
-  animation: pulse 2s infinite;
+  animation: pulse 4s infinite;
 }
 
 /* Pulse sottile per i bottoni */

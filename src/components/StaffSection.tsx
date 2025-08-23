@@ -1,10 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Award, Dumbbell, Zap, Shield, Heart } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
 const StaffSection: React.FC = () => {
   const { t } = useLanguageContext();
   const [selectedCoach, setSelectedCoach] = useState<number | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // Intersection Observer per le transizioni
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      {
+        threshold: 0.2,
+        rootMargin: '50px'
+      }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
 
   // Gestione chiusura modal con ESC
   useEffect(() => {
@@ -95,9 +120,21 @@ const StaffSection: React.FC = () => {
 
   return (
     <>
-      <section id="staff" className="py-16 bg-gradient-to-b from-gray-50 to-white">
+      <section 
+        ref={sectionRef}
+        id="staff" 
+        className={`py-16 bg-white transition-all duration-1000 transform ${
+          isVisible 
+            ? 'opacity-100 translate-y-0' 
+            : 'opacity-0 translate-y-8'
+        }`}
+      >
         <div className="container mx-auto px-4">
-          <h2 className="text-4xl md:text-5xl font-bold text-navy-900 text-center mb-12 animate-fadeInUp">
+          <h2 className={`text-4xl md:text-5xl font-bold text-navy-900 text-center mb-12 transition-all duration-800 transform ${
+            isVisible 
+              ? 'translate-y-0 opacity-100 scale-100' 
+              : 'translate-y-8 opacity-0 scale-95'
+          }`}>
             {t.ourTeam}
           </h2>
 
@@ -107,17 +144,38 @@ const StaffSection: React.FC = () => {
               return (
                 <div 
                   key={index} 
-                  className="text-center group cursor-pointer transform hover:-translate-y-2 transition-all duration-300"
+                  className={`text-center group cursor-pointer transform hover:-translate-y-2 transition-all duration-700 ${
+                    isVisible 
+                      ? 'translate-y-0 opacity-100 scale-100' 
+                      : 'translate-y-12 opacity-0 scale-90'
+                  }`}
+                  style={{ transitionDelay: `${300 + index * 150}ms` }}
                   onClick={() => setSelectedCoach(index)}
+                  onTouchStart={() => {}}
                 >
-                  <div className="relative overflow-hidden rounded-xl mb-4 shadow-lg group-hover:shadow-2xl transition-shadow duration-300">
+                  <div className={`relative overflow-hidden rounded-xl mb-4 shadow-lg group-hover:shadow-2xl transition-all duration-600 transform ${
+                    isVisible 
+                      ? 'rotate-0 scale-100' 
+                      : 'rotate-3 scale-95'
+                  }`}
+                  style={{ transitionDelay: `${500 + index * 150}ms` }}>
                     <img 
                       src={member.image} 
                       alt={member.name}
                       className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
                     />
-                    <div className="absolute inset-0 bg-navy-900 bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-500 flex items-center justify-center">
-                      <Icon className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" size={32} />
+                    <div className={`absolute inset-0 transition-opacity duration-500 flex items-center justify-center ${
+                      index === 0 ? 'bg-blue-900 bg-opacity-0 group-hover:bg-opacity-70' :
+                      index === 1 ? 'bg-red-600 bg-opacity-0 group-hover:bg-opacity-70' :
+                      index === 2 ? 'bg-white bg-opacity-0 group-hover:bg-opacity-70' :
+                      'bg-yellow-400 bg-opacity-0 group-hover:bg-opacity-70'
+                    }`}>
+                      <Icon className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                        index === 0 ? 'text-white' :
+                        index === 1 ? 'text-white' :
+                        index === 2 ? 'text-navy-900' :
+                        'text-navy-900'
+                      }`} size={32} />
                     </div>
                   </div>
                   

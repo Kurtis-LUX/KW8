@@ -5,11 +5,11 @@ export interface EmailJSConfig {
   publicKey: string;
 }
 
-// Configurazione di default (da sostituire con credenziali valide)
+// Configurazione di default (placeholder - configurare tramite variabili d'ambiente)
 export const defaultEmailConfig: EmailJSConfig = {
-  serviceId: 'service_kw8gym',
-  templateId: 'template_newsletter', 
-  publicKey: 'LaN_cQnKCCBeoS2FW'
+  serviceId: 'YOUR_EMAILJS_SERVICE_ID',
+  templateId: 'YOUR_EMAILJS_TEMPLATE_ID',
+  publicKey: 'YOUR_EMAILJS_PUBLIC_KEY'
 };
 
 // Funzione per validare la configurazione

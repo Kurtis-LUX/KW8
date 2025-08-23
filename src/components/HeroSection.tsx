@@ -4,10 +4,12 @@ import { useLanguageContext } from '../contexts/LanguageContext';
 const HeroSection: React.FC = () => {
   const { t } = useLanguageContext();
   const [displayText, setDisplayText] = useState('');
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
   const fullText = t.heroTitle;
   
   useEffect(() => {
     setDisplayText(''); // Reset text when language changes
+    setIsTypingComplete(false);
     let currentIndex = 0;
     const typingInterval = setInterval(() => {
       if (currentIndex <= fullText.length) {
@@ -15,6 +17,7 @@ const HeroSection: React.FC = () => {
         currentIndex++;
       } else {
         clearInterval(typingInterval);
+        setIsTypingComplete(true);
       }
     }, 100);
     
@@ -42,7 +45,7 @@ const HeroSection: React.FC = () => {
       
       {/* Content */}
       <div className="relative z-10 text-center text-white px-4">
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 tracking-wider animate-fadeInSlideUp" style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}>
+        <h1 className={`text-5xl md:text-7xl lg:text-8xl font-bold mb-8 tracking-wider animate-fadeInSlideUp ${isTypingComplete ? 'animate-pulse' : ''}`} style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}>
           <span style={{ fontFamily: 'Bebas Neue, cursive' }}>
             {displayText.split(' ').map((word, index) => {
               if (word === 'CROSS' || word === 'YOUR') {
@@ -53,7 +56,7 @@ const HeroSection: React.FC = () => {
               return <span key={index}>{word}</span>;
             }).reduce((prev, curr, index) => [prev, ' ', curr])}
           </span>
-          <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>
+          {!isTypingComplete && <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>}
         </h1>
         
         <button

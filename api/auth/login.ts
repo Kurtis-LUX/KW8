@@ -8,9 +8,9 @@ import bcrypt from 'bcryptjs';
 let users: any[] = [
   {
     id: 'admin-1',
-    email: 'kw8@gmail.com',
-    // Password hashata per 'kw8@182'
-    password: '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+    email: 'admin@example.com',
+    // Password placeholder - CHANGE IN PRODUCTION
+    password: '$2a$10$PLACEHOLDER_HASH_CHANGE_IN_PRODUCTION',
     name: 'Amministratore',
     role: 'admin'
   }
@@ -18,7 +18,7 @@ let users: any[] = [
 
 // Funzione per inizializzare l'admin con password hashata
 const initializeAdmin = async () => {
-  const hashedPassword = await bcrypt.hash('kw8@182', 10);
+  const hashedPassword = await bcrypt.hash('CHANGE_IN_PRODUCTION', 10);
   users[0].password = hashedPassword;
 };
 
