@@ -47,18 +47,27 @@ function App() {
     const initializeApp = async () => {
       try {
         console.log('🔧 App initialization started');
+        console.log('📱 Mobile debug - localStorage available:', typeof localStorage !== 'undefined');
+        console.log('📱 Mobile debug - sessionStorage available:', typeof sessionStorage !== 'undefined');
+        
         // Inizializza il database con le configurazioni di base
+        console.log('💾 Initializing database...');
         DB.initializeDatabase();
         console.log('💾 Database initialized');
         
         // Inizializza il database con dati di esempio
+        console.log('📊 Initializing data...');
         await initializeData();
         console.log('📊 Data initialized');
         
         // Controlla se l'utente ha già dato il consenso ai cookie
+        console.log('🍪 Checking cookie consent...');
         const hasConsent = localStorage.getItem('cookieConsent');
         if (hasConsent) {
           setShowCookieConsent(false);
+          console.log('🍪 Cookie consent found, hiding banner');
+        } else {
+          console.log('🍪 No cookie consent found, showing banner');
         }
         
         // Auto-login sicuro con JWT
@@ -74,18 +83,20 @@ function App() {
               console.log('👤 No authenticated user');
             }
           } catch (error) {
-            console.error('Auto-login failed:', error);
+            console.error('❌ Auto-login failed:', error);
             // Rimuovi dati di sessione non validi
             localStorage.removeItem('currentUser');
             authService.logout();
           }
         };
         
+        console.log('🔐 Starting auto-login check...');
         await checkAutoLogin();
-        console.log('✅ App initialization completed');
+        console.log('✅ App initialization completed successfully');
         setAppInitialized(true);
       } catch (error) {
         console.error('❌ App initialization failed:', error);
+        console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
         setInitError(error instanceof Error ? error.message : 'Unknown error');
         // Fallback per dispositivi mobili - forza il rendering anche in caso di errore
         console.log('🔄 Forcing app render despite initialization error');
@@ -93,6 +104,7 @@ function App() {
       }
     };
     
+    console.log('🚀 Starting app initialization...');
     initializeApp();
   }, []);
 
