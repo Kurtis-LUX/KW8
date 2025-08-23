@@ -6,6 +6,7 @@ export default {
       colors: {
         'navy': {
           700: '#1e40af',
+          800: '#1e3a8a',
           900: '#1e3a8a',
         }
       },
