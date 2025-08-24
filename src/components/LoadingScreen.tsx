@@ -13,12 +13,28 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
     // Show logo after 500ms
     const logoTimer = setTimeout(() => {
       setLogoVisible(true);
-      // Play sound when logo appears
-      const audio = new Audio('/sounds/logo-sound.mp3');
-      audio.volume = 0.3;
-      audio.play().catch(() => {
-        // Ignore audio play errors (user interaction required)
-      });
+      // Play sound when logo appears with Supercell-like effect
+      try {
+        const audio = new Audio('/sounds/logo-sound.mp3');
+        audio.volume = 0.8; // Volume più alto per effetto Supercell
+        audio.preload = 'auto';
+        
+        // Tentativo di riproduzione con fallback
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log('Audio played successfully');
+          }).catch((error) => {
+            console.log('Audio autoplay prevented:', error);
+            // Fallback: prova a riprodurre con interazione utente
+            document.addEventListener('click', () => {
+              audio.play().catch(() => {});
+            }, { once: true });
+          });
+        }
+      } catch (error) {
+        console.log('Audio creation failed:', error);
+      }
     }, 500);
 
     // Progress animation
@@ -66,10 +82,11 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
         logoVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-75 translate-y-4'
       }`}>
         <div className="text-white text-center">
-          <h1 className="text-6xl md:text-8xl font-bold mb-2" style={{ fontFamily: 'Bebas Neue, cursive' }}>
-            <span className="text-white">KW</span>
-            <span className="text-red-500">8</span>
-          </h1>
+          <img 
+            src="/images/logo.png" 
+            alt="KW8 Logo" 
+            className="h-24 md:h-32 w-auto mx-auto mb-4 filter brightness-0 invert"
+          />
           <p className="text-xl md:text-2xl font-light tracking-wider" style={{ fontFamily: 'Bebas Neue, cursive' }}>
             CROSS YOUR LIMITS
           </p>

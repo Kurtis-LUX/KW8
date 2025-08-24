@@ -55,23 +55,17 @@ const StaffSection: React.FC = () => {
       document.body.style.position = 'fixed';
       document.body.style.top = `-${window.pageYOffset}px`;
       document.body.style.width = '100%';
-    } else {
-      // Ripristina la posizione di scroll
+    } else if (selectedCoach === null && scrollPosition > 0) {
+      // Ripristina la posizione di scroll solo quando si chiude il modal
       document.body.style.overflow = 'unset';
       document.body.style.position = 'unset';
       document.body.style.top = 'unset';
       document.body.style.width = 'unset';
-      window.scrollTo(0, scrollPosition);
+      setTimeout(() => {
+        window.scrollTo(0, scrollPosition);
+      }, 0);
     }
-    
-    // Cleanup quando il componente viene smontato
-    return () => {
-      document.body.style.overflow = 'unset';
-      document.body.style.position = 'unset';
-      document.body.style.top = 'unset';
-      document.body.style.width = 'unset';
-    };
-  }, [selectedCoach, scrollPosition]);
+  }, [selectedCoach]);
 
   const staff = [
     {
