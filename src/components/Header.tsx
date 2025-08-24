@@ -250,6 +250,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
           
           <nav className="px-4 sm:px-8 py-6 sm:py-8 overflow-y-auto max-h-[calc(100vh-100px)]">
             <ul className="space-y-2 sm:space-y-3">
+              {/* 1. Profilo */}
               <li>
                 <button
                   onClick={() => currentUser ? toggleUserMenu() : handleNavigation('auth')}
@@ -259,42 +260,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>{currentUser ? `${currentUser.name || t.header.profile} ${currentUser.role === 'admin' ? '(Admin)' : ''}` : t.header.profile}</span>
                 </button>
               </li>
-              <li>
-                <button
-                  onClick={() => scrollToSection('aree')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <Dumbbell size={20} className="sm:w-6 sm:h-6" />
-                  <span>Aree</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => scrollToSection('contatti')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <Phone size={20} className="sm:w-6 sm:h-6" />
-                  <span>Contatti</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => scrollToSection('posizione')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <MapPin size={20} className="sm:w-6 sm:h-6" />
-                  <span>{t.header.location}</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => scrollToSection('staff')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <Users size={20} className="sm:w-6 sm:h-6" />
-                  <span>Coach</span>
-                </button>
-              </li>
+              {/* 2. Informazioni */}
               <li>
                 <button
                   onClick={scrollToFooter}
@@ -304,15 +270,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>{t.header.information}</span>
                 </button>
               </li>
-              <li>
-                <button
-                  onClick={handleShowRules}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <BookOpen size={20} className="sm:w-6 sm:h-6" />
-                  <span>{t.header.rules}</span>
-                </button>
-              </li>
+              {/* 3. Orari */}
               <li>
                 <button
                   onClick={() => scrollToSection('orari')}
@@ -322,6 +280,17 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>Orari</span>
                 </button>
               </li>
+              {/* 4. Regole */}
+              <li>
+                <button
+                  onClick={handleShowRules}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <BookOpen size={20} className="sm:w-6 sm:h-6" />
+                  <span>{t.header.rules}</span>
+                </button>
+              </li>
+              {/* 5. Schede */}
               <li>
                 <button
                   onClick={() => handleNavigation('workouts')}
@@ -329,6 +298,46 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                 >
                   <FileText size={20} className="sm:w-6 sm:h-6" />
                   <span>{t.header.workouts}</span>
+                </button>
+              </li>
+              {/* 6. Aree */}
+              <li>
+                <button
+                  onClick={() => scrollToSection('aree')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <Dumbbell size={20} className="sm:w-6 sm:h-6" />
+                  <span>Aree</span>
+                </button>
+              </li>
+              {/* 7. Coach */}
+              <li>
+                <button
+                  onClick={() => scrollToSection('staff')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <Users size={20} className="sm:w-6 sm:h-6" />
+                  <span>Coach</span>
+                </button>
+              </li>
+              {/* 8. Posizione */}
+              <li>
+                <button
+                  onClick={() => scrollToSection('posizione')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <MapPin size={20} className="sm:w-6 sm:h-6" />
+                  <span>{t.header.location}</span>
+                </button>
+              </li>
+              {/* 9. Contatti */}
+              <li>
+                <button
+                  onClick={() => scrollToSection('contatti')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <Phone size={20} className="sm:w-6 sm:h-6" />
+                  <span>Contatti</span>
                 </button>
               </li>
               

@@ -24,33 +24,16 @@ const HeroSection: React.FC = () => {
     return () => clearInterval(typingInterval);
   }, [fullText]);
   const scrollToStatistics = () => {
-    console.log('Tentativo di scroll alla sezione statistiche...');
     const element = document.getElementById('statistiche');
-    console.log('Elemento trovato:', element);
     if (element) {
-      const elementPosition = element.offsetTop;
-      const offsetPosition = elementPosition - 100; // Offset di 100px per evitare sovrapposizione header
-      console.log('Scrolling to position:', offsetPosition);
-      
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+      element.scrollIntoView({ behavior: 'smooth' });
     } else {
-      console.error('Elemento con id "statistiche" non trovato!');
       // Fallback: prova a cercare la sezione in modo alternativo
       const sections = document.querySelectorAll('section');
-      console.log('Sezioni trovate:', sections.length);
       // Cerca la seconda sezione (dovrebbe essere StatisticsSection)
       if (sections.length >= 2) {
         const statisticsSection = sections[1];
-        const elementPosition = statisticsSection.offsetTop;
-        const offsetPosition = elementPosition - 100;
-        console.log('Fallback: scrolling to section 2 at position:', offsetPosition);
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        });
+        statisticsSection.scrollIntoView({ behavior: 'smooth' });
       }
     }
   };

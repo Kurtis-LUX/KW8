@@ -85,7 +85,7 @@ const StatisticsSection: React.FC = () => {
     <section 
       ref={sectionRef}
       id="statistiche" 
-      className={`py-16 bg-gradient-to-b from-white to-gray-50 transition-all duration-1000 transform ${
+      className={`py-16 bg-gradient-to-b from-white to-gray-50 scroll-mt-[100px] transition-all duration-1000 transform ${
         isVisible 
           ? 'opacity-100 translate-y-0' 
           : 'opacity-0 translate-y-8'
