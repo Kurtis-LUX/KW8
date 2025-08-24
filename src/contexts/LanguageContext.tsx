@@ -24,10 +24,16 @@ interface LanguageProviderProps {
 }
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('it');
+  // Initialize language from localStorage or default to 'it'
+  const [language, setLanguage] = useState<Language>(() => {
+    const savedLanguage = localStorage.getItem('kw8-language') as Language;
+    return savedLanguage || 'it';
+  });
   const t = useTranslation(language);
 
   const handleLanguageChange = (lang: Language) => {
+    // Save language to localStorage first
+    localStorage.setItem('kw8-language', lang);
     setLanguage(lang);
     // Refresh the page after language change
     setTimeout(() => {

@@ -11,95 +11,53 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   const [shouldShowLoading, setShouldShowLoading] = useState(false);
 
   useEffect(() => {
-    // Check if it's a mobile app (PWA in standalone mode)
-    const checkMobileApp = () => {
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                          (window.navigator as any).standalone === true;
-      
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      // Only show loading screen if it's a PWA in standalone mode on mobile
-      const showLoading = isStandalone && isMobileDevice;
-      setShouldShowLoading(showLoading);
-      
-      // If not mobile app, complete loading immediately
-      if (!showLoading) {
-        setTimeout(() => onLoadingComplete(), 100);
-        return;
-      }
-    };
-    
-    checkMobileApp();
-    
-    // If not showing loading, exit early
-    if (!shouldShowLoading) {
-      return;
-    }
+    // Always show loading screen on all devices
+    setShouldShowLoading(true);
 
-    // Play audio and show logo with improved audio handling
+    // Play audio and show logo with simplified audio handling
     const playAudioAndShowLogo = async () => {
+      // Show logo immediately
+      setLogoVisible(true);
+      
       try {
-        // Show logo immediately
-        setLogoVisible(true);
-        
         // Create and configure audio
         const audio = new Audio('/sounds/logo-sound.mp3');
         audio.volume = 0.8;
         audio.preload = 'auto';
         
-        // Try multiple approaches for audio playback
-        const attemptAudioPlay = async () => {
-          try {
-            // First attempt: direct play
-            await audio.play();
-            console.log('Audio played successfully');
-          } catch (error) {
-            console.log('Direct audio play failed, trying muted approach:', error);
-            
+        // Simple audio play with muted trick
+        try {
+          // Start muted to bypass autoplay restrictions
+          audio.muted = true;
+          await audio.play();
+          
+          // Unmute after a short delay
+          setTimeout(() => {
+            audio.muted = false;
+            console.log('Audio playing with muted trick');
+          }, 200);
+        } catch (error) {
+          console.log('Audio autoplay failed:', error);
+          
+          // Fallback: play on first user interaction
+          const playOnInteraction = async () => {
             try {
-              // Second attempt: muted then unmuted
-              audio.muted = true;
+              audio.currentTime = 0;
+              audio.muted = false;
               await audio.play();
-              setTimeout(() => {
-                audio.muted = false;
-                console.log('Audio unmuted after muted play');
-              }, 100);
-            } catch (mutedError) {
-              console.log('Muted audio play also failed:', mutedError);
-              
-              // Final fallback: wait for user interaction
-              const playOnInteraction = async (event: Event) => {
-                try {
-                  audio.currentTime = 0;
-                  audio.muted = false;
-                  await audio.play();
-                  console.log('Audio played on user interaction');
-                } catch (interactionError) {
-                  console.log('Audio play failed even on interaction:', interactionError);
-                }
-                
-                // Remove all event listeners
-                document.removeEventListener('touchstart', playOnInteraction);
-                document.removeEventListener('click', playOnInteraction);
-                document.removeEventListener('keydown', playOnInteraction);
-                document.removeEventListener('scroll', playOnInteraction);
-              };
-              
-              // Add multiple event listeners for user interaction
-              document.addEventListener('touchstart', playOnInteraction, { once: true });
-              document.addEventListener('click', playOnInteraction, { once: true });
-              document.addEventListener('keydown', playOnInteraction, { once: true });
-              document.addEventListener('scroll', playOnInteraction, { once: true });
+              console.log('Audio played on user interaction');
+            } catch (interactionError) {
+              console.log('Audio play failed on interaction:', interactionError);
             }
-          }
-        };
-        
-        attemptAudioPlay();
+          };
+          
+          // Add event listeners for user interaction
+          document.addEventListener('touchstart', playOnInteraction, { once: true });
+          document.addEventListener('click', playOnInteraction, { once: true });
+        }
         
       } catch (error) {
         console.log('Audio setup failed:', error);
-        // Always show logo even if audio completely fails
-        setLogoVisible(true);
       }
     };
     
@@ -129,10 +87,10 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       clearTimeout(minLoadingTimer);
       clearInterval(progressInterval);
     };
-  }, [onLoadingComplete, shouldShowLoading]);
+  }, [onLoadingComplete]);
 
-  // Don't show loading screen if not mobile app or not visible
-  if (!shouldShowLoading || !isVisible) {
+  // Don't show loading screen if not visible
+  if (!isVisible) {
     return null;
   }
 

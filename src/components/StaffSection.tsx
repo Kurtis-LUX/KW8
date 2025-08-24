@@ -215,17 +215,18 @@ const StaffSection: React.FC = () => {
               staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'from-blue-900 to-blue-800' :
               staff[selectedCoach].name === 'Saverio Di Maria' ? 'from-red-600 to-red-700' :
               staff[selectedCoach].role.includes('Karate') ? 'from-white to-gray-100' :
-              staff[selectedCoach].role.includes('Yoga') ? 'from-white to-gray-100' :
+              staff[selectedCoach].role.includes('Yoga') ? 'from-yellow-400 to-yellow-500' :
               'from-red-600 to-red-700'
             } ${
-              staff[selectedCoach].role.includes('Karate') || staff[selectedCoach].role.includes('Yoga') ? 'text-black' : 'text-white'
+              staff[selectedCoach].role.includes('Karate') ? 'text-black' : 
+              staff[selectedCoach].role.includes('Yoga') ? 'text-black' : 'text-white'
             } p-4 sm:p-6 relative`}>
               <button
                 onClick={() => setSelectedCoach(null)}
                 className={`absolute top-2 right-2 sm:top-4 sm:right-4 ${
-                  staff[selectedCoach].role.includes('Karate') || staff[selectedCoach].role.includes('Yoga') 
-                    ? 'text-black hover:text-gray-600' 
-                    : 'text-white hover:text-gray-200'
+                  staff[selectedCoach].role.includes('Karate') ? 'text-black hover:text-gray-600' :
+                  staff[selectedCoach].role.includes('Yoga') ? 'text-black hover:text-gray-600' :
+                  'text-white hover:text-gray-200'
                 } transition-colors p-2 rounded-full hover:bg-black/10`}
               >
                 <X size={20} className="sm:w-6 sm:h-6" />
@@ -236,9 +237,9 @@ const StaffSection: React.FC = () => {
                   src={staff[selectedCoach].image} 
                   alt={staff[selectedCoach].name}
                   className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 ${
-                    staff[selectedCoach].role.includes('Karate') || staff[selectedCoach].role.includes('Yoga') 
-                      ? 'border-black' 
-                      : 'border-white'
+                    staff[selectedCoach].role.includes('Karate') ? 'border-black' :
+                    staff[selectedCoach].role.includes('Yoga') ? 'border-black' :
+                    'border-white'
                   } shadow-lg`}
                 />
                 <div>
@@ -264,7 +265,7 @@ const StaffSection: React.FC = () => {
                     staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'text-blue-900' :
                     staff[selectedCoach].name === 'Saverio Di Maria' ? 'text-red-600' :
                     staff[selectedCoach].role.includes('Karate') ? 'text-yellow-500' :
-                    staff[selectedCoach].role.includes('Yoga') ? 'text-gray-600' :
+                    staff[selectedCoach].role.includes('Yoga') ? 'text-yellow-600' :
                     'text-red-600';
                   return (
                     <div key={index} className="flex items-start space-x-3 p-3 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100 hover:shadow-md transition-all duration-300">
