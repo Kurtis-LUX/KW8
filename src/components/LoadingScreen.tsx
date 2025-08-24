@@ -36,20 +36,20 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       return;
     }
 
-    // Start loading animation immediately
-    setLogoVisible(true);
-    
-    // Play sound immediately when loading starts
-    const playAudio = async () => {
+    // Play audio and show logo simultaneously
+    const playAudioAndShowLogo = async () => {
       try {
         const audio = new Audio('/sounds/logo-sound.mp3');
         audio.volume = 0.8;
         audio.preload = 'auto';
         
+        // Show logo and play audio at the exact same time
+        setLogoVisible(true);
+        
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise.then(() => {
-            console.log('Audio played successfully');
+            console.log('Audio played successfully with logo appearance');
           }).catch((error) => {
             console.log('Audio autoplay prevented:', error);
             // Try to play on first user interaction
@@ -64,10 +64,13 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
         }
       } catch (error) {
         console.log('Audio creation failed:', error);
+        // Show logo even if audio fails
+        setLogoVisible(true);
       }
     };
     
-    playAudio();
+    // Execute immediately without any delay
+    playAudioAndShowLogo();
 
     // Progress animation
     const progressInterval = setInterval(() => {
