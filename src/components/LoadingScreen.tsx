@@ -8,62 +8,66 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [logoVisible, setLogoVisible] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
+  const [shouldShowLoading, setShouldShowLoading] = useState(false);
 
   useEffect(() => {
-    // Check if it's a mobile app (not just mobile browser)
+    // Check if it's a mobile app (PWA in standalone mode)
     const checkMobileApp = () => {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                          (window.navigator as any).standalone || 
-                          document.referrer.includes('android-app://') ||
-                          /Android.*wv|iPhone.*Mobile.*Safari/i.test(navigator.userAgent);
+                          (window.navigator as any).standalone === true;
       
-      const isMobileDevice = window.innerWidth <= 768 && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
-      // Only show loading screen if it's a mobile app, not mobile browser
-      const shouldShowLoading = isStandalone && isMobileDevice;
-      setIsMobile(shouldShowLoading);
+      // Only show loading screen if it's a PWA in standalone mode on mobile
+      const showLoading = isStandalone && isMobileDevice;
+      setShouldShowLoading(showLoading);
       
       // If not mobile app, complete loading immediately
-      if (!shouldShowLoading) {
-        onLoadingComplete();
+      if (!showLoading) {
+        setTimeout(() => onLoadingComplete(), 100);
         return;
       }
     };
     
     checkMobileApp();
-    window.addEventListener('resize', checkMobileApp);
     
-    // Only run loading animation on mobile app
-    if (!isMobile) {
-      return () => window.removeEventListener('resize', checkMobileApp);
+    // If not showing loading, exit early
+    if (!shouldShowLoading) {
+      return;
     }
 
+    // Start loading animation immediately
+    setLogoVisible(true);
+    
     // Play sound immediately when loading starts
-    try {
-      const audio = new Audio('/sounds/logo-sound.mp3');
-      audio.volume = 0.8;
-      audio.preload = 'auto';
-      
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          console.log('Audio played successfully');
-        }).catch((error) => {
-          console.log('Audio autoplay prevented:', error);
-          document.addEventListener('click', () => {
-            audio.play().catch(() => {});
-          }, { once: true });
-        });
+    const playAudio = async () => {
+      try {
+        const audio = new Audio('/sounds/logo-sound.mp3');
+        audio.volume = 0.8;
+        audio.preload = 'auto';
+        
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log('Audio played successfully');
+          }).catch((error) => {
+            console.log('Audio autoplay prevented:', error);
+            // Try to play on first user interaction
+            const playOnInteraction = () => {
+              audio.play().catch(() => {});
+              document.removeEventListener('touchstart', playOnInteraction);
+              document.removeEventListener('click', playOnInteraction);
+            };
+            document.addEventListener('touchstart', playOnInteraction, { once: true });
+            document.addEventListener('click', playOnInteraction, { once: true });
+          });
+        }
+      } catch (error) {
+        console.log('Audio creation failed:', error);
       }
-    } catch (error) {
-      console.log('Audio creation failed:', error);
-    }
-
-    // Show logo after 500ms
-    const logoTimer = setTimeout(() => {
-      setLogoVisible(true);
-    }, 500);
+    };
+    
+    playAudio();
 
     // Progress animation
     const progressInterval = setInterval(() => {
@@ -74,7 +78,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
         }
         return prev + 2;
       });
-    }, 40);
+    }, 30); // Slightly faster progress
 
     // Minimum 3 seconds loading time
     const minLoadingTimer = setTimeout(() => {
@@ -85,15 +89,13 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
     }, 3000);
 
     return () => {
-      clearTimeout(logoTimer);
       clearTimeout(minLoadingTimer);
       clearInterval(progressInterval);
-      window.removeEventListener('resize', checkMobile);
     };
-  }, [onLoadingComplete]);
+  }, [onLoadingComplete, shouldShowLoading]);
 
-  // Don't show loading screen on desktop
-  if (!isMobile || !isVisible) {
+  // Don't show loading screen if not mobile app or not visible
+  if (!shouldShowLoading || !isVisible) {
     return null;
   }
 
