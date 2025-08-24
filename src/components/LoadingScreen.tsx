@@ -11,51 +11,58 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Check if device is mobile
-    const checkMobile = () => {
-      const isMobileDevice = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      setIsMobile(isMobileDevice);
+    // Check if it's a mobile app (not just mobile browser)
+    const checkMobileApp = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                          (window.navigator as any).standalone || 
+                          document.referrer.includes('android-app://') ||
+                          /Android.*wv|iPhone.*Mobile.*Safari/i.test(navigator.userAgent);
       
-      // If not mobile, complete loading immediately
-      if (!isMobileDevice) {
+      const isMobileDevice = window.innerWidth <= 768 && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Only show loading screen if it's a mobile app, not mobile browser
+      const shouldShowLoading = isStandalone && isMobileDevice;
+      setIsMobile(shouldShowLoading);
+      
+      // If not mobile app, complete loading immediately
+      if (!shouldShowLoading) {
         onLoadingComplete();
         return;
       }
     };
     
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
+    checkMobileApp();
+    window.addEventListener('resize', checkMobileApp);
     
-    // Only run loading animation on mobile
-    if (!isMobile && window.innerWidth > 768) {
-      return () => window.removeEventListener('resize', checkMobile);
+    // Only run loading animation on mobile app
+    if (!isMobile) {
+      return () => window.removeEventListener('resize', checkMobileApp);
+    }
+
+    // Play sound immediately when loading starts
+    try {
+      const audio = new Audio('/sounds/logo-sound.mp3');
+      audio.volume = 0.8;
+      audio.preload = 'auto';
+      
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          console.log('Audio played successfully');
+        }).catch((error) => {
+          console.log('Audio autoplay prevented:', error);
+          document.addEventListener('click', () => {
+            audio.play().catch(() => {});
+          }, { once: true });
+        });
+      }
+    } catch (error) {
+      console.log('Audio creation failed:', error);
     }
 
     // Show logo after 500ms
     const logoTimer = setTimeout(() => {
       setLogoVisible(true);
-      // Play sound when logo appears with Supercell-like effect
-      try {
-        const audio = new Audio('/sounds/logo-sound.mp3');
-        audio.volume = 0.8; // Volume più alto per effetto Supercell
-        audio.preload = 'auto';
-        
-        // Tentativo di riproduzione con fallback
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            console.log('Audio played successfully');
-          }).catch((error) => {
-            console.log('Audio autoplay prevented:', error);
-            // Fallback: prova a riprodurre con interazione utente
-            document.addEventListener('click', () => {
-              audio.play().catch(() => {});
-            }, { once: true });
-          });
-        }
-      } catch (error) {
-        console.log('Audio creation failed:', error);
-      }
     }, 500);
 
     // Progress animation
@@ -106,20 +113,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
             <img 
               src="/images/logo.png" 
               alt="KW8 Logo" 
-              className="h-24 md:h-32 w-auto mx-auto mb-4 relative z-10 animate-pulse"
-              style={{
-                filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 40px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 60px rgba(147, 51, 234, 0.4))',
-                animation: 'supercellGlow 2s ease-in-out infinite alternate'
-              }}
-            />
-            {/* Glow effect background */}
-            <div 
-              className="absolute inset-0 rounded-full opacity-60"
-              style={{
-                background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(147, 51, 234, 0.2) 50%, transparent 70%)',
-                animation: 'supercellPulse 2s ease-in-out infinite alternate',
-                transform: 'scale(1.5)'
-              }}
+              className="h-24 md:h-32 w-auto mx-auto mb-4"
             />
           </div>
           <p className="text-xl md:text-2xl font-light tracking-wider" style={{ fontFamily: 'Bebas Neue, cursive' }}>
@@ -145,38 +139,3 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
 };
 
 export default LoadingScreen;
-
-// Add Supercell-like glow animation styles
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes supercellGlow {
-    0% {
-      filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 40px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 60px rgba(147, 51, 234, 0.4));
-      transform: scale(1);
-    }
-    50% {
-      filter: drop-shadow(0 0 30px rgba(255, 255, 255, 1)) drop-shadow(0 0 60px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 90px rgba(147, 51, 234, 0.6));
-      transform: scale(1.05);
-    }
-    100% {
-      filter: drop-shadow(0 0 40px rgba(255, 255, 255, 1.2)) drop-shadow(0 0 80px rgba(59, 130, 246, 1)) drop-shadow(0 0 120px rgba(147, 51, 234, 0.8));
-      transform: scale(1.1);
-    }
-  }
-  
-  @keyframes supercellPulse {
-    0% {
-      opacity: 0.3;
-      transform: scale(1.2);
-    }
-    50% {
-      opacity: 0.6;
-      transform: scale(1.5);
-    }
-    100% {
-      opacity: 0.8;
-      transform: scale(1.8);
-    }
-  }
-`;
-document.head.appendChild(style);

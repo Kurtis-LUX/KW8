@@ -61,6 +61,9 @@ interface RulesSectionProps {
 
 const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [currentX, setCurrentX] = useState(0);
 
   // Blocca lo scroll della pagina quando il modal è aperto
   useEffect(() => {
@@ -86,6 +89,59 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
 
   const goToRule = (index: number) => {
     setCurrentIndex(index);
+  };
+
+  // Touch and mouse drag handlers
+  const handleStart = (clientX: number) => {
+    setIsDragging(true);
+    setStartX(clientX);
+    setCurrentX(clientX);
+  };
+
+  const handleMove = (clientX: number) => {
+    if (!isDragging) return;
+    setCurrentX(clientX);
+  };
+
+  const handleEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    
+    const diff = startX - currentX;
+    const threshold = 50;
+    
+    if (diff > threshold) {
+      nextRule();
+    } else if (diff < -threshold) {
+      prevRule();
+    }
+  };
+
+  // Mouse events
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleStart(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handleMove(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    handleEnd();
+  };
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleStart(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    handleMove(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    handleEnd();
   };
 
   if (!isOpen) return null;
@@ -114,8 +170,15 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
           {/* Carousel Container */}
           <div className="relative overflow-hidden rounded-xl shadow-2xl mb-6">
             <div 
-              className="flex transition-transform duration-700 ease-in-out"
+              className="flex transition-transform duration-700 ease-in-out cursor-grab active:cursor-grabbing select-none"
               style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
             >
               {rules.map((rule, index) => (
                 <div key={index} className="w-full flex-shrink-0 relative">
@@ -166,23 +229,7 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
             ))}
           </div>
 
-          {/* Rules Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {rules.map((rule, index) => (
-              <button
-                key={rule.id}
-                onClick={() => goToRule(index)}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 text-left ${
-                  index === currentIndex
-                    ? 'border-red-600 bg-red-50'
-                    : 'border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50'
-                }`}
-              >
-                <div className="text-2xl mb-2">{rule.icon}</div>
-                <h4 className="font-semibold text-sm text-gray-800 line-clamp-2">{rule.title}</h4>
-              </button>
-            ))}
-          </div>
+
         </div>
 
         {/* Footer */}
