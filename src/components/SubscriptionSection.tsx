@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
 interface SubscriptionSectionProps {
@@ -8,7 +9,12 @@ interface SubscriptionSectionProps {
 const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate }) => {
   const { t } = useLanguageContext();
   const [isVisible, setIsVisible] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [currentX, setCurrentX] = useState(0);
   const sectionRef = useRef<HTMLElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -31,6 +37,70 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
       }
     };
   }, []);
+
+
+
+  // Carousel navigation functions
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % transformationCases.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + transformationCases.length) % transformationCases.length);
+  };
+
+  // Drag handlers
+  const handleStart = (clientX: number) => {
+    setIsDragging(true);
+    setStartX(clientX);
+    setCurrentX(clientX);
+  };
+
+  const handleMove = (clientX: number) => {
+    if (!isDragging) return;
+    setCurrentX(clientX);
+  };
+
+  const handleEnd = () => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    
+    const deltaX = currentX - startX;
+    const threshold = 50;
+    
+    if (deltaX > threshold) {
+      prevSlide();
+    } else if (deltaX < -threshold) {
+      nextSlide();
+    }
+  };
+
+  // Mouse events
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleStart(e.clientX);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handleMove(e.clientX);
+  };
+
+  const handleMouseUp = () => {
+    handleEnd();
+  };
+
+  // Touch events
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleStart(e.touches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    handleMove(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    handleEnd();
+  };
 
   const transformationCases = [
     {
@@ -80,21 +150,33 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
         }`}
         style={{ transitionDelay: '300ms' }}>
           <div className="max-w-4xl mx-auto">
-            <div className={`relative bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-700 transform ${
-              isVisible 
-                ? 'rotate-0 scale-100' 
-                : 'rotate-1 scale-95'
-            }`}
-            style={{ transitionDelay: '500ms' }}>
-              <div className="relative">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
-                  {transformationCases.map((case_, index) => (
-                    <div key={index} className={`bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-700 transform hover:scale-105 hover:shadow-xl ${
-                      isVisible 
-                        ? 'translate-y-0 opacity-100' 
-                        : 'translate-y-8 opacity-0'
-                    }`}
-                    style={{ transitionDelay: `${index * 200}ms` }}>
+            {/* Carousel Container */}
+        <div 
+          ref={carouselRef}
+          className="relative overflow-hidden rounded-xl shadow-2xl cursor-grab active:cursor-grabbing select-none"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div 
+            className="flex transition-transform duration-700 ease-in-out"
+            style={{ 
+              transform: `translateX(-${currentSlide * 100}%)`,
+              userSelect: 'none'
+            }}
+          >
+            {transformationCases.map((case_, index) => (
+              <div key={index} className="w-full flex-shrink-0 relative">
+                <div className={`bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-700 transform hover:scale-105 hover:shadow-xl ${
+                  isVisible 
+                    ? 'translate-y-0 opacity-100' 
+                    : 'translate-y-8 opacity-0'
+                }`}
+                style={{ transitionDelay: `${index * 200}ms` }}>
                       {/* Before/After Images */}
                       <div className="relative h-48 bg-gradient-to-r from-gray-100 to-gray-200">
                         <div className="flex h-full">
@@ -127,9 +209,52 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
                         <p className="text-navy-700 text-sm text-center leading-relaxed">{case_.description}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
+            </div>
+
+            {/* Navigation Arrows */}
+            <button
+              onClick={prevSlide}
+              className={`absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 ${
+                isVisible 
+                  ? 'translate-x-0 opacity-100' 
+                  : '-translate-x-8 opacity-0'
+              }`}
+              style={{ transitionDelay: '600ms' }}
+            >
+              <ChevronLeft size={24} />
+            </button>
+
+            <button
+              onClick={nextSlide}
+              className={`absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 ${
+                isVisible 
+                  ? 'translate-x-0 opacity-100' 
+                  : 'translate-x-8 opacity-0'
+              }`}
+              style={{ transitionDelay: '600ms' }}
+            >
+              <ChevronRight size={24} />
+            </button>
+
+            {/* Dots Indicator */}
+            <div className={`flex justify-center mt-8 space-x-3 transition-all duration-700 transform ${
+              isVisible 
+                ? 'translate-y-0 opacity-100' 
+                : 'translate-y-4 opacity-0'
+            }`}
+            style={{ transitionDelay: '800ms' }}>
+              {transformationCases.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 transform hover:scale-125 ${
+                    currentSlide === index ? 'bg-red-600 scale-125' : 'bg-gray-300'
+                  }`}
+                />
+              ))}
             </div>
           </div>
         </div>

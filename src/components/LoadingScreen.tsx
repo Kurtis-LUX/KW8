@@ -11,7 +11,17 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   const [shouldShowLoading, setShouldShowLoading] = useState(false);
   const [showEnterButton, setShowEnterButton] = useState(false);
 
-  const handleEnterClick = () => {
+  const handleEnterClick = async () => {
+    // Play audio when ENTER button is clicked
+    try {
+      const audio = new Audio('/sounds/logo-sound.mp3');
+      audio.volume = 0.8;
+      await audio.play();
+      console.log('Audio played on ENTER button click');
+    } catch (error) {
+      console.log('Audio play failed on ENTER click:', error);
+    }
+    
     setIsVisible(false);
     setTimeout(() => {
       onLoadingComplete();

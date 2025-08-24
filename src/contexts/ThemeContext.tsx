@@ -38,7 +38,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   // Update favicon and app icon based on theme
   const updateAppIcons = (currentTheme: Theme) => {
-    const logoPath = currentTheme === 'dark' ? '/images/logopaginadark.PNG' : '/images/logopagina.PNG';
+    const selectedLogo = localStorage.getItem('kw8-selected-logo') || 'default';
+    
+    let logoPath;
+    if (selectedLogo === 'alternative') {
+      logoPath = currentTheme === 'dark' ? '/images/logopaginadark.PNG' : '/images/logopagina.PNG';
+    } else {
+      logoPath = currentTheme === 'dark' ? '/images/logopaginadark.PNG' : '/images/logo.png';
+    }
     
     // Update favicon
     const favicon16 = document.querySelector('link[rel="icon"][sizes="16x16"]') as HTMLLinkElement;
@@ -48,6 +55,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     if (favicon16) favicon16.href = `${logoPath}?v=4`;
     if (favicon32) favicon32.href = `${logoPath}?v=4`;
     if (appleTouchIcon) appleTouchIcon.href = `${logoPath}?v=4`;
+    
+    // Update header logos
+    const headerLogo = document.querySelector('header img[alt="KW8 Logo"]') as HTMLImageElement;
+    const mobileMenuLogo = document.querySelector('.fixed.inset-0 img[alt="KW8 Logo"]') as HTMLImageElement;
+    
+    if (headerLogo) headerLogo.src = logoPath;
+    if (mobileMenuLogo) mobileMenuLogo.src = logoPath;
     
     // Update theme-color meta tag
     const themeColorMeta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement;

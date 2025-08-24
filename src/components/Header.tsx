@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Sun, Moon } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Sun, Moon, Palette } from 'lucide-react';
 import { User } from '../utils/database';
 import RulesSection from './RulesSection';
+import ThemeModal from './ThemeModal';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 
@@ -16,6 +17,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [showThemeModal, setShowThemeModal] = useState(false);
   const { language, setLanguage, t } = useLanguageContext();
   const { theme, toggleTheme } = useThemeContext();
   
@@ -351,11 +353,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               
               <li>
                 <button
-                  onClick={toggleTheme}
+                  onClick={() => {
+                    setShowThemeModal(true);
+                    setIsMenuOpen(false);
+                  }}
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                 >
-                  {theme === 'dark' ? <Sun size={20} className="sm:w-6 sm:h-6" /> : <Moon size={20} className="sm:w-6 sm:h-6" />}
-                  <span>{theme === 'dark' ? 'Tema Chiaro' : 'Tema Scuro'}</span>
+                  <Palette size={20} className="sm:w-6 sm:h-6" />
+                  <span>Personalizza Tema</span>
                 </button>
               </li>
               
@@ -378,6 +383,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
       <RulesSection 
         isOpen={showRulesModal} 
         onClose={() => setShowRulesModal(false)} 
+      />
+      
+      {/* Theme Modal */}
+      <ThemeModal 
+        isOpen={showThemeModal} 
+        onClose={() => setShowThemeModal(false)} 
       />
     </>
   );
