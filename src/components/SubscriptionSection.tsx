@@ -53,10 +53,8 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
     }
   ];
 
-
-
   return (
-    <section 
+    <section
       ref={sectionRef}
       id="informazioni" 
       className={`py-20 bg-white transition-all duration-1000 transform ${
@@ -74,7 +72,7 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
           {t.transformations?.title || 'CASI DI MIGLIORAMENTO FISICO'}
         </h2>
 
-        {/* Transformation Cases Slider */}
+        {/* Transformation Cases Grid */}
         <div className={`mb-8 transition-all duration-1000 transform ${
           isVisible 
             ? 'translate-y-0 opacity-100 scale-100' 
@@ -88,9 +86,8 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
                 : 'rotate-1 scale-95'
             }`}
             style={{ transitionDelay: '500ms' }}>
-              {/* Slider Container */}
               <div className="relative">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
                   {transformationCases.map((case_, index) => (
                     <div key={index} className={`bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-700 transform hover:scale-105 hover:shadow-xl ${
                       isVisible 
@@ -132,6 +129,7 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
                     </div>
                   ))}
                 </div>
+              </div>
             </div>
           </div>
         </div>
