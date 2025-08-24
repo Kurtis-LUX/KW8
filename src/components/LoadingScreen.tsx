@@ -36,24 +36,31 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       return;
     }
 
-    // Play audio and show logo simultaneously
+    // Play audio and show logo simultaneously with muted autoplay trick
     const playAudioAndShowLogo = async () => {
       try {
         const audio = new Audio('/sounds/logo-sound.mp3');
         audio.volume = 0.8;
         audio.preload = 'auto';
+        audio.muted = true; // Start muted to bypass autoplay restrictions
         
-        // Show logo and play audio at the exact same time
+        // Show logo and start muted audio at the exact same time
         setLogoVisible(true);
         
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise.then(() => {
-            console.log('Audio played successfully with logo appearance');
+            console.log('Muted audio started successfully with logo appearance');
+            // Unmute after 200ms to activate sound
+            setTimeout(() => {
+              audio.muted = false;
+              console.log('Audio unmuted - sound activated');
+            }, 200);
           }).catch((error) => {
-            console.log('Audio autoplay prevented:', error);
-            // Try to play on first user interaction
+            console.log('Audio autoplay prevented even when muted:', error);
+            // Fallback: try to play on first user interaction
             const playOnInteraction = () => {
+              audio.muted = false;
               audio.play().catch(() => {});
               document.removeEventListener('touchstart', playOnInteraction);
               document.removeEventListener('click', playOnInteraction);
