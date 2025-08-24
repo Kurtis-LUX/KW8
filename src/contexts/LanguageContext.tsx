@@ -27,8 +27,16 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
   const [language, setLanguage] = useState<Language>('it');
   const t = useTranslation(language);
 
+  const handleLanguageChange = (lang: Language) => {
+    setLanguage(lang);
+    // Refresh the page after language change
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
+  };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage: handleLanguageChange, t }}>
       {children}
     </LanguageContext.Provider>
   );

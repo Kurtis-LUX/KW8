@@ -36,42 +36,69 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       return;
     }
 
-    // Play audio and show logo simultaneously with muted autoplay trick
+    // Play audio and show logo with improved audio handling
     const playAudioAndShowLogo = async () => {
       try {
+        // Show logo immediately
+        setLogoVisible(true);
+        
+        // Create and configure audio
         const audio = new Audio('/sounds/logo-sound.mp3');
         audio.volume = 0.8;
         audio.preload = 'auto';
-        audio.muted = true; // Start muted to bypass autoplay restrictions
         
-        // Show logo and start muted audio at the exact same time
-        setLogoVisible(true);
+        // Try multiple approaches for audio playback
+        const attemptAudioPlay = async () => {
+          try {
+            // First attempt: direct play
+            await audio.play();
+            console.log('Audio played successfully');
+          } catch (error) {
+            console.log('Direct audio play failed, trying muted approach:', error);
+            
+            try {
+              // Second attempt: muted then unmuted
+              audio.muted = true;
+              await audio.play();
+              setTimeout(() => {
+                audio.muted = false;
+                console.log('Audio unmuted after muted play');
+              }, 100);
+            } catch (mutedError) {
+              console.log('Muted audio play also failed:', mutedError);
+              
+              // Final fallback: wait for user interaction
+              const playOnInteraction = async (event: Event) => {
+                try {
+                  audio.currentTime = 0;
+                  audio.muted = false;
+                  await audio.play();
+                  console.log('Audio played on user interaction');
+                } catch (interactionError) {
+                  console.log('Audio play failed even on interaction:', interactionError);
+                }
+                
+                // Remove all event listeners
+                document.removeEventListener('touchstart', playOnInteraction);
+                document.removeEventListener('click', playOnInteraction);
+                document.removeEventListener('keydown', playOnInteraction);
+                document.removeEventListener('scroll', playOnInteraction);
+              };
+              
+              // Add multiple event listeners for user interaction
+              document.addEventListener('touchstart', playOnInteraction, { once: true });
+              document.addEventListener('click', playOnInteraction, { once: true });
+              document.addEventListener('keydown', playOnInteraction, { once: true });
+              document.addEventListener('scroll', playOnInteraction, { once: true });
+            }
+          }
+        };
         
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            console.log('Muted audio started successfully with logo appearance');
-            // Unmute after 200ms to activate sound
-            setTimeout(() => {
-              audio.muted = false;
-              console.log('Audio unmuted - sound activated');
-            }, 200);
-          }).catch((error) => {
-            console.log('Audio autoplay prevented even when muted:', error);
-            // Fallback: try to play on first user interaction
-            const playOnInteraction = () => {
-              audio.muted = false;
-              audio.play().catch(() => {});
-              document.removeEventListener('touchstart', playOnInteraction);
-              document.removeEventListener('click', playOnInteraction);
-            };
-            document.addEventListener('touchstart', playOnInteraction, { once: true });
-            document.addEventListener('click', playOnInteraction, { once: true });
-          });
-        }
+        attemptAudioPlay();
+        
       } catch (error) {
-        console.log('Audio creation failed:', error);
-        // Show logo even if audio fails
+        console.log('Audio setup failed:', error);
+        // Always show logo even if audio completely fails
         setLogoVisible(true);
       }
     };

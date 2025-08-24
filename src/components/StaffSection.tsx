@@ -111,7 +111,7 @@ const StaffSection: React.FC = () => {
       ]
     },
     {
-      name: 'Eleonora Nonnehoidea',
+      name: 'Eleonora Randazzo',
       role: 'Maestra Yoga',
       description: 'Approccio olistico e personalizzazione in base alle esigenze.',
       image: '/images/eleonora nonnehoidea.jpg',
@@ -214,13 +214,19 @@ const StaffSection: React.FC = () => {
             <div className={`bg-gradient-to-r ${
               staff[selectedCoach].name === 'Giuseppe Pandolfo' ? 'from-blue-900 to-blue-800' :
               staff[selectedCoach].name === 'Saverio Di Maria' ? 'from-red-600 to-red-700' :
-              staff[selectedCoach].role.includes('Karate') ? 'from-yellow-500 to-yellow-600' :
-              staff[selectedCoach].role.includes('Yoga') ? 'from-white to-gray-100 text-gray-800' :
+              staff[selectedCoach].role.includes('Karate') ? 'from-white to-gray-100' :
+              staff[selectedCoach].role.includes('Yoga') ? 'from-white to-gray-100' :
               'from-red-600 to-red-700'
-            } text-white p-4 sm:p-6 relative`}>
+            } ${
+              staff[selectedCoach].role.includes('Karate') || staff[selectedCoach].role.includes('Yoga') ? 'text-black' : 'text-white'
+            } p-4 sm:p-6 relative`}>
               <button
                 onClick={() => setSelectedCoach(null)}
-                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:text-gray-200 transition-colors p-2 rounded-full hover:bg-white/10"
+                className={`absolute top-2 right-2 sm:top-4 sm:right-4 ${
+                  staff[selectedCoach].role.includes('Karate') || staff[selectedCoach].role.includes('Yoga') 
+                    ? 'text-black hover:text-gray-600' 
+                    : 'text-white hover:text-gray-200'
+                } transition-colors p-2 rounded-full hover:bg-black/10`}
               >
                 <X size={20} className="sm:w-6 sm:h-6" />
               </button>
@@ -229,7 +235,11 @@ const StaffSection: React.FC = () => {
                 <img 
                   src={staff[selectedCoach].image} 
                   alt={staff[selectedCoach].name}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 border-white shadow-lg"
+                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 ${
+                    staff[selectedCoach].role.includes('Karate') || staff[selectedCoach].role.includes('Yoga') 
+                      ? 'border-black' 
+                      : 'border-white'
+                  } shadow-lg`}
                 />
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold">{staff[selectedCoach].name}</h3>
