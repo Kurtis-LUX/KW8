@@ -8,8 +8,29 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [logoVisible, setLogoVisible] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Check if device is mobile
+    const checkMobile = () => {
+      const isMobileDevice = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isMobileDevice);
+      
+      // If not mobile, complete loading immediately
+      if (!isMobileDevice) {
+        onLoadingComplete();
+        return;
+      }
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    // Only run loading animation on mobile
+    if (!isMobile && window.innerWidth > 768) {
+      return () => window.removeEventListener('resize', checkMobile);
+    }
+
     // Show logo after 500ms
     const logoTimer = setTimeout(() => {
       setLogoVisible(true);
@@ -48,26 +69,25 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       });
     }, 40);
 
-    // Minimum 2 seconds loading time
+    // Minimum 3 seconds loading time
     const minLoadingTimer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(() => {
         onLoadingComplete();
       }, 500); // Fade out duration
-    }, 2000);
+    }, 3000);
 
     return () => {
       clearTimeout(logoTimer);
       clearTimeout(minLoadingTimer);
       clearInterval(progressInterval);
+      window.removeEventListener('resize', checkMobile);
     };
   }, [onLoadingComplete]);
 
-  if (!isVisible) {
-    return (
-      <div className="fixed inset-0 bg-blue-900 z-50 flex items-center justify-center transition-opacity duration-500 opacity-0 pointer-events-none">
-      </div>
-    );
+  // Don't show loading screen on desktop
+  if (!isMobile || !isVisible) {
+    return null;
   }
 
   return (
@@ -82,13 +102,28 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
         logoVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-75 translate-y-4'
       }`}>
         <div className="text-white text-center">
-          <img 
-            src="/images/logo.png" 
-            alt="KW8 Logo" 
-            className="h-24 md:h-32 w-auto mx-auto mb-4 filter brightness-0 invert"
-          />
+          <div className="relative">
+            <img 
+              src="/images/logo.png" 
+              alt="KW8 Logo" 
+              className="h-24 md:h-32 w-auto mx-auto mb-4 relative z-10 animate-pulse"
+              style={{
+                filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 40px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 60px rgba(147, 51, 234, 0.4))',
+                animation: 'supercellGlow 2s ease-in-out infinite alternate'
+              }}
+            />
+            {/* Glow effect background */}
+            <div 
+              className="absolute inset-0 rounded-full opacity-60"
+              style={{
+                background: 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(147, 51, 234, 0.2) 50%, transparent 70%)',
+                animation: 'supercellPulse 2s ease-in-out infinite alternate',
+                transform: 'scale(1.5)'
+              }}
+            />
+          </div>
           <p className="text-xl md:text-2xl font-light tracking-wider" style={{ fontFamily: 'Bebas Neue, cursive' }}>
-            CROSS YOUR LIMITS
+            CROSS YOUR LIMITS.
           </p>
         </div>
       </div>
@@ -110,3 +145,38 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
 };
 
 export default LoadingScreen;
+
+// Add Supercell-like glow animation styles
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes supercellGlow {
+    0% {
+      filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 40px rgba(59, 130, 246, 0.6)) drop-shadow(0 0 60px rgba(147, 51, 234, 0.4));
+      transform: scale(1);
+    }
+    50% {
+      filter: drop-shadow(0 0 30px rgba(255, 255, 255, 1)) drop-shadow(0 0 60px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 90px rgba(147, 51, 234, 0.6));
+      transform: scale(1.05);
+    }
+    100% {
+      filter: drop-shadow(0 0 40px rgba(255, 255, 255, 1.2)) drop-shadow(0 0 80px rgba(59, 130, 246, 1)) drop-shadow(0 0 120px rgba(147, 51, 234, 0.8));
+      transform: scale(1.1);
+    }
+  }
+  
+  @keyframes supercellPulse {
+    0% {
+      opacity: 0.3;
+      transform: scale(1.2);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.5);
+    }
+    100% {
+      opacity: 0.8;
+      transform: scale(1.8);
+    }
+  }
+`;
+document.head.appendChild(style);

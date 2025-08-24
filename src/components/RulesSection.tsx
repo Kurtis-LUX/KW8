@@ -12,43 +12,43 @@ interface Rule {
 const rules: Rule[] = [
   {
     id: 1,
-    title: "Rispetto degli Orari",
+    title: "Rispetto degli orari",
     description: "Rispetta gli orari di apertura e chiusura della palestra. Assicurati di terminare il tuo allenamento entro l'orario di chiusura.",
     image: "/images/orari.jpg",
     icon: "⏰"
   },
   {
     id: 2,
-    title: "Igiene Personale",
+    title: "Igiene",
     description: "Mantieni sempre un'ottima igiene personale. Porta sempre un asciugamano pulito e utilizzalo su attrezzi e panche.",
     image: "/images/heropalestra.jpg",
     icon: "🧼"
   },
   {
     id: 3,
-    title: "Riordino Attrezzi",
+    title: "Mantieni l'ordine",
     description: "Rimetti sempre a posto gli attrezzi dopo l'uso. Questo aiuta a mantenere la palestra ordinata e sicura per tutti.",
     image: "/images/sala pesi.jpg",
     icon: "🏋️"
   },
   {
     id: 4,
-    title: "Rispetto degli Altri",
+    title: "Rispetto degli altri",
     description: "Rispetta gli altri utenti e il loro spazio. Evita di monopolizzare gli attrezzi e consenti a tutti di allenarsi serenamente.",
     image: "/images/crossfit.jpg",
     icon: "🤝"
   },
   {
     id: 5,
-    title: "Abbigliamento Adeguato",
+    title: "Abbigliamento adeguato",
     description: "Indossa sempre abbigliamento sportivo appropriato e scarpe da ginnastica pulite. L'abbigliamento deve essere adatto all'attività fisica.",
     image: "/images/karate.jpg",
     icon: "👕"
   },
   {
     id: 6,
-    title: "Sicurezza Prima di Tutto",
-    description: "Segui sempre le norme di sicurezza. In caso di dubbi su un esercizio, chiedi aiuto ai nostri coach qualificati.",
+    title: "Sicurezza prima di tutto",
+    description: "Segui sempre le norme di sicurezza. In caso di dubbi su un esercizio, chiedi aiuto ai nostri coach.",
     image: "/images/yoga.jpg",
     icon: "🛡️"
   }
