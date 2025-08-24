@@ -26,20 +26,13 @@ const HeroSection: React.FC = () => {
   const scrollToStatistics = () => {
     const element = document.getElementById('statistiche');
     if (element) {
-      // Trova il div specifico del counter degli iscritti
-      const counterDiv = element.querySelector('.text-5xl.md\\:text-6xl.font-bold.text-navy-900');
-      if (counterDiv) {
-        const elementPosition = (counterDiv as HTMLElement).offsetTop;
-        const offsetPosition = elementPosition - 50; // Offset per centrare meglio il counter
-        
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        });
-      } else {
-        // Fallback alla sezione generale se non trova il counter
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
+      const elementPosition = element.offsetTop;
+      const offsetPosition = elementPosition - 100; // Offset di 100px per evitare sovrapposizione header
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
     }
   };
 

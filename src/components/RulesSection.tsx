@@ -203,16 +203,16 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
             {/* Navigation Arrows */}
             <button
               onClick={prevRule}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 text-navy-900 p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 opacity-70 hover:opacity-100"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={16} />
             </button>
 
             <button
               onClick={nextRule}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 hover:bg-opacity-100 text-navy-900 p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 opacity-70 hover:opacity-100"
             >
-              <ChevronRight size={24} />
+              <ChevronRight size={16} />
             </button>
           </div>
 

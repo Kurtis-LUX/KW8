@@ -61,7 +61,7 @@ const StatisticsSection: React.FC = () => {
           }
           setAnimatedNumbers(prev => ({ ...prev, years: yearCount }));
         }, 200);
-      }, 500); // Ritardo di 500ms per sincronizzare con la transizione
+      }, 200); // Ritardo di 500ms per sincronizzare con la transizione
     }
   };
 
@@ -124,14 +124,14 @@ const StatisticsSection: React.FC = () => {
             return (
               <div 
                 key={index} 
-                className={`text-center p-4 rounded-xl bg-white hover:shadow-xl transition-all duration-700 transform hover:-translate-y-2 border border-gray-100 ${
+                className={`text-center p-4 rounded-xl bg-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 ${
                   isVisible 
                     ? 'translate-y-0 opacity-100 scale-100' 
                     : 'translate-y-8 opacity-0 scale-90'
                 }`}
                 style={{ transitionDelay: `${600 + index * 100}ms` }}
               >
-                <div className={`flex justify-center mb-3 transform hover:scale-110 transition-all duration-500 ${
+                <div className={`flex justify-center mb-3 transform hover:scale-110 transition-all duration-300 ${
                   isVisible 
                     ? 'rotate-0 scale-100' 
                     : 'rotate-180 scale-0'

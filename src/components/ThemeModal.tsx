@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sun, Moon, Palette } from 'lucide-react';
+import { X, Palette } from 'lucide-react';
 import { useThemeContext } from '../contexts/ThemeContext';
 
 interface ThemeModalProps {
@@ -17,22 +17,22 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ isOpen, onClose }) => {
     {
       id: 'default',
       name: 'Logo Classico',
-      lightPath: '/images/logo.png',
-      darkPath: '/images/logopaginadark.PNG',
+      path: '/images/logo.png',
       preview: '/images/logo.png'
     },
     {
-      id: 'alternative',
-      name: 'Logo Alternativo',
-      lightPath: '/images/logopagina.PNG',
-      darkPath: '/images/logopaginadark.PNG',
+      id: 'logopagina',
+      name: 'Logo Pagina',
+      path: '/images/logopagina.PNG',
       preview: '/images/logopagina.PNG'
+    },
+    {
+      id: 'logopaginadark',
+      name: 'Logo Pagina Dark',
+      path: '/images/logopaginadark.png',
+      preview: '/images/logopaginadark.png'
     }
   ];
-
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    setTheme(newTheme);
-  };
 
   const handleLogoChange = (logoId: string) => {
     setSelectedLogo(logoId);
@@ -44,11 +44,28 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ isOpen, onClose }) => {
     
     const selectedLogoData = logos.find(logo => logo.id === logoId);
     if (selectedLogoData && headerLogo) {
-      const logoPath = theme === 'dark' ? selectedLogoData.darkPath : selectedLogoData.lightPath;
-      headerLogo.src = logoPath;
+      headerLogo.src = selectedLogoData.path;
       if (mobileMenuLogo) {
-        mobileMenuLogo.src = logoPath;
+        mobileMenuLogo.src = selectedLogoData.path;
       }
+    }
+    
+    // Aggiorna anche il manifest per la PWA
+    const manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+    if (manifestLink && selectedLogoData) {
+      // Aggiorna dinamicamente il manifest per la PWA
+      fetch('/manifest.json')
+        .then(response => response.json())
+        .then(manifest => {
+          manifest.icons = manifest.icons.map((icon: any) => ({
+            ...icon,
+            src: selectedLogoData.path
+          }));
+          const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          manifestLink.href = url;
+        })
+        .catch(console.error);
     }
   };
 
@@ -66,7 +83,7 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ isOpen, onClose }) => {
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <Palette className="text-blue-600" size={24} />
-            <h2 className="text-xl font-bold text-gray-900">Personalizza Tema</h2>
+            <h2 className="text-xl font-bold text-gray-900">Seleziona Logo</h2>
           </div>
           <button
             onClick={onClose}
@@ -78,47 +95,9 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ isOpen, onClose }) => {
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Theme Selection */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Seleziona Tema</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleThemeChange('light')}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                  theme === 'light'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex flex-col items-center space-y-2">
-                  <Sun className={`${theme === 'light' ? 'text-blue-600' : 'text-gray-600'}`} size={24} />
-                  <span className={`font-medium ${theme === 'light' ? 'text-blue-600' : 'text-gray-600'}`}>
-                    Tema Chiaro
-                  </span>
-                </div>
-              </button>
-              
-              <button
-                onClick={() => handleThemeChange('dark')}
-                className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                  theme === 'dark'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex flex-col items-center space-y-2">
-                  <Moon className={`${theme === 'dark' ? 'text-blue-600' : 'text-gray-600'}`} size={24} />
-                  <span className={`font-medium ${theme === 'dark' ? 'text-blue-600' : 'text-gray-600'}`}>
-                    Tema Scuro
-                  </span>
-                </div>
-              </button>
-            </div>
-          </div>
-
           {/* Logo Selection */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Seleziona Logo</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Scegli il tuo logo preferito</h3>
             <div className="space-y-3">
               {logos.map((logo) => (
                 <button
