@@ -29,6 +29,7 @@ import initializeData from './utils/initData';
 import { User } from './utils/database';
 import { authService } from './services/authService';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import LoadingScreen from './components/LoadingScreen';
 
 function App() {
@@ -167,22 +168,27 @@ function App() {
   // Gestione delle pagine
   if (currentPage === 'payment') {
     return (
+      <ThemeProvider>
       <LanguageProvider>
         <PaymentPage onNavigate={handleNavigation} selectedPlan={selectedPlan} currentUser={currentUser} />
       </LanguageProvider>
+      </ThemeProvider>
     );
   }
 
   if (currentPage === 'auth') {
     return (
+      <ThemeProvider>
       <LanguageProvider>
         <AuthPage onNavigate={handleNavigation} onLogin={handleLogin} />
       </LanguageProvider>
+      </ThemeProvider>
     );
   }
 
   if (currentPage === 'workouts') {
     return (
+      <ThemeProvider>
       <LanguageProvider>
         {currentUser ? 
           <WorkoutsPage onNavigate={handleNavigation} currentUser={currentUser} /> : 
@@ -198,11 +204,13 @@ function App() {
           </div>
         }
       </LanguageProvider>
+      </ThemeProvider>
     );
   }
 
   if (currentPage === 'admin-dashboard') {
     return (
+      <ThemeProvider>
       <LanguageProvider>
         <ProtectedRoute 
           requireAdmin={true}
@@ -211,11 +219,13 @@ function App() {
           <AdminDashboard onNavigate={handleNavigation} currentUser={currentUser} />
         </ProtectedRoute>
       </LanguageProvider>
+      </ThemeProvider>
     );
   }
 
   if (currentPage === 'email-test') {
     return (
+      <ThemeProvider>
       <LanguageProvider>
         <div className="min-h-screen bg-gray-100 py-8">
           <div className="container mx-auto px-4">
@@ -230,6 +240,7 @@ function App() {
           </div>
         </div>
       </LanguageProvider>
+      </ThemeProvider>
     );
   }
 
@@ -246,15 +257,18 @@ function App() {
   // Mostra loading screen personalizzata
   if (showLoadingScreen) {
     return (
+      <ThemeProvider>
       <LanguageProvider>
         <LoadingScreen onLoadingComplete={() => setShowLoadingScreen(false)} />
       </LanguageProvider>
+      </ThemeProvider>
     );
   }
 
   // Mostra errore durante l'inizializzazione se necessario
   if (!appInitialized && initError) {
     return (
+      <ThemeProvider>
       <LanguageProvider>
         <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">
@@ -262,10 +276,12 @@ function App() {
           </div>
         </div>
       </LanguageProvider>
+      </ThemeProvider>
     );
   }
 
   return (
+    <ThemeProvider>
     <LanguageProvider>
       <div className="min-h-screen bg-white">
         <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} />
@@ -337,6 +353,7 @@ function App() {
       </Modal>
       </div>
     </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

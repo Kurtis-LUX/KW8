@@ -5,14 +5,32 @@ interface LoadingScreenProps {
 }
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
-  const [isVisible, setIsVisible] = useState(true);
   const [logoVisible, setLogoVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(0);
   const [shouldShowLoading, setShouldShowLoading] = useState(false);
+  const [showEnterButton, setShowEnterButton] = useState(false);
+
+  const handleEnterClick = () => {
+    setIsVisible(false);
+    setTimeout(() => {
+      onLoadingComplete();
+    }, 500); // Fade out duration
+  };
 
   useEffect(() => {
-    // Always show loading screen on all devices
-    setShouldShowLoading(true);
+    // Only show loading screen on mobile devices or PWA
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                  (window.navigator as any).standalone === true;
+    
+    setShouldShowLoading(isMobile || isPWA);
+
+    // If not mobile/PWA, skip loading screen
+    if (!isMobile && !isPWA) {
+      onLoadingComplete();
+      return;
+    }
 
     // Play audio and show logo with simplified audio handling
     const playAudioAndShowLogo = async () => {
@@ -69,19 +87,22 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(progressInterval);
+          // Show ENTER button when progress completes
+          setTimeout(() => {
+            setShowEnterButton(true);
+          }, 500);
           return 100;
         }
         return prev + 2;
       });
     }, 30); // Slightly faster progress
 
-    // Minimum 3 seconds loading time
+    // Minimum 2 seconds loading time
     const minLoadingTimer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(() => {
-        onLoadingComplete();
-      }, 500); // Fade out duration
-    }, 3000);
+      if (progress >= 100) {
+        setShowEnterButton(true);
+      }
+    }, 2000);
 
     return () => {
       clearTimeout(minLoadingTimer);
@@ -89,8 +110,8 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
     };
   }, [onLoadingComplete]);
 
-  // Don't show loading screen if not visible
-  if (!isVisible) {
+  // Don't show loading screen if not visible or not mobile/PWA
+  if (!isVisible || !shouldShowLoading) {
     return null;
   }
 
@@ -102,8 +123,8 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       </div>
       
       {/* Logo */}
-      <div className={`mb-8 transition-all duration-1000 transform ${
-        logoVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-75 translate-y-4'
+      <div className={`mb-8 transition-opacity duration-1000 ${
+        logoVisible ? 'opacity-100 animate-pulse' : 'opacity-0'
       }`}>
         <div className="text-white text-center">
           <div className="relative">
@@ -128,9 +149,23 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       </div>
       
       {/* Loading text */}
-      <p className="text-white text-sm mt-4 opacity-70 animate-pulse">
-        Caricamento in corso...
-      </p>
+      {!showEnterButton && (
+        <p className="text-white text-sm mt-4 opacity-70 animate-pulse">
+          Caricamento in corso...
+        </p>
+      )}
+      
+      {/* ENTER Button */}
+      {showEnterButton && (
+        <button
+          onClick={handleEnterClick}
+          className="mt-6 px-8 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold text-lg rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group animate-bounce"
+        >
+          <span className="relative z-10">ENTRA</span>
+          {/* Light reflection animation */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-700 ease-out"></div>
+        </button>
+      )}
     </div>
   );
 };

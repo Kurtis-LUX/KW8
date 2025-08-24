@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Sun, Moon } from 'lucide-react';
 import { User } from '../utils/database';
 import RulesSection from './RulesSection';
 import { useLanguageContext } from '../contexts/LanguageContext';
+import { useThemeContext } from '../contexts/ThemeContext';
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -16,6 +17,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const { language, setLanguage, t } = useLanguageContext();
+  const { theme, toggleTheme } = useThemeContext();
   
   // Aggiungi event listener per lo scroll
   useEffect(() => {
@@ -344,6 +346,16 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                     <span>{t.header.language}</span>
                     <span className="text-2xl">{language === 'it' ? '🇮🇹' : '🇬🇧'}</span>
                   </span>
+                </button>
+              </li>
+              
+              <li>
+                <button
+                  onClick={toggleTheme}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  {theme === 'dark' ? <Sun size={20} className="sm:w-6 sm:h-6" /> : <Moon size={20} className="sm:w-6 sm:h-6" />}
+                  <span>{theme === 'dark' ? 'Tema Chiaro' : 'Tema Scuro'}</span>
                 </button>
               </li>
               
