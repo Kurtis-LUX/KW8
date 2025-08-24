@@ -6,6 +6,7 @@ const StaffSection: React.FC = () => {
   const { t } = useLanguageContext();
   const [selectedCoach, setSelectedCoach] = useState<number | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [scrollPosition, setScrollPosition] = useState(0);
   const sectionRef = useRef<HTMLElement>(null);
 
   // Intersection Observer per le transizioni
@@ -45,19 +46,32 @@ const StaffSection: React.FC = () => {
     };
   }, [selectedCoach]);
 
-  // Blocca lo scroll della pagina quando il modal è aperto
+  // Blocca lo scroll della pagina quando il modal è aperto e salva/ripristina la posizione
   useEffect(() => {
     if (selectedCoach !== null) {
+      // Salva la posizione di scroll corrente
+      setScrollPosition(window.pageYOffset);
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${window.pageYOffset}px`;
+      document.body.style.width = '100%';
     } else {
+      // Ripristina la posizione di scroll
       document.body.style.overflow = 'unset';
+      document.body.style.position = 'unset';
+      document.body.style.top = 'unset';
+      document.body.style.width = 'unset';
+      window.scrollTo(0, scrollPosition);
     }
     
     // Cleanup quando il componente viene smontato
     return () => {
       document.body.style.overflow = 'unset';
+      document.body.style.position = 'unset';
+      document.body.style.top = 'unset';
+      document.body.style.width = 'unset';
     };
-  }, [selectedCoach]);
+  }, [selectedCoach, scrollPosition]);
 
   const staff = [
     {
@@ -165,16 +179,16 @@ const StaffSection: React.FC = () => {
                       className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
                     />
                     <div className={`absolute inset-0 transition-opacity duration-500 flex items-center justify-center ${
-                      index === 0 ? 'bg-red-600 bg-opacity-0 group-hover:bg-opacity-70' :
-                      index === 1 ? 'bg-blue-900 bg-opacity-0 group-hover:bg-opacity-70' :
-                      index === 2 ? 'bg-yellow-400 bg-opacity-0 group-hover:bg-opacity-70' :
-                      'bg-white bg-opacity-0 group-hover:bg-opacity-70'
+                      index === 0 ? 'bg-blue-900 bg-opacity-0 group-hover:bg-opacity-70' :
+                      index === 1 ? 'bg-red-600 bg-opacity-0 group-hover:bg-opacity-70' :
+                      index === 2 ? 'bg-white bg-opacity-0 group-hover:bg-opacity-70' :
+                      'bg-yellow-400 bg-opacity-0 group-hover:bg-opacity-70'
                     }`}>
                       <Icon className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                         index === 0 ? 'text-white' :
                         index === 1 ? 'text-white' :
-                        index === 2 ? 'text-blue-900' :
-                        'text-blue-900'
+                        index === 2 ? 'text-gray-900' :
+                        'text-gray-900'
                       }`} size={32} />
                     </div>
                   </div>
@@ -258,24 +272,12 @@ const StaffSection: React.FC = () => {
               </div>
             </div>
 
-            {/* Footer con azione */}
+            {/* Footer */}
             <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 hidden sm:block">
+              <div className="flex items-center justify-center">
+                <span className="text-xs text-gray-600">
                   Clicca per chiudere o premi ESC
                 </span>
-                <button
-                  onClick={() => setSelectedCoach(null)}
-                  className={`${
-                    staff[selectedCoach].role.includes('Sala Pesi') ? 'bg-red-600 hover:bg-red-700' :
-                    staff[selectedCoach].role.includes('Cross training') ? 'bg-blue-600 hover:bg-blue-700' :
-                    staff[selectedCoach].role.includes('Karate') ? 'bg-yellow-500 hover:bg-yellow-600' :
-                    staff[selectedCoach].role.includes('Yoga') ? 'bg-gray-600 hover:bg-gray-700' :
-                    'bg-red-600 hover:bg-red-700'
-                  } text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto`}
-                >
-                  {t.closeCertifications}
-                </button>
               </div>
             </div>
           </div>

@@ -45,7 +45,7 @@ const HeroSection: React.FC = () => {
       
       {/* Content */}
       <div className="relative z-10 text-center text-white px-4">
-        <h1 className={`text-5xl md:text-7xl lg:text-8xl font-bold mb-8 tracking-wider animate-fadeInSlideUp ${isTypingComplete ? 'animate-pulse' : ''}`} style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}>
+        <h1 className={`text-4xl md:text-7xl lg:text-8xl font-bold mb-8 tracking-wider animate-fadeInSlideUp ${isTypingComplete ? 'animate-pulse' : ''}`} style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}>
           <span style={{ fontFamily: 'Bebas Neue, cursive' }}>
             {displayText.split(' ').map((word, index) => {
               if (word === 'CROSS' || word === 'YOUR') {

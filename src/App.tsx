@@ -29,6 +29,7 @@ import initializeData from './utils/initData';
 import { User } from './utils/database';
 import { authService } from './services/authService';
 import { LanguageProvider } from './contexts/LanguageContext';
+import LoadingScreen from './components/LoadingScreen';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -42,6 +43,7 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [appInitialized, setAppInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -241,17 +243,22 @@ function App() {
     // Qui puoi aggiungere logica per disabilitare i cookie non essenziali
   };
 
-  // Mostra loading o errore durante l'inizializzazione
-  if (!appInitialized) {
+  // Mostra loading screen personalizzata
+  if (showLoadingScreen) {
+    return (
+      <LanguageProvider>
+        <LoadingScreen onLoadingComplete={() => setShowLoadingScreen(false)} />
+      </LanguageProvider>
+    );
+  }
+
+  // Mostra errore durante l'inizializzazione se necessario
+  if (!appInitialized && initError) {
     return (
       <LanguageProvider>
         <div className="min-h-screen bg-white flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-navy-800 mx-auto mb-4"></div>
-            <p className="text-lg text-gray-600">Caricamento in corso...</p>
-            {initError && (
-              <p className="text-red-500 mt-2 text-sm">Errore: {initError}</p>
-            )}
+            <p className="text-red-500 mt-2 text-sm">Errore: {initError}</p>
           </div>
         </div>
       </LanguageProvider>

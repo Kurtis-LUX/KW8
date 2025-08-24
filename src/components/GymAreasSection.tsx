@@ -181,23 +181,23 @@ const GymAreasSection: React.FC = () => {
                 switch(area.id) {
                   case 'sala-pesi': // sala pesi
                     overlayColor = 'bg-blue-900 bg-opacity-70';
-                    iconColor = 'text-blue-100';
+                    iconColor = 'text-red-600';
                     textColor = 'text-white';
                     break;
                   case 'crosstraining':
                     overlayColor = 'bg-red-600 bg-opacity-30';
-                    iconColor = 'text-red-600';
+                    iconColor = 'text-blue-900';
                     textColor = 'text-white';
                     break;
                   case 'karate':
-                    overlayColor = 'bg-yellow-400 bg-opacity-30';
+                    overlayColor = 'bg-white bg-opacity-70';
                     iconColor = 'text-yellow-400';
-                    textColor = 'text-white';
+                    textColor = 'text-gray-900';
                     break;
                   case 'yoga':
                     overlayColor = 'bg-white bg-opacity-30';
                     iconColor = 'text-white';
-                    textColor = 'text-white';
+                    textColor = 'text-gray-900';
                     break;
                   default:
                     overlayColor = 'bg-gray-900 bg-opacity-30';
