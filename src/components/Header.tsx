@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Sun, Moon, Palette } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Sun, Moon } from 'lucide-react';
 import { User } from '../utils/database';
 import RulesSection from './RulesSection';
-import ThemeModal from './ThemeModal';
+
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { useThemeContext } from '../contexts/ThemeContext';
 
@@ -17,7 +17,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
-  const [showThemeModal, setShowThemeModal] = useState(false);
+
   const { language, setLanguage, t } = useLanguageContext();
   const { theme, toggleTheme } = useThemeContext();
   
@@ -70,6 +70,24 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+    setIsMenuOpen(false);
+  };
+
+  const scrollToFooter = () => {
+    if (onNavigate) {
+      onNavigate('home');
+      setTimeout(() => {
+        const footer = document.querySelector('footer');
+        if (footer) {
+          footer.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    } else {
+      const footer = document.querySelector('footer');
+      if (footer) {
+        footer.scrollIntoView({ behavior: 'smooth' });
       }
     }
     setIsMenuOpen(false);
@@ -243,29 +261,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               </li>
               <li>
                 <button
-                  onClick={() => scrollToSection('statistics')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <Mail size={20} className="sm:w-6 sm:h-6" />
-                  <span>{t.header.information}</span>
-                </button>
-              </li>
-              <li>
-                <button
                   onClick={() => scrollToSection('aree')}
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <Dumbbell size={20} className="sm:w-6 sm:h-6" />
                   <span>Aree</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => scrollToSection('orari')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <Clock size={20} className="sm:w-6 sm:h-6" />
-                  <span>Orari</span>
                 </button>
               </li>
               <li>
@@ -297,11 +297,29 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               </li>
               <li>
                 <button
+                  onClick={scrollToFooter}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <Mail size={20} className="sm:w-6 sm:h-6" />
+                  <span>{t.header.information}</span>
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={handleShowRules}
                   className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <BookOpen size={20} className="sm:w-6 sm:h-6" />
                   <span>{t.header.rules}</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => scrollToSection('orari')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <Clock size={20} className="sm:w-6 sm:h-6" />
+                  <span>Orari</span>
                 </button>
               </li>
               <li>
@@ -351,18 +369,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                 </button>
               </li>
               
-              <li>
-                <button
-                  onClick={() => {
-                    setShowThemeModal(true);
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <Palette size={20} className="sm:w-6 sm:h-6" />
-                  <span>Personalizza Tema</span>
-                </button>
-              </li>
+
               
               {currentUser && (
                 <li>
@@ -385,11 +392,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
         onClose={() => setShowRulesModal(false)} 
       />
       
-      {/* Theme Modal */}
-      <ThemeModal 
-        isOpen={showThemeModal} 
-        onClose={() => setShowThemeModal(false)} 
-      />
+
     </>
   );
 };

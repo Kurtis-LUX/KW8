@@ -23,13 +23,9 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  // Initialize theme from localStorage or system preference
+  // Initialize theme based on system preference only
   const [theme, setTheme] = useState<Theme>(() => {
-    const savedTheme = localStorage.getItem('kw8-theme') as Theme;
-    if (savedTheme) {
-      return savedTheme;
-    }
-    // Check system preference
+    // Always check system preference
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
       return 'dark';
     }
@@ -38,14 +34,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
 
   // Update favicon and app icon based on theme
   const updateAppIcons = (currentTheme: Theme) => {
-    const selectedLogo = localStorage.getItem('kw8-selected-logo') || 'default';
-    
-    let logoPath;
-    if (selectedLogo === 'alternative') {
-      logoPath = currentTheme === 'dark' ? '/images/logopaginadark.PNG' : '/images/logopagina.PNG';
-    } else {
-      logoPath = currentTheme === 'dark' ? '/images/logopaginadark.PNG' : '/images/logo.png';
-    }
+    // Automatic logo selection based on theme
+    const logoPath = currentTheme === 'dark' ? '/images/logopaginadark.png' : '/images/logopagina.PNG';
     
     // Update favicon
     const favicon16 = document.querySelector('link[rel="icon"][sizes="16x16"]') as HTMLLinkElement;
@@ -71,7 +61,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   };
 
   const handleThemeChange = (newTheme: Theme) => {
-    localStorage.setItem('kw8-theme', newTheme);
     setTheme(newTheme);
     updateAppIcons(newTheme);
     
@@ -102,10 +91,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e: MediaQueryListEvent) => {
-      if (!localStorage.getItem('kw8-theme')) {
-        const newTheme = e.matches ? 'dark' : 'light';
-        handleThemeChange(newTheme);
-      }
+      const newTheme = e.matches ? 'dark' : 'light';
+      handleThemeChange(newTheme);
     };
 
     mediaQuery.addEventListener('change', handleChange);
