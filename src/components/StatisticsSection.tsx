@@ -38,18 +38,18 @@ const StatisticsSection: React.FC = () => {
     if (!hasAnimated) {
       setHasAnimated(true);
       
-      // Animazione per gli iscritti (150)
+      // Animazione per gli iscritti
       let subscriberCount = 0;
       const subscriberInterval = setInterval(() => {
         subscriberCount += 5;
-        if (subscriberCount >= 150) {
-          subscriberCount = 150;
+        if (subscriberCount >= 200) {
+          subscriberCount = 200;
           clearInterval(subscriberInterval);
         }
         setAnimatedNumbers(prev => ({ ...prev, subscribers: subscriberCount }));
       }, 50);
       
-      // Animazione per gli anni (5)
+      // Animazione per gli anni
       let yearCount = 0;
       const yearInterval = setInterval(() => {
         yearCount += 1;
@@ -63,7 +63,7 @@ const StatisticsSection: React.FC = () => {
   };
 
   const statistics = [
-    { number: animatedNumbers.subscribers.toString(), label: t.subscribers || 'Iscritti' },
+    { number: animatedNumbers.subscribers.toString() + '+', label: t.subscribers || 'Iscritti' },
     { number: animatedNumbers.years.toString(), label: t.yearsOfActivity }
   ];
 
@@ -117,14 +117,14 @@ const StatisticsSection: React.FC = () => {
             return (
               <div 
                 key={index} 
-                className={`text-center p-4 rounded-xl bg-white hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 ${
+                className={`text-center p-4 rounded-xl bg-white hover:shadow-xl transition-all duration-150 transform hover:-translate-y-2 border border-gray-100 ${
                   isVisible 
                     ? 'translate-y-0 opacity-100 scale-100' 
                     : 'translate-y-8 opacity-0 scale-90'
                 }`}
                 style={{ transitionDelay: `${600 + index * 100}ms` }}
               >
-                <div className={`flex justify-center mb-3 transform hover:scale-110 transition-all duration-300 ${
+                <div className={`flex justify-center mb-3 transform hover:scale-110 transition-all duration-150 ${
                   isVisible 
                     ? 'rotate-0 scale-100' 
                     : 'rotate-180 scale-0'
