@@ -153,6 +153,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             <div className="mt-2 text-gray-400 text-xs">
               <div>Powered by: Simeone Luca</div>
               <div>Info: simeoneluca13@gmail.com</div>
+              <div className="text-gray-500 mt-1">v1.0.1</div>
             </div>
           </div>
         </div>

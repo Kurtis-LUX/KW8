@@ -7,16 +7,17 @@ interface LoadingScreenProps {
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   const [logoVisible, setLogoVisible] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  const [progress, setProgress] = useState(0);
+  const [fadeOut, setFadeOut] = useState(false);
   const [shouldShowLoading, setShouldShowLoading] = useState(false);
 
 
 
   const handleLoadingComplete = () => {
-    setIsVisible(false);
+    setFadeOut(true);
     setTimeout(() => {
+      setIsVisible(false);
       onLoadingComplete();
-    }, 800); // Transizione più fluida
+    }, 300); // Transizione veloce di dissolvenza
   };
 
   useEffect(() => {
@@ -32,34 +33,18 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       return;
     }
 
-    // Show logo immediately
-    setLogoVisible(true);
+    // Show logo immediately with fade in
+    setTimeout(() => {
+      setLogoVisible(true);
+    }, 100);
 
-    // Progress animation
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(progressInterval);
-          // Auto-complete loading when progress finishes
-          setTimeout(() => {
-            handleLoadingComplete();
-          }, 1000);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 30); // Slightly faster progress
-
-    // Minimum 3 seconds loading time
-    const minLoadingTimer = setTimeout(() => {
-      if (progress >= 100) {
-        handleLoadingComplete();
-      }
-    }, 3000);
+    // Complete loading after maximum 1.5 seconds
+    const loadingTimer = setTimeout(() => {
+      handleLoadingComplete();
+    }, 1500);
 
     return () => {
-      clearTimeout(minLoadingTimer);
-      clearInterval(progressInterval);
+      clearTimeout(loadingTimer);
     };
   }, [onLoadingComplete]);
 
@@ -69,22 +54,20 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-blue-900 z-50 flex flex-col items-center justify-center transition-all duration-500">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="w-full h-full bg-gradient-to-br from-red-500 to-transparent"></div>
-      </div>
+    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 ${
+      fadeOut ? 'opacity-0' : 'opacity-100'
+    }`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
       
       {/* Logo */}
-      <div className={`mb-8 transition-all duration-1000 transform ${
-        logoVisible ? 'opacity-100 animate-pulse' : 'opacity-0'
+      <div className={`mb-8 transition-all duration-500 transform ${
+        logoVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       }`}>
         <div className="text-white text-center">
           <div className="relative">
             <img 
               src="/images/logo.png" 
               alt="KW8 Logo" 
-              className="h-24 md:h-32 w-auto mx-auto mb-4"
+              className="h-24 md:h-32 w-auto mx-auto mb-4 filter drop-shadow-lg"
             />
           </div>
           <p className="text-xl md:text-2xl font-light tracking-wider" style={{ fontFamily: 'Bebas Neue, cursive' }}>
@@ -93,18 +76,14 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
         </div>
       </div>
 
-      {/* Loading bar */}
-      <div className="w-64 md:w-80 h-1 bg-white bg-opacity-20 rounded-full overflow-hidden transition-all duration-500">
-        <div 
-          className="h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-100 ease-out"
-          style={{ width: `${progress}%` }}
-        ></div>
+      {/* Three dots loading animation */}
+      <div className={`flex space-x-2 transition-all duration-500 ${
+        logoVisible ? 'opacity-100' : 'opacity-0'
+      }`}>
+        <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+        <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+        <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
       </div>
-      
-      {/* Loading text */}
-      <p className="text-white text-sm mt-4 opacity-70 animate-pulse">
-        Caricamento in corso...
-      </p>
 
     </div>
   );

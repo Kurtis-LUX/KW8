@@ -313,7 +313,7 @@ export const translations: Record<'it' | 'en', Translations> = {
     cookies: 'Cookie',
     managePreferences: 'Gestisci preferenze',
     contacts: 'Contatti',
-    copyright: '© KW8 2025 - Ogni diritto riservato.',
+    copyright: '© KW8 2025 - Tutti i diritti riservati.',
     quickLinks: 'Link rapidi',
     followUs: 'Seguici',
     contactInfo: 'Informazioni di contatto',
