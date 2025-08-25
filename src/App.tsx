@@ -12,7 +12,7 @@ import SocialSection from './components/SocialSection';
 import TrustpilotSection from './components/TrustpilotSection';
 import Footer from './components/Footer';
 import SectionSeparator from './components/SectionSeparator';
-import PaymentPage from './pages/PaymentPage';
+
 import AuthPage from './pages/AuthPage';
 import WorkoutsPage from './pages/WorkoutsPage';
 import PrivacyPage from './pages/PrivacyPage';
@@ -22,11 +22,11 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import CookieConsent from './components/CookieConsent';
 import CookieSettings from './components/CookieSettings';
 import Modal from './components/Modal';
-import AdminDashboard from './pages/AdminDashboard';
+
 import ProtectedRoute from './components/ProtectedRoute';
 import DB from './utils/database';
 import initializeData from './utils/initData';
-import { User } from './utils/database';
+
 import { authService } from './services/authService';
 import { LanguageProvider } from './contexts/LanguageContext';
 import LoadingScreen from './components/LoadingScreen';
@@ -165,13 +165,6 @@ function App() {
   };
 
   // Gestione delle pagine
-  if (currentPage === 'payment') {
-    return (
-      <LanguageProvider>
-        <PaymentPage onNavigate={handleNavigation} selectedPlan={selectedPlan} currentUser={currentUser} />
-      </LanguageProvider>
-    );
-  }
 
   if (currentPage === 'auth') {
     return (
@@ -201,18 +194,7 @@ function App() {
     );
   }
 
-  if (currentPage === 'admin-dashboard') {
-    return (
-      <LanguageProvider>
-        <ProtectedRoute 
-          requireAdmin={true}
-          onUnauthorized={() => handleNavigation('auth')}
-        >
-          <AdminDashboard onNavigate={handleNavigation} currentUser={currentUser} />
-        </ProtectedRoute>
-      </LanguageProvider>
-    );
-  }
+
 
   if (currentPage === 'email-test') {
     return (

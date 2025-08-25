@@ -8,7 +8,7 @@ export interface Translations {
     rules: string;
     workouts: string;
     cookieSettings: string;
-    adminDashboard: string;
+  
     logout: string;
     language: string;
   };
@@ -206,7 +206,7 @@ export const translations: Record<'it' | 'en', Translations> = {
       rules: 'Regole',
       workouts: 'Schede',
       cookieSettings: 'Impostazioni Cookie',
-      adminDashboard: 'Dashboard Admin',
+  
       logout: 'Logout',
       language: 'Lingua',
     },
@@ -402,7 +402,7 @@ export const translations: Record<'it' | 'en', Translations> = {
       rules: 'Rules',
       workouts: 'Workouts',
       cookieSettings: 'Cookie Settings',
-      adminDashboard: 'Admin Dashboard',
+  
       logout: 'Logout',
       language: 'Language',
     },

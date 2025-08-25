@@ -144,32 +144,7 @@ class ApiService {
     return error.message || 'Errore sconosciuto';
   }
 
-  // Users API (richiede autenticazione admin)
-  async getUsers() {
-    return this.request('/users', { method: 'GET' });
-  }
-
-  async getUserById(id: string) {
-    return this.request(`/users/${id}`, { method: 'GET' });
-  }
-
-  async createUser(user: any) {
-    return this.request('/users', {
-      method: 'POST',
-      body: JSON.stringify(user),
-    });
-  }
-
-  async updateUser(id: string, user: any) {
-    return this.request(`/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(user),
-    });
-  }
-
-  async deleteUser(id: string) {
-    return this.request(`/users/${id}`, { method: 'DELETE' });
-  }
+  // Authentication API methods are handled by authService
 
   // Workout Plans API
   async getWorkoutPlans() {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import DB, { User } from '../utils/database';
+import DB from '../utils/database';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
 interface CookieSettingsProps {

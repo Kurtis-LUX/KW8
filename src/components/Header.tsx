@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell } from 'lucide-react';
-import { User } from '../utils/database';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -211,15 +210,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                       <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
                     </div>
                     
-                    {currentUser.role === 'admin' && (
-                      <button
-                        onClick={() => handleNavigation('admin-dashboard')}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center space-x-2"
-                      >
-                        <Users size={16} />
-                        <span>{t.header.adminDashboard}</span>
-                      </button>
-                    )}
+
                     
                     {currentUser.role === 'athlete' && (
                       <button
@@ -386,17 +377,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               </li>
             )}
             
-            {currentUser && currentUser.role === 'admin' && (
-              <li>
-                <button
-                  onClick={() => handleNavigation('admin-dashboard')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <Users size={20} className="sm:w-6 sm:h-6" />
-                  <span>{t.header.adminDashboard}</span>
-                </button>
-              </li>
-            )}
+
             
             <li>
               <button

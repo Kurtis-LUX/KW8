@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import DB, { User } from '../utils/database';
+import DB from '../utils/database';
 import { v4 as uuidv4 } from 'uuid';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import Modal from '../components/Modal';

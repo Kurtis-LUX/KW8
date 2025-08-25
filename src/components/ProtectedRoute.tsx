@@ -1,7 +1,14 @@
 // Componente per proteggere le rotte che richiedono autenticazione
 import React, { useEffect, useState } from 'react';
 import { authService } from '../services/authService';
-import { User } from '../utils/database';
+
+interface AuthUser {
+  id: string;
+  email: string;
+  role: string;
+  nome?: string;
+  cognome?: string;
+}
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,7 +20,7 @@ interface ProtectedRouteProps {
 interface AuthState {
   isLoading: boolean;
   isAuthenticated: boolean;
-  user: User | null;
+  user: AuthUser | null;
   error: string | null;
 }
 

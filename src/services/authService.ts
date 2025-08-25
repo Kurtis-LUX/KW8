@@ -1,8 +1,15 @@
 // Servizio di autenticazione con JWT
-import { User } from '../utils/database';
+
+interface AuthUser {
+  id: string;
+  email: string;
+  role: string;
+  nome?: string;
+  cognome?: string;
+}
 
 interface LoginResponse {
-  user: User;
+  user: AuthUser;
   token: string;
   message: string;
   expiresIn: string;
@@ -169,7 +176,7 @@ class AuthService {
   }
 
   // Ottieni l'utente corrente
-  getCurrentUser(): User | null {
+  getCurrentUser(): AuthUser | null {
     const userStr = localStorage.getItem(this.USER_KEY);
     if (!userStr) return null;
     
@@ -181,7 +188,7 @@ class AuthService {
   }
 
   // Salva i dati utente
-  private setUser(user: User): void {
+  private setUser(user: AuthUser): void {
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
   }
 
@@ -205,7 +212,7 @@ class AuthService {
   }
 
   // Auto-login se il token è ancora valido
-  async autoLogin(): Promise<User | null> {
+  async autoLogin(): Promise<AuthUser | null> {
     if (!this.isAuthenticated()) {
       return null;
     }

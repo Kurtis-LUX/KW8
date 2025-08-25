@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DB from '../utils/database';
 import { ArrowLeft, Calendar, Clock, Dumbbell, Target, CheckCircle, Play, Download, User as UserIcon } from 'lucide-react';
 
-import { User } from '../utils/database';
+
 
 interface WorkoutsPageProps {
   onNavigate: (page: string) => void;
