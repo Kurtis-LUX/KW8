@@ -127,7 +127,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
           {/* Logo */}
           <div className="flex items-center">
             <img 
-              src="/images/logopagina" 
+              src="/images/logo.png" 
               alt="KW8 Logo" 
               className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer filter drop-shadow-lg"
               onClick={() => {
@@ -267,7 +267,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
         <div className="flex justify-between p-4 items-center">
           <div className="flex items-center">
             <img 
-              src="/images/logopagina" 
+              src="/images/logo.png" 
               alt="KW8 Logo" 
               className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer"
               onClick={() => {
