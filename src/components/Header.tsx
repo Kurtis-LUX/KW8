@@ -129,7 +129,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
           {/* Logo */}
           <div className="flex items-center">
             <img 
-              src="/images/logo.png" 
+              src="/images/logopagina" 
               alt="KW8 Logo" 
               className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer filter drop-shadow-lg"
               onClick={() => {
@@ -224,7 +224,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
           <div className="flex justify-between p-4 items-center">
             <div className="flex items-center">
               <img 
-                src="/images/logo.png" 
+                src="/images/logopagina" 
                 alt="KW8 Logo" 
                 className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer"
                 onClick={() => {
@@ -250,17 +250,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
           
           <nav className="px-4 sm:px-8 py-6 sm:py-8 overflow-y-auto max-h-[calc(100vh-100px)]">
             <ul className="space-y-2 sm:space-y-3">
-              {/* 1. Profilo */}
-              <li>
-                <button
-                  onClick={() => currentUser ? toggleUserMenu() : handleNavigation('auth')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <UserIcon size={20} className="sm:w-6 sm:h-6" />
-                  <span>{currentUser ? `${currentUser.name || t.header.profile} ${currentUser.role === 'admin' ? '(Admin)' : ''}` : t.header.profile}</span>
-                </button>
-              </li>
-              {/* 2. Informazioni */}
+              {/* 1. Informazioni */}
               <li>
                 <button
                   onClick={scrollToFooter}
@@ -270,7 +260,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>{t.header.information}</span>
                 </button>
               </li>
-              {/* 3. Orari */}
+              {/* 2. Orari */}
               <li>
                 <button
                   onClick={() => scrollToSection('orari')}
@@ -280,7 +270,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>Orari</span>
                 </button>
               </li>
-              {/* 4. Regole */}
+              {/* 3. Regole */}
               <li>
                 <button
                   onClick={handleShowRules}
@@ -290,7 +280,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>{t.header.rules}</span>
                 </button>
               </li>
-              {/* 5. Schede */}
+              {/* 4. Schede */}
               <li>
                 <button
                   onClick={() => handleNavigation('workouts')}
@@ -300,7 +290,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>{t.header.workouts}</span>
                 </button>
               </li>
-              {/* 6. Aree */}
+              {/* 5. Aree */}
               <li>
                 <button
                   onClick={() => scrollToSection('aree')}
@@ -310,7 +300,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>Aree</span>
                 </button>
               </li>
-              {/* 7. Coach */}
+              {/* 6. Coach */}
               <li>
                 <button
                   onClick={() => scrollToSection('staff')}
@@ -320,7 +310,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>Coach</span>
                 </button>
               </li>
-              {/* 8. Posizione */}
+              {/* 7. Posizione */}
               <li>
                 <button
                   onClick={() => scrollToSection('posizione')}
@@ -330,7 +320,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                   <span>{t.header.location}</span>
                 </button>
               </li>
-              {/* 9. Contatti */}
+              {/* 8. Contatti */
               <li>
                 <button
                   onClick={() => scrollToSection('contatti')}

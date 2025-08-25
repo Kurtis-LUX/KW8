@@ -38,35 +38,20 @@ const StatisticsSection: React.FC = () => {
     if (!hasAnimated) {
       setHasAnimated(true);
       
-      // Ritardo per sincronizzare con la transizione di entrata
-      setTimeout(() => {
-        // Animazione per gli iscritti (200)
-        let subscriberCount = 0;
-        const subscriberInterval = setInterval(() => {
-          subscriberCount += 8;
-          if (subscriberCount >= 200) {
-            subscriberCount = 200;
-            clearInterval(subscriberInterval);
-          }
-          setAnimatedNumbers(prev => ({ ...prev, subscribers: subscriberCount }));
-        }, 30);
-        
-        // Animazione per gli anni (5)
-        let yearCount = 0;
-        const yearInterval = setInterval(() => {
-          yearCount += 1;
-          if (yearCount >= 5) {
-            yearCount = 5;
-            clearInterval(yearInterval);
-          }
-          setAnimatedNumbers(prev => ({ ...prev, years: yearCount }));
-        }, 200);
-      }, 200); // Ritardo di 500ms per sincronizzare con la transizione
+      // Animazione per gli anni (5)
+      let yearCount = 0;
+      const yearInterval = setInterval(() => {
+        yearCount += 1;
+        if (yearCount >= 5) {
+          yearCount = 5;
+          clearInterval(yearInterval);
+        }
+        setAnimatedNumbers(prev => ({ ...prev, years: yearCount }));
+      }, 200);
     }
   };
 
   const statistics = [
-    { number: '200+', label: t.subscribers },
     { number: '5', label: t.yearsOfActivity }
   ];
 
@@ -96,9 +81,7 @@ const StatisticsSection: React.FC = () => {
         <div className="text-center mb-16">
           <div className="flex justify-center space-x-12 mb-12">
             {statistics.map((stat, index) => {
-              const displayNumber = index === 0 
-                ? `${animatedNumbers.subscribers}+` 
-                : animatedNumbers.years.toString();
+              const displayNumber = animatedNumbers.years.toString();
               
               return (
                 <div 

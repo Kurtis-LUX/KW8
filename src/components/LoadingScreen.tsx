@@ -9,111 +9,53 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(0);
   const [shouldShowLoading, setShouldShowLoading] = useState(false);
-  const [showEnterButton, setShowEnterButton] = useState(false);
 
 
-  const handleEnterClick = async () => {
-    // Play audio when ENTER button is clicked
-    try {
-      const audio = new Audio('/sounds/logo-sound.mp3');
-      audio.volume = 0.8;
-      await audio.play();
-      console.log('Audio played on ENTER button click');
-    } catch (error) {
-      console.log('Audio play failed on ENTER click:', error);
-    }
-    
+
+  const handleLoadingComplete = () => {
     setIsVisible(false);
     setTimeout(() => {
       onLoadingComplete();
-    }, 500);
+    }, 800); // Transizione più fluida
   };
 
   useEffect(() => {
-    // Only show loading screen on mobile devices or PWA
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    // Only show loading screen in PWA/app mode, not in browser
     const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
                   (window.navigator as any).standalone === true;
     
-    setShouldShowLoading(isMobile || isPWA);
+    setShouldShowLoading(isPWA);
 
-    // If not mobile/PWA, skip loading screen
-    if (!isMobile && !isPWA) {
+    // If not PWA/app, skip loading screen
+    if (!isPWA) {
       onLoadingComplete();
       return;
     }
 
-    // Play audio and show logo with simplified audio handling
-    const playAudioAndShowLogo = async () => {
-      // Show logo immediately
-      setLogoVisible(true);
-      
-      try {
-        // Create and configure audio
-        const audio = new Audio('/sounds/logo-sound.mp3');
-        audio.volume = 0.8;
-        audio.preload = 'auto';
-        
-        // Simple audio play with muted trick
-        try {
-          // Start muted to bypass autoplay restrictions
-          audio.muted = true;
-          await audio.play();
-          
-          // Unmute after a short delay
-          setTimeout(() => {
-            audio.muted = false;
-            console.log('Audio playing with muted trick');
-          }, 200);
-        } catch (error) {
-          console.log('Audio autoplay failed:', error);
-          
-          // Fallback: play on first user interaction
-          const playOnInteraction = async () => {
-            try {
-              audio.currentTime = 0;
-              audio.muted = false;
-              await audio.play();
-              console.log('Audio played on user interaction');
-            } catch (interactionError) {
-              console.log('Audio play failed on interaction:', interactionError);
-            }
-          };
-          
-          // Add event listeners for user interaction
-          document.addEventListener('touchstart', playOnInteraction, { once: true });
-          document.addEventListener('click', playOnInteraction, { once: true });
-        }
-        
-      } catch (error) {
-        console.log('Audio setup failed:', error);
-      }
-    };
-    
-    // Execute immediately without any delay
-    playAudioAndShowLogo();
+    // Show logo immediately
+    setLogoVisible(true);
 
     // Progress animation
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(progressInterval);
-          // Show ENTER button when progress completes
+          // Auto-complete loading when progress finishes
           setTimeout(() => {
-            setShowEnterButton(true);
-          }, 500);
+            handleLoadingComplete();
+          }, 1000);
           return 100;
         }
         return prev + 2;
       });
     }, 30); // Slightly faster progress
 
-    // Minimum 2 seconds loading time
+    // Minimum 3 seconds loading time
     const minLoadingTimer = setTimeout(() => {
       if (progress >= 100) {
-        setShowEnterButton(true);
+        handleLoadingComplete();
       }
-    }, 2000);
+    }, 3000);
 
     return () => {
       clearTimeout(minLoadingTimer);
@@ -140,13 +82,13 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
         <div className="text-white text-center">
           <div className="relative">
             <img 
-              src="/images/logo.png" 
+              src="/images/logopagina" 
               alt="KW8 Logo" 
               className="h-24 md:h-32 w-auto mx-auto mb-4"
             />
           </div>
           <p className="text-xl md:text-2xl font-light tracking-wider" style={{ fontFamily: 'Bebas Neue, cursive' }}>
-            CROSS YOUR LIMITS.
+            SUPERA I TUOI LIMITI.
           </p>
         </div>
       </div>
@@ -160,23 +102,9 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       </div>
       
       {/* Loading text */}
-      {!showEnterButton && (
-        <p className="text-white text-sm mt-4 opacity-70 animate-pulse">
-          Caricamento in corso...
-        </p>
-      )}
-      
-      {/* ENTER Button */}
-      {showEnterButton && (
-        <button
-          onClick={handleEnterClick}
-          className="mt-6 px-8 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold text-lg rounded-full shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden group animate-bounce cursor-pointer"
-        >
-          <span className="relative z-10">ENTRA</span>
-          {/* Light reflection animation */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-700 ease-out"></div>
-        </button>
-      )}
+      <p className="text-white text-sm mt-4 opacity-70 animate-pulse">
+        Caricamento in corso...
+      </p>
 
     </div>
   );

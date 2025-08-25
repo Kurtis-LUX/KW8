@@ -17,8 +17,8 @@ const ThemeModal: React.FC<ThemeModalProps> = ({ isOpen, onClose }) => {
     {
       id: 'default',
       name: 'Logo Classico',
-      path: '/images/logo.png',
-      preview: '/images/logo.png'
+      path: '/images/logopagina',
+        preview: '/images/logopagina'
     },
     {
       id: 'logopagina',

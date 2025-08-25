@@ -152,7 +152,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onNavigate, onLogin }) => {
             {/* Logo */}
             <div className="text-center mb-8">
               <img 
-                src="/images/logo.png" 
+                src="/images/logopagina" 
                 alt="KW8 Logo" 
                 className="h-16 w-auto mx-auto mb-4"
               />

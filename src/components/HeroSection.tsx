@@ -23,7 +23,17 @@ const HeroSection: React.FC = () => {
     
     return () => clearInterval(typingInterval);
   }, [fullText]);
-  const scrollToStatistics = () => {
+  const scrollToStatistics = async () => {
+    // Play audio when 'Scopri di più' button is clicked
+    try {
+      const audio = new Audio('/sounds/logo-sound.mp3');
+      audio.volume = 0.8;
+      await audio.play();
+      console.log('Audio played on Scopri di più button click');
+    } catch (error) {
+      console.log('Audio play failed on Scopri di più click:', error);
+    }
+    
     const element = document.getElementById('statistiche');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });

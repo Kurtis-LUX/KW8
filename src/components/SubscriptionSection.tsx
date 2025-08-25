@@ -217,26 +217,16 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
             {/* Navigation Arrows */}
             <button
               onClick={prevSlide}
-              className={`absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 ${
-                isVisible 
-                  ? 'translate-x-0 opacity-100' 
-                  : '-translate-x-8 opacity-0'
-              }`}
-              style={{ transitionDelay: '600ms' }}
+              className="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-95 hover:bg-opacity-100 text-navy-900 p-3 md:p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 z-10 opacity-90 hover:opacity-100"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={28} className="md:w-8 md:h-8" />
             </button>
 
             <button
               onClick={nextSlide}
-              className={`absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 ${
-                isVisible 
-                  ? 'translate-x-0 opacity-100' 
-                  : 'translate-x-8 opacity-0'
-              }`}
-              style={{ transitionDelay: '600ms' }}
+              className="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-95 hover:bg-opacity-100 text-navy-900 p-3 md:p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 z-10 opacity-90 hover:opacity-100"
             >
-              <ChevronRight size={24} />
+              <ChevronRight size={28} className="md:w-8 md:h-8" />
             </button>
 
             {/* Dots Indicator */}
