@@ -122,7 +122,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
 
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 ${isScrolled ? 'bg-white shadow-lg' : 'bg-transparent'} backdrop-blur-sm transition-all duration-300`}>
+      <header className={`fixed top-0 left-0 right-0 z-40 ${isScrolled ? 'bg-white shadow-lg' : 'bg-transparent'} backdrop-blur-sm transition-all duration-300`}>
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
