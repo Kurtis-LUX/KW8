@@ -82,13 +82,13 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
         <div className="text-white text-center">
           <div className="relative">
             <img 
-              src="/images/logopagina" 
+              src="/images/logo.png" 
               alt="KW8 Logo" 
               className="h-24 md:h-32 w-auto mx-auto mb-4"
             />
           </div>
           <p className="text-xl md:text-2xl font-light tracking-wider" style={{ fontFamily: 'Bebas Neue, cursive' }}>
-            SUPERA I TUOI LIMITI.
+            CROSS YOUR LIMITS.
           </p>
         </div>
       </div>
