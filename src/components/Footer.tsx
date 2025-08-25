@@ -141,7 +141,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         <div className="border-t border-gray-200 pt-8 mt-6">
           <div className="text-center text-navy-700 text-sm font-medium flex flex-col items-center justify-center">
             <div className="grid grid-cols-3 sm:grid-cols-4 md:flex md:items-center md:justify-center gap-4 sm:gap-6 mb-8">
-              <img src="/images/logopagina" alt="KW8 Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+              <img src="/images/logo" alt="KW8 Logo" className="h-8 sm:h-10 w-auto mx-auto" />
               <img src="/images/coni.svg.png" alt="CONI Logo" className="h-8 sm:h-10 w-auto mx-auto" />
               <img src="/images/fiam.png" alt="FIAM Logo" className="h-8 sm:h-10 w-auto mx-auto" />
               <img src="/images/acsi.png" alt="ACSI Logo" className="h-8 sm:h-10 w-auto mx-auto" />

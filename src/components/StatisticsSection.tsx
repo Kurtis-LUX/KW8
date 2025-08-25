@@ -38,6 +38,17 @@ const StatisticsSection: React.FC = () => {
     if (!hasAnimated) {
       setHasAnimated(true);
       
+      // Animazione per gli iscritti (150)
+      let subscriberCount = 0;
+      const subscriberInterval = setInterval(() => {
+        subscriberCount += 5;
+        if (subscriberCount >= 150) {
+          subscriberCount = 150;
+          clearInterval(subscriberInterval);
+        }
+        setAnimatedNumbers(prev => ({ ...prev, subscribers: subscriberCount }));
+      }, 50);
+      
       // Animazione per gli anni (5)
       let yearCount = 0;
       const yearInterval = setInterval(() => {
@@ -52,7 +63,8 @@ const StatisticsSection: React.FC = () => {
   };
 
   const statistics = [
-    { number: '5', label: t.yearsOfActivity }
+    { number: animatedNumbers.subscribers.toString(), label: t.subscribers || 'Iscritti' },
+    { number: animatedNumbers.years.toString(), label: t.yearsOfActivity }
   ];
 
   const values = [
@@ -81,15 +93,13 @@ const StatisticsSection: React.FC = () => {
         <div className="text-center mb-16">
           <div className="flex justify-center space-x-12 mb-12">
             {statistics.map((stat, index) => {
-              const displayNumber = animatedNumbers.years.toString();
-              
               return (
                 <div 
                   key={index} 
                   className="text-center transform hover:scale-110 transition-all duration-300"
                 >
                   <div className="text-5xl md:text-6xl font-bold text-navy-900 mb-2 transition-all duration-300">
-                    {displayNumber}
+                    {stat.number}
                   </div>
                   <div className="text-xl text-navy-700 uppercase tracking-wide font-semibold">
                     {stat.label}

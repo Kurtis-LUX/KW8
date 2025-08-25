@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Sun, Moon } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell } from 'lucide-react';
 import { User } from '../utils/database';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
-import { useThemeContext } from '../contexts/ThemeContext';
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -18,8 +17,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
 
-  const { language, setLanguage, t } = useLanguageContext();
-  const { theme, toggleTheme } = useThemeContext();
+  const { t, language, setLanguage } = useLanguageContext();
   
   // Aggiungi event listener per lo scroll
   useEffect(() => {
