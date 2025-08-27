@@ -266,10 +266,9 @@ export const requireCoachOrTempToken = (handler: Function) => {
 // Funzione helper per verificare token temporanei
 const verifyTempToken = async (token: string): Promise<boolean> => {
   try {
-    // Importa dinamicamente per evitare dipendenze circolari
-    const { verifyTempTokenHelper } = await import('../auth/temp-tokens');
-    const tokenData = await verifyTempTokenHelper(token);
-    return tokenData !== null;
+    // Token temporanei non più supportati
+    console.warn('Temp tokens are no longer supported');
+    return false;
   } catch (error) {
     console.error('Temp token verification error:', error);
     return false;
