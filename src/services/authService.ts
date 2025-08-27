@@ -1,4 +1,5 @@
 // Servizio di autenticazione con JWT
+import { envConfig, checkCriticalEnvVars } from '../config/envConfig';
 
 interface AuthUser {
   id: string;
@@ -43,52 +44,15 @@ class AuthService {
   private readonly TOKEN_KEY = 'kw8_auth_token';
   private readonly USER_KEY = 'kw8_current_user';
   
-  // Funzione per rilevare dinamicamente l'ambiente
-  private getApiBaseUrl(): string {
-    if (typeof window === 'undefined') {
-      // Server-side rendering
-      return 'https://kw8.vercel.app/api';
+  constructor() {
+    // Verifica che le variabili d'ambiente critiche siano configurate
+    if (!checkCriticalEnvVars()) {
+      console.warn('⚠️ Alcune variabili d\'ambiente critiche non sono configurate');
     }
-    
-    const hostname = window.location.hostname;
-    const protocol = window.location.protocol;
-    
-    // SEMPRE usa l'API locale quando siamo su localhost
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      console.log('🏠 Ambiente locale rilevato, usando API locale');
-      return 'http://localhost:3001/api';
-    }
-    
-    // In sviluppo con Vite, forza sempre l'uso del server locale
-    if (import.meta.env.DEV) {
-      console.log('🔧 Modalità development rilevata, usando API locale');
-      return 'http://localhost:3001/api';
-    }
-    
-    // Se siamo su Vercel, usa l'URL corrente del deployment
-    if (hostname.includes('vercel.app')) {
-      console.log('☁️ Ambiente Vercel rilevato, usando API di produzione');
-      return `${protocol}//${hostname}/api`;
-    }
-    
-    // Se siamo su dominio kw8 personalizzato
-    if (hostname.includes('kw8')) {
-      console.log('🌐 Dominio KW8 rilevato, usando API di produzione');
-      return `${protocol}//${hostname}/api`;
-    }
-    
-    // Fallback: se non siamo sicuri, usa locale per development
-    const isProduction = import.meta.env.PROD;
-    const apiUrl = isProduction 
-      ? `${protocol}//${hostname}/api`
-      : 'http://localhost:3001/api';
-    
-    console.log(`🔄 Fallback API URL: ${apiUrl} (production: ${isProduction})`);
-    return apiUrl;
   }
   
   private get API_BASE_URL(): string {
-    return this.getApiBaseUrl();
+    return envConfig.apiBaseUrl;
   }
 
   // Autenticazione con Google Identity Services
@@ -106,43 +70,59 @@ class AuthService {
       });
 
       console.log('📡 Risposta ricevuta - Status:', response.status, 'StatusText:', response.statusText);
-      console.log('📡 Headers risposta:', Object.fromEntries(response.headers.entries()));
-
-      // Verifica che la risposta contenga contenuto
-      const responseText = await response.text();
-      console.log('📄 Testo risposta completo:', responseText);
       
-      if (!responseText) {
-        console.error('❌ Risposta vuota dal server');
-        throw new Error('Risposta vuota dal server');
+      // Verifica Content-Type della risposta
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('❌ Content-Type non valido:', contentType);
+        throw new Error('Il server non ha restituito una risposta JSON valida');
       }
 
+      // Usa response.json() direttamente per evitare problemi di parsing
       let data: GoogleSignInResponse;
       try {
-        data = JSON.parse(responseText);
+        data = await response.json();
         console.log('✅ JSON parsato con successo:', data);
       } catch (jsonError) {
         console.error('❌ Errore nel parsing JSON per Google Sign-In:', jsonError);
-        console.error('❌ Risposta ricevuta:', responseText.substring(0, 500));
-        throw new Error('Risposta non valida dal server');
+        throw new Error('Risposta JSON non valida dal server');
+      }
+      
+      // Validazione struttura risposta
+      if (!data || typeof data !== 'object') {
+        console.error('❌ Struttura risposta non valida:', data);
+        throw new Error('Struttura risposta non valida dal server');
       }
       
       if (!response.ok) {
-        console.log('❌ Risposta non OK:', data.message);
-        throw new Error(data.message || 'Errore nell\'autenticazione Google');
+        console.log('❌ Risposta non OK:', data.message || 'Errore sconosciuto');
+        const errorMessage = (data as any).message || (data as any).error || 'Errore nell\'autenticazione Google';
+        throw new Error(errorMessage);
+      }
+
+      // Validazione campi obbligatori
+      if (typeof data.success !== 'boolean') {
+        console.error('❌ Campo success mancante o non valido');
+        throw new Error('Risposta del server incompleta');
       }
 
       // Se l'autenticazione è riuscita, salva il token e i dati utente
       if (data.success && data.data) {
+        // Validazione dati utente
+        if (!data.data.token || !data.data.user || !data.data.user.email) {
+          console.error('❌ Dati utente incompleti:', data.data);
+          throw new Error('Dati di autenticazione incompleti');
+        }
+        
         console.log('✅ Login riuscito, salvando token e user');
         this.setToken(data.data.token);
         this.setUser({
           id: data.data.user.email, // Usa email come ID
           email: data.data.user.email,
-          role: data.data.user.role
+          role: data.data.user.role || 'user'
         });
       } else {
-        console.log('❌ Login fallito:', data.message);
+        console.log('❌ Login fallito:', data.message || 'Autenticazione non riuscita');
       }
 
       return data;
@@ -164,37 +144,44 @@ class AuthService {
         body: JSON.stringify({ email, password }),
       });
 
+      // Verifica Content-Type della risposta
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('❌ Content-Type non valido per login:', contentType);
+        throw new Error('Il server non ha restituito una risposta JSON valida');
+      }
+
+      // Usa response.json() direttamente
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Errore nel parsing JSON per login:', jsonError);
+        throw new Error('Risposta JSON non valida dal server');
+      }
+
+      // Validazione struttura risposta
+      if (!data || typeof data !== 'object') {
+        console.error('❌ Struttura risposta login non valida:', data);
+        throw new Error('Struttura risposta non valida dal server');
+      }
+
       if (!response.ok) {
-        let errorMessage = 'Login fallito';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (jsonError) {
-          console.error('Errore nel parsing della risposta di errore:', jsonError);
-        }
+        const errorMessage = data.message || data.error || 'Login fallito';
         throw new Error(errorMessage);
       }
 
-      // Verifica che la risposta contenga contenuto
-      const responseText = await response.text();
-      if (!responseText) {
-        throw new Error('Risposta vuota dal server');
-      }
-
-      let data: LoginResponse;
-      try {
-        data = JSON.parse(responseText);
-      } catch (jsonError) {
-        console.error('Errore nel parsing JSON:', jsonError);
-        console.error('Risposta ricevuta:', responseText);
-        throw new Error('Risposta non valida dal server');
+      // Validazione campi obbligatori per login
+      if (!data.token || !data.user || !data.user.email) {
+        console.error('❌ Dati login incompleti:', data);
+        throw new Error('Dati di login incompleti dal server');
       }
       
       // Salva il token e i dati utente
       this.setToken(data.token);
       this.setUser(data.user);
       
-      return data;
+      return data as LoginResponse;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
@@ -219,27 +206,41 @@ class AuthService {
         credentials: 'include',
       });
 
-      // Verifica che la risposta contenga contenuto
-      const responseText = await response.text();
-      if (!responseText) {
-        console.error('Risposta vuota dal server per verify');
+      // Verifica Content-Type della risposta
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('❌ Content-Type non valido per verify:', contentType);
         this.logout();
         return null;
       }
 
+      // Usa response.json() direttamente
       let data: any;
       try {
-        data = JSON.parse(responseText);
+        data = await response.json();
       } catch (jsonError) {
         console.error('Errore nel parsing JSON per verify:', jsonError);
-        console.error('Risposta ricevuta:', responseText);
+        this.logout();
+        return null;
+      }
+      
+      // Validazione struttura risposta
+      if (!data || typeof data !== 'object') {
+        console.error('❌ Struttura risposta verify non valida:', data);
         this.logout();
         return null;
       }
       
       // Controlla se il token è valido dal campo 'valid'
-      if (!data.valid) {
-        console.log('Token non valido:', data.message);
+      if (typeof data.valid !== 'boolean' || !data.valid) {
+        console.log('Token non valido:', data.message || 'Token verification failed');
+        this.logout();
+        return null;
+      }
+      
+      // Validazione dati utente
+      if (!data.user || !data.user.email) {
+        console.error('❌ Dati utente mancanti nella risposta verify:', data);
         this.logout();
         return null;
       }
@@ -247,7 +248,8 @@ class AuthService {
       // Se il token è valido, restituisci i dati utente
       return {
         valid: true,
-        user: data.user
+        user: data.user,
+        message: data.message || 'Token valido'
       } as VerifyResponse;
     } catch (error) {
       console.error('Token verification error:', error);

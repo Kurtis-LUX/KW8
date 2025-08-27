@@ -54,8 +54,8 @@ Gli errori 500 dal backend `/api/auth/google-signin` in produzione indicano prob
 #### Per Sviluppo Locale (.env.local)
 1. Crea/aggiorna il file `.env.local` nella root del progetto:
    ```bash
-   # Google OAuth
-   NEXT_PUBLIC_GOOGLE_CLIENT_ID=IL_TUO_CLIENT_ID_REALE.apps.googleusercontent.com
+   # Google OAuth (IMPORTANTE: usa VITE_ prefix per il frontend)
+   VITE_GOOGLE_CLIENT_ID=IL_TUO_CLIENT_ID_REALE.apps.googleusercontent.com
    GOOGLE_CLIENT_SECRET=IL_TUO_CLIENT_SECRET_REALE
    
    # Email autorizzata
@@ -75,7 +75,7 @@ Gli errori 500 dal backend `/api/auth/google-signin` in produzione indicano prob
 2. Seleziona il progetto KW8
 3. Vai su **Settings** → **Environment Variables**
 4. Aggiungi le seguenti variabili per **Production**:
-   - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: Il tuo Client ID
+   - `VITE_GOOGLE_CLIENT_ID`: Il tuo Client ID (IMPORTANTE: usa VITE_ prefix)
    - `GOOGLE_CLIENT_SECRET`: Il tuo Client Secret
    - `AUTHORIZED_EMAIL`: `krossingweight@gmail.com`
    - `JWT_SECRET`: Una stringa segreta di almeno 32 caratteri
@@ -132,7 +132,7 @@ Dopo aver completato i passaggi:
 ## 🆘 Risoluzione Problemi
 
 ### 🔴 Errore "Token Google non valido o scaduto"
-**CAUSA PRINCIPALE**: Client ID nel file `.env` non corrisponde a quello della Google Cloud Console
+**CAUSA PRINCIPALE**: Client ID nel file `.env.local` non corrisponde a quello della Google Cloud Console
 
 **SOLUZIONE**:
 1. Vai su [Google Cloud Console](https://console.cloud.google.com/)
@@ -140,7 +140,7 @@ Dopo aver completato i passaggi:
 3. Vai su **"API e servizi" > "Credenziali"**
 4. Clicca sul tuo Client ID OAuth 2.0
 5. **COPIA** il Client ID completo (formato: `xxxxx-xxxxx.apps.googleusercontent.com`)
-6. Apri il file `.env` nel tuo progetto
+6. Apri il file `.env.local` nel tuo progetto (nella root)
 7. **SOSTITUISCI** il valore di `VITE_GOOGLE_CLIENT_ID` con quello copiato
 8. **RIAVVIA** il server con `npm run dev`
 9. Riprova l'autenticazione
@@ -173,8 +173,10 @@ Dopo aver completato i passaggi:
 
 ### Errore "invalid_client" persiste
 - Verifica che il Client ID sia copiato correttamente
-- Controlla che non ci siano spazi extra nel file `.env`
-- Riavvia il server dopo aver modificato `.env`
+- Controlla che non ci siano spazi extra nel file `.env.local`
+- Assicurati di usare `VITE_GOOGLE_CLIENT_ID` (non `NEXT_PUBLIC_GOOGLE_CLIENT_ID`)
+- Riavvia il server dopo aver modificato `.env.local`
+- Verifica che il file `.env.local` sia nella root del progetto (non in src/)
 
 ---
 

@@ -1,38 +1,6 @@
 // Servizio API per gestire le operazioni CRUD con backend remoto
 import { authService } from './authService';
-
-// Funzione per rilevare dinamicamente l'ambiente
-function getApiBaseUrl(): string {
-  if (typeof window === 'undefined') {
-    // Server-side rendering
-    return 'https://kw8.vercel.app/api';
-  }
-  
-  const hostname = window.location.hostname;
-  const protocol = window.location.protocol;
-  
-  // Se siamo in locale (localhost o 127.0.0.1)
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return 'http://localhost:3001/api';
-  }
-  
-  // Se siamo su Vercel, usa l'URL corrente del deployment
-  if (hostname.includes('vercel.app')) {
-    return `${protocol}//${hostname}/api`;
-  }
-  
-  // Se siamo su dominio personalizzato kw8
-  if (hostname.includes('kw8')) {
-    return `${protocol}//${hostname}/api`;
-  }
-  
-  // Fallback per altri casi
-   return process.env.NODE_ENV === 'production' 
-     ? `${protocol}//${hostname}/api`
-     : 'http://localhost:3001/api';
-}
-
-const API_BASE_URL = getApiBaseUrl();
+import { envConfig } from '../config/envConfig';
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -41,6 +9,9 @@ export interface ApiResponse<T> {
 }
 
 class ApiService {
+  private get API_BASE_URL(): string {
+    return envConfig.apiBaseUrl;
+  }
   private readonly TIMEOUT_MS = 15000; // 15 secondi per mobile
   private readonly MAX_RETRIES = 3;
   
@@ -71,7 +42,7 @@ class ApiService {
         // Aggiungi automaticamente l'header di autorizzazione se disponibile
         const authHeaders = authService.getAuthHeader();
         
-        const response = await this.requestWithTimeout(`${API_BASE_URL}${endpoint}`, {
+        const response = await this.requestWithTimeout(`${this.API_BASE_URL}${endpoint}`, {
           headers: {
             'Content-Type': 'application/json',
             ...authHeaders,
@@ -81,14 +52,50 @@ class ApiService {
           ...options,
         }, this.TIMEOUT_MS);
 
-        const data = await response.json();
+        console.log(`📡 API Response:`, {
+          status: response.status,
+          statusText: response.statusText,
+          contentType: response.headers.get('content-type')
+        });
 
-        // Se ricevi un errore 401, il token potrebbe essere scaduto
+        // Se la risposta è 401, l'utente non è autenticato
         if (response.status === 401) {
+          console.log('🔒 Utente non autenticato, effettuo logout');
           authService.logout();
           return {
             success: false,
-            error: 'Sessione scaduta. Effettua nuovamente il login.',
+            error: 'Non autenticato',
+          };
+        }
+
+        // Verifica Content-Type della risposta
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('❌ Content-Type non valido:', contentType);
+          return {
+            success: false,
+            error: 'Il server non ha restituito una risposta JSON valida',
+          };
+        }
+
+        // Usa response.json() con gestione errori migliorata
+        let data: any;
+        try {
+          data = await response.json();
+        } catch (jsonError) {
+          console.error('❌ Errore nel parsing JSON:', jsonError);
+          return {
+            success: false,
+            error: 'Risposta JSON non valida dal server',
+          };
+        }
+
+        // Validazione struttura risposta
+        if (!data || typeof data !== 'object') {
+          console.error('❌ Struttura risposta non valida:', data);
+          return {
+            success: false,
+            error: 'Struttura risposta non valida dal server',
           };
         }
 
@@ -97,12 +104,13 @@ class ApiService {
           if (response.status >= 400 && response.status < 500) {
             return {
               success: false,
-              error: data.error || `HTTP error! status: ${response.status}`,
+              error: data.error || data.message || `HTTP error! status: ${response.status}`,
             };
           }
           
           // Per errori server (5xx), prova di nuovo
-          throw new Error(data.error || `HTTP error! status: ${response.status}`);
+          const errorMessage = data.message || data.error || `HTTP error! status: ${response.status}`;
+          throw new Error(errorMessage);
         }
 
         console.log(`✅ API Request successful: ${endpoint}`);

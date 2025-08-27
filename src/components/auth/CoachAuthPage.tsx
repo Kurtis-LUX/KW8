@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authService } from '../../services/authService';
+import { envConfig, debugEnvConfig } from '../../config/envConfig';
 
 interface CoachAuthPageProps {
   onAuthSuccess?: () => void;
@@ -36,15 +37,18 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
   // Inizializzazione Google Identity Services
   useEffect(() => {
     const initializeGoogleSignIn = () => {
-      // Debug: Verifica che il client_id sia configurato
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      console.log('🔍 Client ID Debug:', clientId);
-      console.log('🔍 VITE_GOOGLE_CLIENT_ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
-      console.log('🔍 NEXT_PUBLIC_GOOGLE_CLIENT_ID:', import.meta.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+      // Debug configurazione ambiente
+      debugEnvConfig();
+      
+      const clientId = envConfig.googleClientId;
+      console.log('🔍 Client ID da envConfig:', clientId);
       
       if (!clientId) {
-        console.error('❌ VITE_GOOGLE_CLIENT_ID o NEXT_PUBLIC_GOOGLE_CLIENT_ID non configurato!');
-        setError('Configurazione Google OAuth mancante. Verifica che VITE_GOOGLE_CLIENT_ID sia configurato nel file .env.local');
+        console.error('❌ Google Client ID non configurato!');
+        const errorMsg = envConfig.isDevelopment 
+          ? 'Configurazione Google OAuth mancante. Crea un file .env.local con VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com'
+          : 'Configurazione Google OAuth mancante. Verifica le variabili d\'ambiente su Vercel.';
+        setError(errorMsg);
         return;
       }
       

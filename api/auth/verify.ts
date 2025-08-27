@@ -2,6 +2,20 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import jwt from 'jsonwebtoken';
 
+// Logger utility per debugging strutturato
+const logger = {
+  info: (message: string, data?: any) => {
+    console.log(`[INFO] ${new Date().toISOString()} - ${message}`, data ? JSON.stringify(data, null, 2) : '');
+  },
+  error: (message: string, error?: any) => {
+    console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, error?.message || error);
+    if (error?.stack) console.error(error.stack);
+  },
+  warn: (message: string, data?: any) => {
+    console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, data ? JSON.stringify(data, null, 2) : '');
+  }
+};
+
 interface JWTPayload {
   userId: string;
   email: string;
@@ -13,61 +27,192 @@ interface JWTPayload {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Abilita CORS
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'https://kw8-fitness.vercel.app',
-    process.env.FRONTEND_URL
-  ].filter(Boolean);
-  
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).json({ message: 'CORS preflight successful' });
-  }
-
-  if (req.method !== 'POST' && req.method !== 'GET') {
-    res.setHeader('Allow', ['POST', 'GET']);
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
+  const requestId = Math.random().toString(36).substring(7);
+  logger.info(`[${requestId}] Nuova richiesta verifica token`, { 
+    method: req.method, 
+    origin: req.headers.origin,
+    userAgent: req.headers['user-agent']?.substring(0, 50)
+  });
 
   try {
+    // Abilita CORS con logging
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'https://kw8-fitness.vercel.app',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+    
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      logger.info(`[${requestId}] CORS origin consentita`, { origin });
+    } else {
+      logger.warn(`[${requestId}] CORS origin non consentita`, { origin, allowedOrigins });
+    }
+    
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+    if (req.method === 'OPTIONS') {
+      logger.info(`[${requestId}] Gestione preflight CORS`);
+      return res.status(200).json({ 
+        success: true, 
+        message: 'CORS preflight successful' 
+      });
+    }
+
+    if (req.method !== 'POST' && req.method !== 'GET') {
+      logger.warn(`[${requestId}] Metodo non consentito`, { method: req.method });
+      res.setHeader('Allow', ['POST', 'GET']);
+      return res.status(405).json({ 
+        success: false,
+        error: `Method ${req.method} Not Allowed`,
+        message: 'Metodo non consentito'
+      });
+    }
+
+    // Validazione variabili d'ambiente
+    if (!process.env.JWT_SECRET) {
+      logger.error(`[${requestId}] JWT_SECRET non configurato`);
+      return res.status(500).json({ 
+        success: false,
+        valid: false, 
+        message: 'Configurazione server mancante',
+        error: 'MISSING_JWT_SECRET'
+      });
+    }
+
     // Estrai il token dall'header Authorization
     const authHeader = req.headers.authorization;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(200).json({ valid: false, message: 'Token mancante o formato non valido' });
+    if (!authHeader) {
+      logger.warn(`[${requestId}] Header Authorization mancante`);
+      return res.status(200).json({ 
+        success: false,
+        valid: false, 
+        message: 'Header Authorization mancante',
+        error: 'MISSING_AUTH_HEADER'
+      });
+    }
+
+    if (!authHeader.startsWith('Bearer ')) {
+      logger.warn(`[${requestId}] Formato Authorization header non valido`);
+      return res.status(200).json({ 
+        success: false,
+        valid: false, 
+        message: 'Formato Authorization header non valido',
+        error: 'INVALID_AUTH_FORMAT'
+      });
     }
 
     const token = authHeader.substring(7); // Rimuovi 'Bearer '
     
-    if (!token) {
-      return res.status(200).json({ valid: false, message: 'Token non fornito' });
+    if (!token || token.trim() === '') {
+      logger.warn(`[${requestId}] Token vuoto`);
+      return res.status(200).json({ 
+        success: false,
+        valid: false, 
+        message: 'Token non fornito',
+        error: 'EMPTY_TOKEN'
+      });
     }
+
+    // Validazione lunghezza token
+    if (token.length < 10 || token.length > 2048) {
+      logger.warn(`[${requestId}] Lunghezza token non valida`, { length: token.length });
+      return res.status(200).json({ 
+        success: false,
+        valid: false, 
+        message: 'Formato token non valido',
+        error: 'INVALID_TOKEN_LENGTH'
+      });
+    }
+
+    logger.info(`[${requestId}] Iniziando verifica JWT token`);
 
     // Verifica il token JWT
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key-change-in-production';
+    const jwtSecret = process.env.JWT_SECRET;
     
-    const decoded = jwt.verify(token, jwtSecret, {
-      issuer: 'kw8-fitness',
-      audience: 'kw8-app'
-    }) as JWTPayload;
-
-    // Controlla se il token è scaduto
-    const currentTime = Math.floor(Date.now() / 1000);
-    if (decoded.exp < currentTime) {
-      return res.status(200).json({ valid: false, message: 'Token scaduto' });
+    let decoded: JWTPayload;
+    try {
+      decoded = jwt.verify(token, jwtSecret, {
+        issuer: 'kw8-fitness',
+        audience: 'kw8-app'
+      }) as JWTPayload;
+    } catch (jwtError: any) {
+      logger.error(`[${requestId}] Errore nella verifica JWT`, jwtError);
+      
+      if (jwtError instanceof jwt.JsonWebTokenError) {
+        return res.status(200).json({ 
+          success: false,
+          valid: false, 
+          message: 'Token non valido',
+          error: 'INVALID_JWT_TOKEN'
+        });
+      }
+      
+      if (jwtError instanceof jwt.TokenExpiredError) {
+        return res.status(200).json({ 
+          success: false,
+          valid: false, 
+          message: 'Token scaduto',
+          error: 'EXPIRED_JWT_TOKEN'
+        });
+      }
+      
+      return res.status(200).json({ 
+        success: false,
+        valid: false, 
+        message: 'Errore nella verifica del token',
+        error: 'JWT_VERIFICATION_FAILED'
+      });
     }
+
+    // Validazione payload
+    if (!decoded || !decoded.userId || !decoded.email) {
+      logger.error(`[${requestId}] Payload JWT incompleto`, { decoded });
+      return res.status(200).json({ 
+        success: false,
+        valid: false, 
+        message: 'Token non valido - payload incompleto',
+        error: 'INCOMPLETE_JWT_PAYLOAD'
+      });
+    }
+
+    // Controlla se il token è scaduto (doppio controllo)
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (decoded.exp && decoded.exp < currentTime) {
+      logger.warn(`[${requestId}] Token scaduto`, { exp: decoded.exp, current: currentTime });
+      return res.status(200).json({ 
+        success: false,
+        valid: false, 
+        message: 'Token scaduto',
+        error: 'TOKEN_EXPIRED'
+      });
+    }
+
+    // Verifica che l'email sia autorizzata
+    const authorizedEmail = process.env.AUTHORIZED_EMAIL;
+    if (authorizedEmail && decoded.email.toLowerCase().trim() !== authorizedEmail.toLowerCase().trim()) {
+      logger.warn(`[${requestId}] Email non autorizzata nel token`, { email: decoded.email });
+      return res.status(200).json({ 
+        success: false,
+        valid: false, 
+        message: 'Token non autorizzato',
+        error: 'UNAUTHORIZED_TOKEN'
+      });
+    }
+
+    logger.info(`[${requestId}] Token verificato con successo`, { 
+      userId: decoded.userId,
+      email: decoded.email,
+      role: decoded.role
+    });
 
     // Token valido - restituisci le informazioni dell'utente
     return res.status(200).json({
+      success: true,
       valid: true,
       user: {
         id: decoded.userId,
@@ -77,18 +222,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: 'Token valido'
     });
 
-  } catch (error) {
-    console.error('Token verification error:', error);
-    
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(200).json({ valid: false, message: 'Token non valido' });
-    }
-    
-    if (error instanceof jwt.TokenExpiredError) {
-      return res.status(200).json({ valid: false, message: 'Token scaduto' });
-    }
-    
-    return res.status(200).json({ valid: false, message: 'Errore nella verifica del token' });
+  } catch (error: any) {
+    logger.error(`[${requestId}] Errore generale nella verifica token`, error);
+    return res.status(500).json({ 
+      success: false,
+      valid: false, 
+      message: 'Errore interno del server',
+      error: 'INTERNAL_SERVER_ERROR'
+    });
   }
 }
 

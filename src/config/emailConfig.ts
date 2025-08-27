@@ -1,4 +1,6 @@
 // Configurazione EmailJS
+import { envConfig } from './envConfig';
+
 export interface EmailJSConfig {
   serviceId: string;
   templateId: string;
@@ -14,15 +16,30 @@ export const defaultEmailConfig: EmailJSConfig = {
 
 // Funzione per validare la configurazione
 export function validateEmailConfig(config: EmailJSConfig): boolean {
-  return !!(config.serviceId && config.templateId && config.publicKey);
+  return !!(config.serviceId && config.templateId && config.publicKey &&
+    config.serviceId !== 'YOUR_EMAILJS_SERVICE_ID' &&
+    config.templateId !== 'YOUR_EMAILJS_TEMPLATE_ID' &&
+    config.publicKey !== 'YOUR_EMAILJS_PUBLIC_KEY');
 }
 
 // Funzione per ottenere la configurazione dalle variabili d'ambiente o default
 export function getEmailConfig(): EmailJSConfig {
-  // In produzione, queste dovrebbero venire da variabili d'ambiente
-  return {
-    serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID || defaultEmailConfig.serviceId,
-    templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID || defaultEmailConfig.templateId,
-    publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY || defaultEmailConfig.publicKey
-  };
+  // Usa la configurazione centralizzata
+  return envConfig.emailJs || defaultEmailConfig;
+}
+
+// Funzione per verificare se EmailJS è configurato correttamente
+export function isEmailJSConfigured(): boolean {
+  const config = getEmailConfig();
+  const isValid = validateEmailConfig(config);
+  
+  if (!isValid) {
+    console.warn('⚠️ EmailJS non configurato correttamente');
+    console.warn('Aggiungi le seguenti variabili d\'ambiente:');
+    console.warn('- VITE_EMAILJS_SERVICE_ID');
+    console.warn('- VITE_EMAILJS_TEMPLATE_ID');
+    console.warn('- VITE_EMAILJS_PUBLIC_KEY');
+  }
+  
+  return isValid;
 }
