@@ -90,7 +90,20 @@ class AuthService {
         body: JSON.stringify({ credential }),
       });
 
-      const data = await response.json();
+      // Verifica che la risposta contenga contenuto
+      const responseText = await response.text();
+      if (!responseText) {
+        throw new Error('Risposta vuota dal server');
+      }
+
+      let data: GoogleSignInResponse;
+      try {
+        data = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('Errore nel parsing JSON per Google Sign-In:', jsonError);
+        console.error('Risposta ricevuta:', responseText);
+        throw new Error('Risposta non valida dal server');
+      }
       
       if (!response.ok) {
         throw new Error(data.message || 'Errore nell\'autenticazione Google');
