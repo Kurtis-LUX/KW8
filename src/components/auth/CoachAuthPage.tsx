@@ -47,21 +47,34 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
       }
       
       if (window.google) {
-        // Pulisci eventuali inizializzazioni precedenti
+        // Pulisci completamente eventuali inizializzazioni precedenti
         window.google.accounts.id.cancel();
+        window.google.accounts.id.disableAutoSelect();
         
-        // Configurazione ottimizzata per evitare bottoni multipli e schermata bianca
+        // Forza il logout da eventuali sessioni Google attive
+        try {
+          window.google.accounts.id.revoke('', () => {
+            console.log('🔄 Sessione Google revocata');
+          });
+        } catch (e) {
+          console.log('🔄 Nessuna sessione da revocare');
+        }
+        
+        // Configurazione per forzare selezione account e evitare redirect_uri_mismatch
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleGoogleSignIn,
           auto_select: false,
           cancel_on_tap_outside: true,
-          // Forza la selezione manuale dell'account
+          // Forza sempre la selezione dell'account
           prompt: 'select_account',
-          ux_mode: 'redirect',
-          // Configurazioni per evitare problemi CORS
+          ux_mode: 'popup',
+          // Configurazioni per evitare problemi
           use_fedcm_for_prompt: false,
-          itp_support: true
+          itp_support: true,
+          // Disabilita completamente l'auto-login
+          context: 'signin',
+          state_cookie_domain: window.location.hostname
         });
 
         const buttonElement = document.getElementById('google-signin-button');
