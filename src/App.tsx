@@ -179,7 +179,22 @@ function App() {
     return (
       <LanguageProvider>
         <CoachAuthPage 
-          onAuthSuccess={() => handleNavigation('coach-dashboard')}
+          onAuthSuccess={async () => {
+            // Verifica l'autenticazione e aggiorna lo stato dell'utente
+            try {
+              const user = await authService.autoLogin();
+              if (user) {
+                setCurrentUser(user);
+                handleNavigation('coach-dashboard');
+              } else {
+                console.error('Login Google riuscito ma utente non trovato');
+                handleNavigation('home');
+              }
+            } catch (error) {
+              console.error('Errore durante la verifica post-login:', error);
+              handleNavigation('home');
+            }
+          }}
           onNavigateHome={() => handleNavigation('home')}
         />
       </LanguageProvider>

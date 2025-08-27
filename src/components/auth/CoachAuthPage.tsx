@@ -47,37 +47,41 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
       }
       
       if (window.google) {
-        // Disconnetti eventuali sessioni precedenti e impedisci il salvataggio
-        window.google.accounts.id.disableAutoSelect();
+        // Pulisci eventuali inizializzazioni precedenti
+        window.google.accounts.id.cancel();
         
+        // Configurazione ottimizzata per evitare bottoni multipli e schermata bianca
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: handleGoogleSignIn,
           auto_select: false,
           cancel_on_tap_outside: true,
-          // Impedisci il salvataggio della sessione
+          // Configurazioni per evitare problemi
           use_fedcm_for_prompt: false,
-          // Forza sempre la selezione dell'account
-          prompt_parent_id: 'google-signin-button'
+          itp_support: true
         });
 
         const buttonElement = document.getElementById('google-signin-button');
         if (buttonElement) {
+          // Pulisci il contenuto precedente del bottone
+          buttonElement.innerHTML = '';
+          
           window.google.accounts.id.renderButton(buttonElement, {
             theme: 'outline',
             size: 'large',
             width: '100%',
             text: 'signin_with',
             locale: 'it',
-            // Forza sempre la selezione dell'account
-            click_listener: () => {
-              // Disconnetti e cancella eventuali sessioni salvate
-              window.google.accounts.id.disableAutoSelect();
-              // Forza il prompt di selezione account
-              window.google.accounts.id.prompt();
-            }
+            type: 'standard'
           });
         }
+      }
+    };
+
+    // Cleanup function per evitare inizializzazioni multiple
+    const cleanup = () => {
+      if (window.google) {
+        window.google.accounts.id.cancel();
       }
     };
 
@@ -92,6 +96,9 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
     } else {
       initializeGoogleSignIn();
     }
+
+    // Cleanup al dismount del componente
+    return cleanup;
   }, []);
 
   // Gestione risposta Google Sign-In

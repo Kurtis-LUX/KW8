@@ -53,19 +53,24 @@ class AuthService {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
-    // Se siamo su Vercel o dominio di produzione
-    if (hostname.includes('vercel.app') || hostname.includes('kw8')) {
-      return 'https://kw8.vercel.app/api';
-    }
-    
     // Se siamo in locale (localhost o 127.0.0.1)
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return 'http://localhost:3001/api';
     }
     
+    // Se siamo su Vercel, usa l'URL corrente del deployment
+    if (hostname.includes('vercel.app')) {
+      return `${protocol}//${hostname}/api`;
+    }
+    
+    // Se siamo su dominio kw8 personalizzato
+    if (hostname.includes('kw8')) {
+      return `${protocol}//${hostname}/api`;
+    }
+    
     // Fallback per altri casi
     return process.env.NODE_ENV === 'production' 
-      ? 'https://kw8.vercel.app/api'
+      ? `${protocol}//${hostname}/api`
       : 'http://localhost:3001/api';
   }
   

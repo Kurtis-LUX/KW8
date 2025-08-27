@@ -9,21 +9,27 @@ function getApiBaseUrl(): string {
   }
   
   const hostname = window.location.hostname;
-  
-  // Se siamo su Vercel o dominio di produzione
-  if (hostname.includes('vercel.app') || hostname.includes('kw8')) {
-    return 'https://kw8.vercel.app/api';
-  }
+  const protocol = window.location.protocol;
   
   // Se siamo in locale (localhost o 127.0.0.1)
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:3001/api';
   }
   
+  // Se siamo su Vercel, usa l'URL corrente del deployment
+  if (hostname.includes('vercel.app')) {
+    return `${protocol}//${hostname}/api`;
+  }
+  
+  // Se siamo su dominio personalizzato kw8
+  if (hostname.includes('kw8')) {
+    return `${protocol}//${hostname}/api`;
+  }
+  
   // Fallback per altri casi
-  return process.env.NODE_ENV === 'production' 
-    ? 'https://kw8.vercel.app/api'
-    : 'http://localhost:3001/api';
+   return process.env.NODE_ENV === 'production' 
+     ? `${protocol}//${hostname}/api`
+     : 'http://localhost:3001/api';
 }
 
 const API_BASE_URL = getApiBaseUrl();

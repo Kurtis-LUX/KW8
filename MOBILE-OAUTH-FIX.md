@@ -40,7 +40,21 @@ Google Identity Services può fare login automatico con un account già collegat
 
 ## ✅ Soluzioni
 
-### Soluzione 1: 🔧 Risoluzione "origin_mismatch"
+### Soluzione 1: 🔧 Risoluzione "Redirect a URL Vercel sbagliato"
+
+**CAUSA**: Il servizio di autenticazione forza l'uso di `https://kw8.vercel.app/api` invece di usare l'URL corrente del deployment.
+
+**SINTOMI**:
+- Dopo il login, l'utente viene reindirizzato a un URL Vercel diverso
+- Errori di CORS o API non trovate
+- L'applicazione non funziona correttamente su deployment branch
+
+**SOLUZIONE IMPLEMENTATA**:
+- Modificata la logica in `authService.ts` e `api.ts`
+- Ora usa l'URL corrente del deployment: `${protocol}//${hostname}/api`
+- Funziona correttamente su tutti i deployment Vercel (main, branch, preview)
+
+### Soluzione 2: 🔧 Risoluzione "origin_mismatch"
 
 **CAUSA**: L'origine del sito web non è autorizzata nella Google Cloud Console.
 
@@ -74,19 +88,26 @@ Google Identity Services può fare login automatico con un account già collegat
 
 5. **Attendi la propagazione** (5-10 minuti)
 
-### 2. 🔧 Risoluzione "Login automatico con account sbagliato"
+### 2. 🔧 Risoluzione "Bottoni multipli e schermata bianca"
 
-**CAUSA**: Google mantiene la sessione dell'account precedente nel browser.
+**CAUSA**: Configurazione Google Identity Services non ottimizzata che causa:
+- Bottoni di login multipli
+- Schermata bianca su accounts.google.com/gsi/transform
+- Inizializzazioni multiple del servizio
 
 **SOLUZIONE IMPLEMENTATA**:
-- Aggiunto `disableAutoSelect()` per forzare la disconnessione
-- Configurazione `use_fedcm_for_prompt: false` per impedire il salvataggio della sessione
-- Configurazione per forzare sempre la selezione dell'account
+- Rimosso `click_listener` personalizzato che causava bottoni multipli
+- Aggiunto `window.google.accounts.id.cancel()` per pulire inizializzazioni precedenti
+- Aggiunto `buttonElement.innerHTML = ''` per pulire il contenuto del bottone
+- Configurazione `itp_support: true` per migliorare la compatibilità
+- Aggiunta funzione di cleanup al dismount del componente
+- Rimosso `prompt()` che causava la schermata bianca
 
 **Come funziona**:
-1. Ogni login richiederà sempre la selezione dell'account
-2. La sessione non viene salvata tra i login
-3. Apparirà sempre la schermata di selezione account Google
+1. Un solo bottone "Accedi con Google" viene renderizzato
+2. Nessuna schermata bianca durante il processo di login
+3. Gestione pulita delle inizializzazioni multiple
+4. Flusso di login più stabile e affidabile
 
 ### 3. 🔧 Risoluzione "Missing client_id"
 
