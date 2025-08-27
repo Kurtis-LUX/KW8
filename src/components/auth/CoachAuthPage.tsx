@@ -37,12 +37,14 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
   useEffect(() => {
     const initializeGoogleSignIn = () => {
       // Debug: Verifica che il client_id sia configurato
-      const clientId = import.meta.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || import.meta.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       console.log('🔍 Client ID Debug:', clientId);
+      console.log('🔍 VITE_GOOGLE_CLIENT_ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
+      console.log('🔍 NEXT_PUBLIC_GOOGLE_CLIENT_ID:', import.meta.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
       
       if (!clientId) {
-        console.error('❌ NEXT_PUBLIC_GOOGLE_CLIENT_ID non configurato!');
-        setError('Configurazione Google OAuth mancante. Contatta l\'amministratore.');
+        console.error('❌ VITE_GOOGLE_CLIENT_ID o NEXT_PUBLIC_GOOGLE_CLIENT_ID non configurato!');
+        setError('Configurazione Google OAuth mancante. Verifica che VITE_GOOGLE_CLIENT_ID sia configurato nel file .env.local');
         return;
       }
       
