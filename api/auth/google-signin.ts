@@ -167,6 +167,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .setHeader('Access-Control-Allow-Methods', corsHeaders['Access-Control-Allow-Methods'])
         .setHeader('Access-Control-Allow-Headers', corsHeaders['Access-Control-Allow-Headers'])
         .setHeader('Access-Control-Allow-Credentials', corsHeaders['Access-Control-Allow-Credentials'])
+        .setHeader('Content-Type', 'application/json')
         .json({ success: true, message: 'CORS preflight successful' });
     }
 
@@ -177,6 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method !== 'POST') {
       logger.warn(`[${requestId}] Metodo non consentito: ${req.method}`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(405).json({ 
         success: false, 
         message: 'Metodo non consentito',
@@ -188,6 +190,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const envValidation = validateEnvironmentVariables();
     if (!envValidation.isValid) {
       logger.error(`[${requestId}] Configurazione server incompleta`, { missingVars: envValidation.missingVars });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({
         success: false,
         message: 'Configurazione server incompleta',
@@ -203,6 +206,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     if (!checkRateLimit(ip)) {
       logger.warn(`[${requestId}] Rate limit superato`, { ip });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(429).json({
         success: false,
         message: 'Troppi tentativi di accesso. Riprova tra 15 minuti.',
@@ -213,6 +217,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione input richiesta
     if (!req.body || typeof req.body !== 'object') {
       logger.error(`[${requestId}] Body della richiesta non valido`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({
         success: false,
         message: 'Dati della richiesta non validi',
@@ -224,6 +229,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!credential) {
       logger.error(`[${requestId}] Credential mancante`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({
         success: false,
         message: 'Credential Google richiesto',
@@ -233,6 +239,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (typeof credential !== 'string') {
       logger.error(`[${requestId}] Credential non è una stringa`, { type: typeof credential });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({
         success: false,
         message: 'Credential deve essere una stringa',
@@ -243,6 +250,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione lunghezza token (i token JWT Google sono tipicamente lunghi)
     if (credential.length < 100 || credential.length > 2048) {
       logger.error(`[${requestId}] Lunghezza credential non valida`, { length: credential.length });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({
         success: false,
         message: 'Formato credential non valido',
@@ -257,6 +265,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       payload = await verifyGoogleIdToken(credential, process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!);
     } catch (error: any) {
       logger.error(`[${requestId}] Errore nella verifica del token Google`, error);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(401).json({
         success: false,
         message: 'Token Google non valido o scaduto',
@@ -266,6 +275,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!payload || !payload.email) {
       logger.error(`[${requestId}] Payload token vuoto o email mancante`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({
         success: false,
         message: 'Impossibile ottenere informazioni dall\'account Google',
@@ -278,6 +288,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazioni aggiuntive dell'email
     if (typeof email !== 'string' || !email.includes('@') || email.length > 254) {
       logger.error(`[${requestId}] Formato email non valido`, { email: email?.substring(0, 10) + '...' });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({
         success: false,
         message: 'Formato email non valido',
@@ -290,6 +301,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Controlla se l'email è autorizzata usando la funzione dedicata
     if (!validateAuthorizedEmail(email)) {
       logger.warn(`[${requestId}] Email non autorizzata`, { email });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(403).json({
         success: false,
         message: 'Accesso non autorizzato per questo account',
@@ -331,6 +343,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
 
       // Risposta di successo
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({
         success: true,
         message: 'Autenticazione Google completata con successo',
@@ -349,6 +362,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     } catch (jwtError: any) {
       logger.error(`[${requestId}] Errore nella generazione JWT`, jwtError);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({
         success: false,
         message: 'Errore nella generazione del token di autenticazione',
@@ -358,6 +372,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     logger.error(`[${requestId}] Errore generale nell'autenticazione Google`, error);
+    res.setHeader('Content-Type', 'application/json');
     return res.status(500).json({
       success: false,
       message: 'Errore interno del server durante l\'autenticazione',

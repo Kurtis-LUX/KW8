@@ -75,6 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'OPTIONS') {
       logger.info(`[${requestId}] Gestione preflight CORS`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: true, 
         message: 'CORS preflight successful' 
@@ -84,6 +85,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
       logger.warn(`[${requestId}] Metodo non consentito`, { method: req.method });
       res.setHeader('Allow', ['POST']);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(405).json({ 
         success: false,
         error: `Method ${req.method} Not Allowed`,
@@ -94,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione variabili d'ambiente
     if (!process.env.JWT_SECRET) {
       logger.error(`[${requestId}] JWT_SECRET non configurato`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         success: false,
         message: 'Configurazione server mancante',
@@ -105,6 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const contentType = req.headers['content-type'];
     if (!contentType || !contentType.includes('application/json')) {
       logger.warn(`[${requestId}] Content-Type non valido`, { contentType });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({ 
         success: false, 
         message: 'Content-Type deve essere application/json',
@@ -115,6 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione body
     if (!req.body || typeof req.body !== 'object') {
       logger.warn(`[${requestId}] Body della richiesta non valido`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({ 
         success: false, 
         message: 'Body della richiesta non valido',
@@ -127,6 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione input dettagliata
     if (!email || typeof email !== 'string' || email.trim() === '') {
       logger.warn(`[${requestId}] Email mancante o non valida`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({ 
         success: false, 
         message: 'Email è richiesta e deve essere una stringa valida',
@@ -136,6 +142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!password || typeof password !== 'string' || password.trim() === '') {
       logger.warn(`[${requestId}] Password mancante o non valida`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({ 
         success: false, 
         message: 'Password è richiesta e deve essere una stringa valida',
@@ -147,6 +154,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       logger.warn(`[${requestId}] Formato email non valido`, { email: email.substring(0, 10) + '...' });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(400).json({ 
         success: false, 
         message: 'Formato email non valido',
@@ -160,6 +168,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const authorizedEmail = process.env.AUTHORIZED_EMAIL;
     if (!authorizedEmail) {
       logger.error(`[${requestId}] AUTHORIZED_EMAIL non configurata`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         success: false,
         message: 'Configurazione server incompleta',
@@ -175,6 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         attempted: normalizedEmail.substring(0, 10) + '...',
         authorized: normalizedAuthorized.substring(0, 3) + '***'
       });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(403).json({ 
         success: false,
         error: 'Unauthorized email',
@@ -187,6 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     if (!user) {
       logger.warn(`[${requestId}] Utente non trovato`, { email: email.substring(0, 10) + '...' });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(401).json({ 
         success: false,
         error: 'Invalid credentials',
@@ -200,6 +211,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       isPasswordValid = await bcrypt.compare(password, user.password);
     } catch (bcryptError: any) {
       logger.error(`[${requestId}] Errore durante la verifica password`, bcryptError);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         success: false,
         error: 'Password verification error',
@@ -209,6 +221,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     if (!isPasswordValid) {
       logger.warn(`[${requestId}] Password non valida`, { email: email.substring(0, 10) + '...' });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(401).json({ 
         success: false,
         error: 'Invalid credentials',
@@ -238,6 +251,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
     } catch (jwtError: any) {
       logger.error(`[${requestId}] Errore nella generazione JWT`, jwtError);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         success: false, 
         message: 'Errore nella generazione del token',
@@ -253,6 +267,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       tokenLength: token.length
     });
 
+    res.setHeader('Content-Type', 'application/json');
     return res.status(200).json({
       success: true,
       user: userWithoutPassword,
@@ -263,6 +278,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     logger.error(`[${requestId}] Errore generale nel login`, error);
+    res.setHeader('Content-Type', 'application/json');
     return res.status(500).json({ 
       success: false,
       error: 'Internal Server Error',

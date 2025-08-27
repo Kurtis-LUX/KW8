@@ -56,6 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'OPTIONS') {
       logger.info(`[${requestId}] Gestione preflight CORS`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: true, 
         message: 'CORS preflight successful' 
@@ -65,6 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST' && req.method !== 'GET') {
       logger.warn(`[${requestId}] Metodo non consentito`, { method: req.method });
       res.setHeader('Allow', ['POST', 'GET']);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(405).json({ 
         success: false,
         error: `Method ${req.method} Not Allowed`,
@@ -75,6 +77,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione variabili d'ambiente
     if (!process.env.JWT_SECRET) {
       logger.error(`[${requestId}] JWT_SECRET non configurato`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(500).json({ 
         success: false,
         valid: false, 
@@ -88,6 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     if (!authHeader) {
       logger.warn(`[${requestId}] Header Authorization mancante`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: false,
         valid: false, 
@@ -98,6 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!authHeader.startsWith('Bearer ')) {
       logger.warn(`[${requestId}] Formato Authorization header non valido`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: false,
         valid: false, 
@@ -110,6 +115,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     if (!token || token.trim() === '') {
       logger.warn(`[${requestId}] Token vuoto`);
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: false,
         valid: false, 
@@ -121,6 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione lunghezza token
     if (token.length < 10 || token.length > 2048) {
       logger.warn(`[${requestId}] Lunghezza token non valida`, { length: token.length });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: false,
         valid: false, 
@@ -144,6 +151,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       logger.error(`[${requestId}] Errore nella verifica JWT`, jwtError);
       
       if (jwtError instanceof jwt.JsonWebTokenError) {
+        res.setHeader('Content-Type', 'application/json');
         return res.status(200).json({ 
           success: false,
           valid: false, 
@@ -153,6 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       if (jwtError instanceof jwt.TokenExpiredError) {
+        res.setHeader('Content-Type', 'application/json');
         return res.status(200).json({ 
           success: false,
           valid: false, 
@@ -161,6 +170,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
       
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: false,
         valid: false, 
@@ -172,6 +182,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Validazione payload
     if (!decoded || !decoded.userId || !decoded.email) {
       logger.error(`[${requestId}] Payload JWT incompleto`, { decoded });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: false,
         valid: false, 
@@ -184,6 +195,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const currentTime = Math.floor(Date.now() / 1000);
     if (decoded.exp && decoded.exp < currentTime) {
       logger.warn(`[${requestId}] Token scaduto`, { exp: decoded.exp, current: currentTime });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: false,
         valid: false, 
@@ -196,6 +208,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const authorizedEmail = process.env.AUTHORIZED_EMAIL;
     if (authorizedEmail && decoded.email.toLowerCase().trim() !== authorizedEmail.toLowerCase().trim()) {
       logger.warn(`[${requestId}] Email non autorizzata nel token`, { email: decoded.email });
+      res.setHeader('Content-Type', 'application/json');
       return res.status(200).json({ 
         success: false,
         valid: false, 
@@ -211,6 +224,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
     // Token valido - restituisci le informazioni dell'utente
+    res.setHeader('Content-Type', 'application/json');
     return res.status(200).json({
       success: true,
       valid: true,
@@ -224,6 +238,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     logger.error(`[${requestId}] Errore generale nella verifica token`, error);
+    res.setHeader('Content-Type', 'application/json');
     return res.status(500).json({ 
       success: false,
       valid: false, 
