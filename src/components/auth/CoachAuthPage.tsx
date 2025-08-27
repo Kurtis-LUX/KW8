@@ -36,12 +36,29 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
   // Inizializzazione Google Identity Services
   useEffect(() => {
     const initializeGoogleSignIn = () => {
+      // Debug: Verifica che il client_id sia configurato
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      console.log('🔍 Client ID Debug:', clientId);
+      
+      if (!clientId) {
+        console.error('❌ VITE_GOOGLE_CLIENT_ID non configurato!');
+        setError('Configurazione Google OAuth mancante. Contatta l\'amministratore.');
+        return;
+      }
+      
       if (window.google) {
+        // Disconnetti eventuali sessioni precedenti e impedisci il salvataggio
+        window.google.accounts.id.disableAutoSelect();
+        
         window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          client_id: clientId,
           callback: handleGoogleSignIn,
           auto_select: false,
-          cancel_on_tap_outside: true
+          cancel_on_tap_outside: true,
+          // Impedisci il salvataggio della sessione
+          use_fedcm_for_prompt: false,
+          // Forza sempre la selezione dell'account
+          prompt_parent_id: 'google-signin-button'
         });
 
         const buttonElement = document.getElementById('google-signin-button');
@@ -51,7 +68,14 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
             size: 'large',
             width: '100%',
             text: 'signin_with',
-            locale: 'it'
+            locale: 'it',
+            // Forza sempre la selezione dell'account
+            click_listener: () => {
+              // Disconnetti e cancella eventuali sessioni salvate
+              window.google.accounts.id.disableAutoSelect();
+              // Forza il prompt di selezione account
+              window.google.accounts.id.prompt();
+            }
           });
         }
       }
@@ -178,6 +202,8 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
           <div className="flex justify-center">
             <div id="google-signin-button" className="w-full"></div>
           </div>
+          
+
           
           {loading && (
             <div className="flex items-center justify-center py-4">
