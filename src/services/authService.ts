@@ -81,6 +81,8 @@ class AuthService {
   // Autenticazione con Google Identity Services
   async googleSignIn(credential: string): Promise<GoogleSignInResponse> {
     try {
+      console.log('🔍 Inizio Google Sign-In, URL:', `${this.API_BASE_URL}/auth/google-signin`);
+      
       const response = await fetch(`${this.API_BASE_URL}/auth/google-signin`, {
         method: 'POST',
         headers: {
@@ -90,38 +92,49 @@ class AuthService {
         body: JSON.stringify({ credential }),
       });
 
+      console.log('📡 Risposta ricevuta - Status:', response.status, 'StatusText:', response.statusText);
+      console.log('📡 Headers risposta:', Object.fromEntries(response.headers.entries()));
+
       // Verifica che la risposta contenga contenuto
       const responseText = await response.text();
+      console.log('📄 Testo risposta completo:', responseText);
+      
       if (!responseText) {
+        console.error('❌ Risposta vuota dal server');
         throw new Error('Risposta vuota dal server');
       }
 
       let data: GoogleSignInResponse;
       try {
         data = JSON.parse(responseText);
+        console.log('✅ JSON parsato con successo:', data);
       } catch (jsonError) {
-        console.error('Errore nel parsing JSON per Google Sign-In:', jsonError);
-        console.error('Risposta ricevuta:', responseText);
+        console.error('❌ Errore nel parsing JSON per Google Sign-In:', jsonError);
+        console.error('❌ Risposta ricevuta:', responseText.substring(0, 500));
         throw new Error('Risposta non valida dal server');
       }
       
       if (!response.ok) {
+        console.log('❌ Risposta non OK:', data.message);
         throw new Error(data.message || 'Errore nell\'autenticazione Google');
       }
 
       // Se l'autenticazione è riuscita, salva il token e i dati utente
       if (data.success && data.data) {
+        console.log('✅ Login riuscito, salvando token e user');
         this.setToken(data.data.token);
         this.setUser({
           id: data.data.user.email, // Usa email come ID
           email: data.data.user.email,
           role: data.data.user.role
         });
+      } else {
+        console.log('❌ Login fallito:', data.message);
       }
 
       return data;
     } catch (error) {
-      console.error('Google Sign-In error:', error);
+      console.error('❌ Errore Google Sign-In:', error);
       throw error;
     }
   }

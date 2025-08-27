@@ -56,6 +56,9 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
           callback: handleGoogleSignIn,
           auto_select: false,
           cancel_on_tap_outside: true,
+          // Forza la selezione manuale dell'account
+          prompt: 'select_account',
+          ux_mode: 'popup',
           // Configurazioni per evitare problemi
           use_fedcm_for_prompt: false,
           itp_support: true
