@@ -1,9 +1,9 @@
 # 🔐 Configurazione Google OAuth per KW8
 
 ## ❌ Problema Attuale
-L'errore **"OAuth client was not found. Errore 401: invalid_client"** indica che il Google Client ID non è configurato correttamente.
+Gli errori 500 dal backend `/api/auth/google-signin` in produzione indicano problemi di configurazione OAuth e variabili d'ambiente.
 
-## ✅ Soluzione: Configurare Google OAuth
+## ✅ Soluzione: Configurare Google OAuth per Produzione
 
 ### Passo 1: Accedere alla Google Cloud Console
 1. Vai su [Google Cloud Console](https://console.cloud.google.com/)
@@ -37,47 +37,82 @@ L'errore **"OAuth client was not found. Errore 401: invalid_client"** indica che
      - `http://localhost:5173` (per sviluppo locale)
      - `https://kw8.vercel.app` (per produzione)
    - **URI di reindirizzamento autorizzati**:
-     - ⚠️ **IMPORTANTE**: Per Google Identity Services (GSI), NON aggiungere URI di reindirizzamento specifici
-      - GSI gestisce automaticamente i redirect, aggiungere URI manuali può causare pagine bianche
-      - Lascia questa sezione VUOTA o rimuovi eventuali URI aggiunti
+     - `https://kw8.vercel.app/api/auth/google-signin` (per produzione)
+     - ⚠️ **IMPORTANTE**: Aggiungi questo URI per il backend API
 5. Clicca **"Crea"**
 
-### Passo 5: Copiare il Client ID
+### Passo 5: Copiare Client ID e Client Secret
 1. Dopo la creazione, apparirà una finestra con:
    - **ID client**: `123456789-abcdefghijklmnop.apps.googleusercontent.com`
-   - **Segreto client**: (non necessario per il frontend)
-2. **Copia l'ID client** (quello che termina con `.apps.googleusercontent.com`)
+   - **Segreto client**: `GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxxx`
+2. **Copia entrambi i valori**:
+   - **Client ID** (per il frontend)
+   - **Client Secret** (per il backend)
 
-### Passo 6: Aggiornare il File .env
-1. Apri il file `.env` nella root del progetto
-2. Sostituisci la riga:
-   ```
-   VITE_GOOGLE_CLIENT_ID=your-google-client-id-here.apps.googleusercontent.com
-   ```
-   Con:
-   ```
-   VITE_GOOGLE_CLIENT_ID=IL_TUO_CLIENT_ID_REALE.apps.googleusercontent.com
-   ```
+### Passo 6: Configurare le Variabili d'Ambiente
 
-### Passo 7: Aggiungere Email Autorizzate (Opzionale)
-Se vuoi autorizzare email diverse da `krossingweight@gmail.com`:
-
-1. Apri `server.cjs`
-2. Trova la riga:
-   ```javascript
-   const AUTHORIZED_COACH_EMAIL = 'krossingweight@gmail.com';
-   ```
-3. Cambiala con la tua email:
-   ```javascript
-   const AUTHORIZED_COACH_EMAIL = 'email';
-   ```
-
-### Passo 8: Riavviare il Server
-1. Ferma il server di sviluppo (Ctrl+C)
-2. Riavvia con:
+#### Per Sviluppo Locale (.env.local)
+1. Crea/aggiorna il file `.env.local` nella root del progetto:
    ```bash
-   npm run dev
+   # Google OAuth
+   NEXT_PUBLIC_GOOGLE_CLIENT_ID=IL_TUO_CLIENT_ID_REALE.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=IL_TUO_CLIENT_SECRET_REALE
+   
+   # Email autorizzata
+   AUTHORIZED_EMAIL=krossingweight@gmail.com
+   
+   # Altri settings
+   JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
+   API_SECRET_KEY=your-super-secret-api-key-here
+   MONGODB_URI=your-mongodb-uri-here
+   FRONTEND_URL=http://localhost:5173
+   CORS_ORIGIN=http://localhost:5173
+   NODE_ENV=development
    ```
+
+#### Per Produzione (Vercel)
+1. Vai su [Vercel Dashboard](https://vercel.com/dashboard)
+2. Seleziona il progetto KW8
+3. Vai su **Settings** → **Environment Variables**
+4. Aggiungi le seguenti variabili per **Production**:
+   - `NEXT_PUBLIC_GOOGLE_CLIENT_ID`: Il tuo Client ID
+   - `GOOGLE_CLIENT_SECRET`: Il tuo Client Secret
+   - `AUTHORIZED_EMAIL`: `krossingweight@gmail.com`
+   - `JWT_SECRET`: Una stringa segreta di almeno 32 caratteri
+   - `API_SECRET_KEY`: Una chiave API segreta
+   - `MONGODB_URI`: La tua stringa di connessione MongoDB
+   - `FRONTEND_URL`: `https://kw8.vercel.app`
+   - `CORS_ORIGIN`: `https://kw8.vercel.app`
+   - `NODE_ENV`: `production`
+5. Clicca **Save** per ogni variabile
+6. **Redeploy** il progetto per applicare le modifiche
+
+### Passo 7: Configurare Email Autorizzata
+Per cambiare l'email autorizzata:
+
+1. **Sviluppo locale**: Modifica `.env.local`:
+   ```bash
+   AUTHORIZED_EMAIL=tua-email@gmail.com
+   ```
+
+2. **Produzione**: Aggiorna la variabile su Vercel:
+   - Vai su **Settings** → **Environment Variables**
+   - Modifica `AUTHORIZED_EMAIL` con la tua email
+   - Redeploy il progetto
+
+### Passo 8: Testare la Configurazione
+
+#### Sviluppo Locale
+1. Ferma il server di sviluppo (Ctrl+C)
+2. Riavvia con: `npm run dev`
+3. Vai su `http://localhost:5173`
+4. Testa il login con Google
+
+#### Produzione
+1. Dopo aver configurato le variabili su Vercel
+2. Redeploy il progetto
+3. Vai su `https://kw8.vercel.app`
+4. Testa il login con Google
 
 ## 🔍 Verifica della Configurazione
 

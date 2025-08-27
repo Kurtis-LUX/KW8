@@ -37,11 +37,11 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
   useEffect(() => {
     const initializeGoogleSignIn = () => {
       // Debug: Verifica che il client_id sia configurato
-      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const clientId = import.meta.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       console.log('🔍 Client ID Debug:', clientId);
       
       if (!clientId) {
-        console.error('❌ VITE_GOOGLE_CLIENT_ID non configurato!');
+        console.error('❌ NEXT_PUBLIC_GOOGLE_CLIENT_ID non configurato!');
         setError('Configurazione Google OAuth mancante. Contatta l\'amministratore.');
         return;
       }
@@ -85,7 +85,6 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
           window.google.accounts.id.renderButton(buttonElement, {
             theme: 'outline',
             size: 'large',
-            width: '100%',
             text: 'signin_with',
             locale: 'it',
             type: 'standard'
@@ -223,7 +222,7 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
           
           {/* Container per il pulsante Google */}
           <div className="flex justify-center">
-            <div id="google-signin-button" className="w-full"></div>
+            <div id="google-signin-button" className="w-full" style={{ width: '100%' }}></div>
           </div>
           
 
