@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KW8 Mobile Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f8fafc;
+        }
+        .test-section {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .warning { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        #log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 KW8 Mobile Debug Test</h1>
+    
+    <div class="test-section">
+        <h3>📱 Device Info</h3>
+        <p><strong>User Agent:</strong> <span id="userAgent"></span></p>
+        <p><strong>Screen Size:</strong> <span id="screenSize"></span></p>
+        <p><strong>Viewport:</strong> <span id="viewport"></span></p>
+        <p><strong>Touch Support:</strong> <span id="touchSupport"></span></p>
+    </div>
+
+    <div class="test-section">
+        <h3>🌐 Browser Features</h3>
+        <p><strong>LocalStorage:</strong> <span id="localStorage"></span></p>
+        <p><strong>SessionStorage:</strong> <span id="sessionStorage"></span></p>
+        <p><strong>IndexedDB:</strong> <span id="indexedDB"></span></p>
+        <p><strong>Service Worker:</strong> <span id="serviceWorker"></span></p>
+        <p><strong>ES6 Modules:</strong> <span id="es6Modules"></span></p>
+    </div>
+
+    <div class="test-section">
+        <h3>⚛️ React Test</h3>
+        <button onclick="testReact()">Test React Loading</button>
+        <p><strong>Status:</strong> <span id="reactStatus">Not tested</span></p>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Console Log</h3>
+        <button onclick="clearLog()">Clear Log</button>
+        <button onclick="testError()">Test Error</button>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        // Logging function
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+            logDiv.textContent += logEntry;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            // Also log to console
+            console.log(`🔧 Mobile Test - ${message}`);
+        }
+
+        // Override console methods to capture logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            log(args.join(' '), 'info');
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            log(args.join(' '), 'error');
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            log(args.join(' '), 'warning');
+        };
+
+        // Test functions
+        function setStatus(elementId, status, isSuccess) {
+            const element = document.getElementById(elementId);
+            element.textContent = status;
+            element.className = 'status ' + (isSuccess ? 'success' : 'error');
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function testError() {
+            try {
+                throw new Error('Test error for debugging');
+            } catch (e) {
+                console.error('Test error caught:', e.message);
+            }
+        }
+
+        function testReact() {
+            log('Testing React loading...', 'info');
+            
+            // Try to load React dynamically
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.textContent = `
+                try {
+                    import('https://esm.sh/react@18').then(React => {
+                        console.log('✅ React loaded successfully');
+                        document.getElementById('reactStatus').textContent = 'React loaded successfully';
+                        document.getElementById('reactStatus').className = 'status success';
+                    }).catch(error => {
+                        console.error('❌ React loading failed:', error);
+                        document.getElementById('reactStatus').textContent = 'React loading failed: ' + error.message;
+                        document.getElementById('reactStatus').className = 'status error';
+                    });
+                } catch (error) {
+                    console.error('❌ ES6 modules not supported:', error);
+                    document.getElementById('reactStatus').textContent = 'ES6 modules not supported';
+                    document.getElementById('reactStatus').className = 'status error';
+                }
+            `;
+            document.head.appendChild(script);
+        }
+
+        // Initialize tests
+        window.addEventListener('load', function() {
+            log('🚀 Mobile test page loaded', 'info');
+            
+            // Device info
+            document.getElementById('userAgent').textContent = navigator.userAgent;
+            document.getElementById('screenSize').textContent = `${screen.width}x${screen.height}`;
+            document.getElementById('viewport').textContent = `${window.innerWidth}x${window.innerHeight}`;
+            document.getElementById('touchSupport').textContent = 'ontouchstart' in window ? 'Yes' : 'No';
+            
+            // Browser features
+            setStatus('localStorage', typeof localStorage !== 'undefined' ? 'Supported' : 'Not supported', typeof localStorage !== 'undefined');
+            setStatus('sessionStorage', typeof sessionStorage !== 'undefined' ? 'Supported' : 'Not supported', typeof sessionStorage !== 'undefined');
+            setStatus('indexedDB', typeof indexedDB !== 'undefined' ? 'Supported' : 'Not supported', typeof indexedDB !== 'undefined');
+            setStatus('serviceWorker', 'serviceWorker' in navigator ? 'Supported' : 'Not supported', 'serviceWorker' in navigator);
+            
+            // Test ES6 modules
+            try {
+                eval('import("data:text/javascript,export default 1")');
+                setStatus('es6Modules', 'Supported', true);
+            } catch (e) {
+                setStatus('es6Modules', 'Not supported', false);
+                log('ES6 modules test failed: ' + e.message, 'error');
+            }
+            
+            log('All tests initialized', 'info');
+        });
+
+        // Error handling
+        window.addEventListener('error', function(e) {
+            log(`Global error: ${e.message} at ${e.filename}:${e.lineno}`, 'error');
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+            log(`Unhandled promise rejection: ${e.reason}`, 'error');
+        });
+    </script>
+</body>
+</html>

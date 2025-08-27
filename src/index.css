@@ -1,0 +1,90 @@
+/* Importa il file delle animazioni */
+@import './animations.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Assicura che body e html abbiano sfondo bianco */
+html, body {
+  background-color: white;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+#root {
+  background-color: white;
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Fix per dispositivi mobili */
+* {
+  box-sizing: border-box;
+}
+
+/* Previeni zoom su input su iOS */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* Fix per Safari mobile */
+@supports (-webkit-touch-callout: none) {
+  .h-screen {
+    height: -webkit-fill-available;
+  }
+}
+
+/* Fix per problemi di layout mobile - elementi stabili */
+body {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Previeni il bounce scrolling su iOS */
+.no-bounce {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Stabilizza gli elementi durante lo scroll */
+.fixed-element {
+  position: fixed;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Fix per viewport mobile */
+@media screen and (max-width: 768px) {
+  html {
+    height: -webkit-fill-available;
+  }
+  
+  body {
+    min-height: -webkit-fill-available;
+  }
+  
+  /* Previeni il ridimensionamento durante la rotazione */
+  @media screen and (orientation: landscape) {
+    html {
+      height: 100vh;
+    }
+  }
+}

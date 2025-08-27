@@ -1,0 +1,99 @@
+<svg width="300" height="400" viewBox="0 0 300 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="400" fill="#f8f9fa"/>
+  
+  <!-- Grid lines for measurement -->
+  <defs>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e9ecef" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="300" height="400" fill="url(#grid)" opacity="0.3"/>
+  
+  <!-- Title -->
+  <text x="150" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#27ae60">DOPO</text>
+  
+  <!-- Body outline - correct posture figure -->
+  <!-- Head - aligned -->
+  <circle cx="150" cy="80" r="24" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Hair -->
+  <path d="M 126 65 Q 150 50 174 65 Q 174 75 150 75 Q 126 75 126 65" fill="#654321"/>
+  
+  <!-- Face features - relaxed, confident expression -->
+  <circle cx="142" cy="75" r="2" fill="#2c3e50"/>
+  <circle cx="158" cy="75" r="2" fill="#2c3e50"/>
+  <path d="M 144 85 Q 150 90 156 85" stroke="#2c3e50" stroke-width="2" fill="none"/>
+  
+  <!-- Neck - proper alignment -->
+  <rect x="142" y="104" width="16" height="15" fill="#fdbcb4"/>
+  
+  <!-- Torso - upright -->
+  <ellipse cx="150" cy="175" rx="38" ry="65" fill="#4a90e2" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Spine alignment line - straight -->
+  <line x1="150" y1="104" x2="150" y2="240" stroke="#27ae60" stroke-width="3" opacity="0.8"/>
+  
+  <!-- Arms - proper position -->
+  <ellipse cx="105" cy="160" rx="14" ry="40" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  <ellipse cx="195" cy="160" rx="14" ry="40" fill="#fdbcb4" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Hands -->
+  <circle cx="105" cy="200" r="7" fill="#fdbcb4" stroke="#2c3e50" stroke-width="1"/>
+  <circle cx="195" cy="200" r="7" fill="#fdbcb4" stroke="#2c3e50" stroke-width="1"/>
+  
+  <!-- Legs - balanced -->
+  <ellipse cx="135" cy="285" rx="17" ry="52" fill="#2c3e50" stroke="#2c3e50" stroke-width="2"/>
+  <ellipse cx="165" cy="285" rx="17" ry="52" fill="#2c3e50" stroke="#2c3e50" stroke-width="2"/>
+  
+  <!-- Feet -->
+  <ellipse cx="135" cy="345" rx="14" ry="8" fill="#654321" stroke="#2c3e50" stroke-width="1"/>
+  <ellipse cx="165" cy="345" rx="14" ry="8" fill="#654321" stroke="#2c3e50" stroke-width="1"/>
+  
+  <!-- Wellness indicators -->
+  <circle cx="150" cy="160" r="20" fill="none" stroke="#27ae60" stroke-width="2" opacity="0.7"/>
+  <circle cx="150" cy="160" r="15" fill="none" stroke="#27ae60" stroke-width="1" opacity="0.5"/>
+  
+  <!-- Health level indicator -->
+  <text x="50" y="120" font-family="Arial, sans-serif" font-size="12" fill="#27ae60" font-weight="bold">Dolore: 1/10</text>
+  <text x="50" y="140" font-family="Arial, sans-serif" font-size="10" fill="#7f8c8d">Mobilità ottima</text>
+  
+  <!-- Posture reference line -->
+  <line x1="20" y1="80" x2="20" y2="345" stroke="#27ae60" stroke-width="2" stroke-dasharray="10,5"/>
+  <text x="5" y="215" font-family="Arial, sans-serif" font-size="8" fill="#27ae60" transform="rotate(-90 5 215)">Postura corretta</text>
+  
+  <!-- Perfect alignment indicator -->
+  <path d="M 20 80 L 150 80" stroke="#27ae60" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="60" y="75" font-family="Arial, sans-serif" font-size="8" fill="#27ae60">Allineamento perfetto</text>
+  
+  <!-- Achievement indicators -->
+  <rect x="200" y="290" width="90" height="90" fill="#fff" stroke="#27ae60" stroke-width="2" rx="5"/>
+  <text x="245" y="305" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#27ae60">RISULTATI</text>
+  <text x="245" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">-90% dolore</text>
+  <text x="245" y="332" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">+70% mobilità</text>
+  <text x="245" y="344" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">+80% postura</text>
+  <text x="245" y="356" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Forza core</text>
+  <text x="245" y="368" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#2c3e50">Flessibilità</text>
+  
+  <!-- Success checkmark -->
+  <circle cx="245" cy="375" r="8" fill="#27ae60"/>
+  <path d="M 241 375 L 244 378 L 249 372" stroke="#fff" stroke-width="2" fill="none"/>
+  
+  <!-- Wellness symbols -->
+  <text x="170" y="150" font-family="Arial, sans-serif" font-size="16" fill="#27ae60">✓</text>
+  <text x="160" y="170" font-family="Arial, sans-serif" font-size="14" fill="#27ae60">✓</text>
+  <text x="140" y="165" font-family="Arial, sans-serif" font-size="12" fill="#27ae60">✓</text>
+  
+  <!-- Strength lines -->
+  <path d="M 120 140 Q 150 135 180 140" stroke="#27ae60" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M 125 180 Q 150 175 175 180" stroke="#27ae60" stroke-width="2" fill="none" opacity="0.6"/>
+  
+  <!-- Core strength indicator -->
+  <ellipse cx="150" cy="175" rx="25" ry="45" fill="none" stroke="#27ae60" stroke-width="2" opacity="0.4"/>
+  <text x="125" y="195" font-family="Arial, sans-serif" font-size="8" fill="#27ae60" font-weight="bold">Core forte</text>
+  
+  <!-- Balance indicators -->
+  <circle cx="135" cy="345" r="12" fill="none" stroke="#27ae60" stroke-width="1" opacity="0.5"/>
+  <circle cx="165" cy="345" r="12" fill="none" stroke="#27ae60" stroke-width="1" opacity="0.5"/>
+  <text x="120" y="365" font-family="Arial, sans-serif" font-size="8" fill="#27ae60">Equilibrio</text>
+</svg>
