@@ -58,8 +58,8 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
           cancel_on_tap_outside: true,
           // Forza la selezione manuale dell'account
           prompt: 'select_account',
-          ux_mode: 'popup',
-          // Configurazioni per evitare problemi
+          ux_mode: 'redirect',
+          // Configurazioni per evitare problemi CORS
           use_fedcm_for_prompt: false,
           itp_support: true
         });

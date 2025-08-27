@@ -50,6 +50,11 @@ class AuthService {
       return 'https://kw8.vercel.app/api';
     }
     
+    // In sviluppo, forza sempre l'uso del server locale
+    if (import.meta.env.DEV || process.env.NODE_ENV === 'development') {
+      return 'http://localhost:3001/api';
+    }
+    
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
