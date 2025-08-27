@@ -50,33 +50,41 @@ class AuthService {
       return 'https://kw8.vercel.app/api';
     }
     
-    // In sviluppo, forza sempre l'uso del server locale
-    if (import.meta.env.DEV || process.env.NODE_ENV === 'development') {
-      return 'http://localhost:3001/api';
-    }
-    
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     
-    // Se siamo in locale (localhost o 127.0.0.1)
+    // SEMPRE usa l'API locale quando siamo su localhost
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      console.log('🏠 Ambiente locale rilevato, usando API locale');
+      return 'http://localhost:3001/api';
+    }
+    
+    // In sviluppo con Vite, forza sempre l'uso del server locale
+    if (import.meta.env.DEV) {
+      console.log('🔧 Modalità development rilevata, usando API locale');
       return 'http://localhost:3001/api';
     }
     
     // Se siamo su Vercel, usa l'URL corrente del deployment
     if (hostname.includes('vercel.app')) {
+      console.log('☁️ Ambiente Vercel rilevato, usando API di produzione');
       return `${protocol}//${hostname}/api`;
     }
     
     // Se siamo su dominio kw8 personalizzato
     if (hostname.includes('kw8')) {
+      console.log('🌐 Dominio KW8 rilevato, usando API di produzione');
       return `${protocol}//${hostname}/api`;
     }
     
-    // Fallback per altri casi
-    return process.env.NODE_ENV === 'production' 
+    // Fallback: se non siamo sicuri, usa locale per development
+    const isProduction = import.meta.env.PROD;
+    const apiUrl = isProduction 
       ? `${protocol}//${hostname}/api`
       : 'http://localhost:3001/api';
+    
+    console.log(`🔄 Fallback API URL: ${apiUrl} (production: ${isProduction})`);
+    return apiUrl;
   }
   
   private get API_BASE_URL(): string {
