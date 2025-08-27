@@ -1,6 +1,6 @@
 // API endpoint per gestire le cartelle di allenamento
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { requireCoachAuth } from '../middleware/rbac';
+import { requireCoachRole } from '../middleware/rbac';
 
 // Simulazione di un database (in produzione usare MongoDB, PostgreSQL, etc.)
 let workoutFolders: any[] = [];
@@ -92,4 +92,4 @@ async function handler(req: VercelRequest & { user?: any }, res: VercelResponse)
 }
 
 // Proteggi l'endpoint con autenticazione coach
-export default requireCoachAuth(handler);
+export default requireCoachRole(handler);
