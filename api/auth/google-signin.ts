@@ -61,6 +61,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  // Controllo credenziali Google OAuth
+  if (!process.env.VITE_GOOGLE_CLIENT_ID) {
+    console.error('❌ VITE_GOOGLE_CLIENT_ID non configurato');
+    return res.status(500).json({
+      success: false,
+      message: 'Configurazione Google OAuth mancante - Client ID non trovato'
+    });
+  }
+
+  if (!process.env.JWT_SECRET) {
+    console.error('❌ JWT_SECRET non configurato');
+    return res.status(500).json({
+      success: false,
+      message: 'Configurazione server mancante - JWT Secret non trovato'
+    });
+  }
+
   // Rate limiting
   const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
   const ip = Array.isArray(clientIP) ? clientIP[0] : clientIP;
@@ -164,14 +181,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`✅ Email autorizzata: ${email}`);
 
     // Genera JWT token per l'utente autorizzato
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      console.error('JWT_SECRET non configurato');
-      return res.status(500).json({
-        success: false,
-        message: 'Errore di configurazione del server'
-      });
-    }
+    const jwtSecret = process.env.JWT_SECRET!; // Già verificato all'inizio
 
     const user = {
       userId: email,
