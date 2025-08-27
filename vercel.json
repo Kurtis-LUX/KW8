@@ -2,7 +2,16 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/**/*.ts": {
+    "api/auth/*.ts": {
+      "runtime": "@vercel/node@3.0.7"
+    },
+    "api/users/*.ts": {
+      "runtime": "@vercel/node@3.0.7"
+    },
+    "api/workout-plans/*.ts": {
+      "runtime": "@vercel/node@3.0.7"
+    },
+    "api/workout-folders/*.ts": {
       "runtime": "@vercel/node@3.0.7"
     }
   },
