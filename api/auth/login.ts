@@ -1,7 +1,7 @@
 // API endpoint per l'autenticazione sicura con JWT
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 // Logger utility per debugging strutturato
 const logger = {
@@ -40,14 +40,27 @@ const initializeAdmin = async () => {
 let initPromise: Promise<void> | null = null;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Imposta immediatamente il Content-Type per evitare text/plain di default
+  res.setHeader('Content-Type', 'application/json');
+  
   const requestId = Math.random().toString(36).substring(7);
-  logger.info(`[${requestId}] Nuova richiesta login`, { 
-    method: req.method, 
-    origin: req.headers.origin,
-    userAgent: req.headers['user-agent']?.substring(0, 50)
-  });
-
+  
   try {
+    logger.info(`[${requestId}] Nuova richiesta login`, { 
+      method: req.method, 
+      origin: req.headers.origin,
+      userAgent: req.headers['user-agent']?.substring(0, 50)
+    });
+
+    // Verifica immediata delle dipendenze critiche
+    if (!jwt || !bcrypt) {
+      logger.error(`[${requestId}] Dipendenze mancanti`, { jwt: !!jwt, bcrypt: !!bcrypt });
+      return res.status(500).json({
+        success: false,
+        message: 'Errore di configurazione server - dipendenze mancanti',
+        error: 'MISSING_DEPENDENCIES'
+      });
+    }
     // Assicurati che l'inizializzazione sia completata
     if (!initPromise) {
       initPromise = initializeAdmin();

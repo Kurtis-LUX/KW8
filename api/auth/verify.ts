@@ -1,6 +1,6 @@
 // API endpoint per la verifica del token JWT
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import jwt from 'jsonwebtoken';
+const jwt = require('jsonwebtoken');
 
 // Logger utility per debugging strutturato
 const logger = {
@@ -27,14 +27,28 @@ interface JWTPayload {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Imposta immediatamente il Content-Type per evitare text/plain di default
+  res.setHeader('Content-Type', 'application/json');
+  
   const requestId = Math.random().toString(36).substring(7);
-  logger.info(`[${requestId}] Nuova richiesta verifica token`, { 
-    method: req.method, 
-    origin: req.headers.origin,
-    userAgent: req.headers['user-agent']?.substring(0, 50)
-  });
-
+  
   try {
+    logger.info(`[${requestId}] Nuova richiesta verifica token`, { 
+      method: req.method, 
+      origin: req.headers.origin,
+      userAgent: req.headers['user-agent']?.substring(0, 50)
+    });
+
+    // Verifica immediata delle dipendenze critiche
+    if (!jwt) {
+      logger.error(`[${requestId}] Dipendenze mancanti`, { jwt: !!jwt });
+      return res.status(500).json({
+        success: false,
+        valid: false,
+        message: 'Errore di configurazione server - dipendenze mancanti',
+        error: 'MISSING_DEPENDENCIES'
+      });
+    }
     // Abilita CORS con logging
     const allowedOrigins = [
       'http://localhost:5173',
@@ -237,13 +251,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
 
   } catch (error: any) {
-    logger.error(`[${requestId}] Errore generale nella verifica token`, error);
+    // Assicurati sempre che il Content-Type sia impostato
     res.setHeader('Content-Type', 'application/json');
-    return res.status(500).json({ 
+    
+    logger.error(`[${requestId}] Errore generale nella verifica token`, error);
+    
+    // Gestione specifica per diversi tipi di errore
+    let errorType = 'INTERNAL_SERVER_ERROR';
+    let statusCode = 500;
+    let message = 'Errore interno del server';
+    
+    if (error?.code === 'MODULE_NOT_FOUND') {
+      errorType = 'MODULE_NOT_FOUND';
+      message = 'Errore di configurazione server - modulo mancante';
+    } else if (error?.name === 'JsonWebTokenError') {
+      errorType = 'JWT_LIBRARY_ERROR';
+      message = 'Errore nella libreria JWT';
+    } else if (error?.message?.includes('jwt')) {
+      errorType = 'JWT_PROCESSING_ERROR';
+      message = 'Errore nel processamento JWT';
+    }
+    
+    return res.status(statusCode).json({ 
       success: false,
       valid: false, 
-      message: 'Errore interno del server',
-      error: 'INTERNAL_SERVER_ERROR'
+      message,
+      error: errorType,
+      requestId
     });
   }
 }

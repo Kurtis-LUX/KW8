@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import jwt from 'jsonwebtoken';
-import { OAuth2Client } from 'google-auth-library';
+const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
 
 // Logger utility per debugging strutturato
 const logger = {
@@ -151,14 +151,27 @@ function validateAuthorizedEmail(email: string): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Imposta immediatamente il Content-Type per evitare text/plain di default
+  res.setHeader('Content-Type', 'application/json');
+  
   const requestId = Math.random().toString(36).substring(7);
-  logger.info(`[${requestId}] Nuova richiesta Google Sign-In`, { 
-    method: req.method, 
-    origin: req.headers.origin,
-    userAgent: req.headers['user-agent']?.substring(0, 50)
-  });
-
+  
   try {
+    logger.info(`[${requestId}] Nuova richiesta Google Sign-In`, { 
+      method: req.method, 
+      origin: req.headers.origin,
+      userAgent: req.headers['user-agent']?.substring(0, 50)
+    });
+
+    // Verifica immediata delle dipendenze critiche
+    if (!jwt || !OAuth2Client) {
+      logger.error(`[${requestId}] Dipendenze mancanti`, { jwt: !!jwt, OAuth2Client: !!OAuth2Client });
+      return res.status(500).json({
+        success: false,
+        message: 'Errore di configurazione server - dipendenze mancanti',
+        error: 'MISSING_DEPENDENCIES'
+      });
+    }
     // Gestione CORS
     if (req.method === 'OPTIONS') {
       logger.info(`[${requestId}] Gestione preflight CORS`);
@@ -372,11 +385,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     logger.error(`[${requestId}] Errore generale nell'autenticazione Google`, error);
-    res.setHeader('Content-Type', 'application/json');
+    
+    // Assicurati che il Content-Type sia sempre JSON
+    if (!res.headersSent) {
+      res.setHeader('Content-Type', 'application/json');
+    }
+    
+    // Gestione errori specifici per debugging
+    let errorMessage = 'Errore interno del server durante l\'autenticazione';
+    let errorCode = 'INTERNAL_SERVER_ERROR';
+    
+    if (error.message?.includes('Cannot find module')) {
+      errorMessage = 'Modulo mancante sul server';
+      errorCode = 'MODULE_NOT_FOUND';
+    } else if (error.message?.includes('google-auth-library')) {
+      errorMessage = 'Errore libreria Google Auth';
+      errorCode = 'GOOGLE_AUTH_ERROR';
+    } else if (error.message?.includes('jsonwebtoken')) {
+      errorMessage = 'Errore libreria JWT';
+      errorCode = 'JWT_LIBRARY_ERROR';
+    }
+    
     return res.status(500).json({
       success: false,
-      message: 'Errore interno del server durante l\'autenticazione',
-      error: 'INTERNAL_SERVER_ERROR'
+      message: errorMessage,
+      error: errorCode,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 }
