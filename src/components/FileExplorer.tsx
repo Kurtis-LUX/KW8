@@ -1,0 +1,911 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Folder,
+  FolderOpen,
+  FileText,
+  Grid3X3,
+  List,
+  Plus,
+  MoreVertical,
+  Download,
+  Edit3,
+  Trash2,
+  Link,
+  ChevronRight,
+  ChevronDown,
+  Users,
+  Calendar,
+  Target,
+  Palette
+} from 'lucide-react';
+import DB, { WorkoutPlan, WorkoutFolder, WorkoutVariant } from '../utils/database';
+import FolderCustomizer, { AVAILABLE_ICONS } from './FolderCustomizer';
+import WorkoutCustomizer from './WorkoutCustomizer';
+import TreeView from './TreeView';
+
+interface FileExplorerProps {
+  currentUser: any;
+}
+
+type ViewMode = 'list' | 'grid';
+
+interface FolderTreeItem {
+  id: string;
+  name: string;
+  type: 'folder' | 'file';
+  icon?: string;
+  color?: string;
+  parentId?: string;
+  children?: FolderTreeItem[];
+  workoutCount?: number;
+  subfolderCount?: number;
+  isExpanded?: boolean;
+  data?: WorkoutPlan | WorkoutFolder;
+}
+
+const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
+  const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([]);
+  const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Root' }]);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createType, setCreateType] = useState<'folder' | 'workout'>('folder');
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [itemToRename, setItemToRename] = useState<FolderTreeItem | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<FolderTreeItem | null>(null);
+  const [showTreeView, setShowTreeView] = useState(false);
+  const [draggedItem, setDraggedItem] = useState<FolderTreeItem | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadFolderContent();
+  }, [currentFolderId]);
+
+  // Funzione per contare schede e sottocartelle
+  const getFolderCounts = (folderId: string, allFolders: WorkoutFolder[], allWorkouts: WorkoutPlan[]) => {
+    const subfolders = allFolders.filter(folder => folder.parentId === folderId);
+    const workouts = allWorkouts.filter(workout => workout.folderId === folderId);
+    
+    // Conta ricorsivamente tutte le schede nelle sottocartelle
+    const countWorkoutsRecursive = (folderIds: string[]): number => {
+      let count = 0;
+      folderIds.forEach(id => {
+        count += allWorkouts.filter(workout => workout.folderId === id).length;
+        const childFolders = allFolders.filter(folder => folder.parentId === id);
+        if (childFolders.length > 0) {
+          count += countWorkoutsRecursive(childFolders.map(f => f.id));
+        }
+      });
+      return count;
+    };
+    
+    const totalWorkouts = workouts.length + countWorkoutsRecursive(subfolders.map(f => f.id));
+    
+    return {
+      subfolders: subfolders.length,
+      workouts: totalWorkouts
+    };
+  };
+
+  // Funzioni drag & drop
+  const handleDragStart = (e: React.DragEvent, item: FolderTreeItem) => {
+    setDraggedItem(item);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverItem(targetId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverItem(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetFolderId: string | null) => {
+    e.preventDefault();
+    setDragOverItem(null);
+    
+    if (!draggedItem) return;
+    
+    try {
+      if (draggedItem.type === 'folder') {
+        // Sposta cartella
+        const folder = draggedItem.data as WorkoutFolder;
+        const updatedFolder = { ...folder, parentId: targetFolderId };
+        await DB.saveWorkoutFolder(updatedFolder);
+      } else {
+        // Sposta scheda
+        const workout = draggedItem.data as WorkoutPlan;
+        const updatedWorkout = { ...workout, folderId: targetFolderId };
+        await DB.saveWorkoutPlan(updatedWorkout);
+      }
+      
+      // Ricarica il contenuto
+      await loadFolderContent();
+      setDraggedItem(null);
+    } catch (error) {
+      console.error('Errore durante lo spostamento:', error);
+    }
+  };
+
+  const loadFolderContent = () => {
+    const folders = DB.getWorkoutFolders();
+    const workoutPlans = DB.getWorkoutPlans();
+
+    // Filtra cartelle e schede per la cartella corrente
+    const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
+    const currentWorkouts = workoutPlans.filter(plan => plan.folderId === currentFolderId);
+
+    // Crea gli elementi dell'albero
+    const treeItems: FolderTreeItem[] = [
+      // Cartelle
+      ...currentFolders.map(folder => {
+        const counts = getFolderCounts(folder.id, folders, workoutPlans);
+        
+        return {
+          id: folder.id,
+          name: folder.name,
+          type: 'folder' as const,
+          icon: folder.icon,
+          parentId: folder.parentId,
+          workoutCount: counts.workouts,
+          subfolderCount: counts.subfolders,
+          isExpanded: folder.isExpanded,
+          data: folder
+        };
+      }),
+      // Schede di allenamento
+      ...currentWorkouts.map(workout => ({
+        id: workout.id,
+        name: workout.name,
+        type: 'file' as const,
+        parentId: workout.folderId,
+        data: workout
+      }))
+    ];
+
+    setFolderTree(treeItems);
+  };
+
+  const navigateToFolder = (folderId?: string, folderName?: string) => {
+    setCurrentFolderId(folderId);
+    
+    if (folderId) {
+      const folder = DB.getWorkoutFolderById(folderId);
+      if (folder) {
+        // Costruisci il breadcrumb
+        const newBreadcrumb = [...breadcrumb];
+        if (!newBreadcrumb.find(b => b.id === folderId)) {
+          newBreadcrumb.push({ id: folderId, name: folder.name });
+        }
+        setBreadcrumb(newBreadcrumb);
+      }
+    } else {
+      setBreadcrumb([{ name: 'Root' }]);
+    }
+  };
+
+  const navigateToBreadcrumb = (index: number) => {
+    const newBreadcrumb = breadcrumb.slice(0, index + 1);
+    setBreadcrumb(newBreadcrumb);
+    
+    const targetFolder = newBreadcrumb[newBreadcrumb.length - 1];
+    setCurrentFolderId(targetFolder.id);
+  };
+
+  const handleItemClick = (item: FolderTreeItem) => {
+    if (item.type === 'folder') {
+      navigateToFolder(item.id, item.name);
+    } else {
+      // Apri scheda di allenamento
+      console.log('Opening workout:', item.name);
+    }
+  };
+
+  const handleItemSelect = (itemId: string, isSelected: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (isSelected) {
+      newSelected.add(itemId);
+    } else {
+      newSelected.delete(itemId);
+    }
+    setSelectedItems(newSelected);
+  };
+
+  const createNewItem = (type: 'folder' | 'workout', name: string, icon?: string, color?: string, variants?: WorkoutVariant[]) => {
+    const now = new Date().toISOString();
+    const id = `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    if (type === 'folder') {
+      const newFolder: WorkoutFolder = {
+        id,
+        name,
+        icon: icon || 'Folder',
+        color: color || '#3B82F6',
+        parentId: currentFolderId,
+        order: folderTree.filter(item => item.type === 'folder').length,
+        createdAt: now,
+        updatedAt: now,
+        isExpanded: false
+      };
+      DB.saveWorkoutFolder(newFolder);
+    } else {
+      const newWorkout: WorkoutPlan = {
+        id,
+        name,
+        description: '',
+        coach: currentUser?.name || 'Coach',
+        startDate: now,
+        duration: 30,
+        exercises: [],
+        category: 'strength',
+        status: 'draft',
+        mediaFiles: { images: [], videos: [], audio: [] },
+        tags: [],
+        order: folderTree.filter(item => item.type === 'file').length,
+        createdAt: now,
+        updatedAt: now,
+        difficulty: 1,
+        targetMuscles: [],
+        folderId: currentFolderId,
+        color: color || '#10B981',
+        variants: variants || [],
+        assignedAthletes: []
+      };
+      DB.saveWorkoutPlan(newWorkout);
+    }
+
+    loadFolderContent();
+    setShowCreateModal(false);
+  };
+
+  const deleteItem = (itemId: string, itemType: 'folder' | 'file') => {
+    if (itemType === 'folder') {
+      DB.deleteWorkoutFolder(itemId);
+    } else {
+      DB.deleteWorkoutPlan(itemId);
+    }
+    loadFolderContent();
+  };
+
+  const handleRename = (item: FolderTreeItem, newName: string) => {
+    if (item.type === 'folder' && item.data && 'icon' in item.data) {
+      const updatedFolder = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
+      DB.saveWorkoutFolder(updatedFolder);
+    } else if (item.type === 'workout' && item.data && 'title' in item.data) {
+      const updatedWorkout = { ...item.data, title: newName, updatedAt: new Date().toISOString() };
+      DB.saveWorkoutPlan(updatedWorkout);
+    }
+    loadFolderContent();
+    setShowRenameModal(false);
+    setItemToRename(null);
+  };
+
+  const handleDelete = (item: FolderTreeItem) => {
+    if (item.type === 'folder') {
+      // Elimina ricorsivamente tutte le sottocartelle e schede
+      const folders = DB.getWorkoutFolders();
+      const workouts = DB.getWorkoutPlans();
+      
+      const deleteRecursive = (folderId: string) => {
+        const subfolders = folders.filter(f => f.parentId === folderId);
+        const folderWorkouts = workouts.filter(w => w.folderId === folderId);
+        
+        // Elimina tutte le schede in questa cartella
+        folderWorkouts.forEach(workout => DB.deleteWorkoutPlan(workout.id));
+        
+        // Elimina ricorsivamente le sottocartelle
+        subfolders.forEach(subfolder => {
+          deleteRecursive(subfolder.id);
+          DB.deleteWorkoutFolder(subfolder.id);
+        });
+      };
+      
+      deleteRecursive(item.id);
+      DB.deleteWorkoutFolder(item.id);
+    } else if (item.type === 'workout') {
+       DB.deleteWorkoutPlan(item.id);
+     }
+    
+    loadFolderContent();
+    setShowDeleteModal(false);
+    setItemToDelete(null);
+  };
+
+  const handleDownload = (item: FolderTreeItem) => {
+    // Implementazione placeholder per il download
+    if (item.type === 'folder') {
+      alert(`Download cartella "${item.name}" come ZIP - Funzionalità in sviluppo`);
+    } else {
+      alert(`Download scheda "${item.name}" - Funzionalità in sviluppo`);
+    }
+  };
+
+  const handleGenerateLink = (item: FolderTreeItem) => {
+    if (item.type === 'workout') {
+      const link = `${window.location.origin}/workout/${item.id}`;
+      navigator.clipboard.writeText(link);
+      alert(`Link copiato negli appunti: ${link}`);
+    }
+  };
+
+  const FolderIcon = ({ item }: { item: FolderTreeItem }) => {
+    if (item.type === 'folder' && item.data && 'icon' in item.data) {
+      const iconData = AVAILABLE_ICONS.find(icon => icon.name === item.data.icon);
+      if (iconData) {
+        const IconComponent = iconData.component;
+        return <IconComponent size={20} />;
+      }
+    }
+    
+    if (item.type === 'folder') {
+      return item.isExpanded ? <FolderOpen size={20} /> : <Folder size={20} />;
+    }
+    return <FileText size={20} />;
+  };
+
+  const ItemCard = ({ item }: { item: FolderTreeItem }) => {
+    const isSelected = selectedItems.has(item.id);
+    const isDragOver = dragOverItem === item.id;
+    const isDragging = draggedItem?.id === item.id;
+    
+    return (
+      <div 
+          className={`group relative bg-white rounded-lg border-2 transition-all duration-300 ease-in-out hover:shadow-lg hover:scale-[1.02] cursor-pointer transform ${
+            isSelected ? 'border-red-500 bg-red-50 shadow-md scale-[1.01]' : 'border-gray-200 hover:border-gray-300'
+          } ${
+            isDragOver ? 'border-red-300 bg-red-50 shadow-lg scale-[1.02]' : ''
+          } ${
+            isDragging ? 'opacity-50 scale-95' : ''
+          }`}
+          onClick={() => handleItemClick(item)}
+          draggable
+          onDragStart={(e) => handleDragStart(e, item)}
+          onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : e.preventDefault()}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => item.type === 'folder' ? handleDrop(e, item.id) : e.preventDefault()}
+        >
+        <div className="p-4">
+          {/* Header con icona e nome */}
+          <div className="flex items-center space-x-3 mb-2">
+            <div 
+              className="p-2 rounded-lg"
+              style={{
+                backgroundColor: item.type === 'folder' && item.data && 'color' in item.data 
+                  ? item.data.color + '20' 
+                  : item.type === 'workout' && item.data && 'color' in item.data
+                  ? item.data.color + '20'
+                  : item.type === 'folder' ? '#3B82F620' : '#10B98120',
+                color: item.type === 'folder' && item.data && 'color' in item.data 
+                  ? item.data.color 
+                  : item.type === 'workout' && item.data && 'color' in item.data
+                  ? item.data.color
+                  : item.type === 'folder' ? '#3B82F6' : '#10B981'
+              }}
+            >
+              <FolderIcon item={item} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
+              {item.type === 'folder' && (
+                <p className="text-sm text-gray-500">
+                  {item.workoutCount || 0} schede, {item.subfolderCount || 0} sottocartelle
+                </p>
+              )}
+              {item.type === 'file' && item.data && 'coach' in item.data && (
+                <p className="text-sm text-gray-500">
+                  Coach: {item.data.coach}
+                  {item.data && 'variants' in item.data && item.data.variants && item.data.variants.length > 0 && (
+                    <span> • {item.data.variants.length} varianti</span>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Metadata per schede */}
+          {item.type === 'file' && item.data && 'exercises' in item.data && (
+            <div className="flex items-center space-x-4 text-xs text-gray-500">
+              <div className="flex items-center space-x-1">
+                <Target size={12} />
+                <span>{item.data.exercises?.length || 0} esercizi</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Calendar size={12} />
+                <span>{item.data.duration} giorni</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Menu azioni */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="relative group/menu">
+            <button className="p-1 rounded hover:bg-gray-100">
+              <MoreVertical size={16} />
+            </button>
+            
+            {/* Dropdown menu */}
+            <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[150px] opacity-0 group-hover/menu:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setItemToRename(item);
+                  setShowRenameModal(true);
+                }}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+              >
+                <Edit3 size={14} />
+                <span>Rinomina</span>
+              </button>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownload(item);
+                }}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+              >
+                <Download size={14} />
+                <span>Scarica</span>
+              </button>
+              
+              {item.type === 'workout' && (
+                 <button
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     handleGenerateLink(item);
+                   }}
+                   className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+                 >
+                   <Link size={14} />
+                   <span>Genera link</span>
+                 </button>
+               )}
+              
+              <hr className="my-1" />
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setItemToDelete(item);
+                  setShowDeleteModal(true);
+                }}
+                className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center space-x-2"
+              >
+                <Trash2 size={14} />
+                <span>Elimina</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Checkbox per selezione */}
+        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              handleItemSelect(item.id, e.target.checked);
+            }}
+            className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+          />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-gray-50">
+      {/* Toolbar */}
+      <div className="bg-white border-b border-gray-200 p-4">
+        <div className="flex items-center justify-between">
+          {/* Breadcrumb */}
+          <nav className="flex items-center space-x-2 text-sm">
+            {breadcrumb.map((crumb, index) => (
+              <React.Fragment key={index}>
+                <button
+                  onClick={() => navigateToBreadcrumb(index)}
+                  className="text-gray-600 hover:text-gray-900 font-medium"
+                >
+                  {crumb.name}
+                </button>
+                {index < breadcrumb.length - 1 && (
+                  <ChevronRight size={16} className="text-gray-400" />
+                )}
+              </React.Fragment>
+            ))}
+          </nav>
+
+          {/* Azioni */}
+          <div className="flex items-center space-x-2">
+            {/* Toggle vista ad albero */}
+            <button
+              onClick={() => setShowTreeView(!showTreeView)}
+              className={`p-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105 ${
+                showTreeView ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
+              }`}
+              title="Vista ad albero"
+            >
+              <ChevronRight size={16} className={`transition-transform duration-200 ease-in-out ${showTreeView ? 'rotate-90' : ''}`} />
+            </button>
+
+            {/* Toggle vista */}
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded-md transition-all duration-200 ease-in-out hover:scale-105 ${
+                  viewMode === 'list' ? 'bg-white shadow-sm transform scale-105' : 'hover:bg-gray-200'
+                }`}
+              >
+                <List size={16} />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-md transition-all duration-200 ease-in-out hover:scale-105 ${
+                  viewMode === 'grid' ? 'bg-white shadow-sm transform scale-105' : 'hover:bg-gray-200'
+                }`}
+              >
+                <Grid3X3 size={16} />
+              </button>
+            </div>
+
+            {/* Pulsante crea */}
+            <div className="relative">
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="group flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg transform"
+              >
+                <Plus size={16} className="transition-transform duration-200 ease-in-out group-hover:rotate-90" />
+                <span>Crea</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contenuto */}
+      <div className="flex-1 p-4 overflow-auto">
+        {/* Layout principale con sidebar opzionale */}
+        <div className={`flex ${showTreeView ? 'space-x-4' : ''}`}>
+          {/* Sidebar navigazione ad albero */}
+          {showTreeView && (
+            <div className="w-64 flex-shrink-0">
+              <TreeView
+                currentFolderId={currentFolderId}
+                onFolderSelect={navigateToFolder}
+              />
+            </div>
+          )}
+          
+          {/* Contenuto principale */}
+          <div 
+            className={`flex-1 transition-all duration-300 ease-in-out ${
+              dragOverItem === 'root' ? 'bg-red-50 border-2 border-dashed border-red-300 rounded-lg transform scale-[1.01]' : ''
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOverItem('root');
+            }}
+            onDragLeave={() => setDragOverItem(null)}
+            onDrop={(e) => handleDrop(e, currentFolderId)}
+          >
+            {folderTree.length === 0 ? (
+              <div className="text-center py-12">
+                <Folder className="mx-auto mb-4 text-gray-400" size={48} />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Cartella vuota</h3>
+                <p className="text-gray-500 mb-4">Inizia creando una nuova cartella o scheda di allenamento.</p>
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  Crea il primo elemento
+                </button>
+              </div>
+            ) : (
+              <div className={`${
+                viewMode === 'grid' 
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+                  : 'space-y-2'
+              }`}>
+                {folderTree.map((item) => (
+                  <ItemCard key={item.id} item={item} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal creazione */}
+      {showCreateModal && (
+        <CreateItemModal
+          onClose={() => setShowCreateModal(false)}
+          onCreate={createNewItem}
+          type={createType}
+          onTypeChange={setCreateType}
+        />
+      )}
+
+      {/* Modal rinomina */}
+      {showRenameModal && itemToRename && (
+        <RenameModal
+          item={itemToRename}
+          onClose={() => {
+            setShowRenameModal(false);
+            setItemToRename(null);
+          }}
+          onRename={handleRename}
+        />
+      )}
+
+      {/* Modal eliminazione */}
+      {showDeleteModal && itemToDelete && (
+        <DeleteModal
+          item={itemToDelete}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setItemToDelete(null);
+          }}
+          onDelete={handleDelete}
+        />
+      )}
+    </div>
+  );
+};
+
+// Modal per creare nuovi elementi
+interface CreateItemModalProps {
+  onClose: () => void;
+  onCreate: (type: 'folder' | 'workout', name: string, icon?: string, color?: string, variants?: WorkoutVariant[]) => void;
+  type: 'folder' | 'workout';
+  onTypeChange: (type: 'folder' | 'workout') => void;
+}
+
+const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, type, onTypeChange }) => {
+  const [name, setName] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState('Folder');
+  const [selectedColor, setSelectedColor] = useState(type === 'folder' ? '#3B82F6' : '#10B981');
+  const [workoutVariants, setWorkoutVariants] = useState<WorkoutVariant[]>([]);
+  const [showCustomizer, setShowCustomizer] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) {
+      onCreate(
+        type, 
+        name.trim(), 
+        type === 'folder' ? selectedIcon : undefined, 
+        selectedColor,
+        type === 'workout' ? workoutVariants : undefined
+      );
+      setName('');
+      setSelectedIcon('Folder');
+      setSelectedColor(type === 'folder' ? '#3B82F6' : '#10B981');
+      setWorkoutVariants([]);
+      setShowCustomizer(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Crea {type === 'folder' ? 'Cartella' : 'Scheda'}
+        </h2>
+        
+        {/* Selezione tipo */}
+        <div className="flex space-x-2 mb-4">
+          <button
+            onClick={() => onTypeChange('folder')}
+            className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${
+              type === 'folder'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                : 'border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <Folder className="inline mr-2" size={16} />
+            Cartella
+          </button>
+          <button
+            onClick={() => onTypeChange('workout')}
+            className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${
+              type === 'workout'
+                ? 'border-green-500 bg-green-50 text-green-700'
+                : 'border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <FileText className="inline mr-2" size={16} />
+            Scheda
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nome {type === 'folder' ? 'cartella' : 'scheda'}
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={`Inserisci il nome della ${type === 'folder' ? 'cartella' : 'scheda'}...`}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              autoFocus
+            />
+          </div>
+
+          {/* Personalizzazione */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Personalizzazione
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowCustomizer(!showCustomizer)}
+                className="flex items-center space-x-1 text-sm text-red-600 hover:text-red-700"
+              >
+                <Palette size={14} />
+                <span>{showCustomizer ? 'Nascondi' : 'Personalizza'}</span>
+              </button>
+            </div>
+            
+            {showCustomizer && (
+              <div className="border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+                {type === 'folder' ? (
+                  <FolderCustomizer
+                    selectedIcon={selectedIcon}
+                    selectedColor={selectedColor}
+                    onIconChange={setSelectedIcon}
+                    onColorChange={setSelectedColor}
+                  />
+                ) : (
+                  <WorkoutCustomizer
+                    selectedColor={selectedColor}
+                    onColorChange={setSelectedColor}
+                    variants={workoutVariants}
+                    onVariantsChange={setWorkoutVariants}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Crea
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Modal per rinominare elementi
+interface RenameModalProps {
+  item: FolderTreeItem;
+  onClose: () => void;
+  onRename: (item: FolderTreeItem, newName: string) => void;
+}
+
+const RenameModal: React.FC<RenameModalProps> = ({ item, onClose, onRename }) => {
+  const [name, setName] = useState(item.name);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim() && name.trim() !== item.name) {
+      onRename(item, name.trim());
+    } else {
+      onClose();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Rinomina {item.type === 'folder' ? 'Cartella' : 'Scheda'}
+        </h2>
+        
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Nuovo nome
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              autoFocus
+            />
+          </div>
+          
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Rinomina
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Modal per confermare eliminazione
+interface DeleteModalProps {
+  item: FolderTreeItem;
+  onClose: () => void;
+  onDelete: (item: FolderTreeItem) => void;
+}
+
+const DeleteModal: React.FC<DeleteModalProps> = ({ item, onClose, onDelete }) => {
+  const handleDelete = () => {
+    onDelete(item);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">
+          Elimina {item.type === 'folder' ? 'Cartella' : 'Scheda'}
+        </h2>
+        
+        <p className="text-gray-600 mb-6">
+          Sei sicuro di voler eliminare "{item.name}"?
+          {item.type === 'folder' && (
+            <span className="block mt-2 text-red-600 font-medium">
+              Attenzione: verranno eliminate anche tutte le sottocartelle e schede contenute.
+            </span>
+          )}
+        </p>
+        
+        <div className="flex space-x-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Annulla
+          </button>
+          <button
+            onClick={handleDelete}
+            className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Elimina
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FileExplorer;

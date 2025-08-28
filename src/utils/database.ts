@@ -24,12 +24,34 @@ export interface WorkoutPlan {
   difficulty?: number; // 1-5 stelle
   targetMuscles?: string[];
   folderId?: string; // ID della cartella contenitore
+  color?: string;
+  variants?: WorkoutVariant[];
+}
+
+export interface WorkoutVariant {
+  id: string;
+  name: string;
+  description?: string;
+  parentWorkoutId: string;
+  modifications: {
+    exerciseId: string;
+    changes: {
+      sets?: number;
+      reps?: number;
+      weight?: number;
+      duration?: number;
+      rest?: number;
+    };
+  }[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface WorkoutFolder {
   id: string;
   name: string;
   icon: string; // Nome dell'icona Lucide React
+  color: string; // Colore personalizzabile (hex, rgb, o nome colore)
   parentId?: string; // ID della cartella padre (per sotto-cartelle)
   order: number;
   createdAt: string;

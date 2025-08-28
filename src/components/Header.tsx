@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -210,7 +210,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                       <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
                     </div>
                     
-
+                    {currentUser.role === 'coach' && (
+                      <button
+                        onClick={() => handleNavigation('coach-dashboard')}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center space-x-2"
+                      >
+                        <Settings size={16} />
+                        <span>Dashboard Coach</span>
+                      </button>
+                    )}
                     
                     {currentUser.role === 'athlete' && (
                       <button
@@ -365,7 +373,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
               </button>
             </li>
             
-
+            {/* Dashboard Coach - Solo per coach */}
+            {currentUser && currentUser.role === 'coach' && (
+              <li>
+                <button
+                  onClick={() => handleNavigation('coach-dashboard')}
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                >
+                  <Settings size={20} className="sm:w-6 sm:h-6" />
+                  <span>Dashboard Coach</span>
+                </button>
+              </li>
+            )}
             
             {currentUser && (
               <li>

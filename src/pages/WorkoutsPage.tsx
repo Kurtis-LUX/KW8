@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import DB from '../utils/database';
-import { ArrowLeft, Calendar, Clock, Dumbbell, Target, CheckCircle, Play, Download, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Dumbbell, Target, CheckCircle, Play, Download, User as UserIcon, Settings } from 'lucide-react';
+import FileExplorer from '../components/FileExplorer';
 
 
 
 interface WorkoutsPageProps {
   onNavigate: (page: string) => void;
   currentUser: User | null;
+  defaultTab?: string;
 }
 
-const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) => {
-  const [activeTab, setActiveTab] = useState('current');
+const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, defaultTab = 'current' }) => {
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [assignedWorkouts, setAssignedWorkouts] = useState([]);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
   const [workoutHistory, setWorkoutHistory] = useState([
@@ -127,7 +129,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 mb-8 bg-gray-100 p-1 rounded-lg max-w-md mx-auto">
+        <div className="flex space-x-1 mb-8 bg-gray-100 p-1 rounded-lg max-w-2xl mx-auto">
           <button
             onClick={() => setActiveTab('current')}
             className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-300 ${
@@ -137,6 +139,17 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
             }`}
           >
             Scheda Attuale
+          </button>
+          <button
+            onClick={() => setActiveTab('manager')}
+            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-300 ${
+              activeTab === 'manager'
+                ? 'bg-white text-red-600 shadow-sm'
+                : 'text-navy-700 hover:text-navy-900'
+            }`}
+          >
+            <Settings className="inline mr-1" size={16} />
+            Gestionale
           </button>
           <button
             onClick={() => setActiveTab('history')}
@@ -247,6 +260,15 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
                         <p className="text-navy-700">{selectedWorkout.description}</p>
                       </div>
                     )}
+
+        {/* Manager Tab - File Explorer */}
+        {activeTab === 'manager' && (
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden" style={{ height: '70vh' }}>
+              <FileExplorer currentUser={currentUser} />
+            </div>
+          </div>
+        )}
 
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold text-navy-900 mb-4">Esercizi</h3>

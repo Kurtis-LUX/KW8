@@ -15,6 +15,7 @@ import SectionSeparator from './components/SectionSeparator';
 
 import AuthPage from './pages/AuthPage';
 import WorkoutsPage from './pages/WorkoutsPage';
+import WorkoutManagerPage from './pages/WorkoutManagerPage';
 import CoachAuthPage from './components/auth/CoachAuthPage';
 import PrivacyPage from './pages/PrivacyPage';
 import CookiePolicyPage from './pages/CookiePolicyPage';
@@ -45,6 +46,7 @@ function App() {
   const [appInitialized, setAppInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const [workoutsDefaultTab, setWorkoutsDefaultTab] = useState<string>('current');
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -144,6 +146,10 @@ function App() {
     } else if (page === 'cookie-settings') {
       setShowCookieSettings(true);
     } else {
+      // Reset del tab di default per workouts se non viene dalla dashboard coach
+      if (page === 'workouts' && workoutsDefaultTab !== 'current') {
+        setWorkoutsDefaultTab('current');
+      }
       setCurrentPage(page);
     }
   };
@@ -235,7 +241,10 @@ function App() {
                 <div className="bg-white rounded-lg shadow p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Gestione Schede</h3>
                   <p className="text-gray-600 mb-4">Crea e gestisci le schede di allenamento per i tuoi atleti</p>
-                  <button className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                  <button 
+                    onClick={() => handleNavigation('workout-manager')}
+                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
                     Gestisci Schede
                   </button>
                 </div>
@@ -265,7 +274,34 @@ function App() {
     return (
       <LanguageProvider>
         {currentUser ? 
-          <WorkoutsPage onNavigate={handleNavigation} currentUser={currentUser} /> : 
+          <WorkoutsPage 
+            onNavigate={handleNavigation} 
+            currentUser={currentUser} 
+            defaultTab={workoutsDefaultTab}
+          /> : 
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
+            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
+            <button 
+              onClick={() => handleNavigation('auth')} 
+              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+            >
+              Accedi
+            </button>
+          </div>
+        }
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'workout-manager') {
+    return (
+      <LanguageProvider>
+        {currentUser ? 
+          <WorkoutManagerPage 
+            onNavigate={handleNavigation} 
+            currentUser={currentUser} 
+          /> : 
           <div className="p-8 text-center">
             <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
             <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
