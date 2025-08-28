@@ -54,35 +54,23 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   }
 
   return (
-    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 ${
+    <div className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${
       fadeOut ? 'opacity-0' : 'opacity-100'
-    }`} style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
+    }`} style={{ backgroundColor: '#1e3a8a' }}>
       
-      {/* Logo */}
-      <div className={`mb-8 transition-all duration-500 transform ${
-        logoVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+      {/* Logo with pulsing animation */}
+      <div className={`transition-all duration-500 transform ${
+        logoVisible ? 'opacity-100 scale-100 animate-pulse' : 'opacity-0 scale-95'
       }`}>
         <div className="text-white text-center">
           <div className="relative">
             <img 
               src="/images/logo.png" 
               alt="KW8 Logo" 
-              className="h-24 md:h-32 w-auto mx-auto mb-4 filter drop-shadow-lg"
+              className="h-24 md:h-32 w-auto mx-auto filter drop-shadow-lg"
             />
           </div>
-          <p className="text-xl md:text-2xl font-light tracking-wider" style={{ fontFamily: 'Bebas Neue, cursive' }}>
-            CROSS YOUR LIMITS.
-          </p>
         </div>
-      </div>
-
-      {/* Three dots loading animation */}
-      <div className={`flex space-x-2 transition-all duration-500 ${
-        logoVisible ? 'opacity-100' : 'opacity-0'
-      }`}>
-        <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-        <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-        <div className="w-3 h-3 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
       </div>
 
     </div>

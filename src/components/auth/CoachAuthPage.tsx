@@ -179,10 +179,10 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
       {/* Pulsante Torna alla home in alto a sinistra */}
       <button
         onClick={() => onNavigateHome && onNavigateHome()}
-        className="absolute top-4 left-4 text-white hover:text-gray-200 font-medium transition-colors flex items-center space-x-2 bg-black/20 backdrop-blur-sm px-4 py-2 rounded-lg hover:bg-black/30"
+        className="absolute top-4 left-4 flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black font-medium hover:bg-red-50"
       >
         <span>←</span>
-        <span>Torna alla home</span>
+        <span className="hidden sm:inline">Home</span>
       </button>
       
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
