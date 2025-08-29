@@ -16,12 +16,16 @@ import {
   Users,
   Calendar,
   Target,
-  Palette
+  Palette,
+  Search,
+  Filter,
+  SlidersHorizontal
 } from 'lucide-react';
 import DB, { WorkoutPlan, WorkoutFolder, WorkoutVariant } from '../utils/database';
 import FolderCustomizer, { AVAILABLE_ICONS } from './FolderCustomizer';
 import WorkoutCustomizer from './WorkoutCustomizer';
 import TreeView from './TreeView';
+import WorkoutDetailPage from './WorkoutDetailPage';
 
 interface FileExplorerProps {
   currentUser: any;
@@ -44,11 +48,11 @@ interface FolderTreeItem {
 }
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([]);
-  const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Root' }]);
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Home' }]);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createType, setCreateType] = useState<'folder' | 'workout'>('folder');
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -58,6 +62,17 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   const [showTreeView, setShowTreeView] = useState(false);
   const [draggedItem, setDraggedItem] = useState<FolderTreeItem | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
+  const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
+  
+  // Stati per ricerca e filtraggio
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    showFolders: true,
+    showWorkouts: true,
+    sortBy: 'name' as 'name' | 'date' | 'type'
+  });
 
   useEffect(() => {
     loadFolderContent();
@@ -185,8 +200,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
         setBreadcrumb(newBreadcrumb);
       }
     } else {
-      setBreadcrumb([{ name: 'Root' }]);
+      setBreadcrumb([{ name: 'Home' }]);
     }
+    
+    // Ricarica il contenuto della cartella
+    loadFolderContent();
   };
 
   const navigateToBreadcrumb = (index: number) => {
@@ -197,24 +215,62 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     setCurrentFolderId(targetFolder.id);
   };
 
+  // Funzione per filtrare e ordinare gli elementi
+  const getFilteredAndSortedItems = () => {
+    let filtered = folderTree.filter(item => {
+      // Filtro per tipo
+      if (!filters.showFolders && item.type === 'folder') return false;
+      if (!filters.showWorkouts && item.type === 'workout') return false;
+      
+      // Filtro per ricerca
+      if (searchTerm) {
+        return item.name.toLowerCase().includes(searchTerm.toLowerCase());
+      }
+      
+      return true;
+    });
+
+    // Ordinamento
+    filtered.sort((a, b) => {
+      switch (filters.sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'date':
+          const aDate = a.data && 'createdAt' in a.data ? a.data.createdAt : '';
+          const bDate = b.data && 'createdAt' in b.data ? b.data.createdAt : '';
+          return new Date(bDate).getTime() - new Date(aDate).getTime();
+        case 'type':
+          if (a.type === b.type) return a.name.localeCompare(b.name);
+          return a.type === 'folder' ? -1 : 1;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  };
+
   const handleItemClick = (item: FolderTreeItem) => {
     if (item.type === 'folder') {
       navigateToFolder(item.id, item.name);
     } else {
       // Apri scheda di allenamento
-      console.log('Opening workout:', item.name);
+      setSelectedWorkoutId(item.id);
+      setShowWorkoutDetail(true);
     }
   };
 
-  const handleItemSelect = (itemId: string, isSelected: boolean) => {
-    const newSelected = new Set(selectedItems);
-    if (isSelected) {
-      newSelected.add(itemId);
-    } else {
-      newSelected.delete(itemId);
-    }
-    setSelectedItems(newSelected);
+  const handleCloseWorkoutDetail = () => {
+    setShowWorkoutDetail(false);
+    setSelectedWorkoutId(null);
   };
+
+  const handleMenuClick = (e: React.MouseEvent, item: FolderTreeItem) => {
+    e.stopPropagation();
+    // Gestisce il click sui tre puntini senza aprire la scheda
+  };
+
+
 
   const createNewItem = (type: 'folder' | 'workout', name: string, icon?: string, color?: string, variants?: WorkoutVariant[]) => {
     const now = new Date().toISOString();
@@ -276,8 +332,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     if (item.type === 'folder' && item.data && 'icon' in item.data) {
       const updatedFolder = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
       DB.saveWorkoutFolder(updatedFolder);
-    } else if (item.type === 'workout' && item.data && 'title' in item.data) {
-      const updatedWorkout = { ...item.data, title: newName, updatedAt: new Date().toISOString() };
+    } else if (item.type === 'file' && item.data && 'name' in item.data) {
+      const updatedWorkout = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
       DB.saveWorkoutPlan(updatedWorkout);
     }
     loadFolderContent();
@@ -307,7 +363,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       
       deleteRecursive(item.id);
       DB.deleteWorkoutFolder(item.id);
-    } else if (item.type === 'workout') {
+    } else if (item.type === 'file') {
        DB.deleteWorkoutPlan(item.id);
      }
     
@@ -349,18 +405,17 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   };
 
   const ItemCard = ({ item }: { item: FolderTreeItem }) => {
-    const isSelected = selectedItems.has(item.id);
     const isDragOver = dragOverItem === item.id;
     const isDragging = draggedItem?.id === item.id;
     
     return (
       <div 
-          className={`group relative bg-white rounded-lg border-2 transition-all duration-300 ease-in-out hover:shadow-lg hover:scale-[1.02] cursor-pointer transform ${
-            isSelected ? 'border-red-500 bg-red-50 shadow-md scale-[1.01]' : 'border-gray-200 hover:border-gray-300'
-          } ${
+          className={`group relative rounded-lg border-2 transition-all duration-300 ease-in-out hover:shadow-lg hover:scale-[1.02] cursor-pointer transform border-gray-200 hover:border-gray-300 ${
             isDragOver ? 'border-red-300 bg-red-50 shadow-lg scale-[1.02]' : ''
           } ${
             isDragging ? 'opacity-50 scale-95' : ''
+          } ${
+            item.type === 'folder' ? 'bg-yellow-50' : 'bg-blue-50'
           }`}
           onClick={() => handleItemClick(item)}
           draggable
@@ -425,12 +480,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
         {/* Menu azioni */}
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <div className="relative group/menu">
-            <button className="p-1 rounded hover:bg-gray-100">
+            <button 
+              className="p-1 rounded hover:bg-gray-100"
+              onClick={(e) => handleMenuClick(e, item)}
+            >
               <MoreVertical size={16} />
             </button>
             
             {/* Dropdown menu */}
-            <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[150px] opacity-0 group-hover/menu:opacity-100 transition-opacity">
+            <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[99999] min-w-[150px] opacity-0 group-hover/menu:opacity-100 transition-opacity">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -484,26 +542,124 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
           </div>
         </div>
 
-        {/* Checkbox per selezione */}
-        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <input
-            type="checkbox"
-            checked={isSelected}
-            onChange={(e) => {
-              e.stopPropagation();
-              handleItemSelect(item.id, e.target.checked);
-            }}
-            className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-          />
-        </div>
+
       </div>
     );
   };
 
+  // Renderizza WorkoutDetailPage se una scheda è selezionata
+  if (showWorkoutDetail && selectedWorkoutId) {
+    return (
+      <WorkoutDetailPage 
+        workoutId={selectedWorkoutId}
+        onClose={handleCloseWorkoutDetail} 
+      />
+    );
+  }
+
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="min-h-[calc(100vh-200px)] flex flex-col bg-gray-50">
       {/* Toolbar */}
       <div className="bg-white border-b border-gray-200 p-4">
+        {/* Barra di ricerca e filtri */}
+        <div className="mb-4">
+          <div className="flex items-center justify-center space-x-4">
+            {/* Barra di ricerca */}
+            <div className="relative flex-1 max-w-md">
+              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cerca cartelle e schede..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              />
+            </div>
+            
+            {/* Pulsante filtri */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors ${
+                  showFilters ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <SlidersHorizontal size={16} />
+                <span>Filtri</span>
+              </button>
+              
+              {/* Dropdown filtri */}
+              {showFilters && (
+                <div className="absolute top-full right-0 mt-2 w-96 bg-white rounded-lg border shadow-lg z-50">
+                  <div className="p-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      {/* Filtri tipo */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Mostra</label>
+                        <div className="space-y-2">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={filters.showFolders}
+                              onChange={(e) => setFilters(prev => ({ ...prev, showFolders: e.target.checked }))}
+                              className="mr-2 text-red-600 focus:ring-red-500"
+                            />
+                            <Folder size={16} className="mr-1" />
+                            Cartelle
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={filters.showWorkouts}
+                              onChange={(e) => setFilters(prev => ({ ...prev, showWorkouts: e.target.checked }))}
+                              className="mr-2 text-red-600 focus:ring-red-500"
+                            />
+                            <FileText size={16} className="mr-1" />
+                            Schede
+                          </label>
+                        </div>
+                      </div>
+                      
+                      {/* Ordinamento */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Ordina per</label>
+                        <select
+                          value={filters.sortBy}
+                          onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as 'name' | 'date' | 'type' }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        >
+                          <option value="name">Nome</option>
+                          <option value="date">Data creazione</option>
+                          <option value="type">Tipo</option>
+                        </select>
+                      </div>
+                      
+                      {/* Azioni filtri */}
+                      <div className="flex justify-between">
+                        <button
+                          onClick={() => {
+                            setSearchTerm('');
+                            setFilters({ showFolders: true, showWorkouts: true, sortBy: 'name' });
+                          }}
+                          className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          onClick={() => setShowFilters(false)}
+                          className="px-3 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg"
+                        >
+                          Chiudi
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
         <div className="flex items-center justify-between">
           {/* Breadcrumb */}
           <nav className="flex items-center space-x-2 text-sm">
@@ -570,7 +726,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       </div>
 
       {/* Contenuto */}
-      <div className="flex-1 p-4 overflow-auto">
+      <div className="flex-1 p-4 overflow-auto min-h-[calc(100vh-300px)]">
         {/* Layout principale con sidebar opzionale */}
         <div className={`flex ${showTreeView ? 'space-x-4' : ''}`}>
           {/* Sidebar navigazione ad albero */}
@@ -595,29 +751,56 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
             onDragLeave={() => setDragOverItem(null)}
             onDrop={(e) => handleDrop(e, currentFolderId)}
           >
-            {folderTree.length === 0 ? (
-              <div className="text-center py-12">
-                <Folder className="mx-auto mb-4 text-gray-400" size={48} />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Cartella vuota</h3>
-                <p className="text-gray-500 mb-4">Inizia creando una nuova cartella o scheda di allenamento.</p>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Crea il primo elemento
-                </button>
-              </div>
-            ) : (
-              <div className={`${
-                viewMode === 'grid' 
-                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                  : 'space-y-2'
-              }`}>
-                {folderTree.map((item) => (
-                  <ItemCard key={item.id} item={item} />
-                ))}
-              </div>
-            )}
+            {(() => {
+              const filteredItems = getFilteredAndSortedItems();
+              
+              if (folderTree.length === 0) {
+                return (
+                  <div className="text-center py-12">
+                    <Folder className="mx-auto mb-4 text-gray-400" size={48} />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Cartella vuota</h3>
+                    <p className="text-gray-500 mb-4">Inizia creando una nuova cartella o scheda di allenamento.</p>
+                    <button
+                      onClick={() => setShowCreateModal(true)}
+                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Crea il primo elemento
+                    </button>
+                  </div>
+                );
+              }
+              
+              if (filteredItems.length === 0) {
+                return (
+                  <div className="text-center py-12">
+                    <Search className="mx-auto mb-4 text-gray-400" size={48} />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nessun risultato</h3>
+                    <p className="text-gray-500 mb-4">Nessun elemento corrisponde ai criteri di ricerca o filtri selezionati.</p>
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setFilters({ showFolders: true, showWorkouts: true, sortBy: 'name' });
+                      }}
+                      className="text-red-600 hover:text-red-700 font-medium"
+                    >
+                      Cancella filtri
+                    </button>
+                  </div>
+                );
+              }
+              
+              return (
+                <div className={`${
+                  viewMode === 'grid' 
+                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+                    : 'space-y-2'
+                }`}>
+                  {filteredItems.map((item) => (
+                    <ItemCard key={item.id} item={item} />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>

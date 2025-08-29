@@ -38,10 +38,10 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
       setLogoVisible(true);
     }, 100);
 
-    // Complete loading after maximum 1.5 seconds
+    // Complete loading after 2 seconds
     const loadingTimer = setTimeout(() => {
       handleLoadingComplete();
-    }, 1500);
+    }, 2000);
 
     return () => {
       clearTimeout(loadingTimer);
@@ -54,15 +54,15 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
   }
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${
+    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center transition-all duration-300 ${
       fadeOut ? 'opacity-0' : 'opacity-100'
-    }`} style={{ backgroundColor: '#1e3a8a' }}>
+    }`} style={{ backgroundColor: 'white' }}>
       
-      {/* Logo with pulsing animation */}
-      <div className={`transition-all duration-500 transform ${
-        logoVisible ? 'opacity-100 scale-100 animate-pulse' : 'opacity-0 scale-95'
+      {/* Logo */}
+      <div className={`transition-all duration-500 transform mb-8 ${
+        logoVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       }`}>
-        <div className="text-white text-center">
+        <div className="text-center">
           <div className="relative">
             <img 
               src="/images/logo.png" 
@@ -71,6 +71,13 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ onLoadingComplete }) => {
             />
           </div>
         </div>
+      </div>
+
+      {/* Red loading spinner */}
+      <div className={`transition-all duration-500 ${
+        logoVisible ? 'opacity-100' : 'opacity-0'
+      }`}>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
       </div>
 
     </div>

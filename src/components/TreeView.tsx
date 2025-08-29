@@ -217,7 +217,7 @@ const TreeView: React.FC<TreeViewProps> = ({
           onClick={() => onFolderSelect(null)}
         >
           <Home size={16} className="mr-2 text-gray-600" />
-          <span className="text-sm font-medium">Cartella principale</span>
+          <span className="text-sm font-medium">Home</span>
         </div>
         
         {/* Tree nodes */}

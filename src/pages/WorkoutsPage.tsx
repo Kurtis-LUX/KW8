@@ -264,7 +264,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
         {/* Manager Tab - File Explorer */}
         {activeTab === 'manager' && (
           <div className="max-w-7xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden" style={{ height: '70vh' }}>
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden" style={{ height: '85vh' }}>
               <FileExplorer currentUser={currentUser} />
             </div>
           </div>

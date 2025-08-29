@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -15,6 +15,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const { t, language, setLanguage } = useLanguageContext();
   
@@ -41,6 +42,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
       document.body.style.overflow = 'unset';
     };
   }, [isMenuOpen]);
+
+  // Gestisce i click esterni per chiudere il menu profilo
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -109,6 +127,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
       onLogout();
     }
     setIsMenuOpen(false);
+    // Reindirizza alla home e refresha la pagina
+    if (onNavigate) {
+      onNavigate('home');
+    }
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   };
 
   const toggleUserMenu = () => {
@@ -192,7 +217,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
           <div className="flex items-center space-x-4">
             {/* User Profile/Login Button */}
             {currentUser ? (
-              <div className="relative">
+              <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={toggleUserMenu}
                   className="flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black"
@@ -210,9 +235,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                       <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
                     </div>
                     
+                    <button
+                      onClick={() => {
+                        handleNavigation('home');
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center space-x-2"
+                    >
+                      <Home size={16} />
+                      <span>Home</span>
+                    </button>
+                    
                     {currentUser.role === 'coach' && (
                       <button
-                        onClick={() => handleNavigation('coach-dashboard')}
+                        onClick={() => {
+                          handleNavigation('coach-dashboard');
+                          setShowUserMenu(false);
+                        }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center space-x-2"
                       >
                         <Settings size={16} />
@@ -222,7 +261,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                     
                     {currentUser.role === 'athlete' && (
                       <button
-                        onClick={() => handleNavigation('workouts')}
+                        onClick={() => {
+                          handleNavigation('workouts');
+                          setShowUserMenu(false);
+                        }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center space-x-2"
                       >
                         <FileText size={16} />
@@ -231,7 +273,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
                     )}
                     
                     <button
-                      onClick={handleLogout}
+                      onClick={() => {
+                        handleLogout();
+                        setShowUserMenu(false);
+                      }}
                       className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center space-x-2"
                     >
                       <UserIcon size={16} />

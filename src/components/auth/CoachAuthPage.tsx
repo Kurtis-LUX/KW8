@@ -188,8 +188,8 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="bg-gradient-to-r from-blue-600 to-red-600 bg-clip-text text-transparent">
-            <h1 className="text-3xl font-bold mb-2">🏋️ KW8</h1>
+          <div className="flex justify-center mb-4">
+            <img src="/images/logo.png" alt="KW8 Logo" className="h-16 w-auto" />
           </div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
             Accesso Coach
