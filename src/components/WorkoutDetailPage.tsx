@@ -26,7 +26,7 @@ interface WorkoutDetailPageProps {
 }
 
 const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClose, folderPath }) => {
-  const [workoutTitle, setWorkoutTitle] = useState('Gestionale schede');
+  const [workoutTitle, setWorkoutTitle] = useState('Nuova scheda');
   const [workoutDescription, setWorkoutDescription] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -344,36 +344,38 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   };
   
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      {/* Workout Variants Tabs */}
-      {variants.length > 1 && (
-        <div className="mb-6">
-          <div className="flex space-x-2 border-b border-gray-200">
-            {variants.map((variant) => (
-              <div key={variant.id} className="relative">
-                <button
-                  onClick={() => handleSwitchVariant(variant.id)}
-                  className={`px-4 py-2 pr-8 text-sm font-medium rounded-t-lg transition-colors ${
-                    variant.isActive
-                      ? 'bg-blue-500 text-white border-b-2 border-blue-500'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {variant.name}
-                </button>
-                {variants.length > 1 && (
+    <>
+      <div className="min-h-screen bg-gray-50 p-6">
+        {/* Workout Variants Tabs */}
+        {variants.length > 1 && (
+          <div className="mb-6">
+            <div className="flex space-x-2 border-b border-gray-200">
+              {variants.map((variant) => (
+                <div key={variant.id} className="relative">
                   <button
-                    onClick={() => handleRemoveVariant(variant.id)}
-                    className="absolute top-1 right-1 p-1 text-gray-500 hover:text-red-500 transition-colors"
+                    onClick={() => handleSwitchVariant(variant.id)}
+                    className={`px-4 py-2 pr-8 text-sm font-medium rounded-t-lg transition-colors ${
+                      variant.isActive
+                        ? 'bg-blue-500 text-white border-b-2 border-blue-500'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
                   >
-                    <X size={14} />
+                    {variant.name}
                   </button>
-                )}
-              </div>
-            ))}
+                  {variants.length > 1 && (
+                    <button
+                      onClick={() => handleRemoveVariant(variant.id)}
+                      className="absolute top-1 right-1 p-1 text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
       
       <div className="w-full max-w-none mx-auto bg-white rounded-lg shadow-lg p-6 relative min-h-screen">
         {/* Delete Workout Button - Top Right */}
@@ -385,29 +387,29 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
           <Trash2 size={20} />
         </button>
         
-        {/* Back to Folder Button */}
-        <div className="mb-6">
+        {/* Header with Back Button, Title and Description */}
+        <div className="flex items-center mb-8 space-x-4">
+          {/* Back to Folder Button */}
           <button
             onClick={handleBackToFolder}
-            className="flex items-center justify-center p-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            className="flex items-center justify-center p-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex-shrink-0"
             title="Torna alla Cartella"
           >
             <ArrowLeft size={20} />
           </button>
-        </div>
-        
-        {/* Header with Title and Description */}
-        <div 
-          className="text-center mb-8 cursor-pointer" 
-          onClick={(e) => {
-            // Solo se il click è sullo sfondo (non sui pulsanti di edit)
-            if (e.target === e.currentTarget) {
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-          }}
-        >
-          {/* Editable Title */}
-          <div className="flex items-center justify-center mb-4">
+          
+          {/* Title and Description Container */}
+          <div 
+            className="flex-1 cursor-pointer" 
+            onClick={(e) => {
+              // Solo se il click è sullo sfondo (non sui pulsanti di edit)
+              if (e.target === e.currentTarget) {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }}
+          >
+            {/* Editable Title */}
+            <div className="flex items-center mb-2">
             {isEditingTitle ? (
               <div className="flex items-center space-x-2">
                 <input
@@ -437,10 +439,10 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                 </button>
               </div>
             )}
-          </div>
+            </div>
           
-          {/* Editable Description */}
-          <div className="flex items-center justify-center mb-4">
+            {/* Editable Description */}
+            <div className="flex items-center">
             {isEditingDescription ? (
               <div className="flex items-center space-x-2 w-full max-w-md">
                 <textarea
@@ -450,16 +452,16 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                   onBlur={handleSaveDescription}
                   onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
                   placeholder="Aggiungi una descrizione..."
-                  className="w-full text-center border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600"
+                  className="w-full border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600"
                   rows={2}
                 />
               </div>
             ) : (
               <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setIsEditingDescription(true)}>
                 {workoutDescription ? (
-                  <p className="text-gray-600 text-center max-w-md">{workoutDescription}</p>
+                  <p className="text-gray-600 max-w-md">{workoutDescription}</p>
                 ) : (
-                  <p className="text-gray-400 text-center italic">Clicca per aggiungere una descrizione</p>
+                  <p className="text-gray-400 italic">Clicca per aggiungere una descrizione</p>
                 )}
                 <button
                   onClick={(e) => {
@@ -473,7 +475,6 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               </div>
             )}
           </div>
-
         </div>
         
 
@@ -1191,6 +1192,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         </div>
       )}
     </div>
+    </>
   );
 };
 

@@ -36,12 +36,18 @@ export const useDropdownPosition = ({
   const calculatePosition = useCallback(() => {
     if (!triggerRef.current || !dropdownRef.current) return;
 
+    // Forza un reflow per assicurarsi che i valori siano aggiornati su mobile
+    triggerRef.current.offsetHeight;
+    
     const triggerRect = triggerRef.current.getBoundingClientRect();
     const dropdownRect = dropdownRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
+    
+    // Su mobile, usa document.documentElement.scrollTop/Left per maggiore affidabilità
+    const isMobile = window.innerWidth <= 768;
+    const scrollX = isMobile ? (document.documentElement.scrollLeft || document.body.scrollLeft || window.scrollX) : window.scrollX;
+    const scrollY = isMobile ? (document.documentElement.scrollTop || document.body.scrollTop || window.scrollY) : window.scrollY;
 
     let top = 0;
     let left = 0;
@@ -70,11 +76,15 @@ export const useDropdownPosition = ({
 
     // Auto-adjust se abilitato
     if (autoAdjust) {
+      // Margini più generosi su mobile per evitare che il dropdown tocchi i bordi
+      const horizontalMargin = isMobile ? 16 : 8;
+      const verticalMargin = isMobile ? 16 : 8;
+      
       // Controlla se il dropdown esce dal viewport orizzontalmente
       if (left < scrollX) {
-        left = scrollX + 8; // Margine dal bordo sinistro
+        left = scrollX + horizontalMargin;
       } else if (left + dropdownRect.width > scrollX + viewportWidth) {
-        left = scrollX + viewportWidth - dropdownRect.width - 8; // Margine dal bordo destro
+        left = scrollX + viewportWidth - dropdownRect.width - horizontalMargin;
       }
 
       // Controlla se il dropdown esce dal viewport verticalmente
@@ -85,10 +95,19 @@ export const useDropdownPosition = ({
         // Se non c'è spazio sotto, posiziona sopra
         top = triggerRect.top + scrollY - dropdownRect.height - offset;
         
-        // Se ancora non c'è spazio, posiziona al centro del viewport
+        // Se ancora non c'è spazio, posiziona al centro del viewport con margini
         if (top < scrollY) {
-          top = scrollY + (viewportHeight - dropdownRect.height) / 2;
+          top = scrollY + verticalMargin;
+          // Su mobile, assicurati che il dropdown non sia troppo alto
+          if (isMobile && dropdownRect.height > viewportHeight - (verticalMargin * 2)) {
+            top = scrollY + (viewportHeight - dropdownRect.height) / 2;
+          }
         }
+      }
+      
+      // Su mobile, assicurati che il dropdown non vada mai sotto la fold
+      if (isMobile && top + dropdownRect.height > scrollY + viewportHeight) {
+        top = scrollY + viewportHeight - dropdownRect.height - verticalMargin;
       }
     }
 
@@ -131,15 +150,35 @@ export const useDropdownPosition = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    const handleResize = () => calculatePosition();
-    const handleScroll = () => calculatePosition();
+    let timeoutId: NodeJS.Timeout;
+    const isMobile = window.innerWidth <= 768;
+    
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(calculatePosition, isMobile ? 100 : 50);
+    };
+    
+    const handleScroll = () => {
+      clearTimeout(timeoutId);
+      // Su mobile, usa un debounce più aggressivo per evitare calcoli troppo frequenti
+      timeoutId = setTimeout(calculatePosition, isMobile ? 150 : 16);
+    };
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleScroll, true);
+    
+    // Su mobile, aggiungi anche listener per orientationchange
+    if (isMobile) {
+      window.addEventListener('orientationchange', handleResize);
+    }
 
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleScroll, true);
+      if (isMobile) {
+        window.removeEventListener('orientationchange', handleResize);
+      }
     };
   }, [isOpen, calculatePosition]);
 
