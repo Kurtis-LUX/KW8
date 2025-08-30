@@ -23,6 +23,8 @@ const getAuthorizedCoaches = (): string[] => {
     'coach@kw8fitness.com',
     'giuseppe@kw8fitness.com',
     'saverio@kw8fitness.com',
+    'giuseppepando@gmail.com',
+    'simeoneluca44@gmail.com',
     process.env.ADMIN_EMAIL
   ].filter(Boolean).map(email => email.toLowerCase());
 };
@@ -167,6 +169,8 @@ export const requireAdminRole = (handler: Function) => {
       // Verifica ruolo admin o coach con privilegi elevati
       const adminEmails = [
         'admin@kw8fitness.com',
+        'giuseppepando@gmail.com',
+        'simeoneluca44@gmail.com',
         process.env.ADMIN_EMAIL
       ].filter(Boolean).map(email => email.toLowerCase());
       
