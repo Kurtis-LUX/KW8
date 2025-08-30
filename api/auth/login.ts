@@ -190,12 +190,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const normalizedAuthorized = authorizedEmail.toLowerCase().trim();
     
-    if (normalizedEmail !== normalizedAuthorized) {
+    // Supporta multiple email separate da virgola
+    const authorizedEmails = authorizedEmail
+      .split(',')
+      .map(email => email.toLowerCase().trim())
+      .filter(email => email.length > 0);
+    
+    if (!authorizedEmails.includes(normalizedEmail)) {
       logger.warn(`[${requestId}] Tentativo di accesso con email non autorizzata`, { 
         attempted: normalizedEmail.substring(0, 10) + '...',
-        authorized: normalizedAuthorized.substring(0, 3) + '***'
+        authorizedCount: authorizedEmails.length
       });
       res.setHeader('Content-Type', 'application/json');
       return res.status(403).json({ 

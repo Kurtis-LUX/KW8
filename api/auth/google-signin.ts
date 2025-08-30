@@ -129,16 +129,21 @@ function validateAuthorizedEmail(email: string): boolean {
       return false;
     }
     
-    // Normalizza le email per il confronto
+    // Normalizza l'email da verificare
     const normalizedEmail = email.toLowerCase().trim();
-    const normalizedAuthorized = authorizedEmail.toLowerCase().trim();
     
-    const isAuthorized = normalizedEmail === normalizedAuthorized;
+    // Supporta multiple email separate da virgola
+    const authorizedEmails = authorizedEmail
+      .split(',')
+      .map(email => email.toLowerCase().trim())
+      .filter(email => email.length > 0);
+    
+    const isAuthorized = authorizedEmails.includes(normalizedEmail);
     
     if (!isAuthorized) {
       logger.warn('Tentativo di accesso con email non autorizzata', { 
         attempted: normalizedEmail,
-        authorized: normalizedAuthorized.substring(0, 3) + '***'
+        authorizedCount: authorizedEmails.length
       });
     }
     

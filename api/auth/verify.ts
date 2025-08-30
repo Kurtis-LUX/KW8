@@ -220,15 +220,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Verifica che l'email sia autorizzata
     const authorizedEmail = process.env.AUTHORIZED_EMAIL;
-    if (authorizedEmail && decoded.email.toLowerCase().trim() !== authorizedEmail.toLowerCase().trim()) {
-      logger.warn(`[${requestId}] Email non autorizzata nel token`, { email: decoded.email });
-      res.setHeader('Content-Type', 'application/json');
-      return res.status(200).json({ 
-        success: false,
-        valid: false, 
-        message: 'Token non autorizzato',
-        error: 'UNAUTHORIZED_TOKEN'
-      });
+    if (authorizedEmail) {
+      // Supporta multiple email separate da virgola
+      const authorizedEmails = authorizedEmail
+        .split(',')
+        .map(email => email.toLowerCase().trim())
+        .filter(email => email.length > 0);
+      
+      if (!authorizedEmails.includes(decoded.email.toLowerCase().trim())) {
+        logger.warn(`[${requestId}] Email non autorizzata nel token`, { email: decoded.email });
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(200).json({ 
+          success: false,
+          valid: false, 
+          message: 'Token non autorizzato',
+          error: 'UNAUTHORIZED_TOKEN'
+        });
+      }
     }
 
     logger.info(`[${requestId}] Token verificato con successo`, { 
