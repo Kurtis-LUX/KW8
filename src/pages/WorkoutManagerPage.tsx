@@ -32,15 +32,6 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
                 <ArrowLeft size={20} />
               </button>
               
-              <div className="text-center flex-1">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent mb-2">
-                  Gestionale Schede di Allenamento
-                </h1>
-                <p className="text-gray-600">
-                  Organizza e gestisci le tue schede di allenamento con cartelle personalizzate
-                </p>
-              </div>
-              
               <div className="w-12"></div> {/* Spacer per bilanciare il layout */}
             </div>
           </div>

@@ -190,25 +190,31 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   onClick={() => handleNavigation('coach-dashboard')}
                   className="text-black hover:text-red-600 transition-all duration-300 font-medium"
                 >
-                  Dashboard Coach
+                  Dashboard
                 </button>
                 <button
                   onClick={() => handleNavigation('workout-manager')}
                   className="text-black hover:text-red-600 transition-all duration-300 font-medium"
                 >
-                  Gestione Schede
+                  Schede
                 </button>
                 <button
                   onClick={() => handleNavigation('athlete-manager')}
                   className="text-black hover:text-red-600 transition-all duration-300 font-medium"
                 >
-                  Gestione Atleti
+                  Atleti
                 </button>
                 <button
                   onClick={() => handleNavigation('link-manager')}
                   className="text-black hover:text-red-600 transition-all duration-300 font-medium"
                 >
-                  Gestione Link
+                  Link
+                </button>
+                <button
+                  onClick={() => handleNavigation('statistics')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Statistiche
                 </button>
               </>
             ) : (
@@ -387,44 +393,54 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {isDashboard ? (
               // Menu Dashboard
               <>
-                {/* 1. Dashboard Coach */}
+                {/* 1. Dashboard */}
                 <li>
                   <button
                     onClick={() => handleNavigation('coach-dashboard')}
                     className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Home size={20} className="sm:w-6 sm:h-6" />
-                    <span>Dashboard Coach</span>
+                    <span>Dashboard</span>
                   </button>
                 </li>
-                {/* 2. Gestione Schede */}
+                {/* 2. Schede */}
                 <li>
                   <button
                     onClick={() => handleNavigation('workout-manager')}
                     className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <FileText size={20} className="sm:w-6 sm:h-6" />
-                    <span>Gestione Schede</span>
+                    <span>Schede</span>
                   </button>
                 </li>
-                {/* 3. Gestione Atleti */}
+                {/* 3. Atleti */}
                 <li>
                   <button
                     onClick={() => handleNavigation('athlete-manager')}
                     className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Users size={20} className="sm:w-6 sm:h-6" />
-                    <span>Gestione Atleti</span>
+                    <span>Atleti</span>
                   </button>
                 </li>
-                {/* 4. Gestione Link */}
+                {/* 4. Link */}
                 <li>
                   <button
                     onClick={() => handleNavigation('link-manager')}
                     className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Settings size={20} className="sm:w-6 sm:h-6" />
-                    <span>Gestione Link</span>
+                    <span>Link</span>
+                  </button>
+                </li>
+                {/* 5. Statistiche */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('statistics')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Dumbbell size={20} className="sm:w-6 sm:h-6" />
+                    <span>Statistiche</span>
                   </button>
                 </li>
               </>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Edit3, Plus, Save, Copy, Users, Link, ChevronDown, ArrowLeft, Eye, X, Trash2 } from 'lucide-react';
+import { Edit3, Plus, Save, Copy, Users, Link, ChevronDown, ArrowLeft, Eye, X, Trash2, Menu } from 'lucide-react';
+import { useDropdownPosition } from '../hooks/useDropdownPosition';
 
 interface Exercise {
   id: string;
@@ -25,8 +26,8 @@ interface WorkoutDetailPageProps {
 }
 
 const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClose, folderPath }) => {
-  const [workoutTitle, setWorkoutTitle] = useState('Scheda di Allenamento');
-  const [workoutDescription, setWorkoutDescription] = useState('Descrizione della scheda di allenamento');
+  const [workoutTitle, setWorkoutTitle] = useState('Gestionale schede');
+  const [workoutDescription, setWorkoutDescription] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   
@@ -41,7 +42,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [variants, setVariants] = useState<WorkoutVariant[]>([
-    { id: '1', name: 'Scheda di Allenamento', isActive: true }
+    { id: '1', name: 'Gestionale schede', isActive: true }
   ]);
   const [activeVariantId, setActiveVariantId] = useState('1');
   
@@ -95,6 +96,20 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [showAthleteDropdown, setShowAthleteDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   
+  // Toolbar dropdown
+  const {
+    position: toolbarPosition,
+    isOpen: isToolbarOpen,
+    triggerRef: toolbarTriggerRef,
+    dropdownRef: toolbarDropdownRef,
+    toggle: toggleToolbar,
+    close: closeToolbar
+  } = useDropdownPosition({
+    preferredPosition: 'bottom-left',
+    offset: 8,
+    autoAdjust: true
+  });
+  
   const titleInputRef = useRef<HTMLInputElement>(null);
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   
@@ -113,11 +128,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     }
   }, [isEditingTitle]);
   
-  useEffect(() => {
-    if (isEditingDescription && descriptionInputRef.current) {
-      descriptionInputRef.current.focus();
-    }
-  }, [isEditingDescription]);
+
   
   const handleSaveTitle = () => {
     setIsEditingTitle(false);
@@ -126,6 +137,14 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const handleSaveDescription = () => {
     setIsEditingDescription(false);
   };
+  
+  useEffect(() => {
+    if (isEditingDescription && descriptionInputRef.current) {
+      descriptionInputRef.current.focus();
+    }
+  }, [isEditingDescription]);
+  
+
   
   const handleAddExercise = () => {
     if (editingExerciseId) {
@@ -356,7 +375,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         </div>
       )}
       
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 relative">
+      <div className="w-full max-w-none mx-auto bg-white rounded-lg shadow-lg p-6 relative min-h-screen">
         {/* Delete Workout Button - Top Right */}
         <button
           onClick={() => setShowDeleteWorkoutDialog(true)}
@@ -370,10 +389,10 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         <div className="mb-6">
           <button
             onClick={handleBackToFolder}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            className="flex items-center justify-center p-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            title="Torna alla Cartella"
           >
-            <ArrowLeft size={16} />
-            <span>Torna alla Cartella</span>
+            <ArrowLeft size={20} />
           </button>
         </div>
         
@@ -403,7 +422,13 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <h1 className="text-3xl font-bold text-gray-800">{workoutTitle}</h1>
+                <h1 
+                  className="text-3xl font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => setIsEditingTitle(true)}
+                  title="Clicca per modificare il titolo"
+                >
+                  {workoutTitle}
+                </h1>
                 <button
                   onClick={() => setIsEditingTitle(true)}
                   className="p-1 text-gray-500 hover:text-blue-500 transition-colors"
@@ -415,215 +440,297 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
           </div>
           
           {/* Editable Description */}
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center mb-4">
             {isEditingDescription ? (
-              <div className="flex items-center space-x-2 w-full max-w-2xl">
+              <div className="flex items-center space-x-2 w-full max-w-md">
                 <textarea
                   ref={descriptionInputRef}
                   value={workoutDescription}
                   onChange={(e) => setWorkoutDescription(e.target.value)}
                   onBlur={handleSaveDescription}
-                  className="w-full text-lg text-center border-b-2 border-blue-500 bg-transparent outline-none resize-none"
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
+                  placeholder="Aggiungi una descrizione..."
+                  className="w-full text-center border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600"
                   rows={2}
                 />
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
-                <p className="text-lg text-gray-600 max-w-2xl">{workoutDescription}</p>
+              <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setIsEditingDescription(true)}>
+                {workoutDescription ? (
+                  <p className="text-gray-600 text-center max-w-md">{workoutDescription}</p>
+                ) : (
+                  <p className="text-gray-400 text-center italic">Clicca per aggiungere una descrizione</p>
+                )}
                 <button
-                  onClick={() => setIsEditingDescription(true)}
-                  className="p-1 text-gray-500 hover:text-blue-500 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditingDescription(true);
+                  }}
+                  className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
                 >
                   <Edit3 size={16} />
                 </button>
               </div>
             )}
           </div>
-          
 
         </div>
         
 
         
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-8 p-3 bg-gray-50 rounded-lg">
-          {/* Duration Selector */}
+        <div className="flex justify-center mb-8">
           <div className="relative">
             <button
-              onClick={() => setIsEditingDates(!isEditingDates)}
-              className="flex items-center space-x-2 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm"
-              title="Gestisci durata scheda"
+              ref={toolbarTriggerRef}
+              onClick={toggleToolbar}
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
-              <span>📅</span>
-              <span>{calculateDuration() || 'Durata'}</span>
-            </button>
-            {isEditingDates && (
-              <div className="absolute top-full left-0 mt-1 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-10 p-4">
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Inizio</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Fine</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                {startDate && endDate && new Date(endDate) < new Date(startDate) && (
-                  <div className="text-xs text-red-600 mb-2">⚠️ Data fine precedente all'inizio</div>
-                )}
-                <button
-                  onClick={() => setIsEditingDates(false)}
-                  className="w-full px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
-                >
-                  Salva
-                </button>
-              </div>
-            )}
-          </div>
-          
-          {/* Create Exercise */}
-          <button
-            onClick={handleAddExercise}
-            className="flex items-center space-x-2 px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm"
-          >
-            <Plus size={16} />
-            <span>Crea</span>
-          </button>
-          
-          {/* Associate Athlete */}
-          <div className="relative">
-            <button
-              onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
-            >
-              <Users size={16} />
-              <span>Associa</span>
+              <Menu size={20} />
+              <span>Azioni</span>
               <ChevronDown size={16} />
             </button>
-            {showAthleteDropdown && (
-              <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                <div className="p-2">
-                  <input
-                    type="text"
-                    placeholder="Cerca atleta..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="max-h-40 overflow-y-auto">
-                  {athletes.map((athlete) => (
-                    <button
-                      key={athlete}
-                      onClick={() => handleAssociateAthlete(athlete)}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
-                    >
-                      {athlete}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* View Associated Athletes */}
-          <div className="relative">
-            <button
-              onClick={() => setShowAthletesList(!showAthletesList)}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
-            >
-              <Eye size={16} />
-              <span>Atleti ({associatedAthletes.length})</span>
-            </button>
-            {showAthletesList && (
-              <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                {associatedAthletes.length === 0 ? (
-                  <div className="p-4 text-gray-500 text-center">
-                    Nessun atleta associato
-                  </div>
-                ) : (
-                  <div className="max-h-40 overflow-y-auto">
-                    {associatedAthletes.map((athlete) => (
-                      <div key={athlete} className="flex items-center justify-between px-4 py-2 hover:bg-gray-100">
-                        <span>{athlete}</span>
-                        <button
-                          onClick={() => handleRemoveAthlete(athlete)}
-                          className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          
-          {/* Generate Link */}
-          <button
-            onClick={handleGenerateLink}
-            className="flex items-center space-x-2 px-3 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
-          >
-            <Link size={16} />
-            <span>Link</span>
-          </button>
-          
-          {/* Clone Workout */}
-          <button
-            onClick={handleCloneWorkout}
-            className="flex items-center space-x-2 px-3 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors text-sm"
-          >
-            <Copy size={16} />
-            <span>Clona</span>
-          </button>
-          
-          {/* Workout Status */}
-          <div className="relative">
-            <button
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                workoutStatus === 'published'
-                  ? 'bg-green-500 text-white hover:bg-green-600'
-                  : 'bg-yellow-500 text-white hover:bg-yellow-600'
-              }`}
-            >
-              <span>{workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}</span>
-              <ChevronDown size={16} />
-            </button>
-            {showStatusDropdown && (
-              <div className="absolute top-full right-0 mt-1 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+            
+            {isToolbarOpen && (
+              <div
+                ref={toolbarDropdownRef}
+                className="absolute bg-white border border-gray-200 rounded-lg shadow-lg py-2 min-w-48 z-50"
+                style={{
+                  left: toolbarPosition.left,
+                  top: toolbarPosition.top,
+                }}
+              >
+                {/* Duration Selector */}
                 <button
                   onClick={() => {
-                    setWorkoutStatus('published');
-                    setShowStatusDropdown(false);
+                    setIsEditingDates(!isEditingDates);
+                    closeToolbar();
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center space-x-2"
                 >
-                  Pubblicata
+                  <span>📅</span>
+                  <span>Gestisci Durata</span>
                 </button>
+                
+                {/* Create Exercise */}
                 <button
                   onClick={() => {
-                    setWorkoutStatus('draft');
-                    setShowStatusDropdown(false);
+                    setShowExerciseForm(true);
+                    closeToolbar();
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center space-x-2"
                 >
-                  Bozza
+                  <Plus size={16} />
+                  <span>Crea Esercizio</span>
+                </button>
+                
+                {/* Associate Athlete */}
+                <button
+                  onClick={() => {
+                    setShowAthleteDropdown(!showAthleteDropdown);
+                    closeToolbar();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center space-x-2"
+                >
+                  <Users size={16} />
+                  <span>Associa Atleta</span>
+                </button>
+                
+                {/* View Associated Athletes */}
+                <button
+                  onClick={() => {
+                    setShowAthletesList(!showAthletesList);
+                    closeToolbar();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center space-x-2"
+                >
+                  <Eye size={16} />
+                  <span>Visualizza Atleti ({associatedAthletes.length})</span>
+                </button>
+                
+                {/* Generate Link */}
+                <button
+                  onClick={() => {
+                    handleGenerateLink();
+                    closeToolbar();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center space-x-2"
+                >
+                  <Link size={16} />
+                  <span>Genera Link</span>
+                </button>
+                
+                {/* Clone Workout */}
+                <button
+                  onClick={() => {
+                    handleCloneWorkout();
+                    closeToolbar();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center space-x-2"
+                >
+                  <Copy size={16} />
+                  <span>Clona Scheda</span>
+                </button>
+                
+                <div className="border-t border-gray-200 my-1"></div>
+                
+                {/* Workout Status */}
+                <button
+                  onClick={() => {
+                    setShowStatusDropdown(!showStatusDropdown);
+                    closeToolbar();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center space-x-2"
+                >
+                  <div className={`w-3 h-3 rounded-full ${
+                    workoutStatus === 'published' ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <span>{workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}</span>
                 </button>
               </div>
             )}
           </div>
         </div>
+        
+        {/* Duration Modal */}
+        {isEditingDates && (
+          <div 
+            className="fixed inset-0 z-50 flex items-start justify-center pt-20"
+            onClick={() => setIsEditingDates(false)}
+          >
+            <div 
+              className="w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Inizio</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Fine</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              {startDate && endDate && new Date(endDate) < new Date(startDate) && (
+                <div className="text-xs text-red-600 mb-2">⚠️ Data fine precedente all'inizio</div>
+              )}
+              <button
+                onClick={() => setIsEditingDates(false)}
+                className="w-full px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
+              >
+                Salva
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* Associate Athlete Modal */}
+        {showAthleteDropdown && (
+          <div 
+            className="fixed inset-0 z-50 flex items-start justify-center pt-20"
+            onClick={() => setShowAthleteDropdown(false)}
+          >
+            <div 
+              className="w-64 bg-white border border-gray-200 rounded-lg shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-2">
+                <input
+                  type="text"
+                  placeholder="Cerca atleta..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="max-h-40 overflow-y-auto">
+                {athletes.map((athlete) => (
+                  <button
+                    key={athlete}
+                    onClick={() => handleAssociateAthlete(athlete)}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
+                  >
+                    {athlete}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* View Athletes Modal */}
+        {showAthletesList && (
+          <div 
+            className="fixed inset-0 z-50 flex items-start justify-center pt-20"
+            onClick={() => setShowAthletesList(false)}
+          >
+            <div 
+              className="w-64 bg-white border border-gray-200 rounded-lg shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {associatedAthletes.length === 0 ? (
+                <div className="p-4 text-gray-500 text-center">
+                  Nessun atleta associato
+                </div>
+              ) : (
+                <div className="max-h-40 overflow-y-auto">
+                  {associatedAthletes.map((athlete) => (
+                    <div key={athlete} className="flex items-center justify-between px-4 py-2 hover:bg-gray-100">
+                      <span>{athlete}</span>
+                      <button
+                        onClick={() => handleRemoveAthlete(athlete)}
+                        className="p-1 text-red-500 hover:text-red-700 transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Status Modal */}
+        {showStatusDropdown && (
+          <div 
+            className="fixed inset-0 z-50 flex items-start justify-center pt-20"
+            onClick={() => setShowStatusDropdown(false)}
+          >
+            <div 
+              className="w-32 bg-white border border-gray-200 rounded-lg shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => {
+                  setWorkoutStatus('published');
+                  setShowStatusDropdown(false);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
+              >
+                Pubblicata
+              </button>
+              <button
+                onClick={() => {
+                  setWorkoutStatus('draft');
+                  setShowStatusDropdown(false);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
+              >
+                Bozza
+              </button>
+            </div>
+          </div>
+        )}
         
 
         
@@ -979,8 +1086,14 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
       
       {/* Link Generation Modal */}
       {showLinkModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowLinkModal(false)}
+        >
+          <div 
+            className="bg-white p-6 rounded-lg max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-lg font-semibold mb-4">Link Scheda Generato</h3>
             <div className="mb-4">
               <input
@@ -1011,8 +1124,14 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
       
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowConfirmDialog(false)}
+        >
+          <div 
+            className="bg-white p-6 rounded-lg max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-lg font-semibold mb-4">Conferma Azione</h3>
             <p className="text-gray-600 mb-6">{confirmMessage}</p>
             <div className="flex space-x-4">
@@ -1035,8 +1154,14 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
       
       {/* Delete Workout Confirmation Dialog */}
       {showDeleteWorkoutDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowDeleteWorkoutDialog(false)}
+        >
+          <div 
+            className="bg-white p-6 rounded-lg max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center mb-4">
               <Trash2 className="text-red-500 mr-3" size={24} />
               <h3 className="text-lg font-semibold text-gray-800">Elimina Scheda</h3>

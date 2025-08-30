@@ -21,6 +21,6 @@ export default defineConfig({
     sourcemap: false
   },
   server: {
-    hmr: false
+    hmr: true
   }
 });

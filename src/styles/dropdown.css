@@ -1,0 +1,113 @@
+/* Stili globali per i menu dropdown */
+
+/* Assicura che i dropdown abbiano sempre il z-index più alto */
+.dropdown-portal {
+  position: fixed;
+  z-index: 99999 !important;
+  pointer-events: auto;
+}
+
+/* Stili per il contenitore del dropdown */
+.dropdown-menu {
+  position: fixed;
+  z-index: 99999;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e7eb;
+  min-width: 200px;
+  max-width: 300px;
+  overflow: hidden;
+  transform-origin: top left;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+/* Animazione di apertura del dropdown */
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Stili per gli elementi del menu */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  font-size: 14px;
+  color: #374151;
+}
+
+.dropdown-item:hover {
+  background-color: #f9fafb;
+}
+
+.dropdown-item:focus {
+  outline: none;
+  background-color: #f3f4f6;
+}
+
+.dropdown-item.danger {
+  color: #dc2626;
+}
+
+.dropdown-item.danger:hover {
+  background-color: #fef2f2;
+}
+
+/* Separatore */
+.dropdown-separator {
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 4px 0;
+}
+
+/* Assicura che il dropdown sia sempre visibile anche con overflow hidden */
+.dropdown-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Override per contenitori con overflow */
+.overflow-hidden .dropdown-portal,
+.overflow-auto .dropdown-portal,
+.overflow-scroll .dropdown-portal {
+  position: fixed !important;
+  z-index: 99999 !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .dropdown-menu {
+    min-width: 180px;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* Assicura che il dropdown sia sempre sopra altri elementi comuni */
+.dropdown-portal {
+  z-index: 99999 !important;
+}
+
+/* Override per elementi con z-index alto */
+.modal,
+.overlay,
+.tooltip {
+  z-index: 9999;
+}
+
+/* Il dropdown deve essere sempre sopra */
+.dropdown-portal {
+  z-index: 99999 !important;
+}

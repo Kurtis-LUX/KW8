@@ -34,6 +34,7 @@ import initializeData from './utils/initData';
 import { authService } from './services/authService';
 import { LanguageProvider } from './contexts/LanguageContext';
 import LoadingScreen from './components/LoadingScreen';
+import './styles/dropdown.css';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');

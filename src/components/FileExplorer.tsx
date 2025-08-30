@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Folder,
   FolderOpen,
@@ -19,8 +19,11 @@ import {
   Palette,
   Search,
   Filter,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ArrowLeft
 } from 'lucide-react';
+import Portal from './Portal';
+import { useDropdownPosition } from '../hooks/useDropdownPosition';
 import DB, { WorkoutPlan, WorkoutFolder, WorkoutVariant } from '../utils/database';
 import FolderCustomizer, { AVAILABLE_ICONS } from './FolderCustomizer';
 import WorkoutCustomizer from './WorkoutCustomizer';
@@ -59,6 +62,21 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   const [itemToRename, setItemToRename] = useState<FolderTreeItem | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<FolderTreeItem | null>(null);
+  const [showToolbarDropdown, setShowToolbarDropdown] = useState(false);
+  
+  // Hook per il posizionamento del menu toolbar
+  const {
+    position: toolbarPosition,
+    isOpen: isToolbarOpen,
+    triggerRef: toolbarTriggerRef,
+    dropdownRef: toolbarDropdownRef,
+    toggleDropdown: toggleToolbarDropdown,
+    closeDropdown: closeToolbarDropdown
+  } = useDropdownPosition({
+    preferredPosition: 'bottom-right',
+    offset: 8,
+    autoAdjust: true
+  });
   const [showTreeView, setShowTreeView] = useState(false);
   const [draggedItem, setDraggedItem] = useState<FolderTreeItem | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
@@ -67,11 +85,24 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   
   // Stati per ricerca e filtraggio
   const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     showFolders: true,
     showWorkouts: true,
-    sortBy: 'name' as 'name' | 'date' | 'type'
+    sortBy: 'name' as 'name' | 'date'
+  });
+  
+  // Hook per il posizionamento del menu filtri
+  const {
+    position: filtersPosition,
+    isOpen: isFiltersOpen,
+    triggerRef: filtersTriggerRef,
+    dropdownRef: filtersDropdownRef,
+    toggleDropdown: toggleFilters,
+    closeDropdown: closeFilters
+  } = useDropdownPosition({
+    preferredPosition: 'bottom-left',
+    offset: 8,
+    autoAdjust: true
   });
 
   useEffect(() => {
@@ -218,9 +249,13 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   // Funzione per filtrare e ordinare gli elementi
   const getFilteredAndSortedItems = () => {
     let filtered = folderTree.filter(item => {
-      // Filtro per tipo
-      if (!filters.showFolders && item.type === 'folder') return false;
-      if (!filters.showWorkouts && item.type === 'workout') return false;
+      // Filtro per tipo - se entrambi sono deselezionati, mostra tutto
+      if (!filters.showFolders && !filters.showWorkouts) {
+        // Mostra tutto quando nessun filtro è selezionato
+      } else {
+        if (!filters.showFolders && item.type === 'folder') return false;
+        if (!filters.showWorkouts && item.type === 'file') return false;
+      }
       
       // Filtro per ricerca
       if (searchTerm) {
@@ -239,9 +274,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
           const aDate = a.data && 'createdAt' in a.data ? a.data.createdAt : '';
           const bDate = b.data && 'createdAt' in b.data ? b.data.createdAt : '';
           return new Date(bDate).getTime() - new Date(aDate).getTime();
-        case 'type':
-          if (a.type === b.type) return a.name.localeCompare(b.name);
-          return a.type === 'folder' ? -1 : 1;
+
         default:
           return 0;
       }
@@ -264,12 +297,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     setShowWorkoutDetail(false);
     setSelectedWorkoutId(null);
   };
-
-  const handleMenuClick = (e: React.MouseEvent, item: FolderTreeItem) => {
-    e.stopPropagation();
-    // Gestisce il click sui tre puntini senza aprire la scheda
-  };
-
 
 
   const createNewItem = (type: 'folder' | 'workout', name: string, icon?: string, color?: string, variants?: WorkoutVariant[]) => {
@@ -408,12 +435,30 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     const isDragOver = dragOverItem === item.id;
     const isDragging = draggedItem?.id === item.id;
     
+    // Hook separato per il posizionamento del menu di ogni elemento
+    const {
+      position: itemMenuPosition,
+      isOpen: isItemMenuOpen,
+      triggerRef: itemMenuTriggerRef,
+      dropdownRef: itemMenuDropdownRef,
+      toggleDropdown: toggleItemMenu
+    } = useDropdownPosition({
+      preferredPosition: 'bottom-right',
+      offset: 8,
+      autoAdjust: true
+    });
+    
+    const handleItemMenuClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      toggleItemMenu();
+    };
+    
     return (
       <div 
           className={`group relative rounded-lg border-2 transition-all duration-300 ease-in-out hover:shadow-lg hover:scale-[1.02] cursor-pointer transform border-gray-200 hover:border-gray-300 ${
             isDragOver ? 'border-red-300 bg-red-50 shadow-lg scale-[1.02]' : ''
           } ${
-            isDragging ? 'opacity-50 scale-95' : ''
+            isDragging ? 'scale-95' : ''
           } ${
             item.type === 'folder' ? 'bg-yellow-50' : 'bg-blue-50'
           }`}
@@ -479,70 +524,83 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
 
         {/* Menu azioni */}
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="relative group/menu">
-            <button 
-              className="p-1 rounded hover:bg-gray-100"
-              onClick={(e) => handleMenuClick(e, item)}
-            >
-              <MoreVertical size={16} />
-            </button>
-            
-            {/* Dropdown menu */}
-            <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-[99999] min-w-[150px] opacity-0 group-hover/menu:opacity-100 transition-opacity">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setItemToRename(item);
-                  setShowRenameModal(true);
-                }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
+          <button 
+            ref={itemMenuTriggerRef}
+            className="p-1 rounded hover:bg-gray-100"
+            onClick={handleItemMenuClick}
+          >
+            <MoreVertical size={16} />
+          </button>
+          
+          {/* Dropdown menu con Portal */}
+          {isItemMenuOpen && (
+            <Portal>
+              <div 
+                ref={itemMenuDropdownRef}
+                className="dropdown-menu min-w-[150px]"
+                style={{
+                   position: 'fixed',
+                   left: itemMenuPosition?.left || 0,
+                   top: itemMenuPosition?.top || 0,
+                 }}
               >
-                <Edit3 size={14} />
-                <span>Rinomina</span>
-              </button>
-              
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDownload(item);
-                }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
-              >
-                <Download size={14} />
-                <span>Scarica</span>
-              </button>
-              
-              {item.type === 'workout' && (
-                 <button
-                   onClick={(e) => {
-                     e.stopPropagation();
-                     handleGenerateLink(item);
-                   }}
-                   className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
-                 >
-                   <Link size={14} />
-                   <span>Genera link</span>
-                 </button>
-               )}
-              
-              <hr className="my-1" />
-              
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setItemToDelete(item);
-                  setShowDeleteModal(true);
-                }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center space-x-2"
-              >
-                <Trash2 size={14} />
-                <span>Elimina</span>
-              </button>
-            </div>
-          </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setItemToRename(item);
+                    setShowRenameModal(true);
+                    toggleItemMenu();
+                  }}
+                  className="dropdown-item"
+                >
+                  <Edit3 size={14} />
+                  <span>Rinomina</span>
+                </button>
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload(item);
+                    toggleItemMenu();
+                  }}
+                  className="dropdown-item"
+                >
+                  <Download size={14} />
+                  <span>Scarica</span>
+                </button>
+                
+                {item.type === 'workout' && (
+                   <button
+                     onClick={(e) => {
+                       e.stopPropagation();
+                       handleGenerateLink(item);
+                       toggleItemMenu();
+                     }}
+                     className="dropdown-item"
+                   >
+                     <Link size={14} />
+                     <span>Genera link</span>
+                   </button>
+                 )}
+                
+                <hr className="my-1" />
+                
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setItemToDelete(item);
+                    setShowDeleteModal(true);
+                    toggleItemMenu();
+                  }}
+                  className="dropdown-item text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 size={14} />
+                  <span>Elimina</span>
+                </button>
+              </div>
+            </Portal>
+          )}
         </div>
-
-
       </div>
     );
   };
@@ -559,6 +617,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
 
   return (
     <div className="min-h-[calc(100vh-200px)] flex flex-col bg-gray-50">
+
+      
       {/* Toolbar */}
       <div className="bg-white border-b border-gray-200 p-4">
         {/* Barra di ricerca e filtri */}
@@ -579,9 +639,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
             {/* Pulsante filtri */}
             <div className="relative">
               <button
-                onClick={() => setShowFilters(!showFilters)}
+                ref={filtersTriggerRef}
+                onClick={toggleFilters}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-colors ${
-                  showFilters ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-300 hover:bg-gray-50'
+                  isFiltersOpen ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-300 hover:bg-gray-50'
                 }`}
               >
                 <SlidersHorizontal size={16} />
@@ -589,138 +650,227 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
               </button>
               
               {/* Dropdown filtri */}
-              {showFilters && (
-                <div className="absolute top-full right-0 mt-2 w-96 bg-white rounded-lg border shadow-lg z-50">
-                  <div className="p-4">
-                    <div className="grid grid-cols-1 gap-4">
-                      {/* Filtri tipo */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Mostra</label>
-                        <div className="space-y-2">
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={filters.showFolders}
-                              onChange={(e) => setFilters(prev => ({ ...prev, showFolders: e.target.checked }))}
-                              className="mr-2 text-red-600 focus:ring-red-500"
-                            />
-                            <Folder size={16} className="mr-1" />
-                            Cartelle
-                          </label>
-                          <label className="flex items-center">
-                            <input
-                              type="checkbox"
-                              checked={filters.showWorkouts}
-                              onChange={(e) => setFilters(prev => ({ ...prev, showWorkouts: e.target.checked }))}
-                              className="mr-2 text-red-600 focus:ring-red-500"
-                            />
-                            <FileText size={16} className="mr-1" />
-                            Schede
-                          </label>
+              {isFiltersOpen && (
+                <Portal>
+                  <div 
+                    ref={filtersDropdownRef}
+                    className="dropdown-menu w-96"
+                    style={{
+                      position: 'fixed',
+                      left: filtersPosition?.left || 0,
+                      top: filtersPosition?.top || 0,
+                    }}
+                  >
+                    <div className="p-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        {/* Filtri tipo */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Mostra</label>
+                          <div className="space-y-2">
+                            <label className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={filters.showFolders}
+                                onChange={(e) => setFilters(prev => ({ ...prev, showFolders: e.target.checked }))}
+                                className="mr-2 text-red-600 focus:ring-red-500"
+                              />
+                              <Folder size={16} className="mr-1" />
+                              Cartelle
+                            </label>
+                            <label className="flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={filters.showWorkouts}
+                                onChange={(e) => setFilters(prev => ({ ...prev, showWorkouts: e.target.checked }))}
+                                className="mr-2 text-red-600 focus:ring-red-500"
+                              />
+                              <FileText size={16} className="mr-1" />
+                              Schede
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                      
-                      {/* Ordinamento */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Ordina per</label>
-                        <select
-                          value={filters.sortBy}
-                          onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as 'name' | 'date' | 'type' }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                        >
-                          <option value="name">Nome</option>
-                          <option value="date">Data creazione</option>
-                          <option value="type">Tipo</option>
-                        </select>
-                      </div>
-                      
-                      {/* Azioni filtri */}
-                      <div className="flex justify-between">
-                        <button
-                          onClick={() => {
-                            setSearchTerm('');
-                            setFilters({ showFolders: true, showWorkouts: true, sortBy: 'name' });
-                          }}
-                          className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50"
-                        >
-                          Reset
-                        </button>
-                        <button
-                          onClick={() => setShowFilters(false)}
-                          className="px-3 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg"
-                        >
-                          Chiudi
-                        </button>
+                        
+                        {/* Ordinamento */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Ordina per</label>
+                          <select
+                            value={filters.sortBy}
+                            onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as 'name' | 'date' }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          >
+                            <option value="name">Nome</option>
+                            <option value="date">Data creazione</option>
+                          </select>
+                        </div>
+                        
+                        {/* Azioni filtri */}
+                        <div className="flex justify-between">
+                          <button
+                             onClick={() => {
+                               setSearchTerm('');
+                               setFilters({ showFolders: false, showWorkouts: false, sortBy: 'name' });
+                             }}
+                             className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50"
+                           >
+                             Reset
+                           </button>
+                           <button
+                             onClick={closeFilters}
+                             className="px-3 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg"
+                           >
+                             Applica
+                           </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Portal>
               )}
             </div>
           </div>
         </div>
         
         <div className="flex items-center justify-between">
-          {/* Breadcrumb */}
-          <nav className="flex items-center space-x-2 text-sm">
-            {breadcrumb.map((crumb, index) => (
-              <React.Fragment key={index}>
-                <button
-                  onClick={() => navigateToBreadcrumb(index)}
-                  className="text-gray-600 hover:text-gray-900 font-medium"
-                >
-                  {crumb.name}
-                </button>
-                {index < breadcrumb.length - 1 && (
-                  <ChevronRight size={16} className="text-gray-400" />
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
+          {/* Breadcrumb con pulsante indietro */}
+          <div className="flex items-center space-x-3">
+            {/* Pulsante freccia indietro */}
+            {breadcrumb.length > 1 && (
+              <button
+                onClick={() => {
+                  const parentIndex = breadcrumb.length - 2;
+                  navigateToBreadcrumb(parentIndex);
+                }}
+                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-all duration-200 ease-in-out hover:scale-105"
+                title="Torna indietro"
+              >
+                <ArrowLeft size={16} />
+              </button>
+            )}
+            
+            {/* Breadcrumb */}
+            <nav className="flex items-center space-x-2 text-sm">
+              {breadcrumb.map((crumb, index) => (
+                <React.Fragment key={index}>
+                  <button
+                    onClick={() => navigateToBreadcrumb(index)}
+                    className="text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    {crumb.name}
+                  </button>
+                  {index < breadcrumb.length - 1 && (
+                    <ChevronRight size={16} className="text-gray-400" />
+                  )}
+                </React.Fragment>
+              ))}
+            </nav>
+          </div>
 
-          {/* Azioni */}
-          <div className="flex items-center space-x-2">
-            {/* Toggle vista ad albero */}
+          {/* Menu Toolbar */}
+          <div className="relative">
             <button
-              onClick={() => setShowTreeView(!showTreeView)}
-              className={`p-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105 ${
-                showTreeView ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
-              }`}
-              title="Vista ad albero"
+              ref={toolbarTriggerRef}
+              onClick={toggleToolbarDropdown}
+              className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105"
             >
-              <ChevronRight size={16} className={`transition-transform duration-200 ease-in-out ${showTreeView ? 'rotate-90' : ''}`} />
+              <SlidersHorizontal size={16} />
+              <span>Menu</span>
+              <ChevronDown size={14} className={`transition-transform duration-200 ${isToolbarOpen ? 'rotate-180' : ''}`} />
             </button>
-
-            {/* Toggle vista */}
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-md transition-all duration-200 ease-in-out hover:scale-105 ${
-                  viewMode === 'list' ? 'bg-white shadow-sm transform scale-105' : 'hover:bg-gray-200'
-                }`}
-              >
-                <List size={16} />
-              </button>
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-md transition-all duration-200 ease-in-out hover:scale-105 ${
-                  viewMode === 'grid' ? 'bg-white shadow-sm transform scale-105' : 'hover:bg-gray-200'
-                }`}
-              >
-                <Grid3X3 size={16} />
-              </button>
-            </div>
-
-            {/* Pulsante crea */}
-            <div className="relative">
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="group flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-lg transform"
-              >
-                <Plus size={16} className="transition-transform duration-200 ease-in-out group-hover:rotate-90" />
-                <span>Crea</span>
-              </button>
-            </div>
+            
+            {/* Dropdown Menu con Portal */}
+            {isToolbarOpen && (
+              <Portal>
+                <div 
+                  ref={toolbarDropdownRef}
+                  className="dropdown-menu w-64"
+                  style={{
+                    position: 'fixed',
+                    left: toolbarPosition?.left || 0,
+                    top: toolbarPosition?.top || 0,
+                  }}
+                >
+                  {/* Vista ad albero */}
+                  <button
+                    onClick={() => {
+                      setShowTreeView(!showTreeView);
+                      closeToolbarDropdown();
+                    }}
+                    className={`dropdown-item justify-between ${
+                      showTreeView ? 'text-red-600 bg-red-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <ChevronRight size={16} className={`transition-transform duration-200 ${showTreeView ? 'rotate-90' : ''}`} />
+                      <span>Vista ad albero</span>
+                    </div>
+                    {showTreeView && <div className="w-2 h-2 bg-red-600 rounded-full"></div>}
+                  </button>
+                  
+                  <hr className="my-2" />
+                  
+                  {/* Modalità vista */}
+                  <div className="px-4 py-2">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Modalità vista</p>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => {
+                          setViewMode('list');
+                          closeToolbarDropdown();
+                        }}
+                        className={`flex-1 p-2 rounded-md transition-all duration-200 flex items-center justify-center space-x-2 ${
+                          viewMode === 'list' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                      >
+                        <List size={16} />
+                        <span className="text-sm">Lista</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setViewMode('grid');
+                          closeToolbarDropdown();
+                        }}
+                        className={`flex-1 p-2 rounded-md transition-all duration-200 flex items-center justify-center space-x-2 ${
+                          viewMode === 'grid' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
+                        }`}
+                      >
+                        <Grid3X3 size={16} />
+                        <span className="text-sm">Griglia</span>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <hr className="my-2" />
+                  
+                  {/* Filtri */}
+                  <button
+                    onClick={() => {
+                      toggleFilters();
+                      closeToolbarDropdown();
+                    }}
+                    className={`dropdown-item justify-between ${
+                      isFiltersOpen ? 'text-red-600 bg-red-50' : ''
+                    }`}
+                  >
+                    <Filter size={16} />
+                    <span>Filtri</span>
+                  </button>
+                  
+                  <hr className="my-2" />
+                  
+                  {/* Crea nuovo */}
+                  <button
+                    onClick={() => {
+                      setShowCreateModal(true);
+                      closeToolbarDropdown();
+                    }}
+                    className="dropdown-item text-red-600 hover:bg-red-50 font-medium"
+                  >
+                    <Plus size={16} />
+                    <span>Crea nuovo</span>
+                  </button>
+                </div>
+              </Portal>
+            )}
           </div>
         </div>
       </div>
@@ -859,20 +1009,21 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim()) {
-      onCreate(
-        type, 
-        name.trim(), 
-        type === 'folder' ? selectedIcon : undefined, 
-        selectedColor,
-        type === 'workout' ? workoutVariants : undefined
-      );
-      setName('');
-      setSelectedIcon('Folder');
-      setSelectedColor(type === 'folder' ? '#3B82F6' : '#10B981');
-      setWorkoutVariants([]);
-      setShowCustomizer(false);
-    }
+    // Usa il nome inserito o il nome predefinito
+    const finalName = name.trim() || (type === 'workout' ? 'Nuova scheda' : 'Nuova Cartella');
+    
+    onCreate(
+      type, 
+      finalName, 
+      type === 'folder' ? selectedIcon : undefined, 
+      selectedColor,
+      type === 'workout' ? workoutVariants : undefined
+    );
+    setName('');
+    setSelectedIcon('Folder');
+    setSelectedColor(type === 'folder' ? '#3B82F6' : '#10B981');
+    setWorkoutVariants([]);
+    setShowCustomizer(false);
   };
 
   return (
@@ -970,8 +1121,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
             </button>
             <button
               type="submit"
-              disabled={!name.trim()}
-              className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
             >
               Crea
             </button>
