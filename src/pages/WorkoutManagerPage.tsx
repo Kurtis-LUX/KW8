@@ -16,6 +16,7 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
         onNavigate={onNavigate} 
         currentUser={currentUser}
         showAuthButtons={false}
+        isDashboard={true}
       />
       
       <div className="pt-20">

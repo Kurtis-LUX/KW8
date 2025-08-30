@@ -8,9 +8,10 @@ interface HeaderProps {
   onNavigate?: (page: string) => void;
   currentUser?: User | null;
   onLogout?: () => void;
+  isDashboard?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDashboard = false }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -144,10 +145,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
     scrollToSection('informazioni');
   };
 
+  const handleHeaderClick = (e: React.MouseEvent<HTMLElement>) => {
+    // Verifica se il click è sul background dell'header (non su bottoni o elementi interattivi)
+    if (e.target === e.currentTarget) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-40 ${isScrolled ? 'bg-white shadow-lg' : 'bg-transparent'} backdrop-blur-sm transition-all duration-300`}>
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header 
+        className={`fixed top-0 left-0 right-0 z-40 ${isScrolled ? 'bg-white shadow-lg' : 'bg-transparent'} backdrop-blur-sm transition-all duration-300 cursor-pointer`}
+        onClick={handleHeaderClick}
+      >
+        <div 
+          className="container mx-auto px-4 py-4 flex items-center justify-between"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Logo */}
           <div className="flex items-center">
             <img 
@@ -169,48 +183,81 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
 
           {/* Desktop Navigation - Hidden on mobile */}
           <nav className="hidden lg:flex items-center space-x-8">
-            <button
-              onClick={() => scrollToSection('orari')}
-              className="text-black hover:text-red-600 transition-all duration-300 font-medium"
-            >
-              Orari
-            </button>
-            <button
-              onClick={handleShowRules}
-              className="text-black hover:text-red-600 transition-all duration-300 font-medium"
-            >
-              {t.header.rules}
-            </button>
-            <button
-              onClick={() => handleNavigation('workouts')}
-              className="text-black hover:text-red-600 transition-all duration-300 font-medium"
-            >
-              {t.header.workouts}
-            </button>
-            <button
-              onClick={() => scrollToSection('aree')}
-              className="text-black hover:text-red-600 transition-all duration-300 font-medium"
-            >
-              Aree
-            </button>
-            <button
-              onClick={() => scrollToSection('coach')}
-              className="text-black hover:text-red-600 transition-all duration-300 font-medium"
-            >
-              Coach
-            </button>
-            <button
-              onClick={() => scrollToSection('posizione')}
-              className="text-black hover:text-red-600 transition-all duration-300 font-medium"
-            >
-              {t.header.location}
-            </button>
-            <button
-              onClick={() => scrollToSection('contatti')}
-              className="text-black hover:text-red-600 transition-all duration-300 font-medium"
-            >
-              Contatti
-            </button>
+            {isDashboard ? (
+              // Menu semplificato per Dashboard
+              <>
+                <button
+                  onClick={() => handleNavigation('coach-dashboard')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Dashboard Coach
+                </button>
+                <button
+                  onClick={() => handleNavigation('workout-manager')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Gestione Schede
+                </button>
+                <button
+                  onClick={() => handleNavigation('athlete-manager')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Gestione Atleti
+                </button>
+                <button
+                  onClick={() => handleNavigation('link-manager')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Gestione Link
+                </button>
+              </>
+            ) : (
+              // Menu normale per le altre pagine
+              <>
+                <button
+                  onClick={() => scrollToSection('orari')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Orari
+                </button>
+                <button
+                  onClick={handleShowRules}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  {t.header.rules}
+                </button>
+                <button
+                  onClick={() => handleNavigation('workouts')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  {t.header.workouts}
+                </button>
+                <button
+                  onClick={() => scrollToSection('aree')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Aree
+                </button>
+                <button
+                  onClick={() => scrollToSection('coach')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Coach
+                </button>
+                <button
+                  onClick={() => scrollToSection('posizione')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  {t.header.location}
+                </button>
+                <button
+                  onClick={() => scrollToSection('contatti')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Contatti
+                </button>
+              </>
+            )}
           </nav>
 
           {/* Right side buttons */}
@@ -337,86 +384,135 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout }) =>
         
         <nav className="px-4 sm:px-8 py-6 sm:py-8 overflow-y-auto max-h-[calc(100vh-100px)]">
           <ul className="space-y-2 sm:space-y-3">
-            {/* 1. Informazioni */}
-            <li>
-              <button
-                onClick={scrollToFooter}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-              >
-                <Mail size={20} className="sm:w-6 sm:h-6" />
-                <span>{t.header.information}</span>
-              </button>
-            </li>
-            {/* 2. Orari */}
-            <li>
-              <button
-                onClick={() => scrollToSection('orari')}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-              >
-                <Clock size={20} className="sm:w-6 sm:h-6" />
-                <span>Orari</span>
-              </button>
-            </li>
-            {/* 3. Regole */}
-            <li>
-              <button
-                onClick={handleShowRules}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-              >
-                <BookOpen size={20} className="sm:w-6 sm:h-6" />
-                <span>{t.header.rules}</span>
-              </button>
-            </li>
-            {/* 4. Schede */}
-            <li>
-              <button
-                onClick={() => handleNavigation('workouts')}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-              >
-                <FileText size={20} className="sm:w-6 sm:h-6" />
-                <span>{t.header.workouts}</span>
-              </button>
-            </li>
-            {/* 5. Aree */}
-            <li>
-              <button
-                onClick={() => scrollToSection('aree')}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-              >
-                <Dumbbell size={20} className="sm:w-6 sm:h-6" />
-                <span>Aree</span>
-              </button>
-            </li>
-            {/* 6. Coach */}
-            <li>
-              <button
-                onClick={() => scrollToSection('coach')}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-              >
-                <Users size={20} className="sm:w-6 sm:h-6" />
-                <span>Coach</span>
-              </button>
-            </li>
-            {/* 7. Posizione */}
-            <li>
-              <button
-                onClick={() => scrollToSection('posizione')}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-              >
-                <MapPin size={20} className="sm:w-6 sm:h-6" />
-                <span>{t.header.location}</span>
-              </button>
-            </li>
-            {/* 8. Contatti */}
-            <li>
-              <button
-                onClick={() => scrollToSection('contatti')}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-              >
-                <Phone size={20} className="sm:w-6 sm:h-6" />
-                <span>Contatti</span>
-              </button>
-            </li>
+            {isDashboard ? (
+              // Menu Dashboard
+              <>
+                {/* 1. Dashboard Coach */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('coach-dashboard')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Home size={20} className="sm:w-6 sm:h-6" />
+                    <span>Dashboard Coach</span>
+                  </button>
+                </li>
+                {/* 2. Gestione Schede */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('workout-manager')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <FileText size={20} className="sm:w-6 sm:h-6" />
+                    <span>Gestione Schede</span>
+                  </button>
+                </li>
+                {/* 3. Gestione Atleti */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('athlete-manager')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Users size={20} className="sm:w-6 sm:h-6" />
+                    <span>Gestione Atleti</span>
+                  </button>
+                </li>
+                {/* 4. Gestione Link */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('link-manager')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Settings size={20} className="sm:w-6 sm:h-6" />
+                    <span>Gestione Link</span>
+                  </button>
+                </li>
+              </>
+            ) : (
+              // Menu Standard
+              <>
+                {/* 1. Informazioni */}
+                <li>
+                  <button
+                    onClick={scrollToFooter}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Mail size={20} className="sm:w-6 sm:h-6" />
+                    <span>{t.header.information}</span>
+                  </button>
+                </li>
+                {/* 2. Orari */}
+                <li>
+                  <button
+                    onClick={() => scrollToSection('orari')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Clock size={20} className="sm:w-6 sm:h-6" />
+                    <span>Orari</span>
+                  </button>
+                </li>
+                {/* 3. Regole */}
+                <li>
+                  <button
+                    onClick={handleShowRules}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <BookOpen size={20} className="sm:w-6 sm:h-6" />
+                    <span>{t.header.rules}</span>
+                  </button>
+                </li>
+                {/* 4. Schede */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('workouts')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <FileText size={20} className="sm:w-6 sm:h-6" />
+                    <span>{t.header.workouts}</span>
+                  </button>
+                </li>
+                {/* 5. Aree */}
+                <li>
+                  <button
+                    onClick={() => scrollToSection('aree')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Dumbbell size={20} className="sm:w-6 sm:h-6" />
+                    <span>Aree</span>
+                  </button>
+                </li>
+                {/* 6. Coach */}
+                <li>
+                  <button
+                    onClick={() => scrollToSection('coach')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Users size={20} className="sm:w-6 sm:h-6" />
+                    <span>Coach</span>
+                  </button>
+                </li>
+                {/* 7. Posizione */}
+                <li>
+                  <button
+                    onClick={() => scrollToSection('posizione')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <MapPin size={20} className="sm:w-6 sm:h-6" />
+                    <span>{t.header.location}</span>
+                  </button>
+                </li>
+                {/* 8. Contatti */}
+                <li>
+                  <button
+                    onClick={() => scrollToSection('contatti')}
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Phone size={20} className="sm:w-6 sm:h-6" />
+                    <span>Contatti</span>
+                  </button>
+                </li>
+              </>
+            )}
             
             {/* Dashboard Coach - Solo per coach */}
             {currentUser && currentUser.role === 'coach' && (
