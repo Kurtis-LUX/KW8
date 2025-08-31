@@ -55,23 +55,39 @@ export const useDropdownPosition = ({
     let bottom: number | undefined;
 
     // Calcola la posizione iniziale basata sulla preferenza
-    switch (preferredPosition) {
-      case 'bottom-right':
-        top = triggerRect.bottom + scrollY + offset;
-        left = triggerRect.right + scrollX - dropdownRect.width;
-        break;
-      case 'bottom-left':
-        top = triggerRect.bottom + scrollY + offset;
-        left = triggerRect.left + scrollX;
-        break;
-      case 'top-right':
-        top = triggerRect.top + scrollY - dropdownRect.height - offset;
-        left = triggerRect.right + scrollX - dropdownRect.width;
-        break;
-      case 'top-left':
-        top = triggerRect.top + scrollY - dropdownRect.height - offset;
-        left = triggerRect.left + scrollX;
-        break;
+    // Su mobile, forza sempre il posizionamento sotto l'icona per una migliore UX
+    if (isMobile) {
+      switch (preferredPosition) {
+        case 'bottom-right':
+        case 'top-right':
+          top = triggerRect.bottom + scrollY + offset;
+          left = triggerRect.right + scrollX - dropdownRect.width;
+          break;
+        case 'bottom-left':
+        case 'top-left':
+          top = triggerRect.bottom + scrollY + offset;
+          left = triggerRect.left + scrollX;
+          break;
+      }
+    } else {
+      switch (preferredPosition) {
+        case 'bottom-right':
+          top = triggerRect.bottom + scrollY + offset;
+          left = triggerRect.right + scrollX - dropdownRect.width;
+          break;
+        case 'bottom-left':
+          top = triggerRect.bottom + scrollY + offset;
+          left = triggerRect.left + scrollX;
+          break;
+        case 'top-right':
+          top = triggerRect.top + scrollY - dropdownRect.height - offset;
+          left = triggerRect.right + scrollX - dropdownRect.width;
+          break;
+        case 'top-left':
+          top = triggerRect.top + scrollY - dropdownRect.height - offset;
+          left = triggerRect.left + scrollX;
+          break;
+      }
     }
 
     // Auto-adjust se abilitato

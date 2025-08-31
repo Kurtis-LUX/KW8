@@ -22,15 +22,20 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
       <div className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            {/* Header con tasto indietro, titolo e descrizione centralizzati */}
+            {/* Header con tasto indietro e titolo centralizzato */}
             <div className="flex items-center justify-between">
               <button
                 onClick={() => onNavigate('coach-dashboard')}
-                className="flex items-center justify-center w-12 h-12 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
+                className="flex items-center justify-center w-12 h-12 bg-white border-2 border-gray-300 rounded-full text-gray-600 hover:bg-gray-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
                 title="Torna alla Dashboard Coach"
               >
                 <ArrowLeft size={20} />
               </button>
+              
+              <div className="text-center flex-1">
+                <h1 className="text-3xl font-bold text-gray-800 mb-2">Gestione Schede</h1>
+                <p className="text-gray-600">Crea e gestisci le schede di allenamento</p>
+              </div>
               
               <div className="w-12"></div> {/* Spacer per bilanciare il layout */}
             </div>

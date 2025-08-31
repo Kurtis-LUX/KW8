@@ -388,8 +388,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           </button>
         </div>
         
-        <nav className="px-4 sm:px-8 py-6 sm:py-8 overflow-y-auto max-h-[calc(100vh-100px)]">
-          <ul className="space-y-2 sm:space-y-3">
+        <nav className="px-3 sm:px-8 py-4 sm:py-8 overflow-y-auto max-h-[calc(100vh-80px)]">
+          <ul className="space-y-1 sm:space-y-3">
             {isDashboard ? (
               // Menu Dashboard
               <>
@@ -397,7 +397,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('coach-dashboard')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Home size={20} className="sm:w-6 sm:h-6" />
                     <span>Dashboard</span>
@@ -407,7 +407,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('workout-manager')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <FileText size={20} className="sm:w-6 sm:h-6" />
                     <span>Schede</span>
@@ -417,7 +417,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('athlete-manager')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Users size={20} className="sm:w-6 sm:h-6" />
                     <span>Atleti</span>
@@ -427,7 +427,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('link-manager')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Settings size={20} className="sm:w-6 sm:h-6" />
                     <span>Link</span>
@@ -437,7 +437,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('statistics')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Dumbbell size={20} className="sm:w-6 sm:h-6" />
                     <span>Statistiche</span>

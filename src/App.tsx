@@ -217,52 +217,52 @@ function App() {
           <div className="min-h-screen bg-gray-100">
             <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} />
             <div className="bg-white shadow-sm border-b mt-20">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-center items-center py-6">
+              <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <div className="flex justify-center items-center py-4 sm:py-6">
                   <div className="text-center">
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
+                    <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
                       Dashboard Coach
                     </h1>
-                    <p className="text-gray-600">Gestione schede, programmi e atleti</p>
+                    <p className="text-sm sm:text-base text-gray-600">Gestione schede, programmi e atleti</p>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 Gestione Schede</h3>
-                  <p className="text-gray-600 mb-4">Crea e gestisci le schede di allenamento per i tuoi atleti</p>
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">📋 Gestione Schede</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Crea e gestisci le schede di allenamento per i tuoi atleti</p>
                   <button 
                     onClick={() => handleNavigation('workout-manager')}
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full bg-blue-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                   >
                     Gestisci Schede
                   </button>
                 </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">👥 Gestione Atleti</h3>
-                  <p className="text-gray-600 mb-4">Visualizza e gestisci i profili dei tuoi atleti</p>
-                  <button className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">
+                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">👥 Gestione Atleti</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Visualizza e gestisci i profili dei tuoi atleti</p>
+                  <button className="w-full bg-green-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base">
                     Gestisci Atleti
                   </button>
                 </div>
-                <div className="bg-white rounded-lg shadow p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">🔗 Token Temporanei</h3>
-                  <p className="text-gray-600 mb-4">Genera token di accesso temporanei per gli utenti</p>
-                  <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🔗 Token Temporanei</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Genera token di accesso temporanei per gli utenti</p>
+                  <button className="w-full bg-purple-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base">
                     Gestisci Token
                   </button>
                 </div>
                 <div 
-                  className="bg-white rounded-lg shadow p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                  className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
                   onClick={() => handleNavigation('athlete-statistics')}
                 >
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Statistiche Atleti</h3>
-                  <p className="text-gray-600 mb-4">Visualizza progressi e analisi dettagliate degli atleti</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">📊 Statistiche Atleti</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Visualizza progressi e analisi dettagliate degli atleti</p>
                   <button 
                     onClick={() => handleNavigation('athlete-statistics')}
-                    className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors"
+                    className="w-full bg-orange-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-orange-700 transition-colors text-sm sm:text-base"
                   >
                     Visualizza Statistiche
                   </button>
