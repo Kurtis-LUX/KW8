@@ -42,7 +42,7 @@ function detectEnvironment() {
 function getApiBaseUrl(): string {
   if (typeof window === 'undefined') {
     // Server-side rendering
-    return process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api` : 'https://palestra-kw8.web.app/api';
+    return process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api` : 'https://us-central1-palestra-kw8.cloudfunctions.net';
   }
   
   const hostname = window.location.hostname;
@@ -50,33 +50,27 @@ function getApiBaseUrl(): string {
   
   // SEMPRE usa l'API locale quando siamo su localhost
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    console.log('🏠 Ambiente locale rilevato, usando API locale');
-    return 'http://localhost:3001/api';
+    console.log('🏠 Ambiente locale rilevato, usando Firebase Functions locale');
+    return 'http://localhost:5001/palestra-kw8/us-central1';
   }
   
-  // In sviluppo con Vite, forza sempre l'uso del server locale
+  // In sviluppo con Vite, usa Firebase Functions locale
   if (import.meta.env.DEV) {
-    console.log('🔧 Modalità development rilevata, usando API locale');
-    return 'http://localhost:3001/api';
+    console.log('🔧 Modalità development rilevata, usando Firebase Functions locale');
+    return 'http://localhost:5001/palestra-kw8/us-central1';
   }
   
-  // Se siamo su Firebase Hosting, usa l'URL corrente del deployment
-  if (hostname.includes('web.app') || hostname.includes('firebaseapp.com')) {
-    console.log('🔥 Ambiente Firebase rilevato, usando API di produzione');
-    return `${protocol}//${hostname}/api`;
+  // Se siamo su Firebase Hosting o produzione, usa Firebase Functions di produzione
+  if (hostname.includes('web.app') || hostname.includes('firebaseapp.com') || hostname.includes('kw8')) {
+    console.log('🔥 Ambiente produzione rilevato, usando Firebase Functions');
+    return 'https://us-central1-palestra-kw8.cloudfunctions.net';
   }
   
-  // Se siamo su dominio kw8 personalizzato
-  if (hostname.includes('kw8')) {
-    console.log('🌐 Dominio KW8 rilevato, usando API di produzione');
-    return `${protocol}//${hostname}/api`;
-  }
-  
-  // Fallback: se non siamo sicuri, usa locale per development
+  // Fallback: usa Firebase Functions di produzione
   const isProduction = import.meta.env.PROD;
   const apiUrl = isProduction 
-    ? `${protocol}//${hostname}/api`
-    : 'http://localhost:3001/api';
+    ? 'https://us-central1-palestra-kw8.cloudfunctions.net'
+    : 'http://localhost:5001/palestra-kw8/us-central1';
   
   console.log(`🔄 Fallback API URL: ${apiUrl} (production: ${isProduction})`);
   return apiUrl;

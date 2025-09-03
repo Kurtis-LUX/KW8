@@ -3,9 +3,12 @@ import { Request, Response } from 'express';
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 
+// Load environment variables
+require('dotenv').config();
+
 // CORS headers
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://palestra-kw8.web.app',
+  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || 'https://palestra-kw8.web.app',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Allow-Credentials': 'true'
@@ -33,8 +36,7 @@ async function verifyGoogleIdToken(idToken: string, clientId: string): Promise<a
 
 // Funzione per validare l'email autorizzata
 function validateAuthorizedEmail(email: string): boolean {
-  const config = functions.config();
-  const authorizedEmail = config.authorized?.email;
+  const authorizedEmail = process.env.AUTHORIZED_EMAIL;
   
   if (!authorizedEmail) return false;
   
@@ -86,12 +88,15 @@ export const googleSignin = functions.https.onRequest(async (req: Request, res: 
       return;
     }
 
-    // Ottieni configurazione da Firebase
-    const config = functions.config();
-    const clientId = config.google?.client_id || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    const jwtSecret = config.jwt?.secret;
+    // Ottieni configurazione dalle variabili d'ambiente
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const jwtSecret = process.env.JWT_SECRET;
     
     if (!clientId || !jwtSecret) {
+      console.error('Configurazione mancante:', { 
+        hasClientId: !!clientId, 
+        hasJwtSecret: !!jwtSecret 
+      });
       res.status(500).json({
         success: false,
         message: 'Configurazione server incompleta',

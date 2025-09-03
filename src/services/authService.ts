@@ -90,9 +90,9 @@ class AuthService {
   // Autenticazione con Google Identity Services
   async googleSignIn(credential: string): Promise<GoogleSignInResponse> {
     try {
-      console.log('🔍 Inizio Google Sign-In, URL:', `${this.API_BASE_URL}/auth/google-signin`);
+      console.log('🔍 Inizio Google Sign-In, URL:', `${this.API_BASE_URL}/apiAuthGoogleSignin`);
       
-      const response = await fetch(`${this.API_BASE_URL}/auth/google-signin`, {
+      const response = await fetch(`${this.API_BASE_URL}/apiAuthGoogleSignin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
