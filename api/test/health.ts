@@ -1,6 +1,7 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import * as functions from 'firebase-functions';
+import { Request, Response } from 'express';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const health = functions.https.onRequest(async (req: Request, res: Response) => {
   try {
     // Test delle variabili d'ambiente critiche
     const envVars = {
@@ -9,7 +10,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       JWT_SECRET: process.env.JWT_SECRET ? '✅ Presente' : '❌ Mancante',
       AUTHORIZED_EMAIL: process.env.AUTHORIZED_EMAIL ? '✅ Presente' : '❌ Mancante',
       NODE_ENV: process.env.NODE_ENV || 'non impostato',
-      VERCEL: process.env.VERCEL ? '✅ Ambiente Vercel' : '❌ Non Vercel'
+      FIREBASE: process.env.FIREBASE_CONFIG ? '✅ Ambiente Firebase' : '❌ Non Firebase'
     };
 
     // Test delle dipendenze
@@ -51,4 +52,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stack: error.stack
     });
   }
-}
+});

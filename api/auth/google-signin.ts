@@ -1,4 +1,5 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import * as functions from 'firebase-functions';
+import { Request, Response } from 'express';
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 
@@ -13,8 +14,7 @@ const logger = {
   },
   warn: (message: string, data?: any) => {
     console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, data ? JSON.stringify(data, null, 2) : '');
-  }
-};
+  };
 
 // CORS headers
 const corsHeaders = {
@@ -155,7 +155,7 @@ function validateAuthorizedEmail(email: string): boolean {
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const googleSignin = functions.https.onRequest(async (req: Request, res: Response) => {
   // Imposta immediatamente il Content-Type per evitare text/plain di default
   res.setHeader('Content-Type', 'application/json');
   
@@ -418,4 +418,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
-}
+});

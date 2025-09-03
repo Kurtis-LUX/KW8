@@ -47,7 +47,7 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
         console.error('❌ Google Client ID non configurato!');
         const errorMsg = envConfig.isDevelopment 
           ? 'Configurazione Google OAuth mancante. Crea un file .env.local con VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com'
-          : 'Configurazione Google OAuth mancante. Verifica le variabili d\'ambiente su Vercel.';
+          : 'Configurazione Google OAuth mancante. Verifica le variabili d\'ambiente su Firebase.';
         setError(errorMsg);
         return;
       }

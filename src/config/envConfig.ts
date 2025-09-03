@@ -42,7 +42,7 @@ function detectEnvironment() {
 function getApiBaseUrl(): string {
   if (typeof window === 'undefined') {
     // Server-side rendering
-    return process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api` : 'https://kw8.vercel.app/api';
+    return process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api` : 'https://palestra-kw8.web.app/api';
   }
   
   const hostname = window.location.hostname;
@@ -60,9 +60,9 @@ function getApiBaseUrl(): string {
     return 'http://localhost:3001/api';
   }
   
-  // Se siamo su Vercel, usa l'URL corrente del deployment
-  if (hostname.includes('vercel.app')) {
-    console.log('☁️ Ambiente Vercel rilevato, usando API di produzione');
+  // Se siamo su Firebase Hosting, usa l'URL corrente del deployment
+  if (hostname.includes('web.app') || hostname.includes('firebaseapp.com')) {
+    console.log('🔥 Ambiente Firebase rilevato, usando API di produzione');
     return `${protocol}//${hostname}/api`;
   }
   
@@ -96,7 +96,7 @@ function getGoogleClientId(): string {
     console.error('❌ Google Client ID non configurato!');
     console.error('Assicurati che VITE_GOOGLE_CLIENT_ID sia configurato in:');
     console.error('- File .env.local per sviluppo locale');
-    console.error('- Vercel Environment Variables per produzione');
+    console.error('- Firebase Environment Variables per produzione');
   }
   
   return clientId || '';
@@ -106,7 +106,7 @@ function getGoogleClientId(): string {
 function getFrontendUrl(): string {
   if (typeof window === 'undefined') {
     // Server-side
-    return process.env.FRONTEND_URL || 'https://kw8.vercel.app';
+    return process.env.FRONTEND_URL || 'https://palestra-kw8.web.app';
   }
   
   // Client-side
@@ -186,12 +186,12 @@ export function getEnvConfig(): EnvConfig {
       console.error('3. Riavvia il server di sviluppo');
     }
     
-    // In produzione, mostra errori per Vercel
+    // In produzione, mostra errori per Firebase
     if (config.isProduction) {
-      console.error('☁️ Configurazione Vercel:');
-      console.error('1. Vai su Vercel Dashboard > Settings > Environment Variables');
-      console.error('2. Aggiungi VITE_GOOGLE_CLIENT_ID con il tuo Client ID');
-      console.error('3. Rideploy il progetto');
+      console.error('🔥 Configurazione Firebase:');
+      console.error('1. Usa firebase functions:config:set per impostare le variabili');
+      console.error('2. Aggiungi VITE_GOOGLE_CLIENT_ID nelle variabili di ambiente');
+      console.error('3. Rideploy il progetto con firebase deploy');
     }
   }
   

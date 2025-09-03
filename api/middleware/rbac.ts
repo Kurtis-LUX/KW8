@@ -1,5 +1,5 @@
 // Middleware RBAC (Role-Based Access Control) per proteggere gli endpoint API
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 interface JWTPayload {
@@ -9,7 +9,7 @@ interface JWTPayload {
   exp: number;
 }
 
-interface AuthenticatedRequest extends VercelRequest {
+interface AuthenticatedRequest extends Request {
   user?: JWTPayload;
 }
 
@@ -46,12 +46,12 @@ export const verifyJWT = (token: string): JWTPayload | null => {
 
 // Middleware di autenticazione base
 export const requireAuth = (handler: Function) => {
-  return async (req: AuthenticatedRequest, res: VercelResponse) => {
+  return async (req: AuthenticatedRequest, res: Response) => {
     try {
       // Abilita CORS
       const allowedOrigins = [
         'http://localhost:5173',
-        'https://kw8-fitness.vercel.app',
+        'https://palestra-kw8.web.app',
         process.env.FRONTEND_URL
       ].filter(Boolean);
       
@@ -107,7 +107,7 @@ export const requireAuth = (handler: Function) => {
 
 // Middleware per richiedere ruolo coach
 export const requireCoachRole = (handler: Function) => {
-  return requireAuth(async (req: AuthenticatedRequest, res: VercelResponse) => {
+  return requireAuth(async (req: AuthenticatedRequest, res: Response) => {
     try {
       const user = req.user;
       
@@ -205,7 +205,7 @@ export const requireCoachOrTempToken = (handler: Function) => {
       // Abilita CORS
       const allowedOrigins = [
         'http://localhost:5173',
-        'https://kw8-fitness.vercel.app',
+        'https://palestra-kw8.web.app',
         process.env.FRONTEND_URL
       ].filter(Boolean);
       

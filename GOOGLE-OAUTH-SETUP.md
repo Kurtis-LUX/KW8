@@ -35,9 +35,9 @@ Gli errori 500 dal backend `/api/auth/google-signin` in produzione indicano prob
    - **Nome**: "KW8 Web Client"
    - **Origini JavaScript autorizzate**:
      - `http://localhost:5173` (per sviluppo locale)
-     - `https://kw8.vercel.app` (per produzione)
+     - `https://palestra-kw8.web.app` (per produzione)
    - **URI di reindirizzamento autorizzati**:
-     - `https://kw8.vercel.app/api/auth/google-signin` (per produzione)
+     - `https://palestra-kw8.web.app/api/auth/google-signin` (per produzione)
      - ⚠️ **IMPORTANTE**: Aggiungi questo URI per il backend API
 5. Clicca **"Crea"**
 
@@ -70,10 +70,10 @@ Gli errori 500 dal backend `/api/auth/google-signin` in produzione indicano prob
    NODE_ENV=development
    ```
 
-#### Per Produzione (Vercel)
-1. Vai su [Vercel Dashboard](https://vercel.com/dashboard)
-2. Seleziona il progetto KW8
-3. Vai su **Settings** → **Environment Variables**
+#### Per Produzione (Firebase)
+1. Vai su [Firebase Console](https://console.firebase.google.com/)
+2. Seleziona il progetto palestra-kw8
+3. Vai su **Functions** → **Environment Variables**
 4. Aggiungi le seguenti variabili per **Production**:
    - `VITE_GOOGLE_CLIENT_ID`: Il tuo Client ID (IMPORTANTE: usa VITE_ prefix)
    - `GOOGLE_CLIENT_SECRET`: Il tuo Client Secret
@@ -81,11 +81,11 @@ Gli errori 500 dal backend `/api/auth/google-signin` in produzione indicano prob
    - `JWT_SECRET`: Una stringa segreta di almeno 32 caratteri
    - `API_SECRET_KEY`: Una chiave API segreta
    - `MONGODB_URI`: La tua stringa di connessione MongoDB
-   - `FRONTEND_URL`: `https://kw8.vercel.app`
-   - `CORS_ORIGIN`: `https://kw8.vercel.app`
+   - `FRONTEND_URL`: `https://palestra-kw8.web.app`
+   - `CORS_ORIGIN`: `https://palestra-kw8.web.app`
    - `NODE_ENV`: `production`
 5. Clicca **Save** per ogni variabile
-6. **Redeploy** il progetto per applicare le modifiche
+6. **Redeploy** il progetto con `firebase deploy` per applicare le modifiche
 
 ### Passo 7: Configurare Email Autorizzata
 Per cambiare l'email autorizzata:
@@ -95,10 +95,10 @@ Per cambiare l'email autorizzata:
    AUTHORIZED_EMAIL=tua-email@gmail.com
    ```
 
-2. **Produzione**: Aggiorna la variabile su Vercel:
-   - Vai su **Settings** → **Environment Variables**
+2. **Produzione**: Aggiorna la variabile su Firebase:
+   - Vai su **Functions** → **Environment Variables**
    - Modifica `AUTHORIZED_EMAIL` con la tua email
-   - Redeploy il progetto
+   - Redeploy il progetto con `firebase deploy`
 
 ### Passo 8: Testare la Configurazione
 
@@ -109,9 +109,9 @@ Per cambiare l'email autorizzata:
 4. Testa il login con Google
 
 #### Produzione
-1. Dopo aver configurato le variabili su Vercel
-2. Redeploy il progetto
-3. Vai su `https://kw8.vercel.app`
+1. Dopo aver configurato le variabili su Firebase
+2. Redeploy il progetto con `firebase deploy`
+3. Vai su `https://palestra-kw8.web.app`
 4. Testa il login con Google
 
 ## 🔍 Verifica della Configurazione
@@ -124,7 +124,7 @@ Dopo aver completato i passaggi:
 ## ⚠️ Note Importanti
 
 - **Per sviluppo locale**: Usa `http://localhost:5173` (non HTTPS)
-- **Per produzione**: Il sito KW8 è già configurato per `https://kw8.vercel.app`
+- **Per produzione**: Il sito KW8 è già configurato per `https://palestra-kw8.web.app`
 - **Sicurezza**: Non condividere mai il Client ID in repository pubblici
 - **Email autorizzate**: Solo l'email configurata in `AUTHORIZED_COACH_EMAIL` può accedere
 - **Configurazione completata**: ✅ Google OAuth configurato correttamente per KW8
@@ -158,7 +158,7 @@ Dopo aver completato i passaggi:
    - ✅ **LASCIA VUOTA** questa sezione
 6. Mantieni solo le **"Origini JavaScript autorizzate"**:
    - `http://localhost:5173`
-   - `https://kw8.vercel.app`
+   - `https://palestra-kw8.web.app`
 7. Clicca **"Salva"**
 8. Attendi 5-10 minuti per la propagazione delle modifiche
 9. Riprova l'autenticazione

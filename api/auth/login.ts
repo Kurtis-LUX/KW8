@@ -1,5 +1,6 @@
 // API endpoint per l'autenticazione sicura con JWT
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import * as functions from 'firebase-functions';
+import { Request, Response } from 'express';
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
@@ -39,7 +40,7 @@ const initializeAdmin = async () => {
 // Promise per tracciare l'inizializzazione
 let initPromise: Promise<void> | null = null;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const login = functions.https.onRequest(async (req: Request, res: Response) => {
   // Imposta immediatamente il Content-Type per evitare text/plain di default
   res.setHeader('Content-Type', 'application/json');
   
@@ -70,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Abilita CORS con logging
     const allowedOrigins = [
       'http://localhost:5173',
-      'https://kw8-fitness.vercel.app',
+      'https://palestra-kw8.web.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
@@ -303,4 +304,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       message: 'Errore interno del server'
     });
   }
-}
+});

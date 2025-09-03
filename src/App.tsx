@@ -18,6 +18,10 @@ import AuthPage from './pages/AuthPage';
 import WorkoutsPage from './pages/WorkoutsPage';
 import WorkoutManagerPage from './pages/WorkoutManagerPage';
 import AthleteStatisticsPage from './pages/AthleteStatisticsPage';
+import AthleteManagerPage from './pages/AthleteManagerPage';
+import RankingsPage from './pages/RankingsPage';
+import LinkManagerPage from './pages/LinkManagerPage';
+import MembershipCardsPage from './pages/MembershipCardsPage';
 import CoachAuthPage from './components/auth/CoachAuthPage';
 import PrivacyPage from './pages/PrivacyPage';
 import CookiePolicyPage from './pages/CookiePolicyPage';
@@ -26,6 +30,7 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 import CookieConsent from './components/CookieConsent';
 import CookieSettings from './components/CookieSettings';
 import Modal from './components/Modal';
+import DataMigration from './components/DataMigration';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import DB from './utils/database';
@@ -164,14 +169,27 @@ function App() {
   };
   
   const handleLogout = () => {
+    console.log('🚪 Logout iniziato');
+    
+    // Pulisci lo stato dell'applicazione
     setCurrentUser(null);
+    
+    // Pulisci localStorage
     localStorage.removeItem('currentUser');
-    authService.logout(); // Pulisce i token JWT
-    DB.clearAutoLogin(); // Rimuove l'auto-login
+    localStorage.removeItem('kw8_auto_login');
+    
+    // Pulisci authService (token JWT e cookie)
+    authService.logout();
+    
+    // Pulisci database locale
+    DB.clearAutoLogin();
+    
     // Se l'utente è in una pagina riservata, reindirizza alla home
     if (currentPage === 'workouts' || currentPage === 'admin-dashboard' || currentPage === 'coach-dashboard') {
       setCurrentPage('home');
     }
+    
+    console.log('✅ Logout completato');
   };
 
   // Gestione delle pagine
@@ -229,7 +247,7 @@ function App() {
               </div>
             </div>
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
                 <div className="bg-white rounded-lg shadow p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">📋 Gestione Schede</h3>
                   <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Crea e gestisci le schede di allenamento per i tuoi atleti</p>
@@ -243,15 +261,41 @@ function App() {
                 <div className="bg-white rounded-lg shadow p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">👥 Gestione Atleti</h3>
                   <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Visualizza e gestisci i profili dei tuoi atleti</p>
-                  <button className="w-full bg-green-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base">
+                  <button 
+                    onClick={() => handleNavigation('athlete-manager')}
+                    className="w-full bg-green-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
+                  >
                     Gestisci Atleti
                   </button>
                 </div>
                 <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🔗 Token Temporanei</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Genera token di accesso temporanei per gli utenti</p>
-                  <button className="w-full bg-purple-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base">
-                    Gestisci Token
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🏆 Classifiche</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Visualizza i massimali e i record degli atleti</p>
+                  <button 
+                    onClick={() => handleNavigation('rankings')}
+                    className="w-full bg-purple-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base"
+                  >
+                    Visualizza Classifiche
+                  </button>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🔗 Gestione Link</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Gestisci i link di accesso alle schede per gli atleti</p>
+                  <button 
+                    onClick={() => handleNavigation('link-manager')}
+                    className="w-full bg-indigo-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-indigo-700 transition-colors text-sm sm:text-base"
+                  >
+                    Gestisci Link
+                  </button>
+                </div>
+                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">💳 Tesserini Atleti</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Gestisci tesserini e pagamenti degli atleti</p>
+                  <button 
+                    onClick={() => handleNavigation('membership-cards')}
+                    className="w-full bg-emerald-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-emerald-700 transition-colors text-sm sm:text-base"
+                  >
+                    Gestisci Tesserini
                   </button>
                 </div>
                 <div 
@@ -267,6 +311,11 @@ function App() {
                     Visualizza Statistiche
                   </button>
                 </div>
+              </div>
+              
+              {/* Sezione Migrazione Dati */}
+              <div className="mt-8">
+                <DataMigration currentUser={currentUser} />
               </div>
             </div>
           </div>
@@ -345,7 +394,97 @@ function App() {
     );
   }
 
+  if (currentPage === 'athlete-manager') {
+    return (
+      <LanguageProvider>
+        {currentUser ? 
+          <AthleteManagerPage 
+            onNavigate={handleNavigation} 
+            currentUser={currentUser} 
+          /> : 
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
+            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
+            <button 
+              onClick={() => handleNavigation('auth')} 
+              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+            >
+              Accedi
+            </button>
+          </div>
+        }
+      </LanguageProvider>
+    );
+  }
 
+  if (currentPage === 'rankings') {
+    return (
+      <LanguageProvider>
+        {currentUser ? 
+          <RankingsPage 
+            onNavigate={handleNavigation} 
+            currentUser={currentUser} 
+          /> : 
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
+            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
+            <button 
+              onClick={() => handleNavigation('auth')} 
+              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+            >
+              Accedi
+            </button>
+          </div>
+        }
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'link-manager') {
+    return (
+      <LanguageProvider>
+        {currentUser ? 
+          <LinkManagerPage 
+            onNavigate={handleNavigation} 
+            currentUser={currentUser} 
+          /> : 
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
+            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
+            <button 
+              onClick={() => handleNavigation('auth')} 
+              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+            >
+              Accedi
+            </button>
+          </div>
+        }
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'membership-cards') {
+    return (
+      <LanguageProvider>
+        {currentUser && currentUser.role === 'coach' ? (
+          <MembershipCardsPage onBack={() => handleNavigation('coach-dashboard')} currentUser={currentUser} />
+        ) : (
+          <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Accesso Negato</h2>
+              <p className="text-gray-600 mb-6">Non hai i permessi per accedere a questa pagina.</p>
+              <button
+                onClick={() => handleNavigation('home')}
+                className="px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+              >
+                Torna alla Home
+              </button>
+            </div>
+          </div>
+        )}
+      </LanguageProvider>
+    );
+  }
 
   if (currentPage === 'email-test') {
     return (
@@ -415,7 +554,7 @@ function App() {
             currentUser={currentUser} 
           />
         )}
-        <HeroSection />
+        <HeroSection currentUser={currentUser} onNavigate={handleNavigation} />
         <StatisticsSection />
         <SectionSeparator variant="black" />
         <GymAreasSection />

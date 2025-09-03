@@ -11,9 +11,9 @@ Questo progetto è stato aggiornato per supportare la persistenza dei dati in pr
 - **Persistenza**: localStorage del browser
 - **Database**: Simulato con localStorage
 
-### Produzione (Vercel)
-- **Frontend**: React build statico
-- **Backend**: Vercel Serverless Functions
+### Produzione (Firebase)
+- **Frontend**: React build statico (Firebase Hosting)
+- **Backend**: Firebase Functions
 - **Persistenza**: Database remoto (da configurare)
 - **API**: Endpoints REST per operazioni CRUD
 
@@ -48,7 +48,7 @@ Questo progetto è stato aggiornato per supportare la persistenza dei dati in pr
 #### Utilità
 - `GET /api/health` - Health check dell'API
 
-## Deployment su Vercel
+## Deployment su Firebase
 
 ### 1. Preparazione
 
@@ -63,19 +63,19 @@ npm run build
 npm run preview
 ```
 
-### 2. Deploy su Vercel
+### 2. Deploy su Firebase
 
-#### Opzione A: Vercel CLI
+#### Opzione A: Firebase CLI
 ```bash
-npm install -g vercel
-vercel login
-vercel --prod
+npm install -g firebase-tools
+firebase login
+firebase deploy
 ```
 
-#### Opzione B: GitHub Integration
+#### Opzione B: GitHub Actions
 1. Pusha il codice su GitHub
-2. Connetti il repository a Vercel
-3. Vercel farà il deploy automaticamente
+2. Configura GitHub Actions per Firebase
+3. Il deploy avverrà automaticamente
 
 ### 3. Configurazione Database
 
@@ -101,21 +101,21 @@ vercel --prod
 1. Crea account su [MongoDB Atlas](https://www.mongodb.com/atlas)
 2. Crea un nuovo cluster
 3. Ottieni la connection string
-4. Aggiungi le variabili d'ambiente su Vercel:
-   ```
-   MONGODB_URI=<YOUR_MONGODB_URI>
+4. Aggiungi le variabili d'ambiente su Firebase:
+   ```bash
+   firebase functions:config:set mongodb.uri="<YOUR_MONGODB_URI>"
    ```
 
 5. Aggiorna gli endpoint API per usare MongoDB:
    ```typescript
    import { MongoClient } from 'mongodb';
    
-   const client = new MongoClient(process.env.MONGODB_URI!);
+   const client = new MongoClient(functions.config().mongodb.uri);
    ```
 
 ## Variabili d'Ambiente
 
-Configura queste variabili su Vercel:
+Configura queste variabili su Firebase:
 
 ```env
 # Database
@@ -136,7 +136,7 @@ API_SECRET_KEY=your_secret_key
 - [x] Visualizzazione data certificato nella UI
 - [x] API endpoints per operazioni CRUD
 - [x] Database ibrido (localStorage + API)
-- [x] Configurazione Vercel
+- [x] Configurazione Firebase
 
 ### 🔄 Da Completare
 - [ ] Integrazione database reale (MongoDB/PostgreSQL)
@@ -157,10 +157,10 @@ npm run dev
 ### Test API
 ```bash
 # Health check
-curl https://your-app.vercel.app/api/health
+curl https://palestra-kw8.web.app/api/health
 
 # Test users endpoint
-curl https://your-app.vercel.app/api/users
+curl https://palestra-kw8.web.app/api/users
 ```
 
 ## Sicurezza
@@ -169,19 +169,19 @@ curl https://your-app.vercel.app/api/users
 1. **Autenticazione**: Implementa JWT per proteggere le API
 2. **Validazione**: Valida tutti i dati in input
 3. **Rate Limiting**: Limita le richieste per prevenire abusi
-4. **HTTPS**: Sempre abilitato su Vercel
+4. **HTTPS**: Sempre abilitato su Firebase
 5. **Variabili d'Ambiente**: Non committare mai credenziali nel codice
 
 ## Monitoraggio
 
-- **Vercel Analytics**: Automaticamente abilitato
+- **Firebase Analytics**: Automaticamente abilitato
 - **Error Tracking**: Considera Sentry per il tracking degli errori
-- **Performance**: Usa Vercel Speed Insights
+- **Performance**: Usa Firebase Performance Monitoring
 
 ## Supporto
 
 Per problemi o domande:
-1. Controlla i log su Vercel Dashboard
+1. Controlla i log su Firebase Console
 2. Testa gli endpoint API individualmente
-3. Verifica le variabili d'ambiente
+3. Verifica le variabili d'ambiente con `firebase functions:config:get`
 4. Controlla la connessione al database

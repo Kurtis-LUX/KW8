@@ -14,11 +14,11 @@
 ## 🛠️ Tecnologie Utilizzate
 
 - **Frontend**: React 18, TypeScript, Tailwind CSS
-- **Backend**: Node.js, Express, Vercel Functions
+- **Backend**: Node.js, Express, Firebase Functions
 - **Database**: MongoDB (produzione), localStorage (sviluppo)
 - **Autenticazione**: JWT, bcrypt
 - **Email**: EmailJS
-- **Deployment**: Vercel
+- **Deployment**: Firebase Hosting
 
 ## 📋 Prerequisiti
 
@@ -69,23 +69,23 @@
    node server.cjs
    ```
 
-## 🌐 Deployment su Vercel
+## 🌐 Deployment su Firebase
 
-1. **Installa Vercel CLI**
+1. **Installa Firebase CLI**
    ```bash
-   npm i -g vercel
+   npm i -g firebase-tools
    ```
 
 2. **Login e deploy**
    ```bash
-   vercel login
-   vercel
+   firebase login
+   firebase deploy
    ```
 
-3. **Configura le variabili d'ambiente su Vercel**
-   - Vai al dashboard Vercel
+3. **Configura le variabili d'ambiente su Firebase**
+   - Vai alla Firebase Console
    - Seleziona il progetto
-   - Settings → Environment Variables
+   - Functions → Environment Variables
    - Aggiungi tutte le variabili del file `.env`
 
 ## 🔐 Configurazione Sicurezza
@@ -110,7 +110,7 @@
 
 ```
 kw8-fitness/
-├── api/                    # Vercel API Functions
+├── api/                    # Firebase Functions
 │   ├── auth/              # Autenticazione
 │   ├── users/             # Gestione utenti
 │   ├── workout-plans/     # Piani di allenamento
@@ -196,7 +196,7 @@ curl http://localhost:5173/api/health
 
 Controlla i logs su:
 - Console del browser (frontend)
-- Vercel Dashboard (API functions)
+- Firebase Console (Functions)
 - Network tab per richieste API
 
 ## 🤝 Contribuire
@@ -216,7 +216,7 @@ Questo progetto è sotto licenza MIT. Vedi il file `LICENSE` per i dettagli.
 Per supporto e domande:
 - Apri un issue su GitHub
 - Controlla la documentazione in `/docs`
-- Verifica i logs di Vercel
+- Verifica i logs di Firebase
 
 ## 🔄 Changelog
 
@@ -225,7 +225,7 @@ Per supporto e domande:
 - Dashboard amministrativa completa
 - Sistema di autenticazione
 - Gestione newsletter
-- Deployment Vercel ready
+- Deployment Firebase ready
 
 ---
 

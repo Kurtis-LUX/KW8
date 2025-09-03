@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Edit3, Plus, Save, Copy, Users, Link, ArrowLeft, Eye, X, Trash2 } from 'lucide-react';
+import { useWorkoutPlans } from '../hooks/useFirestore';
 import DB from '../utils/database';
 
 interface Exercise {
@@ -30,6 +31,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [workoutDescription, setWorkoutDescription] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  
+  // Hook Firestore per gestire i piani di allenamento
+  const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
   
   // Gestione tempo scheda
   const [startDate, setStartDate] = useState('');
@@ -118,26 +122,34 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   
 
   
-  const handleSaveTitle = () => {
+  const handleSaveTitle = async () => {
     setIsEditingTitle(false);
     // Salva il titolo nel database
     if (workoutId) {
-      const workoutData = DB.getWorkoutPlanById(workoutId);
-      if (workoutData) {
-        const updatedWorkout = { ...workoutData, name: workoutTitle, updatedAt: new Date().toISOString() };
-        DB.saveWorkoutPlan(updatedWorkout);
+      try {
+        const workoutData = await DB.getWorkoutPlanById(workoutId);
+        if (workoutData) {
+          const updatedWorkout = { ...workoutData, name: workoutTitle, updatedAt: new Date().toISOString() };
+          await updateWorkoutPlan(workoutId, updatedWorkout);
+        }
+      } catch (error) {
+        console.error('Error saving title:', error);
       }
     }
   };
   
-  const handleSaveDescription = () => {
+  const handleSaveDescription = async () => {
     setIsEditingDescription(false);
     // Salva la descrizione nel database
     if (workoutId) {
-      const workoutData = DB.getWorkoutPlanById(workoutId);
-      if (workoutData) {
-        const updatedWorkout = { ...workoutData, description: workoutDescription, updatedAt: new Date().toISOString() };
-        DB.saveWorkoutPlan(updatedWorkout);
+      try {
+        const workoutData = await DB.getWorkoutPlanById(workoutId);
+        if (workoutData) {
+          const updatedWorkout = { ...workoutData, description: workoutDescription, updatedAt: new Date().toISOString() };
+          await updateWorkoutPlan(workoutId, updatedWorkout);
+        }
+      } catch (error) {
+        console.error('Error saving description:', error);
       }
     }
   };

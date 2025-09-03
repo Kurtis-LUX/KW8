@@ -172,7 +172,7 @@ app.post('/api/auth/verify', (req, res) => {
   }
 });
 
-// Importa e configura le API routes di Vercel
+// Importa e configura le API routes di Firebase
 const fs = require('fs');
 
 // Google Sign-In inline implementation

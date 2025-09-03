@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import Portal from './Portal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
+import { useWorkoutPlans } from '../hooks/useFirestore';
 import DB, { WorkoutPlan, WorkoutFolder, WorkoutVariant } from '../utils/database';
 import FolderCustomizer, { AVAILABLE_ICONS } from './FolderCustomizer';
 import WorkoutCustomizer from './WorkoutCustomizer';
@@ -63,6 +64,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<FolderTreeItem | null>(null);
   const [showToolbarDropdown, setShowToolbarDropdown] = useState(false);
+  
+  // Hook Firestore per gestire i piani di allenamento
+  const { workoutPlans, loading, error, createWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan } = useWorkoutPlans();
   
   // Hook per il posizionamento del menu toolbar
   const {
@@ -105,9 +109,87 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     autoAdjust: true
   });
 
+  // Funzione per caricare il contenuto della cartella
+  const loadFolderContent = async () => {
+    try {
+      const folders = await DB.getWorkoutFolders();
+      const allWorkoutPlans = workoutPlans || await DB.getWorkoutPlans();
+
+      // Filtra cartelle e schede per la cartella corrente
+      const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
+      const currentWorkouts = allWorkoutPlans.filter(plan => plan.folderId === currentFolderId);
+
+      // Crea gli elementi dell'albero
+      const treeItems: FolderTreeItem[] = [
+        // Cartelle
+        ...currentFolders.map(folder => {
+          const counts = getFolderCounts(folder.id, folders, allWorkoutPlans);
+          
+          return {
+            id: folder.id,
+            name: folder.name,
+            type: 'folder' as const,
+            icon: folder.icon,
+            parentId: folder.parentId,
+            workoutCount: counts.workouts,
+            subfolderCount: counts.subfolders,
+            isExpanded: folder.isExpanded,
+            data: folder
+          };
+        }),
+        // Schede di allenamento
+        ...currentWorkouts.map(workout => ({
+          id: workout.id,
+          name: workout.name,
+          type: 'file' as const,
+          parentId: workout.folderId,
+          data: workout
+        }))
+      ];
+
+      setFolderTree(treeItems);
+    } catch (error) {
+      console.error('Error loading folder content:', error);
+    }
+  };
+
   useEffect(() => {
     loadFolderContent();
-  }, [currentFolderId]);
+  }, [currentFolderId, workoutPlans]);
+  
+  // Mostra loading se i dati stanno caricando
+  if (loading) {
+    return (
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento schede di allenamento...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Mostra errore se c'è un problema
+  if (error) {
+    return (
+      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="text-red-600 mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <p className="text-gray-600 mb-4">Errore nel caricamento dei dati</p>
+          <button 
+            onClick={() => loadFolderContent()}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Riprova
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Funzione per contare schede e sottocartelle
   const getFolderCounts = (folderId: string, allFolders: WorkoutFolder[], allWorkouts: WorkoutPlan[]) => {
@@ -178,50 +260,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     }
   };
 
-  const loadFolderContent = () => {
-    const folders = DB.getWorkoutFolders();
-    const workoutPlans = DB.getWorkoutPlans();
-
-    // Filtra cartelle e schede per la cartella corrente
-    const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
-    const currentWorkouts = workoutPlans.filter(plan => plan.folderId === currentFolderId);
-
-    // Crea gli elementi dell'albero
-    const treeItems: FolderTreeItem[] = [
-      // Cartelle
-      ...currentFolders.map(folder => {
-        const counts = getFolderCounts(folder.id, folders, workoutPlans);
-        
-        return {
-          id: folder.id,
-          name: folder.name,
-          type: 'folder' as const,
-          icon: folder.icon,
-          parentId: folder.parentId,
-          workoutCount: counts.workouts,
-          subfolderCount: counts.subfolders,
-          isExpanded: folder.isExpanded,
-          data: folder
-        };
-      }),
-      // Schede di allenamento
-      ...currentWorkouts.map(workout => ({
-        id: workout.id,
-        name: workout.name,
-        type: 'file' as const,
-        parentId: workout.folderId,
-        data: workout
-      }))
-    ];
-
-    setFolderTree(treeItems);
-  };
-
-  const navigateToFolder = (folderId?: string, folderName?: string) => {
+  const navigateToFolder = async (folderId?: string, folderName?: string) => {
     setCurrentFolderId(folderId);
     
     if (folderId) {
-      const folder = DB.getWorkoutFolderById(folderId);
+      const folder = await DB.getWorkoutFolderById(folderId);
       if (folder) {
         // Costruisci il breadcrumb
         const newBreadcrumb = [...breadcrumb];
@@ -235,7 +278,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     }
     
     // Ricarica il contenuto della cartella
-    loadFolderContent();
+    await loadFolderContent();
   };
 
   const navigateToBreadcrumb = (index: number) => {
@@ -299,51 +342,51 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   };
 
 
-  const createNewItem = (type: 'folder' | 'workout', name: string, icon?: string, color?: string, variants?: WorkoutVariant[]) => {
+  const createNewItem = async (type: 'folder' | 'workout', name: string, icon?: string, color?: string, variants?: WorkoutVariant[]) => {
     const now = new Date().toISOString();
     const id = `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    if (type === 'folder') {
-      const newFolder: WorkoutFolder = {
-        id,
-        name,
-        icon: icon || 'Folder',
-        color: color || '#3B82F6',
-        parentId: currentFolderId,
-        order: folderTree.filter(item => item.type === 'folder').length,
-        createdAt: now,
-        updatedAt: now,
-        isExpanded: false
-      };
-      DB.saveWorkoutFolder(newFolder);
-    } else {
-      const newWorkout: WorkoutPlan = {
-        id,
-        name,
-        description: '',
-        coach: currentUser?.name || 'Coach',
-        startDate: now,
-        duration: 30,
-        exercises: [],
-        category: 'strength',
-        status: 'draft',
-        mediaFiles: { images: [], videos: [], audio: [] },
-        tags: [],
-        order: folderTree.filter(item => item.type === 'file').length,
-        createdAt: now,
-        updatedAt: now,
-        difficulty: 1,
-        targetMuscles: [],
-        folderId: currentFolderId,
-        color: color || '#10B981',
-        variants: variants || [],
-        assignedAthletes: []
-      };
-      DB.saveWorkoutPlan(newWorkout);
-    }
+    try {
+      if (type === 'folder') {
+        const newFolder: WorkoutFolder = {
+          id,
+          name,
+          icon: icon || 'Folder',
+          color: color || '#3B82F6',
+          parentId: currentFolderId,
+          order: folderTree.filter(item => item.type === 'folder').length,
+          createdAt: now,
+          updatedAt: now,
+          isExpanded: false
+        };
+        await DB.saveWorkoutFolder(newFolder);
+      } else {
+        const newWorkoutData = {
+          name,
+          description: '',
+          coach: currentUser?.name || 'Coach',
+          startDate: now,
+          duration: 30,
+          exercises: [],
+          category: 'strength' as const,
+          status: 'draft' as const,
+          mediaFiles: { images: [], videos: [], audio: [] },
+          tags: [],
+          order: folderTree.filter(item => item.type === 'file').length,
+          difficulty: 1,
+          targetMuscles: [],
+          folderId: currentFolderId,
+          color: color || '#10B981',
+          variants: variants || []
+        };
+        await createWorkoutPlan(newWorkoutData);
+      }
 
-    loadFolderContent();
-    setShowCreateModal(false);
+      await loadFolderContent();
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error('Error creating new item:', error);
+    }
   };
 
   const deleteItem = (itemId: string, itemType: 'folder' | 'file') => {
@@ -368,35 +411,41 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     setItemToRename(null);
   };
 
-  const handleDelete = (item: FolderTreeItem) => {
-    if (item.type === 'folder') {
-      // Elimina ricorsivamente tutte le sottocartelle e schede
-      const folders = DB.getWorkoutFolders();
-      const workouts = DB.getWorkoutPlans();
-      
-      const deleteRecursive = (folderId: string) => {
-        const subfolders = folders.filter(f => f.parentId === folderId);
-        const folderWorkouts = workouts.filter(w => w.folderId === folderId);
+  const handleDelete = async (item: FolderTreeItem) => {
+    try {
+      if (item.type === 'folder') {
+        // Elimina ricorsivamente tutte le sottocartelle e schede
+        const folders = await DB.getWorkoutFolders();
+        const allWorkouts = workoutPlans || await DB.getWorkoutPlans();
         
-        // Elimina tutte le schede in questa cartella
-        folderWorkouts.forEach(workout => DB.deleteWorkoutPlan(workout.id));
+        const deleteRecursive = async (folderId: string) => {
+          const subfolders = folders.filter(f => f.parentId === folderId);
+          const folderWorkouts = allWorkouts.filter(w => w.folderId === folderId);
+          
+          // Elimina tutte le schede in questa cartella
+          for (const workout of folderWorkouts) {
+            await deleteWorkoutPlan(workout.id);
+          }
+          
+          // Elimina ricorsivamente le sottocartelle
+          for (const subfolder of subfolders) {
+            await deleteRecursive(subfolder.id);
+            await DB.deleteWorkoutFolder(subfolder.id);
+          }
+        };
         
-        // Elimina ricorsivamente le sottocartelle
-        subfolders.forEach(subfolder => {
-          deleteRecursive(subfolder.id);
-          DB.deleteWorkoutFolder(subfolder.id);
-        });
-      };
+        await deleteRecursive(item.id);
+        await DB.deleteWorkoutFolder(item.id);
+      } else if (item.type === 'file') {
+        await deleteWorkoutPlan(item.id);
+      }
       
-      deleteRecursive(item.id);
-      DB.deleteWorkoutFolder(item.id);
-    } else if (item.type === 'file') {
-       DB.deleteWorkoutPlan(item.id);
-     }
-    
-    loadFolderContent();
-    setShowDeleteModal(false);
-    setItemToDelete(null);
+      await loadFolderContent();
+      setShowDeleteModal(false);
+      setItemToDelete(null);
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
   };
 
   const handleDownload = (item: FolderTreeItem) => {

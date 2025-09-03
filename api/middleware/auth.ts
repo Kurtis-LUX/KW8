@@ -1,4 +1,4 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 // Interfaccia per il payload JWT
@@ -20,7 +20,7 @@ declare global {
 }
 
 // Middleware per verificare il token JWT
-export const authenticateToken = (req: VercelRequest & { user?: JWTPayload }, res: VercelResponse, next?: () => void) => {
+export const authenticateToken = (req: Request & { user?: JWTPayload }, res: Response, next?: () => void) => {
   const authHeader = req.headers.authorization;
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 

@@ -1,5 +1,6 @@
 // API endpoint per la verifica del token JWT
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import * as functions from 'firebase-functions';
+import { Request, Response } from 'express';
 const jwt = require('jsonwebtoken');
 
 // Logger utility per debugging strutturato
@@ -26,7 +27,7 @@ interface JWTPayload {
   aud: string;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const verify = functions.https.onRequest(async (req: Request, res: Response) => {
   // Imposta immediatamente il Content-Type per evitare text/plain di default
   res.setHeader('Content-Type', 'application/json');
   
@@ -52,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Abilita CORS con logging
     const allowedOrigins = [
       'http://localhost:5173',
-      'https://kw8-fitness.vercel.app',
+      'https://palestra-kw8.web.app',
       process.env.FRONTEND_URL
     ].filter(Boolean);
     
@@ -288,7 +289,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       requestId
     });
   }
-}
+});
 
 // Funzione helper per verificare i token (utilizzabile in altri endpoint)
 export const verifyToken = (token: string): Promise<JWTPayload> => {
@@ -309,7 +310,7 @@ export const verifyToken = (token: string): Promise<JWTPayload> => {
 };
 
 // Middleware per proteggere le rotte API
-export const requireAuth = async (req: VercelRequest): Promise<JWTPayload> => {
+export const requireAuth = async (req: Request): Promise<JWTPayload> => {
   const authHeader = req.headers.authorization;
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -331,7 +332,7 @@ export const requireAuth = async (req: VercelRequest): Promise<JWTPayload> => {
 };
 
 // Middleware per verificare il ruolo admin
-export const requireAdmin = async (req: VercelRequest): Promise<JWTPayload> => {
+export const requireAdmin = async (req: Request): Promise<JWTPayload> => {
   const user = await requireAuth(req);
   
   if (user.role !== 'admin') {

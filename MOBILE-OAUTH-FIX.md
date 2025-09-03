@@ -40,252 +40,176 @@ Google Identity Services può fare login automatico con un account già collegat
 
 ## ✅ Soluzioni
 
-### Soluzione 1: 🔧 Risoluzione "Redirect a URL Vercel sbagliato"
+### Soluzione 1: 🔧 Risoluzione "Redirect a URL Firebase sbagliato"
 
-**CAUSA**: Il servizio di autenticazione forza l'uso di `https://kw8.vercel.app/api` invece di usare l'URL corrente del deployment.
+**CAUSA**: Il servizio di autenticazione forza l'uso di un URL Firebase diverso invece di usare l'URL corrente del deployment.
 
 **SINTOMI**:
-- Dopo il login, l'utente viene reindirizzato a un URL Vercel diverso
+- Dopo il login, l'utente viene reindirizzato a un URL Firebase diverso
 - Errori di CORS o API non trovate
 - L'applicazione non funziona correttamente su deployment branch
 
-**SOLUZIONE IMPLEMENTATA**:
-- Modificata la logica in `authService.ts` e `api.ts`
-- Ora usa l'URL corrente del deployment: `${protocol}//${hostname}/api`
-- Funziona correttamente su tutti i deployment Vercel (main, branch, preview)
+**SOLUZIONE**:
+- Assicurati che tutte le configurazioni puntino a `https://palestra-kw8.web.app`
+- Funziona correttamente su tutti i deployment Firebase (main, branch, preview)
 
-### Soluzione 2: 🔧 Risoluzione "origin_mismatch"
+### Soluzione 2: 🔧 Configurazione Google Cloud Console
 
-**CAUSA**: L'origine del sito web non è autorizzata nella Google Cloud Console.
-
-**SOLUZIONE IMMEDIATA**:
-
-1. **Accedi alla Google Cloud Console**:
-   - Vai su [Google Cloud Console](https://console.cloud.google.com/)
-   - Seleziona il progetto KW8
-
-2. **Verifica le Credenziali OAuth**:
-   - Vai su **"API e servizi" > "Credenziali"**
-   - Clicca sul Client ID OAuth 2.0 esistente
-   - Clicca sull'icona della matita per modificare
-
-3. **Aggiungi TUTTE le origini necessarie**:
+#### Passo 1: Verifica Origini JavaScript Autorizzate
+1. Vai su [Google Cloud Console](https://console.cloud.google.com/)
+2. Seleziona il progetto corretto
+3. Vai su **API e servizi** → **Credenziali**
+4. Clicca sul tuo **Client ID OAuth 2.0**
+5. Nella sezione **Origini JavaScript autorizzate**, assicurati di avere:
    ```
+   https://palestra-kw8.web.app
    http://localhost:5173
-   http://localhost:3000
-   https://kw8.vercel.app
-   https://kw8-fitness.vercel.app
-   ```
-   
-   **⚠️ IMPORTANTE**: 
-   - Aggiungi sia `http://localhost:5173` che `http://localhost:3000`
-   - Verifica che l'URL di produzione sia esatto (senza slash finale)
-   - Salva le modifiche
-
-4. **Verifica URI di Reindirizzamento**:
-   - ⚠️ **IMPORTANTE**: Lascia la sezione "URI di reindirizzamento autorizzati" **VUOTA**
-   - Google Identity Services gestisce automaticamente i redirect
-
-5. **Attendi la propagazione** (5-10 minuti)
-
-### 2. 🔧 Risoluzione "Bottoni multipli e schermata bianca"
-
-**CAUSA**: Configurazione Google Identity Services non ottimizzata che causa:
-- Bottoni di login multipli
-- Schermata bianca su accounts.google.com/gsi/transform
-- Inizializzazioni multiple del servizio
-
-**SOLUZIONE IMPLEMENTATA**:
-- Rimosso `click_listener` personalizzato che causava bottoni multipli
-- Aggiunto `window.google.accounts.id.cancel()` per pulire inizializzazioni precedenti
-- Aggiunto `buttonElement.innerHTML = ''` per pulire il contenuto del bottone
-- Configurazione `itp_support: true` per migliorare la compatibilità
-- Aggiunta funzione di cleanup al dismount del componente
-- Rimosso `prompt()` che causava la schermata bianca
-
-**Come funziona**:
-1. Un solo bottone "Accedi con Google" viene renderizzato
-2. Nessuna schermata bianca durante il processo di login
-3. Gestione pulita delle inizializzazioni multiple
-4. Flusso di login più stabile e affidabile
-
-### 3. 🔧 Risoluzione "Missing client_id"
-
-**CAUSA**: Variabile d'ambiente non configurata correttamente.
-
-**SOLUZIONE**: Aggiornare Variabili d'Ambiente
-
-1. **Verifica il file `.env`**:
-   ```bash
-   VITE_GOOGLE_CLIENT_ID=803496166941-a6eb8r5v7ei7fo4rd2ks1i02044u1ogf.apps.googleusercontent.com
    ```
 
-2. **Verifica che il Client ID sia corretto**:
-   - Copia il Client ID dalla Google Cloud Console
-   - Sostituisci il valore nel file `.env`
-   - Riavvia il server di sviluppo
-
-### Soluzione 3: Configurazione Vercel per Produzione (CRITICA)
-
-⚠️ **PROBLEMA PRINCIPALE**: Le variabili d'ambiente non sono configurate su Vercel!
-
-1. **Aggiungi le variabili d'ambiente su Vercel**:
-   - Vai su [Vercel Dashboard](https://vercel.com/dashboard)
-   - Seleziona il progetto KW8
-   - Vai su **Settings > Environment Variables**
-   - Clicca **Add New**
-   - Aggiungi ESATTAMENTE:
-     ```
-     Name: VITE_GOOGLE_CLIENT_ID
-     Value: 803496166941-a6eb8r5v7ei7fo4rd2ks1i02044u1ogf.apps.googleusercontent.com
-     Environment: Production, Preview, Development (seleziona tutti)
-     ```
-   - ⚠️ **ATTENZIONE**: Non aggiungere spazi prima o dopo il valore!
-
-2. **Verifica la configurazione**:
-   - Dopo aver aggiunto la variabile, dovrebbe apparire nella lista
-   - Verifica che il nome sia esattamente `VITE_GOOGLE_CLIENT_ID`
-   - Verifica che il valore termini con `.apps.googleusercontent.com`
-
-3. **Rideploy il progetto**:
-   - Vai su **Deployments**
-   - Clicca sui tre puntini dell'ultimo deployment
-   - Seleziona **Redeploy**
-   - ⚠️ **IMPORTANTE**: Le variabili d'ambiente si applicano solo ai nuovi deployment!
-
-4. **Verifica il deployment**:
-   - Attendi che il deployment sia completato
-   - Controlla i log del build per eventuali errori
-   - Testa il login Google su produzione
-
-### Soluzione 4: Test e Verifica
-
-1. **Test su Desktop**:
-   - Vai su `http://localhost:5173`
-   - Prova il login Google
-   - Verifica che funzioni correttamente
-
-2. **Test su Mobile (Locale)**:
-   - Trova l'IP locale del tuo computer (es. `192.168.1.100`)
-   - Aggiungi `http://192.168.1.100:5173` alle origini autorizzate in Google Cloud Console
-   - Accedi da mobile usando l'IP locale
-
-3. **Test su Mobile (Produzione)**:
-   - Vai su `https://kw8.vercel.app` da mobile
-   - Prova il login Google
-   - Verifica che l'errore sia risolto
-
-## 🔧 Configurazione Avanzata per Mobile
-
-### Aggiungere Meta Tag per Mobile
-Il file `index.html` è già configurato correttamente con:
-```html
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<meta name="mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
+#### Passo 2: Verifica URI di Reindirizzamento Autorizzati
+Nella sezione **URI di reindirizzamento autorizzati**, aggiungi:
+```
+https://palestra-kw8.web.app
+https://palestra-kw8.web.app/
 ```
 
-### Verifica Caricamento Script Google
-Il componente `CoachAuthPage.tsx` carica dinamicamente lo script:
-```javascript
-if (!window.google) {
-  const script = document.createElement('script');
-  script.src = 'https://accounts.google.com/gsi/client';
-  script.async = true;
-  script.defer = true;
-  script.onload = initializeGoogleSignIn;
-  document.head.appendChild(script);
-}
+#### Passo 3: Salva e Attendi
+- Clicca **Salva**
+- Attendi 5-10 minuti per la propagazione delle modifiche
+- Testa nuovamente il login
+
+### Soluzione 3: 🔧 Verifica Variabili d'Ambiente
+
+#### Frontend (Vite)
+Assicurati che nel file `.env.local` o nelle variabili di build ci sia:
+```bash
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
-## 🔍 Debug delle Variabili d'Ambiente
+#### Backend (Firebase Functions)
+Configura le variabili d'ambiente:
+```bash
+firebase functions:config:set google.client_secret="your-google-client-secret"
+firebase functions:config:set frontend.url="https://palestra-kw8.web.app"
+firebase functions:config:set cors.origin="https://palestra-kw8.web.app"
+```
 
-### Verifica Locale (Sviluppo)
-1. **Controlla il file `.env`**:
+### Soluzione 4: Configurazione Firebase per Produzione (CRITICA)
+
+⚠️ **PROBLEMA PRINCIPALE**: Le variabili d'ambiente non sono configurate su Firebase!
+
+1. **Aggiungi le variabili d'ambiente su Firebase**:
+   - Vai su [Firebase Console](https://console.firebase.google.com/)
+   - Seleziona il progetto **palestra-kw8**
+   - Vai su **Functions** → **Environment Variables**
+   - Aggiungi:
+     ```
+     VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+     GOOGLE_CLIENT_SECRET=your-google-client-secret
+     JWT_SECRET=your-jwt-secret-32-chars-minimum
+     FRONTEND_URL=https://palestra-kw8.web.app
+     CORS_ORIGIN=https://palestra-kw8.web.app
+     ```
+
+2. **Redeploy l'applicazione**:
    ```bash
-   cat .env | grep VITE_GOOGLE_CLIENT_ID
-   ```
-   Dovrebbe mostrare:
-   ```
-   VITE_GOOGLE_CLIENT_ID=803496166941-a6eb8r5v7ei7fo4rd2ks1i02044u1ogf.apps.googleusercontent.com
+   firebase deploy
    ```
 
-2. **Verifica nel browser (F12 > Console)**:
-   ```javascript
-   console.log('Client ID:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
-   ```
-   Non dovrebbe essere `undefined`
+3. **Verifica il deployment**:
+   - Vai su `https://palestra-kw8.web.app`
+   - Testa il login da desktop
+   - Testa il login da mobile
 
-### Verifica su Vercel (Produzione)
-1. **Controlla i log di build**:
-   - Vai su Vercel Dashboard > Deployments
-   - Clicca sull'ultimo deployment
-   - Vai su **Build Logs**
-   - Cerca errori relativi a variabili d'ambiente
+### Soluzione 5: 🔧 Debug Avanzato
 
-2. **Aggiungi log temporaneo** (per debug):
-   Nel file `src/components/auth/CoachAuthPage.tsx`, aggiungi:
-   ```javascript
-   console.log('🔍 Client ID Debug:', import.meta.env.VITE_GOOGLE_CLIENT_ID);
-   ```
-   Poi rideploy e controlla i log del browser su produzione
+#### Controlla Console del Browser
+1. Apri DevTools (F12)
+2. Vai su **Console**
+3. Cerca errori relativi a:
+   - `client_id`
+   - `CORS`
+   - `origin_mismatch`
 
-## 🚨 Checklist di Verifica
+#### Controlla Network Tab
+1. Vai su **Network** in DevTools
+2. Filtra per `google` o `oauth`
+3. Verifica le richieste durante il login
+4. Controlla gli headers e le risposte
 
-### Per errore "origin_mismatch":
-- [ ] **CRITICO**: Tutte le origini JavaScript aggiunte in Google Cloud Console:
-  - [ ] `http://localhost:5173`
-  - [ ] `http://localhost:3000` 
-  - [ ] `https://kw8.vercel.app`
-  - [ ] Altri domini personalizzati (se applicabili)
-- [ ] URI di reindirizzamento lasciati **VUOTI** (importante per GSI)
-- [ ] Modifiche salvate nella Google Cloud Console
-- [ ] Atteso 5-10 minuti per la propagazione
-- [ ] Cache del browser svuotata
-- [ ] Test con browser in modalità incognito
+#### Test da Mobile
+1. Apri il browser mobile
+2. Vai su `https://palestra-kw8.web.app` da mobile
+3. Apri DevTools mobile (se disponibile)
+4. Tenta il login e monitora gli errori
 
-### Per problema "Login automatico con account sbagliato":
-- [ ] Verifica che `disableAutoSelect()` funzioni correttamente
-- [ ] Configurazione `use_fedcm_for_prompt: false` implementata
-- [ ] Ogni login richiede sempre la selezione dell'account
-- [ ] Nessuna sessione salvata tra i login
-- [ ] Test con browser che ha più account Google collegati
+## 🧪 Testing
 
-### Per errore "Missing client_id":
-- [ ] Client ID copiato correttamente dalla Google Cloud Console
-- [ ] Variabile d'ambiente `VITE_GOOGLE_CLIENT_ID` configurata nel file `.env` locale
-- [ ] Server di sviluppo riavviato dopo modifiche al `.env`
-- [ ] **CRITICO**: Variabile d'ambiente `VITE_GOOGLE_CLIENT_ID` configurata su Vercel
-- [ ] **CRITICO**: Progetto ridisployato su Vercel dopo aver aggiunto le variabili
-- [ ] Verifica che `import.meta.env.VITE_GOOGLE_CLIENT_ID` non sia `undefined` in produzione
-- [ ] Test effettuato sia su desktop che mobile
+### Test Desktop
+1. Apri `https://palestra-kw8.web.app`
+2. Clicca "Accedi con Google"
+3. Verifica che appaia la finestra di selezione account
+4. Completa il login
+5. Verifica il redirect alla dashboard
 
-## ⚡ Risoluzione Rapida per "origin_mismatch"
+### Test Mobile
+1. Apri il browser mobile
+2. Vai su `https://palestra-kw8.web.app`
+3. Clicca "Accedi con Google"
+4. Verifica che il login funzioni correttamente
+5. Controlla che non ci siano errori di redirect
 
-**Se vedi l'errore "origin_mismatch" SUBITO:**
+### Verifica su Firebase (Produzione)
 
-1. **Apri Google Cloud Console** → [console.cloud.google.com](https://console.cloud.google.com/)
-2. **Vai su "APIs & Services" → "Credentials"**
-3. **Clicca sul tuo OAuth 2.0 Client ID**
-4. **Aggiungi queste origini JavaScript autorizzate:**
-   ```
-   http://localhost:5173
-   http://localhost:3000
-   https://kw8.vercel.app
-   ```
-5. **Salva e attendi 5-10 minuti**
-6. **Svuota cache browser e riprova**
+- Vai su Firebase Console > Functions
+- Controlla i logs per errori
+- Verifica che le variabili d'ambiente siano configurate
+- Testa gli endpoint API
 
-## 📞 Supporto Aggiuntivo
+## 📋 Checklist Completa
 
-Se il problema persiste dopo aver seguito tutti i passaggi:
+### Google Cloud Console
+- [ ] Client ID OAuth 2.0 creato
+- [ ] Origini JavaScript autorizzate:
+  - [ ] `https://palestra-kw8.web.app`
+  - [ ] `http://localhost:5173` (per sviluppo)
+- [ ] URI di reindirizzamento autorizzati:
+  - [ ] `https://palestra-kw8.web.app`
+- [ ] Schermata di consenso OAuth configurata
+- [ ] Email di test aggiunta (se in modalità test)
 
-1. **Controlla i log della console del browser** (F12 > Console)
-2. **Verifica che il dominio di produzione sia corretto**
-3. **Prova con un browser diverso** sul mobile
-4. **Prova in modalità incognito**
-5. **Contatta il supporto tecnico** con screenshot dell'errore
+### Firebase Console
+- [ ] **CRITICO**: Variabile d'ambiente `VITE_GOOGLE_CLIENT_ID` configurata su Firebase
+- [ ] **CRITICO**: Progetto ridisployato su Firebase dopo aver aggiunto le variabili
+- [ ] Variabile `GOOGLE_CLIENT_SECRET` configurata
+- [ ] Variabile `JWT_SECRET` configurata (min 32 caratteri)
+- [ ] Variabile `FRONTEND_URL` = `https://palestra-kw8.web.app`
+- [ ] Variabile `CORS_ORIGIN` = `https://palestra-kw8.web.app`
+
+### Test Funzionali
+- [ ] Login da desktop funzionante
+- [ ] Login da mobile funzionante
+- [ ] Redirect corretto dopo login
+- [ ] Dashboard accessibile dopo login
+- [ ] Logout funzionante
+- [ ] No errori in console browser
+
+## 🌐 URL di Produzione
+
+URL principale:
+```
+https://palestra-kw8.web.app
+```
+
+## 📞 Supporto
+
+Se il problema persiste:
+1. Controlla i logs su Firebase Console
+2. Verifica la configurazione Google Cloud Console
+3. Testa con un browser in incognito
+4. Controlla che tutte le variabili d'ambiente siano configurate
+5. Assicurati che il deployment sia aggiornato
 
 ---
 
-*Documento creato per risolvere gli errori OAuth di Google: "Missing required parameter: client_id" e "origin_mismatch".*
+**Nota**: Dopo ogni modifica alla configurazione OAuth o alle variabili d'ambiente, attendi 5-10 minuti prima di testare nuovamente.

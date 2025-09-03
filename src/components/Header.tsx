@@ -124,17 +124,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   };
 
   const handleLogout = () => {
+    console.log('🚪 Header: Logout iniziato');
+    
+    // Chiudi tutti i menu aperti
+    setIsMenuOpen(false);
+    setShowUserMenu(false);
+    
+    // Esegui il logout tramite la funzione parent
     if (onLogout) {
       onLogout();
     }
-    setIsMenuOpen(false);
-    // Reindirizza alla home e refresha la pagina
+    
+    // Reindirizza alla home senza reload
     if (onNavigate) {
       onNavigate('home');
     }
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
+    
+    console.log('✅ Header: Logout completato');
   };
 
   const toggleUserMenu = () => {
@@ -268,6 +274,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
 
           {/* Right side buttons */}
           <div className="flex items-center space-x-4">
+            {/* Gestione Schede Button - Solo per coach */}
+            {currentUser && currentUser.role === 'coach' && (
+              <button
+                onClick={() => handleNavigation('workout-manager')}
+                className="flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black"
+                title="Gestione Schede"
+              >
+                <FileText size={20} />
+                <span className="hidden md:inline font-medium">Gestione Schede</span>
+              </button>
+            )}
+            
             {/* User Profile/Login Button */}
             {currentUser ? (
               <div className="relative" ref={userMenuRef}>

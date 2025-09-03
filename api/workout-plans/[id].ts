@@ -1,11 +1,12 @@
 // API endpoint per operazioni su singoli piani di allenamento
-import { VercelRequest, VercelResponse } from '@vercel/node';
+import * as functions from 'firebase-functions';
+import { Request, Response } from 'express';
 import { requireCoachRole } from '../middleware/rbac';
 
 // Simulazione di un database (in produzione usare MongoDB, PostgreSQL, etc.)
 let workoutPlans: any[] = [];
 
-async function handler(req: VercelRequest & { user?: any }, res: VercelResponse) {
+async function handler(req: Request & { user?: any }, res: Response) {
   // CORS gestito dal middleware RBAC
 
   const { id } = req.query;
@@ -59,4 +60,4 @@ async function handler(req: VercelRequest & { user?: any }, res: VercelResponse)
 }
 
 // Proteggi l'endpoint con autenticazione coach
-export default requireCoachRole(handler);
+export const workoutPlanById = functions.https.onRequest(requireCoachRole(handler));

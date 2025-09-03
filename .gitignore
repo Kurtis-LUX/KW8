@@ -28,8 +28,11 @@ dist-ssr
 .env.test.local
 .env.production.local
 
-# Vercel
-.vercel
+# Firebase
+.firebase
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
 # TypeScript
 *.tsbuildinfo

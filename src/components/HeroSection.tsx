@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { Settings } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
-const HeroSection: React.FC = () => {
+interface HeroSectionProps {
+  currentUser?: any;
+  onNavigate?: (page: string) => void;
+}
+
+const HeroSection: React.FC<HeroSectionProps> = ({ currentUser, onNavigate }) => {
   const { t } = useLanguageContext();
   const [displayText, setDisplayText] = useState('');
   const [isTypingComplete, setIsTypingComplete] = useState(false);
@@ -77,12 +83,25 @@ const HeroSection: React.FC = () => {
           {!isTypingComplete && <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>}
         </h1>
         
-        <button
-          onClick={scrollToStatistics}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl animate-pulse-subtle"
-        >
-          {t.discoverMore}
-        </button>
+        <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+          <button
+            onClick={scrollToStatistics}
+            className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl animate-pulse-subtle"
+          >
+            {t.discoverMore}
+          </button>
+          
+          {/* Pulsante accesso rapido per coach */}
+          {currentUser && currentUser.role === 'coach' && (
+            <button
+              onClick={() => onNavigate && onNavigate('workout-manager')}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl flex items-center space-x-2"
+            >
+              <Settings size={20} />
+              <span>Gestione Schede</span>
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );

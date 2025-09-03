@@ -42,7 +42,7 @@ Tutti gli endpoint admin ora richiedono autenticazione:
 - `/api/workout-plans` - Gestione piani allenamento (Admin only)
 - `/api/workout-folders` - Gestione cartelle allenamento (Admin only)
 
-## 🌐 Configurazione Vercel
+## 🌐 Configurazione Firebase
 
 ### Variabili di Ambiente
 ```env
@@ -53,8 +53,8 @@ JWT_SECRET=your-super-secret-jwt-key-minimum-32-characters-long
 MONGODB_URI=<YOUR_MONGODB_URI>
 
 # CORS
-FRONTEND_URL=https://kw8-fitness.vercel.app
-CORS_ORIGIN=https://kw8-fitness.vercel.app
+FRONTEND_URL=https://palestra-kw8.web.app
+CORS_ORIGIN=https://palestra-kw8.web.app
 
 # Session
 SESSION_TIMEOUT=24h
@@ -64,7 +64,7 @@ REFRESH_TOKEN_EXPIRY=7d
 ### Deploy Security
 - **Nessuna chiave hardcoded**: Tutte le configurazioni tramite env vars
 - **Separazione ambienti**: Configurazioni diverse per dev/prod
-- **Secrets management**: Utilizzo del dashboard Vercel per i secrets
+- **Secrets management**: Utilizzo di Firebase Console per i secrets
 
 ## 📋 Checklist di Sicurezza
 
@@ -92,7 +92,7 @@ REFRESH_TOKEN_EXPIRY=7d
 ## 🚀 Deployment Sicuro
 
 ### Pre-Deploy Checklist
-1. **Configurare JWT_SECRET** nel dashboard Vercel (min 32 caratteri)
+1. **Configurare JWT_SECRET** in Firebase Console (min 32 caratteri)
 2. **Impostare MONGODB_URI** con credenziali sicure
 3. **Configurare FRONTEND_URL** con il dominio di produzione
 4. **Verificare CORS_ORIGIN** per limitare l'accesso
@@ -124,7 +124,7 @@ REFRESH_TOKEN_EXPIRY=7d
 Per problemi di sicurezza o domande sull'implementazione, consultare:
 - Documentazione JWT: https://jwt.io/
 - Documentazione bcrypt: https://github.com/kelektiv/node.bcrypt.js
-- Best practices Vercel: https://vercel.com/docs/security
+- Best practices Firebase: https://firebase.google.com/docs/rules/security
 
 ---
 

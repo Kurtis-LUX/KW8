@@ -1,4 +1,5 @@
-// Database semplice utilizzando localStorage
+// Database integrato con Firestore
+import { firestoreService } from '../services/firestoreService';
 
 // Tipi di dati per il sistema di workout
 
@@ -71,6 +72,17 @@ export interface Exercise {
 
 
 
+// Flag per controllare se usare Firestore o localStorage
+let useFirestore = true;
+
+// Funzione per abilitare/disabilitare Firestore
+export const setFirestoreEnabled = (enabled: boolean) => {
+  useFirestore = enabled;
+};
+
+// Funzione per verificare se Firestore è abilitato
+export const isFirestoreEnabled = () => useFirestore;
+
 // Funzioni per interagire con il database con fallback per mobile
 const DB = {
   // Controllo compatibilità storage
@@ -127,8 +139,18 @@ const DB = {
   
 
   
-  // Piani di allenamento
-  getWorkoutPlans: (): WorkoutPlan[] => {
+  // Piani di allenamento con Firestore
+  getWorkoutPlans: async (): Promise<WorkoutPlan[]> => {
+    if (useFirestore) {
+      try {
+        return await firestoreService.getWorkoutPlans();
+      } catch (error) {
+        console.error('Error fetching from Firestore, falling back to localStorage:', error);
+        // Fallback a localStorage in caso di errore
+      }
+    }
+    
+    // Fallback localStorage
     try {
       const plans = DB.getItem('kw8_workoutPlans');
       const workoutPlans = plans ? JSON.parse(plans) : [];
@@ -162,16 +184,42 @@ const DB = {
     }
   },
   
-  getWorkoutPlanById: (id: string): WorkoutPlan | null => {
-    const plans = DB.getWorkoutPlans();
+  getWorkoutPlanById: async (id: string): Promise<WorkoutPlan | null> => {
+    if (useFirestore) {
+      try {
+        return await firestoreService.getWorkoutPlanById(id);
+      } catch (error) {
+        console.error('Error fetching from Firestore, falling back to localStorage:', error);
+      }
+    }
+    
+    // Fallback localStorage
+    const plans = await DB.getWorkoutPlans();
     return plans.find(plan => plan.id === id) || null;
   },
   
 
   
-  saveWorkoutPlan: (plan: WorkoutPlan): void => {
+  saveWorkoutPlan: async (plan: WorkoutPlan): Promise<void> => {
+    if (useFirestore) {
+      try {
+        const existingPlan = await firestoreService.getWorkoutPlanById(plan.id);
+        if (existingPlan) {
+          await firestoreService.updateWorkoutPlan(plan.id, plan);
+        } else {
+          const { id, ...planData } = plan;
+          await firestoreService.createWorkoutPlan(planData);
+        }
+        console.log('✅ Workout plan saved successfully to Firestore:', plan.name);
+        return;
+      } catch (error) {
+        console.error('Error saving to Firestore, falling back to localStorage:', error);
+      }
+    }
+    
+    // Fallback localStorage
     try {
-      const plans = DB.getWorkoutPlans();
+      const plans = await DB.getWorkoutPlans();
       const existingPlanIndex = plans.findIndex(p => p.id === plan.id);
       
       if (existingPlanIndex >= 0) {
@@ -187,9 +235,20 @@ const DB = {
     }
   },
   
-  deleteWorkoutPlan: (planId: string): void => {
+  deleteWorkoutPlan: async (planId: string): Promise<void> => {
+    if (useFirestore) {
+      try {
+        await firestoreService.deleteWorkoutPlan(planId);
+        console.log('✅ Workout plan deleted successfully from Firestore:', planId);
+        return;
+      } catch (error) {
+        console.error('Error deleting from Firestore, falling back to localStorage:', error);
+      }
+    }
+    
+    // Fallback localStorage
     try {
-      const plans = DB.getWorkoutPlans();
+      const plans = await DB.getWorkoutPlans();
       const filteredPlans = plans.filter(plan => plan.id !== planId);
       DB.setItem('kw8_workoutPlans', JSON.stringify(filteredPlans));
       console.log('✅ Workout plan deleted successfully:', planId);
@@ -198,8 +257,17 @@ const DB = {
     }
   },
 
-  // Cartelle
-  getWorkoutFolders: (): WorkoutFolder[] => {
+  // Cartelle con Firestore
+  getWorkoutFolders: async (): Promise<WorkoutFolder[]> => {
+    if (useFirestore) {
+      try {
+        return await firestoreService.getWorkoutFolders();
+      } catch (error) {
+        console.error('Error fetching folders from Firestore, falling back to localStorage:', error);
+      }
+    }
+    
+    // Fallback localStorage
     try {
       const folders = DB.getItem('kw8_workoutFolders');
       return folders ? JSON.parse(folders) : [];
@@ -209,14 +277,40 @@ const DB = {
     }
   },
 
-  getWorkoutFolderById: (id: string): WorkoutFolder | null => {
-    const folders = DB.getWorkoutFolders();
+  getWorkoutFolderById: async (id: string): Promise<WorkoutFolder | null> => {
+    if (useFirestore) {
+      try {
+        return await firestoreService.getWorkoutFolderById(id);
+      } catch (error) {
+        console.error('Error fetching folder from Firestore, falling back to localStorage:', error);
+      }
+    }
+    
+    // Fallback localStorage
+    const folders = await DB.getWorkoutFolders();
     return folders.find(folder => folder.id === id) || null;
   },
 
-  saveWorkoutFolder: (folder: WorkoutFolder): void => {
+  saveWorkoutFolder: async (folder: WorkoutFolder): Promise<void> => {
+    if (useFirestore) {
+      try {
+        const existingFolder = await firestoreService.getWorkoutFolderById(folder.id);
+        if (existingFolder) {
+          await firestoreService.updateWorkoutFolder(folder.id, folder);
+        } else {
+          const { id, ...folderData } = folder;
+          await firestoreService.createWorkoutFolder(folderData);
+        }
+        console.log('✅ Workout folder saved successfully to Firestore:', folder.name);
+        return;
+      } catch (error) {
+        console.error('Error saving folder to Firestore, falling back to localStorage:', error);
+      }
+    }
+    
+    // Fallback localStorage
     try {
-      const folders = DB.getWorkoutFolders();
+      const folders = await DB.getWorkoutFolders();
       const existingFolderIndex = folders.findIndex(f => f.id === folder.id);
       
       if (existingFolderIndex >= 0) {
@@ -232,10 +326,21 @@ const DB = {
     }
   },
 
-  deleteWorkoutFolder: (folderId: string): void => {
+  deleteWorkoutFolder: async (folderId: string): Promise<void> => {
+    if (useFirestore) {
+      try {
+        await firestoreService.deleteWorkoutFolder(folderId);
+        console.log('✅ Workout folder deleted successfully from Firestore:', folderId);
+        return;
+      } catch (error) {
+        console.error('Error deleting folder from Firestore, falling back to localStorage:', error);
+      }
+    }
+    
+    // Fallback localStorage
     try {
-      const folders = DB.getWorkoutFolders();
-      const plans = DB.getWorkoutPlans();
+      const folders = await DB.getWorkoutFolders();
+      const plans = await DB.getWorkoutPlans();
       
       // Rimuovi la cartella
       const filteredFolders = folders.filter(folder => folder.id !== folderId);
@@ -261,13 +366,13 @@ const DB = {
     }
   },
 
-  getWorkoutPlansByFolderId: (folderId?: string): WorkoutPlan[] => {
-    const plans = DB.getWorkoutPlans();
+  getWorkoutPlansByFolderId: async (folderId?: string): Promise<WorkoutPlan[]> => {
+    const plans = await DB.getWorkoutPlans();
     return plans.filter(plan => plan.folderId === folderId);
   },
 
-  getSubfolders: (parentId?: string): WorkoutFolder[] => {
-    const folders = DB.getWorkoutFolders();
+  getSubfolders: async (parentId?: string): Promise<WorkoutFolder[]> => {
+    const folders = await DB.getWorkoutFolders();
     return folders.filter(folder => folder.parentId === parentId);
   },
   

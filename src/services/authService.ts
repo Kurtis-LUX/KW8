@@ -43,11 +43,43 @@ interface VerifyResponse {
 class AuthService {
   private readonly TOKEN_KEY = 'kw8_auth_token';
   private readonly USER_KEY = 'kw8_current_user';
+  private readonly SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 giorni in millisecondi
   
   constructor() {
     // Verifica che le variabili d'ambiente critiche siano configurate
     if (!checkCriticalEnvVars()) {
       console.warn('⚠️ Alcune variabili d\'ambiente critiche non sono configurate');
+    }
+    
+    // Inizializza la gestione delle sessioni persistenti
+    this.initializePersistentSession();
+  }
+  
+  // Rileva se siamo su un dispositivo mobile
+  private isMobileDevice(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           ('ontouchstart' in window) ||
+           (window.innerWidth <= 768);
+  }
+  
+  // Inizializza la sessione persistente al caricamento
+  private initializePersistentSession(): void {
+    // Verifica se esiste un token nei cookie
+    const cookieToken = this.getCookie(this.TOKEN_KEY);
+    const cookieUser = this.getCookie(this.USER_KEY);
+    
+    // Se non c'è token in localStorage ma c'è nei cookie, ripristina la sessione
+    if (!this.getToken() && cookieToken) {
+      localStorage.setItem(this.TOKEN_KEY, cookieToken);
+    }
+    
+    if (!this.getCurrentUser() && cookieUser) {
+      try {
+        const user = JSON.parse(decodeURIComponent(cookieUser));
+        localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+      } catch (error) {
+        console.error('Errore nel parsing del cookie utente:', error);
+      }
     }
   }
   
@@ -258,11 +290,17 @@ class AuthService {
     }
   }
 
-  // Logout
+  // Logout completo con pulizia cookie
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_KEY);
     localStorage.removeItem('kw8_auto_login'); // Rimuovi anche auto-login
+    
+    // Rimuovi anche i cookie
+    this.deleteCookie(this.TOKEN_KEY);
+    this.deleteCookie(this.USER_KEY);
+    
+    console.log('✅ Logout completato: localStorage e cookie puliti');
   }
 
   // Ottieni il token corrente
@@ -270,9 +308,10 @@ class AuthService {
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
-  // Salva il token
+  // Salva il token con persistenza di 7 giorni
   private setToken(token: string): void {
     localStorage.setItem(this.TOKEN_KEY, token);
+    this.setCookie(this.TOKEN_KEY, token, this.SESSION_DURATION);
   }
 
   // Ottieni l'utente corrente
@@ -287,9 +326,11 @@ class AuthService {
     }
   }
 
-  // Salva i dati utente
+  // Salva i dati utente con persistenza di 7 giorni
   private setUser(user: AuthUser): void {
-    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    const userString = JSON.stringify(user);
+    localStorage.setItem(this.USER_KEY, userString);
+    this.setCookie(this.USER_KEY, encodeURIComponent(userString), this.SESSION_DURATION);
   }
 
   // Controlla se l'utente è autenticato
@@ -324,25 +365,57 @@ class AuthService {
 
   // Auto-login se il token è ancora valido
   async autoLogin(): Promise<AuthUser | null> {
-    if (!this.isAuthenticated()) {
-      return null;
-    }
-
     try {
-      const verifyResult = await this.verifyToken();
+      const token = this.getToken();
+      if (!token) {
+        console.log('🔐 No token found for auto-login');
+        return null;
+      }
+
+      console.log('🔐 Attempting auto-login with existing token');
       
-      if (verifyResult && verifyResult.valid) {
-        // Token valido, aggiorna i dati utente se necessario
-        const currentUser = this.getCurrentUser();
-        if (currentUser) {
-          return currentUser;
+      // Su mobile, usa timeout più lungo e retry
+      const isMobile = this.isMobileDevice();
+      const maxRetries = isMobile ? 3 : 1;
+      const timeout = isMobile ? 10000 : 5000; // 10s mobile, 5s desktop
+      
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          console.log(`🔐 Auto-login attempt ${attempt}/${maxRetries} (${isMobile ? 'mobile' : 'desktop'})`);
+          
+          const result = await Promise.race([
+            this.verifyToken(),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), timeout)
+            )
+          ]);
+          
+          if (result && result.valid) {
+            console.log('✅ Auto-login successful');
+            return result.user;
+          } else {
+            console.log(`❌ Token verification failed during auto-login (attempt ${attempt})`);
+            if (attempt === maxRetries) {
+              this.logout(); // Pulisce i dati non validi solo all'ultimo tentativo
+            }
+          }
+        } catch (error) {
+          console.error(`❌ Auto-login attempt ${attempt} failed:`, error);
+          if (attempt === maxRetries) {
+            this.logout(); // Pulisce i dati in caso di errore finale
+            return null;
+          }
+          // Attendi prima del prossimo tentativo (solo su mobile)
+          if (isMobile && attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
         }
       }
       
       return null;
     } catch (error) {
-      console.error('Auto-login error:', error);
-      this.logout();
+      console.error('❌ Auto-login error:', error);
+      this.logout(); // Pulisce i dati in caso di errore
       return null;
     }
   }
@@ -370,6 +443,39 @@ class AuthService {
     } catch {
       return true; // Se non riusciamo a decodificare, considera il token come in scadenza
     }
+  }
+  
+  // Gestione Cookie - Imposta un cookie con scadenza
+  private setCookie(name: string, value: string, maxAge: number): void {
+    const expires = new Date(Date.now() + maxAge).toUTCString();
+    document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax; Secure=${location.protocol === 'https:'}`;
+  }
+  
+  // Gestione Cookie - Legge un cookie
+  private getCookie(name: string): string | null {
+    const nameEQ = name + '=';
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  }
+  
+  // Gestione Cookie - Elimina un cookie
+  private deleteCookie(name: string): void {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+  }
+  
+  // Verifica se la sessione è ancora valida (entro 7 giorni)
+  isSessionValid(): boolean {
+    const token = this.getToken();
+    if (!token) return false;
+    
+    // Verifica anche se il cookie esiste ancora
+    const cookieToken = this.getCookie(this.TOKEN_KEY);
+    return !!(token && cookieToken);
   }
 }
 
