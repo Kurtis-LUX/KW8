@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/logopagina.PNG?v=3" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/logopagina.PNG?v=3" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/logopagina.PNG?v=3" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#1e3a8a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="KW8" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <title>KW8</title>
+    <meta name="description" content="KW8 - Cross Your Limits. Sala pesi, Cross training, Karate, Yoga. La miglior scelta per i migliori progressi." />
+  </head>
+  <body>
+    <div id="root">
+      <!-- Fallback content per dispositivi mobili -->
+      <div id="loading-fallback" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f8fafc; font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+        <div>
+          <div style="width: 60px; height: 60px; border: 4px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+          <h2 style="color: #1e293b; margin-bottom: 10px;">Caricamento KW8...</h2>
+          <p style="color: #64748b; font-size: 14px;">Se questa schermata persiste, ricarica la pagina</p>
+          <button onclick="window.location.reload()" style="margin-top: 15px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">Ricarica</button>
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Nascondi il fallback quando React si carica
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const fallback = document.getElementById('loading-fallback');
+          if (fallback && document.querySelector('[data-reactroot]') === null) {
+            console.log('⚠️ React non si è caricato, mostrando fallback');
+          } else {
+            console.log('✅ React caricato, nascondendo fallback');
+            if (fallback) fallback.style.display = 'none';
+          }
+        }, 3000);
+      });
+    </script>
+  </body>
+</html>
