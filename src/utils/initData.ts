@@ -1,4 +1,4 @@
-import DB, { WorkoutPlan, Exercise } from './database';
+import DB, { WorkoutPlan, Exercise, Subscription, User } from './database';
 import { v4 as uuidv4 } from 'uuid';
 
 // Funzione per inizializzare il database con dati di esempio

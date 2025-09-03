@@ -35,16 +35,14 @@ export const db = getFirestore(app);
 // Inizializza Auth
 export const auth = getAuth(app);
 
-// Connetti all'emulatore solo se esplicitamente richiesto
-if (import.meta.env.VITE_USE_FIRESTORE_EMULATOR === 'true') {
+// Connetti all'emulatore in sviluppo locale se disponibile
+if (import.meta.env.DEV && !import.meta.env.VITE_FIREBASE_PROJECT_ID) {
   try {
     connectFirestoreEmulator(db, 'localhost', 8080);
     console.log('🔧 Connected to Firestore emulator');
   } catch (error) {
     console.log('⚠️ Firestore emulator not available, using production');
   }
-} else {
-  console.log('🔥 Using Firebase production environment');
 }
 
 export default app;

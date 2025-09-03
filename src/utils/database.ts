@@ -70,6 +70,25 @@ export interface Exercise {
   imageUrl?: string;
 }
 
+export interface Subscription {
+  id: string;
+  type: string;
+  price: number;
+  duration: number; // in mesi
+  features: string[];
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'coach' | 'atleta';
+  subscriptionType?: string;
+  subscriptionEndDate?: string;
+  workoutPlans: string[];
+  birthDate?: string;
+}
+
 
 
 // Flag per controllare se usare Firestore o localStorage
@@ -374,6 +393,66 @@ const DB = {
   getSubfolders: async (parentId?: string): Promise<WorkoutFolder[]> => {
     const folders = await DB.getWorkoutFolders();
     return folders.filter(folder => folder.parentId === parentId);
+  },
+
+  // ==================== SUBSCRIPTIONS ====================
+  
+  getSubscriptions: (): Subscription[] => {
+    try {
+      const data = DB.getItem('kw8_subscriptions');
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('❌ Error parsing subscriptions data:', e);
+      return [];
+    }
+  },
+
+  saveSubscription: (subscription: Subscription): void => {
+    try {
+      const subscriptions = DB.getSubscriptions();
+      const existingIndex = subscriptions.findIndex(s => s.id === subscription.id);
+      
+      if (existingIndex >= 0) {
+        subscriptions[existingIndex] = subscription;
+      } else {
+        subscriptions.push(subscription);
+      }
+      
+      DB.setItem('kw8_subscriptions', JSON.stringify(subscriptions));
+      console.log('✅ Subscription saved successfully:', subscription.type);
+    } catch (e) {
+      console.error('❌ Error saving subscription:', e);
+    }
+  },
+
+  // ==================== USERS ====================
+  
+  getUsers: (): User[] => {
+    try {
+      const data = DB.getItem('kw8_users');
+      return data ? JSON.parse(data) : [];
+    } catch (e) {
+      console.error('❌ Error parsing users data:', e);
+      return [];
+    }
+  },
+
+  saveUser: (user: User): void => {
+    try {
+      const users = DB.getUsers();
+      const existingIndex = users.findIndex(u => u.id === user.id);
+      
+      if (existingIndex >= 0) {
+        users[existingIndex] = user;
+      } else {
+        users.push(user);
+      }
+      
+      DB.setItem('kw8_users', JSON.stringify(users));
+      console.log('✅ User saved successfully:', user.name);
+    } catch (e) {
+      console.error('❌ Error saving user:', e);
+    }
   },
   
 

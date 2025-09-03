@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trophy, Search, Filter, TrendingUp, Users, Target, Calendar, Medal, Edit, Plus, Settings, Dumbbell, BarChart3, Award } from 'lucide-react';
 import { useRankings } from '../hooks/useFirestore';
 import MuscleGroupForm from '../components/MuscleGroupForm';
@@ -23,12 +24,8 @@ interface ExerciseCategory {
   color: string;
 }
 
-interface RankingsPageProps {
-  onNavigate: (page: string) => void;
-  currentUser: any;
-}
-
-const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser }) => {
+const RankingsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { rankings, loading, error, createRanking, updateRanking, deleteRanking } = useRankings();
   const [records, setRecords] = useState<ExerciseRecord[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<ExerciseRecord[]>([]);
@@ -314,7 +311,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser }) 
           {/* Header compatto */}
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => onNavigate('coach-dashboard')}
+              onClick={() => navigate('/')}
               className="flex items-center justify-center w-10 h-10 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
               title="Torna alla Dashboard"
             >

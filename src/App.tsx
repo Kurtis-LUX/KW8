@@ -467,7 +467,7 @@ function App() {
     return (
       <LanguageProvider>
         {currentUser && currentUser.role === 'coach' ? (
-          <MembershipCardsPage onBack={() => handleNavigation('coach-dashboard')} currentUser={currentUser} />
+          <MembershipCardsPage onBack={() => handleNavigation('home')} />
         ) : (
           <div className="min-h-screen bg-gray-100 flex items-center justify-center">
             <div className="text-center">
