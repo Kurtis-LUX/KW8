@@ -48,32 +48,20 @@ function getApiBaseUrl(): string {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   
-  // SEMPRE usa l'API locale quando siamo su localhost
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    console.log('🏠 Ambiente locale rilevato, usando Firebase Functions locale');
-    return 'http://localhost:5001/palestra-kw8/us-central1';
-  }
+  // Per ora usa sempre l'API di produzione per evitare problemi con l'emulatore locale
+  console.log('🔥 Usando Firebase Functions di produzione per stabilità');
+  return 'https://us-central1-palestra-kw8.cloudfunctions.net';
   
-  // In sviluppo con Vite, usa Firebase Functions locale
-  if (import.meta.env.DEV) {
-    console.log('🔧 Modalità development rilevata, usando Firebase Functions locale');
-    return 'http://localhost:5001/palestra-kw8/us-central1';
-  }
+  // COMMENTATO: Configurazione locale per debug futuro
+  // if (hostname === 'localhost' || hostname === '127.0.0.1') {
+  //   console.log('🏠 Ambiente locale rilevato, usando Firebase Functions locale');
+  //   return 'http://localhost:5001/palestra-kw8/us-central1';
+  // }
   
-  // Se siamo su Firebase Hosting o produzione, usa Firebase Functions di produzione
-  if (hostname.includes('web.app') || hostname.includes('firebaseapp.com') || hostname.includes('kw8')) {
-    console.log('🔥 Ambiente produzione rilevato, usando Firebase Functions');
-    return 'https://us-central1-palestra-kw8.cloudfunctions.net';
-  }
-  
-  // Fallback: usa Firebase Functions di produzione
-  const isProduction = import.meta.env.PROD;
-  const apiUrl = isProduction 
-    ? 'https://us-central1-palestra-kw8.cloudfunctions.net'
-    : 'http://localhost:5001/palestra-kw8/us-central1';
-  
-  console.log(`🔄 Fallback API URL: ${apiUrl} (production: ${isProduction})`);
-  return apiUrl;
+  // if (import.meta.env.DEV) {
+  //   console.log('🔧 Modalità development rilevata, usando Firebase Functions locale');
+  //   return 'http://localhost:5001/palestra-kw8/us-central1';
+  // }
 }
 
 // Funzione per ottenere il Google Client ID con fallback

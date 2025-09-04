@@ -45,8 +45,8 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
     };
   }, []);
 
-  // Orari della palestra
-  const [scheduleData, setScheduleData] = useState({
+  // Orari di default della palestra
+  const defaultSchedule = {
     lunedi: { open: '09:00-13:00', close: '16:00-21:00', isOpen: true },
     martedi: { open: '09:00-14:30', close: '16:00-21:00', isOpen: true },
     mercoledi: { open: '09:00-13:00', close: '16:00-21:00', isOpen: true },
@@ -54,7 +54,22 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
     venerdi: { open: '09:00-13:00', close: '16:00-21:00', isOpen: true },
     sabato: { open: '09:00-14:30', close: '16:00-21:00', isOpen: true },
     domenica: { open: 'CHIUSO', close: '', isOpen: false }
-  });
+  };
+
+  // Carica orari salvati o usa quelli di default
+  const loadScheduleData = () => {
+    try {
+      const savedSchedule = localStorage.getItem('gym_schedule');
+      if (savedSchedule) {
+        return JSON.parse(savedSchedule);
+      }
+    } catch (error) {
+      console.error('Errore nel caricamento degli orari salvati:', error);
+    }
+    return defaultSchedule;
+  };
+
+  const [scheduleData, setScheduleData] = useState(loadScheduleData);
   const [editingSchedule, setEditingSchedule] = useState(scheduleData);
 
   const daysOfWeek = ['domenica', 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato'];
@@ -121,10 +136,27 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
   };
 
   const handleEditSave = () => {
-    setScheduleData({ ...editingSchedule });
-    setIsEditing(false);
-    // Qui potresti salvare i dati nel database
-    console.log('Orari salvati:', editingSchedule);
+    try {
+      // Salva nel localStorage
+      localStorage.setItem('gym_schedule', JSON.stringify(editingSchedule));
+      
+      // Aggiorna lo stato locale
+      setScheduleData({ ...editingSchedule });
+      setIsEditing(false);
+      
+      // Feedback per l'utente
+      console.log('✅ Orari salvati con successo:', editingSchedule);
+      
+      // Mostra notifica di successo (opzionale)
+      if (window.alert) {
+        setTimeout(() => {
+          alert('Orari salvati con successo!');
+        }, 100);
+      }
+    } catch (error) {
+      console.error('❌ Errore nel salvataggio degli orari:', error);
+      alert('Errore nel salvataggio degli orari. Riprova.');
+    }
   };
 
   const handleScheduleChange = (day: string, field: string, value: string | boolean) => {
