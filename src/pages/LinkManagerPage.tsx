@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Link as LinkIcon, ExternalLink, Copy, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Users, Database, QrCode, BarChart3 } from 'lucide-react';
 import { useLinks } from '../hooks/useFirestore';
 import { Link as FirestoreLink } from '../services/firestoreService';
+import { User } from '../services/authService';
 
 interface WorkoutLink {
   id: string;
@@ -20,8 +20,12 @@ interface WorkoutLink {
   description?: string;
 }
 
-const LinkManagerPage: React.FC = () => {
-  const navigate = useNavigate();
+interface LinkManagerPageProps {
+  onNavigate: (page: string) => void;
+  currentUser: User;
+}
+
+const LinkManagerPage: React.FC<LinkManagerPageProps> = ({ onNavigate }) => {
   const { links: firestoreLinks, loading, error, createLink, updateLink, deleteLink } = useLinks();
   const [links, setLinks] = useState<WorkoutLink[]>([]);
   const [filteredLinks, setFilteredLinks] = useState<WorkoutLink[]>([]);
@@ -134,7 +138,7 @@ const LinkManagerPage: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => navigate('/coach-dashboard')}
+            onClick={() => onNavigate('coach-dashboard')}
             className="flex items-center justify-center w-10 h-10 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
             title="Torna alla Dashboard"
           >
