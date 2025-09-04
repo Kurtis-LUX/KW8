@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, Calendar, MapPin, Edit3, Save, X } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
+import { firestoreService, type GymSchedule } from '../services/firestoreService';
 
 interface ScheduleSectionProps {
   currentUser?: any;
@@ -56,53 +57,56 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
     domenica: { open: 'CHIUSO', close: '', isOpen: false }
   };
 
-  // Carica orari salvati o usa quelli di default
-  const loadScheduleData = () => {
-    try {
-      const savedSchedule = localStorage.getItem('gym_schedule');
-      if (savedSchedule) {
-        return JSON.parse(savedSchedule);
-      }
-    } catch (error) {
-      console.error('Errore nel caricamento degli orari salvati:', error);
-    }
-    return defaultSchedule;
-  };
-
-  const [scheduleData, setScheduleData] = useState(loadScheduleData);
+  const [scheduleData, setScheduleData] = useState(defaultSchedule);
   const [editingSchedule, setEditingSchedule] = useState(scheduleData);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Effetto per ricaricare gli orari dal localStorage quando cambiano
+  // Carica orari da Firestore all'avvio del componente
   useEffect(() => {
-    const handleStorageChange = () => {
-      const newScheduleData = loadScheduleData();
-      setScheduleData(newScheduleData);
-    };
-
-    // Ascolta i cambiamenti nel localStorage
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Ricarica anche periodicamente per essere sicuri
-    const interval = setInterval(() => {
-      const currentSaved = localStorage.getItem('gym_schedule');
-      if (currentSaved) {
-        try {
-          const parsedSchedule = JSON.parse(currentSaved);
-          // Confronta con lo stato attuale per evitare aggiornamenti inutili
-          if (JSON.stringify(parsedSchedule) !== JSON.stringify(scheduleData)) {
-            setScheduleData(parsedSchedule);
-          }
-        } catch (error) {
-          console.error('Errore nel parsing degli orari salvati:', error);
+    const loadScheduleFromFirestore = async () => {
+      try {
+        setIsLoading(true);
+        const firestoreSchedule = await firestoreService.getGymSchedule();
+        
+        if (firestoreSchedule) {
+          // Rimuovi i campi id, createdAt, updatedAt per compatibilità
+          const { id, createdAt, updatedAt, ...scheduleOnly } = firestoreSchedule;
+          setScheduleData(scheduleOnly);
+        } else {
+          // Se non ci sono orari salvati, usa quelli di default
+          setScheduleData(defaultSchedule);
         }
+      } catch (error) {
+        console.error('Errore nel caricamento degli orari da Firestore:', error);
+        // Fallback al localStorage se Firestore non è disponibile
+        try {
+          const savedSchedule = localStorage.getItem('gym_schedule');
+          if (savedSchedule) {
+            setScheduleData(JSON.parse(savedSchedule));
+          }
+        } catch (localError) {
+          console.error('Errore anche nel caricamento da localStorage:', localError);
+          setScheduleData(defaultSchedule);
+        }
+      } finally {
+        setIsLoading(false);
       }
-    }, 1000); // Controlla ogni secondo
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
     };
-  }, [scheduleData]);
+
+    loadScheduleFromFirestore();
+  }, []);
+
+  // Sottoscrizione in tempo reale agli aggiornamenti degli orari
+  useEffect(() => {
+    const unsubscribe = firestoreService.subscribeToGymSchedule((schedule) => {
+      if (schedule) {
+        const { id, createdAt, updatedAt, ...scheduleOnly } = schedule;
+        setScheduleData(scheduleOnly);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const daysOfWeek = ['domenica', 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato'];
   const dayNames = [t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday];
@@ -167,36 +171,41 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
     setIsEditing(false);
   };
 
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     try {
-      // Crea una copia profonda per evitare problemi di riferimento
+      setIsLoading(true);
+      
+      // Crea una copia profonda degli orari per evitare problemi di riferimento
       const scheduleToSave = JSON.parse(JSON.stringify(editingSchedule));
       
-      // Salva nel localStorage
-      localStorage.setItem('gym_schedule', JSON.stringify(scheduleToSave));
+      // Salva in Firestore
+      await firestoreService.createOrUpdateGymSchedule(scheduleToSave);
       
-      // Aggiorna immediatamente lo stato locale
+      // Aggiorna lo stato locale immediatamente
       setScheduleData(scheduleToSave);
       setIsEditing(false);
       
-      // Forza un aggiornamento del componente
-      setTimeout(() => {
-        const reloadedData = loadScheduleData();
-        setScheduleData(reloadedData);
-      }, 50);
+      // Salva anche nel localStorage come backup
+      localStorage.setItem('gym_schedule', JSON.stringify(scheduleToSave));
       
-      // Feedback per l'utente
-      console.log('✅ Orari salvati con successo:', scheduleToSave);
-      
-      // Mostra notifica di successo
-      if (window.alert) {
-        setTimeout(() => {
-          alert('Orari salvati con successo! Le modifiche sono ora visibili nella home page.');
-        }, 100);
-      }
+      console.log('Orari salvati con successo in Firestore!');
+      alert('Orari aggiornati e sincronizzati! Le modifiche sono ora visibili su tutti i dispositivi.');
     } catch (error) {
-      console.error('❌ Errore nel salvataggio degli orari:', error);
-      alert('Errore nel salvataggio degli orari. Riprova.');
+      console.error('Errore nel salvataggio degli orari in Firestore:', error);
+      
+      // Fallback al localStorage se Firestore non è disponibile
+      try {
+        const scheduleToSave = JSON.parse(JSON.stringify(editingSchedule));
+        localStorage.setItem('gym_schedule', JSON.stringify(scheduleToSave));
+        setScheduleData(scheduleToSave);
+        setIsEditing(false);
+        alert('Orari salvati localmente. La sincronizzazione cloud non è disponibile al momento.');
+      } catch (localError) {
+        console.error('Errore anche nel salvataggio locale:', localError);
+        alert('Errore nel salvataggio degli orari. Riprova.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -237,8 +246,9 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
               {!isEditing ? (
                 <button
                   onClick={handleEditStart}
-                  className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-                  title="Modifica orari"
+                  disabled={isLoading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={isLoading ? "Caricamento..." : "Modifica orari"}
                 >
                   <Edit3 size={20} />
                 </button>
@@ -246,14 +256,16 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
                 <>
                   <button
                     onClick={handleEditSave}
-                    className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
-                    title="Salva modifiche"
+                    disabled={isLoading}
+                    className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={isLoading ? "Salvando..." : "Salva modifiche"}
                   >
                     <Save size={20} />
                   </button>
                   <button
                     onClick={handleEditCancel}
-                    className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    disabled={isLoading}
+                    className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Annulla modifiche"
                   >
                     <X size={20} />
@@ -263,6 +275,14 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
             </div>
           )}
         </div>
+        
+        {/* Indicatore di caricamento */}
+        {isLoading && (
+          <div className="flex justify-center items-center mb-6">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+            <span className="ml-2 text-navy-900">Caricamento orari...</span>
+          </div>
+        )}
         
         {/* Data e Ora Attuale */}
         <div className={`max-w-6xl mx-auto mb-6 transition-all duration-900 delay-300 transform ${

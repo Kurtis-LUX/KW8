@@ -89,6 +89,19 @@ export interface MembershipCard {
   updatedAt: string;
 }
 
+export interface GymSchedule {
+  id: string;
+  lunedi: { open: string; close: string; isOpen: boolean };
+  martedi: { open: string; close: string; isOpen: boolean };
+  mercoledi: { open: string; close: string; isOpen: boolean };
+  giovedi: { open: string; close: string; isOpen: boolean };
+  venerdi: { open: string; close: string; isOpen: boolean };
+  sabato: { open: string; close: string; isOpen: boolean };
+  domenica: { open: string; close: string; isOpen: boolean };
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Classe principale del servizio Firestore
 class FirestoreService {
   // Collezioni Firestore
@@ -98,7 +111,8 @@ class FirestoreService {
     workoutFolders: 'workoutFolders',
     rankings: 'rankings',
     links: 'links',
-    membershipCards: 'membershipCards'
+    membershipCards: 'membershipCards',
+    schedule: 'gymSchedule'
   };
 
   // ==================== UTENTI ====================
@@ -579,6 +593,82 @@ class FirestoreService {
       console.error('❌ Error during data migration:', error);
       throw error;
     }
+  }
+
+  // Metodi per gestire gli orari della palestra
+  async getGymSchedule(): Promise<GymSchedule | null> {
+    try {
+      const scheduleCollection = collection(db, this.collections.schedule);
+      const snapshot = await getDocs(scheduleCollection);
+      
+      if (snapshot.empty) {
+        return null;
+      }
+      
+      // Prende il primo documento (dovrebbe esserci solo un documento per gli orari)
+      const doc = snapshot.docs[0];
+      return {
+        id: doc.id,
+        ...doc.data()
+      } as GymSchedule;
+    } catch (error) {
+      console.error('Errore nel recupero degli orari:', error);
+      throw error;
+    }
+  }
+
+  async createOrUpdateGymSchedule(scheduleData: Omit<GymSchedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    try {
+      const scheduleCollection = collection(db, this.collections.schedule);
+      const snapshot = await getDocs(scheduleCollection);
+      
+      const timestamp = new Date().toISOString();
+      
+      if (snapshot.empty) {
+        // Crea nuovo documento se non esiste
+        const docRef = await addDoc(scheduleCollection, {
+          ...scheduleData,
+          createdAt: timestamp,
+          updatedAt: timestamp
+        });
+        return docRef.id;
+      } else {
+        // Aggiorna il documento esistente
+        const existingDoc = snapshot.docs[0];
+        await updateDoc(existingDoc.ref, {
+          ...scheduleData,
+          updatedAt: timestamp
+        });
+        return existingDoc.id;
+      }
+    } catch (error) {
+      console.error('Errore nel salvataggio degli orari:', error);
+      throw error;
+    }
+  }
+
+  subscribeToGymSchedule(callback: (schedule: GymSchedule | null) => void): Unsubscribe {
+    const scheduleCollection = collection(db, this.collections.schedule);
+    
+    return onSnapshot(scheduleCollection, (snapshot) => {
+      try {
+        if (snapshot.empty) {
+          callback(null);
+          return;
+        }
+        
+        const doc = snapshot.docs[0];
+        const schedule = {
+          id: doc.id,
+          ...doc.data()
+        } as GymSchedule;
+        
+        callback(schedule);
+      } catch (error) {
+        console.error('Errore nella sottoscrizione agli orari:', error);
+        callback(null);
+      }
+    });
   }
 }
 

@@ -35,14 +35,19 @@ export const db = getFirestore(app);
 // Inizializza Auth
 export const auth = getAuth(app);
 
-// Connetti all'emulatore in sviluppo locale se disponibile
-if (import.meta.env.DEV && !import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+// Nota: L'emulatore Firestore richiede Java. Per ora usiamo il servizio cloud.
+// Se vuoi usare l'emulatore locale, installa Java e decomenta il codice seguente:
+/*
+if (import.meta.env.DEV) {
   try {
     connectFirestoreEmulator(db, 'localhost', 8080);
-    console.log('🔧 Connected to Firestore emulator');
+    console.log('🔧 Connected to Firestore emulator on localhost:8080');
   } catch (error) {
-    console.log('⚠️ Firestore emulator not available, using production');
+    console.log('⚠️ Firestore emulator connection failed:', error);
   }
 }
+*/
+
+console.log('🔥 Using Firebase Firestore cloud service for data persistence');
 
 export default app;
