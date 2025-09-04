@@ -229,7 +229,7 @@ class AuthService {
     }
 
     try {
-      const response = await fetch(`${this.API_BASE_URL}/auth/verify`, {
+      const response = await fetch(`${this.API_BASE_URL}/authVerify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

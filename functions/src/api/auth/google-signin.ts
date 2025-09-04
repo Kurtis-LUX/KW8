@@ -1,211 +1,135 @@
-import { onRequest } from 'firebase-functions/v2/https';
-import { Request, Response } from 'express';
-const jwt = require('jsonwebtoken');
-const { OAuth2Client } = require('google-auth-library');
+import { onRequest } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions";
+import { OAuth2Client } from "google-auth-library";
+import * as jwt from "jsonwebtoken";
+import * as dotenv from "dotenv";
 
 // Load environment variables
-require('dotenv').config();
+dotenv.config();
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': process.env.CORS_ORIGIN || 'https://palestra-kw8.web.app',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Credentials': 'true'
-};
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Funzione per verificare il token Google
-async function verifyGoogleIdToken(idToken: string, clientId: string): Promise<any> {
+// Origini consentite
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "https://palestra-kw8.web.app"
+];
+
+// Middleware CORS personalizzato
+function setCorsHeaders(req: any, res: any) {
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Access-Control-Allow-Credentials", "true");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
+}
+
+export const apiAuthGoogleSignin = onRequest({ cors: false }, async (req, res) => {
+  // Imposta header CORS immediatamente per tutte le richieste
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Access-Control-Allow-Credentials", "true");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
+
+  // Gestione preflight esplicita
+  if (req.method === "OPTIONS") {
+    logger.info("Handling CORS preflight manually");
+    res.status(204).end();
+    return;
+  }
+
+  logger.info("Google Sign-In request received", {
+    method: req.method,
+    origin: req.headers.origin,
+    userAgent: req.headers["user-agent"],
+  });
+
+  if (req.method !== "POST") {
+    logger.warn(`Method ${req.method} not allowed`);
+    res.status(405).json({ error: "Method not allowed" });
+    return;
+  }
+
   try {
-    const client = new OAuth2Client(clientId);
+    const { token, credential } = req.body;
+    const idToken = token || credential;
+
+    if (!idToken) {
+      logger.warn("No token provided");
+      res.status(400).json({ error: "Missing Google ID token" });
+      return;
+    }
+
+    // Verify the Google ID token
+    logger.info("Verifying Google ID token");
     const ticket = await client.verifyIdToken({
       idToken: idToken,
-      audience: clientId,
+      audience: process.env.GOOGLE_CLIENT_ID,
     });
-    
+
     const payload = ticket.getPayload();
-    if (!payload || !payload.email || !payload.email_verified) {
-      throw new Error('Token non valido');
+    if (!payload) {
+      logger.error("Invalid token payload");
+      res.status(401).json({ error: "Invalid token" });
+      return;
     }
-    
-    return payload;
-  } catch (error: any) {
-    throw new Error(`Verifica token fallita: ${error.message}`);
-  }
-}
 
-// Funzione per validare l'email autorizzata
-function validateAuthorizedEmail(email: string): boolean {
-  const authorizedEmail = process.env.AUTHORIZED_EMAIL;
-  
-  if (!authorizedEmail) {
-    console.error('AUTHORIZED_EMAIL non configurato');
-    return false;
-  }
-  
-  const normalizedEmail = email.toLowerCase().trim();
-  const authorizedEmails = authorizedEmail
-    .split(',')
-    .map((email: string) => email.toLowerCase().trim())
-    .filter((email: string) => email.length > 0);
-  
-  console.log('Verifica autorizzazione:', {
-    email: normalizedEmail,
-    authorizedEmails: authorizedEmails,
-    isAuthorized: authorizedEmails.includes(normalizedEmail)
-  });
-  
-  return authorizedEmails.includes(normalizedEmail);
-}
+    const { email, name, picture } = payload;
+    logger.info("Token verified successfully", { email, name });
 
-// Firebase Functions Gen2 HTTPS endpoint
-export const apiAuthGoogleSignin = onRequest(
-  {
-    cors: [process.env.CORS_ORIGIN || 'https://palestra-kw8.web.app'],
-    maxInstances: 5,
-    timeoutSeconds: 30,
-    memory: '256MiB'
-  },
-  async (req: Request, res: Response): Promise<void> => {
-    const requestId = Math.random().toString(36).substring(7);
-    console.log(`[${requestId}] Google Sign-In request:`, {
-      method: req.method,
-      origin: req.headers.origin,
-      userAgent: req.headers['user-agent']
+    // Check if email is authorized
+    const authorizedEmails = process.env.AUTHORIZED_EMAIL?.split(",").map(e => e.trim()) || [];
+    if (!email || !authorizedEmails.includes(email)) {
+      logger.warn(`Unauthorized email: ${email}`);
+      res.status(403).json({ error: "Unauthorized email" });
+      return;
+    }
+
+    // Generate JWT session token
+    const sessionToken = jwt.sign(
+      {
+        email,
+        name,
+        picture,
+        iat: Math.floor(Date.now() / 1000),
+      },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
+
+    logger.info("JWT session token generated", { email });
+
+    // Set secure cookie
+    const isProduction = process.env.NODE_ENV === "production";
+    res.cookie("session", sessionToken, {
+      httpOnly: true,
+      secure: true, // Sempre true per HTTPS e SameSite=None
+      sameSite: "none", // Necessario per cross-origin
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      domain: isProduction ? ".palestra-kw8.web.app" : undefined,
     });
 
-    res.setHeader('Content-Type', 'application/json');
-    
-    try {
-      // Gestione CORS preflight
-      if (req.method === 'OPTIONS') {
-        console.log(`[${requestId}] Gestione preflight CORS`);
-        res.status(200)
-          .setHeader('Access-Control-Allow-Origin', corsHeaders['Access-Control-Allow-Origin'])
-          .setHeader('Access-Control-Allow-Methods', corsHeaders['Access-Control-Allow-Methods'])
-          .setHeader('Access-Control-Allow-Headers', corsHeaders['Access-Control-Allow-Headers'])
-          .setHeader('Access-Control-Allow-Credentials', corsHeaders['Access-Control-Allow-Credentials'])
-          .json({ success: true, message: 'CORS preflight successful' });
-        return;
-      }
+    logger.info("Session cookie set successfully", { email, isProduction });
 
-      // Imposta headers CORS per tutte le risposte
-      Object.entries(corsHeaders).forEach(([key, value]) => {
-        res.setHeader(key, value);
-      });
-
-      if (req.method !== 'POST') {
-        console.log(`[${requestId}] Metodo non consentito: ${req.method}`);
-        res.status(405).json({ 
-          success: false, 
-          message: 'Metodo non consentito',
-          error: 'METHOD_NOT_ALLOWED'
-        });
-        return;
-      }
-
-      const { credential } = req.body;
-      if (!credential) {
-        console.log(`[${requestId}] Credential mancante`);
-        res.status(400).json({
-          success: false,
-          message: 'Credential mancante',
-          error: 'MISSING_CREDENTIAL'
-        });
-        return;
-      }
-
-      // Ottieni configurazione dalle variabili d'ambiente
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      const jwtSecret = process.env.JWT_SECRET;
-      
-      if (!clientId || !jwtSecret) {
-        console.error(`[${requestId}] Configurazione mancante:`, { 
-          hasClientId: !!clientId, 
-          hasJwtSecret: !!jwtSecret 
-        });
-        res.status(500).json({
-          success: false,
-          message: 'Configurazione server incompleta',
-          error: 'MISSING_CONFIG'
-        });
-        return;
-      }
-
-      // Verifica token Google
-      console.log(`[${requestId}] Verifica token Google...`);
-      const payload = await verifyGoogleIdToken(credential, clientId);
-      const email = payload.email;
-      
-      console.log(`[${requestId}] Token verificato per email: ${email}`);
-
-      // Verifica email autorizzata
-      if (!validateAuthorizedEmail(email)) {
-        console.log(`[${requestId}] Email non autorizzata: ${email}`);
-        res.status(403).json({
-          success: false,
-          message: 'Email non autorizzata',
-          error: 'UNAUTHORIZED_EMAIL'
-        });
-        return;
-      }
-
-      // Genera JWT
-      const user = {
-        userId: payload.sub,
-        email: payload.email,
-        name: payload.name,
-        role: 'coach'
-      };
-
-      const token = jwt.sign(
-        { 
-          userId: user.userId,
-          email: user.email,
-          role: user.role,
-          name: user.name
+    res.status(200).json({
+      success: true,
+      data: {
+        token: sessionToken,
+        user: {
+          email,
+          name,
+          picture,
+          role: 'coach'
         },
-        jwtSecret,
-        {
-          expiresIn: '24h',
-          issuer: 'kw8-fitness',
-          audience: 'kw8-app'
-        }
-      );
-
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-      console.log(`[${requestId}] Autenticazione completata con successo per: ${email}`);
-      
-      res.status(200).json({
-        success: true,
-        message: 'Autenticazione Google completata con successo',
-        data: {
-          token,
-          user: {
-            id: user.userId,
-            email: user.email,
-            role: user.role,
-            name: user.name
-          },
-          expiresAt: expiresAt.toISOString(),
-          tokenType: 'Bearer'
-        }
-      });
-
-    } catch (error: any) {
-      console.error(`[${requestId}] Errore Google Sign-In:`, error);
-      
-      if (!res.headersSent) {
-        res.setHeader('Content-Type', 'application/json');
-      }
-      
-      res.status(500).json({
-        success: false,
-        message: 'Errore interno del server durante l\'autenticazione',
-        error: 'INTERNAL_SERVER_ERROR',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
-    }
+      },
+    });
+  } catch (error) {
+    logger.error("Google Sign-In error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
-);
+});

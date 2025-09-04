@@ -5,15 +5,16 @@ require('dotenv').config();
 
 // Importa le funzioni API
 import { apiAuthGoogleSignin } from "./api/auth/google-signin";
+import { authVerify } from "./api/auth/verify";
 
 // Imposta opzioni globali per Functions Gen2
 setGlobalOptions({ 
   maxInstances: 10,
-  region: 'europe-west1' // Regione europea per GDPR compliance
+  region: 'us-central1' // Regione predefinita Firebase
 });
 
 // Esporta le funzioni
-export { apiAuthGoogleSignin };
+export { apiAuthGoogleSignin, authVerify };
 
 // Funzione di test
 export const hello = require('firebase-functions').https.onRequest((request: any, response: any) => {

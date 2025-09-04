@@ -109,6 +109,49 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     autoAdjust: true
   });
 
+  const loadFolderContent = async () => {
+    try {
+      const folders = await DB.getWorkoutFolders();
+      const allWorkoutPlans = workoutPlans || await DB.getWorkoutPlans();
+
+      // Filtra cartelle e schede per la cartella corrente
+      const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
+      const currentWorkouts = allWorkoutPlans.filter(plan => plan.folderId === currentFolderId);
+
+      // Crea gli elementi dell'albero
+      const treeItems: FolderTreeItem[] = [
+        // Cartelle
+        ...currentFolders.map(folder => {
+          const counts = getFolderCounts(folder.id, folders, allWorkoutPlans);
+          
+          return {
+            id: folder.id,
+            name: folder.name,
+            type: 'folder' as const,
+            icon: folder.icon,
+            parentId: folder.parentId,
+            workoutCount: counts.workouts,
+            subfolderCount: counts.subfolders,
+            isExpanded: folder.isExpanded,
+            data: folder
+          };
+        }),
+        // Schede di allenamento
+        ...currentWorkouts.map(workout => ({
+          id: workout.id,
+          name: workout.name,
+          type: 'file' as const,
+          parentId: workout.folderId,
+          data: workout
+        }))
+      ];
+
+      setFolderTree(treeItems);
+    } catch (error) {
+      console.error('Error loading folder content:', error);
+    }
+  };
+
   useEffect(() => {
     loadFolderContent();
   }, [currentFolderId, workoutPlans]);
@@ -213,49 +256,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       setDraggedItem(null);
     } catch (error) {
       console.error('Errore durante lo spostamento:', error);
-    }
-  };
-
-  const loadFolderContent = async () => {
-    try {
-      const folders = await DB.getWorkoutFolders();
-      const allWorkoutPlans = workoutPlans || await DB.getWorkoutPlans();
-
-      // Filtra cartelle e schede per la cartella corrente
-      const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
-      const currentWorkouts = allWorkoutPlans.filter(plan => plan.folderId === currentFolderId);
-
-      // Crea gli elementi dell'albero
-      const treeItems: FolderTreeItem[] = [
-        // Cartelle
-        ...currentFolders.map(folder => {
-          const counts = getFolderCounts(folder.id, folders, allWorkoutPlans);
-          
-          return {
-            id: folder.id,
-            name: folder.name,
-            type: 'folder' as const,
-            icon: folder.icon,
-            parentId: folder.parentId,
-            workoutCount: counts.workouts,
-            subfolderCount: counts.subfolders,
-            isExpanded: folder.isExpanded,
-            data: folder
-          };
-        }),
-        // Schede di allenamento
-        ...currentWorkouts.map(workout => ({
-          id: workout.id,
-          name: workout.name,
-          type: 'file' as const,
-          parentId: workout.folderId,
-          data: workout
-        }))
-      ];
-
-      setFolderTree(treeItems);
-    } catch (error) {
-      console.error('Error loading folder content:', error);
     }
   };
 
