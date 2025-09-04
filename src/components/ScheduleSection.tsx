@@ -72,6 +72,38 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
   const [scheduleData, setScheduleData] = useState(loadScheduleData);
   const [editingSchedule, setEditingSchedule] = useState(scheduleData);
 
+  // Effetto per ricaricare gli orari dal localStorage quando cambiano
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newScheduleData = loadScheduleData();
+      setScheduleData(newScheduleData);
+    };
+
+    // Ascolta i cambiamenti nel localStorage
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Ricarica anche periodicamente per essere sicuri
+    const interval = setInterval(() => {
+      const currentSaved = localStorage.getItem('gym_schedule');
+      if (currentSaved) {
+        try {
+          const parsedSchedule = JSON.parse(currentSaved);
+          // Confronta con lo stato attuale per evitare aggiornamenti inutili
+          if (JSON.stringify(parsedSchedule) !== JSON.stringify(scheduleData)) {
+            setScheduleData(parsedSchedule);
+          }
+        } catch (error) {
+          console.error('Errore nel parsing degli orari salvati:', error);
+        }
+      }
+    }, 1000); // Controlla ogni secondo
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [scheduleData]);
+
   const daysOfWeek = ['domenica', 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato'];
   const dayNames = [t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday];
   
@@ -137,20 +169,29 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
 
   const handleEditSave = () => {
     try {
-      // Salva nel localStorage
-      localStorage.setItem('gym_schedule', JSON.stringify(editingSchedule));
+      // Crea una copia profonda per evitare problemi di riferimento
+      const scheduleToSave = JSON.parse(JSON.stringify(editingSchedule));
       
-      // Aggiorna lo stato locale
-      setScheduleData({ ...editingSchedule });
+      // Salva nel localStorage
+      localStorage.setItem('gym_schedule', JSON.stringify(scheduleToSave));
+      
+      // Aggiorna immediatamente lo stato locale
+      setScheduleData(scheduleToSave);
       setIsEditing(false);
       
-      // Feedback per l'utente
-      console.log('✅ Orari salvati con successo:', editingSchedule);
+      // Forza un aggiornamento del componente
+      setTimeout(() => {
+        const reloadedData = loadScheduleData();
+        setScheduleData(reloadedData);
+      }, 50);
       
-      // Mostra notifica di successo (opzionale)
+      // Feedback per l'utente
+      console.log('✅ Orari salvati con successo:', scheduleToSave);
+      
+      // Mostra notifica di successo
       if (window.alert) {
         setTimeout(() => {
-          alert('Orari salvati con successo!');
+          alert('Orari salvati con successo! Le modifiche sono ora visibili nella home page.');
         }, 100);
       }
     } catch (error) {
