@@ -111,7 +111,7 @@ const StaffSection: React.FC = () => {
       ]
     },
     {
-      name: 'Eleonora Randazzo',
+      name: 'Eleonora Perico',
       role: 'Maestra Yoga',
       description: 'Approccio olistico e personalizzazione in base alle esigenze.',
       image: '/images/eleonora nonnehoidea.jpg',

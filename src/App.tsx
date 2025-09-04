@@ -559,7 +559,7 @@ function App() {
         <SectionSeparator variant="black" />
         <GymAreasSection />
         <SectionSeparator variant="black" />
-        <ScheduleSection />
+        <ScheduleSection currentUser={currentUser} />
         <SectionSeparator variant="black" />
         <LocationSection />
         <SectionSeparator variant="black" />

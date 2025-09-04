@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Calendar, MapPin } from 'lucide-react';
+import { Clock, Calendar, MapPin, Edit3, Save, X } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
-const ScheduleSection: React.FC = () => {
+interface ScheduleSectionProps {
+  currentUser?: any;
+}
+
+const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
   const { t } = useLanguageContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isVisible, setIsVisible] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
 
   // Aggiorna l'ora ogni secondo
@@ -41,7 +46,7 @@ const ScheduleSection: React.FC = () => {
   }, []);
 
   // Orari della palestra
-  const scheduleData = {
+  const [scheduleData, setScheduleData] = useState({
     lunedi: { open: '09:00-13:00', close: '16:00-21:00', isOpen: true },
     martedi: { open: '09:00-14:30', close: '16:00-21:00', isOpen: true },
     mercoledi: { open: '09:00-13:00', close: '16:00-21:00', isOpen: true },
@@ -49,7 +54,8 @@ const ScheduleSection: React.FC = () => {
     venerdi: { open: '09:00-13:00', close: '16:00-21:00', isOpen: true },
     sabato: { open: '09:00-14:30', close: '16:00-21:00', isOpen: true },
     domenica: { open: 'CHIUSO', close: '', isOpen: false }
-  };
+  });
+  const [editingSchedule, setEditingSchedule] = useState(scheduleData);
 
   const daysOfWeek = ['domenica', 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato'];
   const dayNames = [t.sunday, t.monday, t.tuesday, t.wednesday, t.thursday, t.friday, t.saturday];
@@ -103,6 +109,39 @@ const ScheduleSection: React.FC = () => {
     });
   };
 
+  // Funzioni per l'editing degli orari
+  const handleEditStart = () => {
+    setEditingSchedule({ ...scheduleData });
+    setIsEditing(true);
+  };
+
+  const handleEditCancel = () => {
+    setEditingSchedule({ ...scheduleData });
+    setIsEditing(false);
+  };
+
+  const handleEditSave = () => {
+    setScheduleData({ ...editingSchedule });
+    setIsEditing(false);
+    // Qui potresti salvare i dati nel database
+    console.log('Orari salvati:', editingSchedule);
+  };
+
+  const handleScheduleChange = (day: string, field: string, value: string | boolean) => {
+    setEditingSchedule(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value
+      }
+    }));
+  };
+
+  // Aggiorna editingSchedule quando scheduleData cambia
+  useEffect(() => {
+    setEditingSchedule({ ...scheduleData });
+  }, [scheduleData]);
+
   return (
     <section 
       id="orari"
@@ -114,11 +153,43 @@ const ScheduleSection: React.FC = () => {
       }`}
     >
       <div className="container mx-auto px-4 text-center">
-        <h2 className={`text-3xl md:text-4xl font-bold text-navy-900 mb-8 transition-all duration-800 delay-100 transform ${
+        <div className={`flex items-center justify-center mb-8 transition-all duration-800 delay-100 transform ${
           isVisible 
             ? 'translate-y-0 opacity-100' 
             : '-translate-y-8 opacity-0'
-        }`}>{t.schedules}</h2>
+        }`}>
+          <h2 className="text-3xl md:text-4xl font-bold text-navy-900">{t.schedules}</h2>
+          {currentUser && currentUser.role === 'coach' && (
+            <div className="ml-4 flex items-center space-x-2">
+              {!isEditing ? (
+                <button
+                  onClick={handleEditStart}
+                  className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                  title="Modifica orari"
+                >
+                  <Edit3 size={20} />
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleEditSave}
+                    className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    title="Salva modifiche"
+                  >
+                    <Save size={20} />
+                  </button>
+                  <button
+                    onClick={handleEditCancel}
+                    className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    title="Annulla modifiche"
+                  >
+                    <X size={20} />
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
         
         {/* Data e Ora Attuale */}
         <div className={`max-w-6xl mx-auto mb-6 transition-all duration-900 delay-300 transform ${
@@ -178,7 +249,7 @@ const ScheduleSection: React.FC = () => {
                 {/* Giorni Lunedì-Sabato */}
                 {displayOrder.slice(0, 6).map((dayIndex) => {
                   const day = daysOfWeek[dayIndex];
-                  const schedule = scheduleData[day];
+                  const schedule = isEditing ? editingSchedule[day] : scheduleData[day];
                   return (
                     <div 
                       key={day} 
@@ -189,17 +260,55 @@ const ScheduleSection: React.FC = () => {
                       }`}
                     >
                       <h4 className="font-bold text-navy-900 mb-2 text-xs sm:text-sm capitalize">{dayNames[dayIndex]}</h4>
-                      {schedule.isOpen ? (
-                        <div className="text-xs text-navy-700">
-                          <div className="mb-1">
-                            <span className="font-semibold">{t.morning}:</span><br className="sm:hidden" /> {schedule.open}
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-1">
+                            <input
+                              type="checkbox"
+                              checked={schedule.isOpen}
+                              onChange={(e) => handleScheduleChange(day, 'isOpen', e.target.checked)}
+                              className="w-3 h-3"
+                            />
+                            <span className="text-xs font-semibold">{schedule.isOpen ? 'APERTO' : 'CHIUSO'}</span>
                           </div>
-                          <div>
-                            <span className="font-semibold">{t.evening}:</span><br className="sm:hidden" /> {schedule.close}
-                          </div>
+                          {schedule.isOpen && (
+                            <>
+                              <div>
+                                <label className="text-xs font-semibold block">{t.morning}:</label>
+                                <input
+                                  type="text"
+                                  value={schedule.open}
+                                  onChange={(e) => handleScheduleChange(day, 'open', e.target.value)}
+                                  className="w-full text-xs p-1 border rounded"
+                                  placeholder="09:00-13:00"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs font-semibold block">{t.evening}:</label>
+                                <input
+                                  type="text"
+                                  value={schedule.close}
+                                  onChange={(e) => handleScheduleChange(day, 'close', e.target.value)}
+                                  className="w-full text-xs p-1 border rounded"
+                                  placeholder="16:00-21:00"
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
                       ) : (
-                        <span className="text-red-600 font-semibold text-xs">{t.closed}</span>
+                        schedule.isOpen ? (
+                          <div className="text-xs text-navy-700">
+                            <div className="mb-1">
+                              <span className="font-semibold">{t.morning}:</span><br className="sm:hidden" /> {schedule.open}
+                            </div>
+                            <div>
+                              <span className="font-semibold">{t.evening}:</span><br className="sm:hidden" /> {schedule.close}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-red-600 font-semibold text-xs">{t.closed}</span>
+                        )
                       )}
                     </div>
                   );
@@ -209,7 +318,7 @@ const ScheduleSection: React.FC = () => {
                 {(() => {
                   const dayIndex = displayOrder[6]; // Domenica
                   const day = daysOfWeek[dayIndex];
-                  const schedule = scheduleData[day];
+                  const schedule = isEditing ? editingSchedule[day] : scheduleData[day];
                   return (
                     <div 
                       key={day} 
@@ -221,17 +330,55 @@ const ScheduleSection: React.FC = () => {
                     >
                       <h4 className="font-bold text-navy-900 mb-2 text-sm sm:text-base capitalize text-center">{dayNames[dayIndex]}</h4>
                       <div className="text-center">
-                        {schedule.isOpen ? (
-                          <div className="text-sm text-navy-700">
-                            <div className="mb-1">
-                              <span className="font-semibold">{t.morning}:</span> {schedule.open}
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={schedule.isOpen}
+                                onChange={(e) => handleScheduleChange(day, 'isOpen', e.target.checked)}
+                                className="w-4 h-4"
+                              />
+                              <span className="text-sm font-semibold">{schedule.isOpen ? 'APERTO' : 'CHIUSO'}</span>
                             </div>
-                            <div>
-                              <span className="font-semibold">{t.evening}:</span> {schedule.close}
-                            </div>
+                            {schedule.isOpen && (
+                              <div className="space-y-2">
+                                <div>
+                                  <label className="text-sm font-semibold block">{t.morning}:</label>
+                                  <input
+                                    type="text"
+                                    value={schedule.open}
+                                    onChange={(e) => handleScheduleChange(day, 'open', e.target.value)}
+                                    className="w-full text-sm p-2 border rounded"
+                                    placeholder="09:00-13:00"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-semibold block">{t.evening}:</label>
+                                  <input
+                                    type="text"
+                                    value={schedule.close}
+                                    onChange={(e) => handleScheduleChange(day, 'close', e.target.value)}
+                                    className="w-full text-sm p-2 border rounded"
+                                    placeholder="16:00-21:00"
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
-                          <span className="text-red-600 font-semibold text-sm">{t.closed}</span>
+                          schedule.isOpen ? (
+                            <div className="text-sm text-navy-700">
+                              <div className="mb-1">
+                                <span className="font-semibold">{t.morning}:</span> {schedule.open}
+                              </div>
+                              <div>
+                                <span className="font-semibold">{t.evening}:</span> {schedule.close}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-red-600 font-semibold text-sm">{t.closed}</span>
+                          )
                         )}
                       </div>
                     </div>

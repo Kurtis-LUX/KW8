@@ -91,16 +91,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ currentUser, onNavigate }) =>
             {t.discoverMore}
           </button>
           
-          {/* Pulsante accesso rapido per coach */}
-          {currentUser && currentUser.role === 'coach' && (
-            <button
-              onClick={() => onNavigate && onNavigate('workout-manager')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-2xl flex items-center space-x-2"
-            >
-              <Settings size={20} />
-              <span>Gestione Schede</span>
-            </button>
-          )}
+
         </div>
       </div>
     </section>
