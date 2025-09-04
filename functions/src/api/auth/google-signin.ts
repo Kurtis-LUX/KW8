@@ -7,7 +7,28 @@ import * as dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+// Try to get config from Firebase Functions v1 config (legacy)
+let firebaseConfig: any = {};
+try {
+  const { config } = require('firebase-functions');
+  firebaseConfig = config();
+} catch (error) {
+  logger.warn('Could not load Firebase Functions config, using environment variables only');
+}
+
+// Get configuration with fallback to environment variables
+const GOOGLE_CLIENT_ID = firebaseConfig.google?.client_id || process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = firebaseConfig.google?.client_secret || process.env.GOOGLE_CLIENT_SECRET;
+const JWT_SECRET = firebaseConfig.jwt?.secret || process.env.JWT_SECRET;
+const AUTHORIZED_EMAILS = firebaseConfig.authorized?.email || process.env.AUTHORIZED_EMAIL;
+
+if (!GOOGLE_CLIENT_ID) {
+  logger.error("Configurazione Google OAuth mancante. Verifica le variabili d'ambiente su Firebase.");
+  logger.error("GOOGLE_CLIENT_ID:", GOOGLE_CLIENT_ID);
+  logger.error("Firebase config:", JSON.stringify(firebaseConfig, null, 2));
+}
+
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // Origini consentite
 const ALLOWED_ORIGINS = [
@@ -69,7 +90,7 @@ export const apiAuthGoogleSignin = onRequest({ cors: false }, async (req, res) =
     logger.info("Verifying Google ID token");
     const ticket = await client.verifyIdToken({
       idToken: idToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
+      audience: GOOGLE_CLIENT_ID,
     });
 
     const payload = ticket.getPayload();
@@ -83,7 +104,7 @@ export const apiAuthGoogleSignin = onRequest({ cors: false }, async (req, res) =
     logger.info("Token verified successfully", { email, name });
 
     // Check if email is authorized
-    const authorizedEmails = process.env.AUTHORIZED_EMAIL?.split(",").map(e => e.trim()) || [];
+    const authorizedEmails = AUTHORIZED_EMAILS?.split(",").map(e => e.trim()) || [];
     if (!email || !authorizedEmails.includes(email)) {
       logger.warn(`Unauthorized email: ${email}`);
       res.status(403).json({ error: "Unauthorized email" });
@@ -98,7 +119,7 @@ export const apiAuthGoogleSignin = onRequest({ cors: false }, async (req, res) =
         picture,
         iat: Math.floor(Date.now() / 1000),
       },
-      process.env.JWT_SECRET!,
+      JWT_SECRET!,
       { expiresIn: "7d" }
     );
 

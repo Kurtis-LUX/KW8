@@ -16,7 +16,9 @@ setGlobalOptions({
 // Esporta le funzioni
 export { apiAuthGoogleSignin, authVerify };
 
-// Funzione di test
-export const hello = require('firebase-functions').https.onRequest((request: any, response: any) => {
+// Funzione di test usando v2 API
+import { onRequest } from "firebase-functions/v2/https";
+
+export const hello = onRequest((request, response) => {
   response.json({ message: "Hello from Firebase Functions Gen2!" });
 });

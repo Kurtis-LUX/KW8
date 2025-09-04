@@ -6,6 +6,24 @@ import * as dotenv from "dotenv";
 // Load environment variables
 dotenv.config();
 
+// Try to get config from Firebase Functions v1 config (legacy)
+let firebaseConfig: any = {};
+try {
+  const { config } = require('firebase-functions');
+  firebaseConfig = config();
+} catch (error) {
+  logger.warn('Could not load Firebase Functions config, using environment variables only');
+}
+
+// Get configuration with fallback to environment variables
+const JWT_SECRET = firebaseConfig.jwt?.secret || process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  logger.error("JWT Secret mancante. Verifica le variabili d'ambiente su Firebase.");
+  logger.error("JWT_SECRET:", JWT_SECRET);
+  logger.error("Firebase config:", JSON.stringify(firebaseConfig, null, 2));
+}
+
 // Origini consentite
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
@@ -60,7 +78,7 @@ export const authVerify = onRequest({ cors: false }, async (req, res) => {
 
     // Verifica il JWT
     logger.info("Verifying JWT token");
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, JWT_SECRET!) as any;
 
     if (!decoded || !decoded.email) {
       logger.error("Invalid token payload");
