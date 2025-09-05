@@ -175,14 +175,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               alt="KW8 Logo" 
               className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer filter drop-shadow-lg"
               onClick={() => {
-                if (onNavigate) {
-                  onNavigate('home');
+                if (isDashboard) {
+                  // Se siamo nella dashboard, naviga alla home senza reload per mantenere la sessione
+                  if (onNavigate) {
+                    onNavigate('home');
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                  // Per le altre pagine, mantieni il comportamento originale
+                  if (onNavigate) {
+                    onNavigate('home');
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  // Refresh della pagina dopo un breve delay per permettere la navigazione
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 100);
                 }
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                // Refresh della pagina dopo un breve delay per permettere la navigazione
-                setTimeout(() => {
-                  window.location.reload();
-                }, 100);
               }}
             />
           </div>
