@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regole per la collezione degli orari della palestra
+    match /gymSchedule/{document} {
+      // Permetti lettura e scrittura a tutti per gli orari della palestra
+      // In produzione, dovresti limitare l'accesso solo agli amministratori
+      allow read, write: if true;
+    }
+    
+    // Regole per altre collezioni esistenti
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /workoutPlans/{planId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /workoutFolders/{folderId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /rankings/{rankingId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /links/{linkId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /membershipCards/{cardId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Regola di default: nega tutto il resto
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
