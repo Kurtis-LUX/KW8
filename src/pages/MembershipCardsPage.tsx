@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CreditCard, Search, Filter, Calendar, User, CheckCircle, XCircle, AlertCircle, Euro, Phone, Mail, MapPin, Eye, Edit3, Plus, Download } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+
 import { User as UserType } from '../utils/database';
 import { useMembershipCards } from '../hooks/useFirestore';
 import { MembershipCard as FirestoreMembershipCard } from '../services/firestoreService';
 
 interface MembershipCardsPageProps {
   currentUser: UserType | null;
+  onNavigate: (page: string) => void;
 }
 
 interface MembershipCard {
@@ -33,8 +34,7 @@ interface MembershipCard {
   };
 }
 
-const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser }) => {
-  const navigate = useNavigate();
+const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, onNavigate }) => {
   const { cards: firestoreCards, loading, error, createCard, updateCard, deleteCard } = useMembershipCards();
   const [cards, setCards] = useState<MembershipCard[]>([]);
   const [filteredCards, setFilteredCards] = useState<MembershipCard[]>([]);
@@ -274,16 +274,9 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser }
         {/* Header compatto */}
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => {
-              try {
-                window.history.back();
-              } catch (error) {
-                // Fallback se history.back() non funziona
-                navigate('/coach-dashboard');
-              }
-            }}
+            onClick={() => onNavigate('coach-dashboard')}
             className="flex items-center justify-center w-8 h-8 bg-white border border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-colors"
-            title="Indietro"
+            title="Torna alla Dashboard Coach"
           >
             <ArrowLeft size={16} />
           </button>

@@ -22,6 +22,7 @@ import AthleteManagerPage from './pages/AthleteManagerPage';
 import RankingsPage from './pages/RankingsPage';
 import LinkManagerPage from './pages/LinkManagerPage';
 import MembershipCardsPage from './pages/MembershipCardsPage';
+import WorkoutCardPage from './pages/WorkoutCardPage';
 import CoachAuthPage from './components/auth/CoachAuthPage';
 import PrivacyPage from './pages/PrivacyPage';
 import CookiePolicyPage from './pages/CookiePolicyPage';
@@ -44,6 +45,7 @@ import './styles/dropdown.css';
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedPlan, setSelectedPlan] = useState<string>('');
+  const [workoutLinkId, setWorkoutLinkId] = useState<string | null>(null);
   const [showCookieConsent, setShowCookieConsent] = useState(true);
   const [showCookieSettings, setShowCookieSettings] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -62,6 +64,15 @@ function App() {
         console.log('🔧 App initialization started');
         console.log('📱 Mobile debug - localStorage available:', typeof localStorage !== 'undefined');
         console.log('📱 Mobile debug - sessionStorage available:', typeof sessionStorage !== 'undefined');
+        
+        // Controlla se l'URL contiene un link per una scheda
+        const urlParams = new URLSearchParams(window.location.search);
+        const linkId = urlParams.get('workout');
+        if (linkId) {
+          setWorkoutLinkId(linkId);
+          setCurrentPage('workout-card');
+          console.log('🔗 Workout link detected:', linkId);
+        }
         
         // Inizializza il database con le configurazioni di base e controlli di compatibilità
         console.log('💾 Initializing database...');
@@ -83,20 +94,18 @@ function App() {
           console.log('🍪 No cookie consent found, showing banner');
         }
         
-        // Auto-login sicuro con JWT (disabilitato per sviluppo locale)
+        // Auto-login sicuro con JWT
         const checkAutoLogin = async () => {
           try {
-            console.log('🔐 Skipping authentication for local development');
-            // Crea un utente mock per sviluppo locale
-            const mockUser = {
-              id: 'local-user',
-              email: 'local@development.com',
-              name: 'Local User',
-              role: 'admin' as const
-            };
-            setCurrentUser(mockUser);
-            localStorage.setItem('currentUser', JSON.stringify(mockUser));
-            console.log('👤 Using mock user for local development');
+            console.log('🔐 Checking for existing authentication...');
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+              const user = JSON.parse(savedUser);
+              setCurrentUser(user);
+              console.log('👤 Restored user session:', user.name);
+            } else {
+              console.log('👤 No existing session found');
+            }
           } catch (error) {
             console.error('❌ Auto-login failed:', error);
             // Rimuovi dati di sessione non validi
@@ -104,7 +113,7 @@ function App() {
           }
         };
 
-        console.log('🔐 Starting local development mode...');
+        console.log('🔐 Starting authentication check...');
         await checkAutoLogin();
         console.log('✅ App initialization completed successfully');
         setAppInitialized(true);
@@ -139,12 +148,15 @@ function App() {
     };
   }, [showCookieSettings, showPrivacyModal, showTermsModal, showCookiePolicyModal, showPrivacyPolicyModal]);
 
-  const handleNavigation = (page: string, plan?: string) => {
+  const handleNavigation = (page: string, plan?: string, linkId?: string) => {
     if (plan) {
       setSelectedPlan(plan);
     }
     
-    if (page === 'privacy') {
+    if (page === 'workout-card' && linkId) {
+      setWorkoutLinkId(linkId);
+      setCurrentPage('workout-card');
+    } else if (page === 'privacy') {
       setShowPrivacyModal(true);
     } else if (page === 'terms') {
       setShowTermsModal(true);
@@ -213,7 +225,7 @@ function App() {
               const user = await authService.autoLogin();
               if (user) {
                 setCurrentUser(user);
-                handleNavigation('coach-dashboard');
+                handleNavigation('home'); // Coach entrano nella home
               } else {
                 console.error('Login Google riuscito ma utente non trovato');
                 handleNavigation('home');
@@ -492,6 +504,14 @@ function App() {
             </div>
           </div>
         )}
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'workout-card') {
+    return (
+      <LanguageProvider>
+        <WorkoutCardPage />
       </LanguageProvider>
     );
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Link as LinkIcon, ExternalLink, Copy, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Users, Database, QrCode, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Link as LinkIcon, ExternalLink, Copy, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Users, Database, QrCode, BarChart3, Check } from 'lucide-react';
 import { useLinks } from '../hooks/useFirestore';
 import { Link as FirestoreLink } from '../services/firestoreService';
 import { User } from '../services/authService';
@@ -100,6 +100,26 @@ const LinkManagerPage: React.FC<LinkManagerPageProps> = ({ onNavigate }) => {
     setFilteredLinks(filtered);
   }, [links, searchTerm, statusFilter, sortBy, sortOrder]);
 
+  const copyLinkToClipboard = async (linkId: string, shortCode: string) => {
+    try {
+      const fullLink = `${window.location.origin}?workout=${shortCode}`;
+      await navigator.clipboard.writeText(fullLink);
+      setCopiedLinkId(linkId);
+      setTimeout(() => setCopiedLinkId(null), 2000);
+    } catch (err) {
+      console.error('Errore nella copia del link:', err);
+      // Fallback per browser che non supportano clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = `${window.location.origin}?workout=${shortCode}`;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopiedLinkId(linkId);
+      setTimeout(() => setCopiedLinkId(null), 2000);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -178,6 +198,23 @@ const LinkManagerPage: React.FC<LinkManagerPageProps> = ({ onNavigate }) => {
                         <p className="text-xs text-gray-500">{link.shortCode}</p>
                       </div>
                       <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => copyLinkToClipboard(link.id, link.shortCode)}
+                          className="flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                          title="Copia link condivisibile"
+                        >
+                          {copiedLinkId === link.id ? (
+                            <>
+                              <Check size={14} className="mr-1" />
+                              Copiato!
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={14} className="mr-1" />
+                              Copia Link
+                            </>
+                          )}
+                        </button>
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           link.status === 'active' ? 'bg-green-100 text-green-800' :
                           link.status === 'expired' ? 'bg-red-100 text-red-800' :

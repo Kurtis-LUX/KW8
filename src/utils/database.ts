@@ -92,11 +92,24 @@ export interface User {
 
 
 // Flag per controllare se usare Firestore o localStorage
-let useFirestore = false; // Disabilitato per sviluppo locale senza Firebase
+let useFirestore = true; // Abilitato per usare Firebase in produzione
 
 // Funzione per abilitare/disabilitare Firestore
 export const setFirestoreEnabled = (enabled: boolean) => {
   useFirestore = enabled;
+  console.log(`🔥 Firestore ${enabled ? 'enabled' : 'disabled'}`);
+};
+
+// Funzione per disabilitare Firestore in caso di errori
+const disableFirestoreOnError = (error: any) => {
+  if (error?.code === 'auth/api-key-not-valid' || 
+      error?.message?.includes('api-key-not-valid') ||
+      error?.message?.includes('Firebase: Error (auth/api-key-not-valid')) {
+    console.warn('⚠️ Disabling Firestore due to invalid API key, using localStorage fallback');
+    useFirestore = false;
+    return true;
+  }
+  return false;
 };
 
 // Funzione per verificare se Firestore è abilitato
@@ -165,6 +178,7 @@ const DB = {
         return await firestoreService.getWorkoutPlans();
       } catch (error) {
         console.error('Error fetching from Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
         // Fallback a localStorage in caso di errore
       }
     }
@@ -233,6 +247,7 @@ const DB = {
         return;
       } catch (error) {
         console.error('Error saving to Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
       }
     }
     
@@ -262,6 +277,7 @@ const DB = {
         return;
       } catch (error) {
         console.error('Error deleting from Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
       }
     }
     
@@ -283,6 +299,7 @@ const DB = {
         return await firestoreService.getWorkoutFolders();
       } catch (error) {
         console.error('Error fetching folders from Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
       }
     }
     
@@ -302,6 +319,7 @@ const DB = {
         return await firestoreService.getWorkoutFolderById(id);
       } catch (error) {
         console.error('Error fetching folder from Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
       }
     }
     
@@ -324,6 +342,7 @@ const DB = {
         return;
       } catch (error) {
         console.error('Error saving folder to Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
       }
     }
     
@@ -353,6 +372,7 @@ const DB = {
         return;
       } catch (error) {
         console.error('Error deleting folder from Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
       }
     }
     

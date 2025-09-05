@@ -38,9 +38,9 @@ const TreeView: React.FC<TreeViewProps> = ({
     loadTreeData();
   }, []);
 
-  const loadTreeData = () => {
-    const folders = DB.getWorkoutFolders();
-    const workouts = DB.getWorkoutPlans();
+  const loadTreeData = async () => {
+    const folders = await DB.getWorkoutFolders();
+    const workouts = await DB.getWorkoutPlans();
     
     const buildTree = (parentId: string | null = null): TreeNode[] => {
       const folderNodes = folders
@@ -59,7 +59,7 @@ const TreeView: React.FC<TreeViewProps> = ({
         .filter(workout => workout.folderId === parentId)
         .map(workout => ({
           id: workout.id,
-          name: workout.title,
+          name: workout.name,
           type: 'workout' as const,
           parentId: workout.folderId,
           isExpanded: false,
@@ -73,7 +73,7 @@ const TreeView: React.FC<TreeViewProps> = ({
     setTreeData(buildTree());
   };
 
-  const toggleNode = (nodeId: string) => {
+  const toggleNode = async (nodeId: string) => {
     const newExpanded = new Set(expandedNodes);
     if (newExpanded.has(nodeId)) {
       newExpanded.delete(nodeId);
@@ -83,7 +83,7 @@ const TreeView: React.FC<TreeViewProps> = ({
     setExpandedNodes(newExpanded);
     
     // Aggiorna anche il database per le cartelle
-    const folders = DB.getWorkoutFolders();
+    const folders = await DB.getWorkoutFolders();
     const folder = folders.find(f => f.id === nodeId);
     if (folder) {
       const updatedFolder = {
@@ -91,10 +91,10 @@ const TreeView: React.FC<TreeViewProps> = ({
         isExpanded: newExpanded.has(nodeId),
         updatedAt: new Date().toISOString()
       };
-      DB.saveWorkoutFolder(updatedFolder);
+      await DB.saveWorkoutFolder(updatedFolder);
     }
     
-    loadTreeData();
+    await loadTreeData();
   };
 
   const handleNodeClick = (node: TreeNode) => {

@@ -82,6 +82,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     autoAdjust: true
   });
   const [showTreeView, setShowTreeView] = useState(false);
+  const [treeViewKey, setTreeViewKey] = useState(0); // Per forzare il re-render del TreeView
   const [draggedItem, setDraggedItem] = useState<FolderTreeItem | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
@@ -386,6 +387,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       }
 
       await loadFolderContent();
+      setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
       setShowCreateModal(false);
     } catch (error) {
       console.error('Error creating new item:', error);
@@ -410,6 +412,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       DB.saveWorkoutPlan(updatedWorkout);
     }
     loadFolderContent();
+    setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
     setShowRenameModal(false);
     setItemToRename(null);
   };
@@ -444,6 +447,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       }
       
       await loadFolderContent();
+      setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (error) {
@@ -945,6 +949,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
           {showTreeView && (
             <div className="w-64 flex-shrink-0">
               <TreeView
+                key={treeViewKey}
                 currentFolderId={currentFolderId}
                 onFolderSelect={navigateToFolder}
               />

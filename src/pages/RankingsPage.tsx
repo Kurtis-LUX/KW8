@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Trophy, Search, Filter, TrendingUp, Users, Target, Calendar, Medal, Edit, Plus, Settings, Dumbbell, BarChart3, Award } from 'lucide-react';
 import { useRankings } from '../hooks/useFirestore';
 import MuscleGroupForm from '../components/MuscleGroupForm';
 import ExerciseForm from '../components/ExerciseForm';
 import EditableRankings from '../components/EditableRankings';
+import { User } from '../utils/database';
 
 interface ExerciseRecord {
   id: string;
@@ -24,8 +24,12 @@ interface ExerciseCategory {
   color: string;
 }
 
-const RankingsPage: React.FC = () => {
-  const navigate = useNavigate();
+interface RankingsPageProps {
+  onNavigate: (page: string) => void;
+  currentUser: User | null;
+}
+
+const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser }) => {
   const { rankings, loading, error, createRanking, updateRanking, deleteRanking } = useRankings();
   const [records, setRecords] = useState<ExerciseRecord[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<ExerciseRecord[]>([]);
@@ -311,7 +315,7 @@ const RankingsPage: React.FC = () => {
           {/* Header compatto */}
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => onNavigate('home')}
               className="flex items-center justify-center w-10 h-10 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
               title="Torna alla Dashboard"
             >
@@ -320,7 +324,7 @@ const RankingsPage: React.FC = () => {
             
             <div className="text-center flex-1">
               <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
-                Classifiche & Gestione
+                Classifiche
               </h1>
             </div>
             
@@ -352,29 +356,7 @@ const RankingsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Statistiche compatte */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <Trophy className="text-yellow-500 mx-auto mb-2" size={20} />
-              <div className="text-lg font-bold text-yellow-600">{totalRecords}</div>
-              <div className="text-xs text-gray-600">Record</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <Users className="text-blue-600 mx-auto mb-2" size={20} />
-              <div className="text-lg font-bold text-blue-600">{uniqueAthletes}</div>
-              <div className="text-xs text-gray-600">Atleti</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <Target className="text-green-600 mx-auto mb-2" size={20} />
-              <div className="text-lg font-bold text-green-600">{uniqueExercises}</div>
-              <div className="text-xs text-gray-600">Esercizi</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <BarChart3 className="text-purple-600 mx-auto mb-2" size={20} />
-              <div className="text-lg font-bold text-purple-600">{averageOneRepMax.toFixed(0)}kg</div>
-              <div className="text-xs text-gray-600">Media 1RM</div>
-            </div>
-          </div>
+
 
           {/* Filtri compatti */}
           <div className="bg-white rounded-lg shadow p-4 mb-6">

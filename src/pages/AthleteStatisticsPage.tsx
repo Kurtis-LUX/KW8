@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Users, TrendingUp, Calendar, BarChart3, LineChart, Activity } from 'lucide-react';
 import Header from '../components/Header';
+import { useUsers } from '../hooks/useFirestore';
+import { User as FirestoreUser } from '../services/firestoreService';
 
 interface User {
   id: string;
@@ -30,77 +32,83 @@ interface AthleteData {
 const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigate, currentUser }) => {
   const [selectedAthlete, setSelectedAthlete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'progress' | 'history'>('overview');
+  const { users: firestoreUsers, loading, error } = useUsers();
+  const [athletes, setAthletes] = useState<AthleteData[]>([]);
 
-  // Dati mock degli atleti
-  const athletes: AthleteData[] = [
+  // Converti utenti Firestore in atleti
+  useEffect(() => {
+    if (firestoreUsers) {
+      const athleteData: AthleteData[] = firestoreUsers
+        .filter(user => user.role === 'athlete') // Solo atleti reali
+        .map(user => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          joinDate: user.createdAt || new Date().toISOString(),
+          activeWorkouts: 0, // Da implementare con dati reali
+          completedSessions: 0, // Da implementare con dati reali
+          progressData: [] // Da implementare con dati reali
+        }));
+      setAthletes(athleteData);
+    }
+  }, [firestoreUsers]);
+
+  // Gestione loading e errori
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Caricamento atleti...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Errore nel caricamento: {error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Riprova
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Dati mock per il progresso (da sostituire con dati reali quando disponibili)
+  const mockProgressData = [
     {
-      id: '1',
-      name: 'Marco Rossi',
-      email: 'marco.rossi@email.com',
-      joinDate: '2024-01-15',
-      activeWorkouts: 3,
-      completedSessions: 45,
-      progressData: [
-        {
-          exercise: 'Squat',
-          sessions: [
-            { date: '2024-01-15', weight: 80, reps: 8, sets: 3 },
-            { date: '2024-01-22', weight: 85, reps: 8, sets: 3 },
-            { date: '2024-01-29', weight: 90, reps: 8, sets: 3 },
-            { date: '2024-02-05', weight: 95, reps: 8, sets: 3 },
-          ]
-        },
-        {
-          exercise: 'Panca piana',
-          sessions: [
-            { date: '2024-01-15', weight: 60, reps: 10, sets: 3 },
-            { date: '2024-01-22', weight: 65, reps: 10, sets: 3 },
-            { date: '2024-01-29', weight: 70, reps: 10, sets: 3 },
-            { date: '2024-02-05', weight: 75, reps: 10, sets: 3 },
-          ]
-        }
+      exercise: 'Squat',
+      sessions: [
+        { date: '2024-01-15', weight: 80, reps: 8, sets: 3 },
+        { date: '2024-01-22', weight: 85, reps: 8, sets: 3 },
+        { date: '2024-01-29', weight: 90, reps: 8, sets: 3 },
+        { date: '2024-02-05', weight: 95, reps: 8, sets: 3 },
       ]
     },
     {
-      id: '2',
-      name: 'Laura Bianchi',
-      email: 'laura.bianchi@email.com',
-      joinDate: '2024-02-01',
-      activeWorkouts: 2,
-      completedSessions: 28,
-      progressData: [
-        {
-          exercise: 'Stacco da terra',
-          sessions: [
-            { date: '2024-02-01', weight: 70, reps: 6, sets: 3 },
-            { date: '2024-02-08', weight: 75, reps: 6, sets: 3 },
-            { date: '2024-02-15', weight: 80, reps: 6, sets: 3 },
-          ]
-        }
-      ]
-    },
-    {
-      id: '3',
-      name: 'Giuseppe Verdi',
-      email: 'giuseppe.verdi@email.com',
-      joinDate: '2023-12-10',
-      activeWorkouts: 4,
-      completedSessions: 67,
-      progressData: [
-        {
-          exercise: 'Trazioni',
-          sessions: [
-            { date: '2023-12-10', weight: 0, reps: 5, sets: 3 },
-            { date: '2023-12-17', weight: 0, reps: 6, sets: 3 },
-            { date: '2023-12-24', weight: 0, reps: 8, sets: 3 },
-            { date: '2024-01-07', weight: 5, reps: 8, sets: 3 },
-          ]
-        }
+      exercise: 'Panca piana',
+      sessions: [
+        { date: '2024-01-15', weight: 60, reps: 10, sets: 3 },
+        { date: '2024-01-22', weight: 65, reps: 10, sets: 3 },
+        { date: '2024-01-29', weight: 70, reps: 10, sets: 3 },
+        { date: '2024-02-05', weight: 75, reps: 10, sets: 3 },
       ]
     }
   ];
 
   const selectedAthleteData = athletes.find(a => a.id === selectedAthlete);
+  
+  // Aggiungi dati mock di progresso all'atleta selezionato se disponibile
+  if (selectedAthleteData && mockProgressData) {
+    selectedAthleteData.progressData = mockProgressData;
+  }
 
   const renderProgressChart = (exerciseData: AthleteData['progressData'][0]) => {
     const maxWeight = Math.max(...exerciseData.sessions.map(s => s.weight));

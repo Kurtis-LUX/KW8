@@ -98,14 +98,24 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
 
   // Sottoscrizione in tempo reale agli aggiornamenti degli orari
   useEffect(() => {
-    const unsubscribe = firestoreService.subscribeToGymSchedule((schedule) => {
-      if (schedule) {
-        const { id, createdAt, updatedAt, ...scheduleOnly } = schedule;
-        setScheduleData(scheduleOnly);
-      }
-    });
+    let unsubscribe: (() => void) | null = null;
+    
+    const setupSubscription = async () => {
+      unsubscribe = await firestoreService.subscribeToGymSchedule((schedule) => {
+        if (schedule) {
+          const { id, createdAt, updatedAt, ...scheduleOnly } = schedule;
+          setScheduleData(scheduleOnly);
+        }
+      });
+    };
+    
+    setupSubscription();
 
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   const daysOfWeek = ['domenica', 'lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato'];

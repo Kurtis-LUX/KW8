@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Edit3, Plus, Save, Copy, Users, Link, ArrowLeft, Eye, X, Trash2 } from 'lucide-react';
-import { useWorkoutPlans } from '../hooks/useFirestore';
+import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
 
 interface Exercise {
@@ -32,8 +32,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   
-  // Hook Firestore per gestire i piani di allenamento
+  // Hook Firestore per gestire i piani di allenamento e gli utenti
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
+  const { users: athletes, loading: athletesLoading } = useUsers();
   
   // Gestione tempo scheda
   const [startDate, setStartDate] = useState('');
@@ -105,14 +106,8 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const titleInputRef = useRef<HTMLInputElement>(null);
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   
-  // Mock athletes data
-  const athletes = [
-    'Mario Rossi',
-    'Luca Bianchi',
-    'Anna Verdi',
-    'Paolo Neri',
-    'Giulia Romano'
-  ];
+  // Filtra solo gli atleti (ruolo 'athlete')
+  const athletesList = athletes?.filter(user => user.role === 'athlete') || [];
   
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
@@ -627,15 +622,24 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                 />
               </div>
               <div className="max-h-40 overflow-y-auto">
-                {athletes.map((athlete) => (
-                  <button
-                    key={athlete}
-                    onClick={() => handleAssociateAthlete(athlete)}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
-                  >
-                    {athlete}
-                  </button>
-                ))}
+                {athletesLoading ? (
+                  <div className="p-4 text-gray-500 text-center">Caricamento atleti...</div>
+                ) : athletesList.length === 0 ? (
+                  <div className="p-4 text-gray-500 text-center">Nessun atleta disponibile</div>
+                ) : (
+                  athletesList.map((athlete) => (
+                    <button
+                      key={athlete.id}
+                      onClick={() => handleAssociateAthlete(athlete.name)}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
+                    >
+                      <div>
+                        <div className="font-medium">{athlete.name}</div>
+                        <div className="text-sm text-gray-500">{athlete.email}</div>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           </div>

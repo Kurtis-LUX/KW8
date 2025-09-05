@@ -4,7 +4,7 @@ import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 // Flag per disabilitare Firebase in sviluppo locale
-const DISABLE_FIREBASE = true; // Disabilitato per sviluppo locale
+const DISABLE_FIREBASE = false; // Attivato per usare il database reale
 
 // Configurazione Firebase
 const firebaseConfig = {
@@ -61,8 +61,17 @@ if (DISABLE_FIREBASE) {
   db = mockDb;
   auth = mockAuth;
 } else {
-  // Usa la configurazione di fallback se le variabili d'ambiente non sono disponibili
-  const config = firebaseConfig.projectId ? firebaseConfig : fallbackConfig;
+  // Usa la configurazione di fallback se le variabili d'ambiente non sono disponibili o non valide
+  const hasValidConfig = firebaseConfig.projectId && 
+                        firebaseConfig.apiKey && 
+                        !firebaseConfig.apiKey.includes('XXXXX') &&
+                        firebaseConfig.apiKey !== 'AIzaSyBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+  
+  const config = hasValidConfig ? firebaseConfig : fallbackConfig;
+  
+  if (!hasValidConfig) {
+    console.log('⚠️ Using fallback Firebase config - API key not valid or missing');
+  }
   
   // Inizializza Firebase
   app = initializeApp(config);

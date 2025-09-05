@@ -20,7 +20,6 @@ import {
 } from 'firebase/firestore';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../config/firebase';
-import { isFirestoreEnabled } from '../utils/database';
 import type {
   WorkoutPlan,
   WorkoutFolder,
@@ -119,11 +118,16 @@ class FirestoreService {
 
   private authPromise: Promise<void> | null = null;
 
+  // Helper per importare dinamicamente isFirestoreEnabled
+  private async isFirestoreEnabled(): Promise<boolean> {
+    const { isFirestoreEnabled } = await import('../utils/database');
+    return isFirestoreEnabled();
+  }
+
   // Inizializza l'autenticazione Firebase se necessario
   private async ensureAuth(): Promise<void> {
-    // Se Firestore è disabilitato, non fare nulla
-    if (!isFirestoreEnabled()) {
-      console.log('🔧 Firebase Auth: Skipped (Firebase disabled)');
+    if (!(await this.isFirestoreEnabled())) {
+      console.log('🔧 Firestore disabled: skipping authentication');
       return Promise.resolve();
     }
 
@@ -145,6 +149,19 @@ class FirestoreService {
           resolve();
         } catch (error) {
           console.error('❌ Firebase Auth: Authentication failed:', error);
+          
+          // Se l'errore è dovuto a API key non valida, disabilita Firestore
+          if (error.code === 'auth/api-key-not-valid') {
+            console.warn('⚠️ Firebase API key not valid, disabling Firestore');
+            // Importa dinamicamente la funzione per evitare dipendenze circolari
+            const { disableFirestoreOnError } = await import('../utils/database');
+            disableFirestoreOnError(error);
+            // Dopo aver disabilitato Firestore, risolvi invece di rigettare
+            unsubscribe();
+            resolve();
+            return;
+          }
+          
           unsubscribe();
           reject(error);
         }
@@ -228,7 +245,7 @@ class FirestoreService {
   // ==================== PIANI DI ALLENAMENTO ====================
   
   async getWorkoutPlans(): Promise<WorkoutPlan[]> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🔧 Firestore disabled: getWorkoutPlans skipped');
       return [];
     }
@@ -251,7 +268,7 @@ class FirestoreService {
   }
 
   async getWorkoutPlanById(id: string): Promise<WorkoutPlan | null> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🔧 Firestore disabled: getWorkoutPlanById skipped');
       return null;
     }
@@ -271,7 +288,7 @@ class FirestoreService {
   }
 
   async createWorkoutPlan(planData: Omit<WorkoutPlan, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🔧 Firestore disabled: createWorkoutPlan skipped');
       throw new Error('Firestore is disabled');
     }
@@ -292,7 +309,7 @@ class FirestoreService {
   }
 
   async updateWorkoutPlan(id: string, planData: Partial<WorkoutPlan>): Promise<void> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🔧 Firestore disabled: updateWorkoutPlan skipped');
       return;
     }
@@ -311,7 +328,7 @@ class FirestoreService {
   }
 
   async deleteWorkoutPlan(id: string): Promise<void> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🔧 Firestore disabled: deleteWorkoutPlan skipped');
       return;
     }
@@ -329,7 +346,7 @@ class FirestoreService {
   // ==================== CARTELLE WORKOUT ====================
   
   async getWorkoutFolders(): Promise<WorkoutFolder[]> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🔧 Firestore disabled: getWorkoutFolders skipped');
       return [];
     }
@@ -352,7 +369,7 @@ class FirestoreService {
   }
 
   async getWorkoutFolderById(id: string): Promise<WorkoutFolder | null> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🔧 Firestore disabled: getWorkoutFolderById skipped');
       return null;
     }
@@ -372,7 +389,7 @@ class FirestoreService {
   }
 
   async createWorkoutFolder(folderData: Omit<WorkoutFolder, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🔧 Firestore disabled: createWorkoutFolder skipped');
       throw new Error('Firestore is disabled');
     }
@@ -420,7 +437,13 @@ class FirestoreService {
   // ==================== CLASSIFICHE ====================
   
   async getRankings(): Promise<Ranking[]> {
+    if (!(await this.isFirestoreEnabled())) {
+      console.log('🔧 Rankings: Using mock data (Firebase disabled)');
+      return [];
+    }
+    
     try {
+      await this.ensureAuth();
       const q = query(
         collection(db, this.collections.rankings),
         orderBy('name')
@@ -437,7 +460,13 @@ class FirestoreService {
   }
 
   async createRanking(rankingData: Omit<Ranking, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!(await this.isFirestoreEnabled())) {
+      console.log('🔧 Rankings: Mock create (Firebase disabled)');
+      return 'mock-ranking-id';
+    }
+    
     try {
+      await this.ensureAuth();
       const now = new Date().toISOString();
       const docRef = await addDoc(collection(db, this.collections.rankings), {
         ...rankingData,
@@ -452,7 +481,13 @@ class FirestoreService {
   }
 
   async updateRanking(id: string, rankingData: Partial<Ranking>): Promise<void> {
+    if (!(await this.isFirestoreEnabled())) {
+      console.log('🔧 Rankings: Mock update (Firebase disabled)');
+      return;
+    }
+    
     try {
+      await this.ensureAuth();
       const docRef = doc(db, this.collections.rankings, id);
       await updateDoc(docRef, {
         ...rankingData,
@@ -465,7 +500,13 @@ class FirestoreService {
   }
 
   async deleteRanking(id: string): Promise<void> {
+    if (!(await this.isFirestoreEnabled())) {
+      console.log('🔧 Rankings: Mock delete (Firebase disabled)');
+      return;
+    }
+    
     try {
+      await this.ensureAuth();
       const docRef = doc(db, this.collections.rankings, id);
       await deleteDoc(docRef);
     } catch (error) {
@@ -522,7 +563,7 @@ class FirestoreService {
   }
 
   async deleteLink(id: string): Promise<void> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return;
     }
     
@@ -538,7 +579,7 @@ class FirestoreService {
   // ==================== TESSERINI ====================
   
   async getMembershipCards(): Promise<MembershipCard[]> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return [];
     }
     
@@ -560,7 +601,7 @@ class FirestoreService {
   }
 
   async getMembershipCardsByUser(userId: string): Promise<MembershipCard[]> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return [];
     }
     
@@ -583,7 +624,7 @@ class FirestoreService {
   }
 
   async createMembershipCard(cardData: Omit<MembershipCard, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return 'mock-card-id';
     }
     
@@ -602,7 +643,7 @@ class FirestoreService {
   }
 
   async updateMembershipCard(id: string, cardData: Partial<MembershipCard>): Promise<void> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return;
     }
     
@@ -619,7 +660,7 @@ class FirestoreService {
   }
 
   async deleteMembershipCard(id: string): Promise<void> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return;
     }
     
@@ -635,7 +676,7 @@ class FirestoreService {
   // ==================== OPERAZIONI BATCH ====================
   
   async batchCreateUsers(users: Omit<User, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<void> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return;
     }
     
@@ -661,8 +702,8 @@ class FirestoreService {
 
   // ==================== LISTENER IN TEMPO REALE ====================
   
-  subscribeToUsers(callback: (users: User[]) => void): Unsubscribe {
-    if (!isFirestoreEnabled()) {
+  async subscribeToUsers(callback: (users: User[]) => void): Promise<Unsubscribe> {
+    if (!(await this.isFirestoreEnabled())) {
       callback([]);
       return () => {}; // Mock unsubscribe function
     }
@@ -681,8 +722,8 @@ class FirestoreService {
     });
   }
 
-  subscribeToWorkoutPlans(callback: (plans: WorkoutPlan[]) => void): Unsubscribe {
-    if (!isFirestoreEnabled()) {
+  async subscribeToWorkoutPlans(callback: (plans: WorkoutPlan[]) => void): Promise<Unsubscribe> {
+    if (!(await this.isFirestoreEnabled())) {
       callback([]);
       return () => {}; // Mock unsubscribe function
     }
@@ -704,7 +745,7 @@ class FirestoreService {
   // ==================== MIGRAZIONE DATI ====================
   
   async migrateFromLocalStorage(): Promise<void> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       console.log('🚫 Migration skipped: Firestore is disabled');
       return;
     }
@@ -743,7 +784,7 @@ class FirestoreService {
 
   // Metodi per gestire gli orari della palestra
   async getGymSchedule(): Promise<GymSchedule | null> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return null;
     }
     
@@ -768,7 +809,7 @@ class FirestoreService {
   }
 
   async createOrUpdateGymSchedule(scheduleData: Omit<GymSchedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!isFirestoreEnabled()) {
+    if (!(await this.isFirestoreEnabled())) {
       return 'mock-schedule-id';
     }
     
@@ -801,8 +842,8 @@ class FirestoreService {
     }
   }
 
-  subscribeToGymSchedule(callback: (schedule: GymSchedule | null) => void): Unsubscribe {
-    if (!isFirestoreEnabled()) {
+  async subscribeToGymSchedule(callback: (schedule: GymSchedule | null) => void): Promise<Unsubscribe> {
+    if (!(await this.isFirestoreEnabled())) {
       callback(null);
       return () => {}; // Mock unsubscribe function
     }

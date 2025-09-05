@@ -286,25 +286,24 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => setShowImportModal(true)}
-                className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+                className="flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
                 title="Importa atleti da CSV/Excel"
               >
                 <Upload size={20} />
-                <span className="hidden sm:inline">Importa</span>
               </button>
               <button
                 onClick={() => setShowAddModal(true)}
-                className="flex items-center space-x-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-lg"
+                className="flex items-center justify-center w-12 h-12 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-lg"
+                title="Nuovo Atleta"
               >
                 <Plus size={20} />
-                <span>Nuovo Atleta</span>
               </button>
             </div>
           </div>
 
           {/* Filtri e ricerca */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Ricerca */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -317,20 +316,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                 />
               </div>
 
-              {/* Filtro stato */}
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as any)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 appearance-none"
-                >
-                  <option value="all">Tutti gli stati</option>
-                  <option value="active">Attivi</option>
-                  <option value="inactive">Inattivi</option>
-                  <option value="suspended">Sospesi</option>
-                </select>
-              </div>
+
 
               {/* Ordinamento */}
               <select
@@ -353,41 +339,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
             </div>
           </div>
 
-          {/* Statistiche rapide compatte */}
-          <div className="bg-white rounded-xl shadow-lg p-4 mb-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <Users className="text-blue-600 mx-auto mb-1" size={20} />
-                <div className="text-lg font-bold text-blue-600">{athletes.length}</div>
-                <div className="text-xs text-gray-600">Totale</div>
-              </div>
-              <div className="text-center">
-                <Activity className="text-green-600 mx-auto mb-1" size={20} />
-                <div className="text-lg font-bold text-green-600">
-                  {athletes.filter(a => a.status === 'active').length}
-                </div>
-                <div className="text-xs text-gray-600">Attivi</div>
-              </div>
-              <div className="text-center">
-                <TrendingUp className="text-orange-600 mx-auto mb-1" size={20} />
-                <div className="text-lg font-bold text-orange-600">
-                  {athletes.reduce((sum, a) => sum + a.completedSessions, 0)}
-                </div>
-                <div className="text-xs text-gray-600">Sessioni</div>
-              </div>
-              <div className="text-center">
-                <Calendar className="text-purple-600 mx-auto mb-1" size={20} />
-                <div className="text-lg font-bold text-purple-600">
-                  {athletes.filter(a => {
-                    const joinDate = new Date(a.joinDate);
-                    const now = new Date();
-                    return joinDate.getMonth() === now.getMonth() && joinDate.getFullYear() === now.getFullYear();
-                  }).length}
-                </div>
-                <div className="text-xs text-gray-600">Nuovi</div>
-              </div>
-            </div>
-          </div>
+
 
           {/* Lista atleti */}
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
