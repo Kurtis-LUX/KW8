@@ -83,27 +83,28 @@ function App() {
           console.log('🍪 No cookie consent found, showing banner');
         }
         
-        // Auto-login sicuro con JWT
+        // Auto-login sicuro con JWT (disabilitato per sviluppo locale)
         const checkAutoLogin = async () => {
           try {
-            console.log('🔐 Checking authentication');
-            const user = await authService.autoLogin();
-            if (user) {
-              setCurrentUser(user);
-              localStorage.setItem('currentUser', JSON.stringify(user));
-              console.log('👤 User authenticated:', user.email);
-            } else {
-              console.log('👤 No authenticated user');
-            }
+            console.log('🔐 Skipping authentication for local development');
+            // Crea un utente mock per sviluppo locale
+            const mockUser = {
+              id: 'local-user',
+              email: 'local@development.com',
+              name: 'Local User',
+              role: 'admin' as const
+            };
+            setCurrentUser(mockUser);
+            localStorage.setItem('currentUser', JSON.stringify(mockUser));
+            console.log('👤 Using mock user for local development');
           } catch (error) {
             console.error('❌ Auto-login failed:', error);
             // Rimuovi dati di sessione non validi
             localStorage.removeItem('currentUser');
-            authService.logout();
           }
         };
-        
-        console.log('🔐 Starting auto-login check...');
+
+        console.log('🔐 Starting local development mode...');
         await checkAutoLogin();
         console.log('✅ App initialization completed successfully');
         setAppInitialized(true);
@@ -248,68 +249,77 @@ function App() {
             </div>
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">📋 Gestione Schede</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Crea e gestisci le schede di allenamento per i tuoi atleti</p>
-                  <button 
-                    onClick={() => handleNavigation('workout-manager')}
-                    className="w-full bg-blue-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
-                  >
-                    Gestisci Schede
-                  </button>
+                <div 
+                  className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                  onClick={() => handleNavigation('workout-manager')}
+                >
+                  <div className="flex items-center mb-3 sm:mb-4">
+                    <svg className="w-6 h-6 text-blue-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Gestione Schede</h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-gray-600">Crea e gestisci le schede di allenamento per i tuoi atleti</p>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">👥 Gestione Atleti</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Visualizza e gestisci i profili dei tuoi atleti</p>
-                  <button 
-                    onClick={() => handleNavigation('athlete-manager')}
-                    className="w-full bg-green-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-green-700 transition-colors text-sm sm:text-base"
-                  >
-                    Gestisci Atleti
-                  </button>
+                <div 
+                  className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                  onClick={() => handleNavigation('athlete-manager')}
+                >
+                  <div className="flex items-center mb-3 sm:mb-4">
+                    <svg className="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Gestione Atleti</h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-gray-600">Visualizza e gestisci i profili dei tuoi atleti</p>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🏆 Classifiche</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Visualizza i massimali e i record degli atleti</p>
-                  <button 
-                    onClick={() => handleNavigation('rankings')}
-                    className="w-full bg-purple-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-purple-700 transition-colors text-sm sm:text-base"
-                  >
-                    Visualizza Classifiche
-                  </button>
+                <div 
+                  className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                  onClick={() => handleNavigation('rankings')}
+                >
+                  <div className="flex items-center mb-3 sm:mb-4">
+                    <svg className="w-6 h-6 text-purple-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    </svg>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Classifiche</h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-gray-600">Visualizza i massimali e i record degli atleti</p>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🔗 Gestione Link</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Gestisci i link di accesso alle schede per gli atleti</p>
-                  <button 
-                    onClick={() => handleNavigation('link-manager')}
-                    className="w-full bg-indigo-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-indigo-700 transition-colors text-sm sm:text-base"
-                  >
-                    Gestisci Link
-                  </button>
+                <div 
+                  className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                  onClick={() => handleNavigation('link-manager')}
+                >
+                  <div className="flex items-center mb-3 sm:mb-4">
+                    <svg className="w-6 h-6 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Gestione Link</h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-gray-600">Gestisci i link di accesso alle schede per gli atleti</p>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">💳 Tesserini Atleti</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Gestisci tesserini e pagamenti degli atleti</p>
-                  <button 
-                    onClick={() => handleNavigation('membership-cards')}
-                    className="w-full bg-emerald-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-emerald-700 transition-colors text-sm sm:text-base"
-                  >
-                    Gestisci Tesserini
-                  </button>
+                <div 
+                  className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                  onClick={() => handleNavigation('membership-cards')}
+                >
+                  <div className="flex items-center mb-3 sm:mb-4">
+                    <svg className="w-6 h-6 text-emerald-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Tesserini Atleti</h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-gray-600">Gestisci tesserini e pagamenti degli atleti</p>
                 </div>
                 <div 
                   className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
                   onClick={() => handleNavigation('athlete-statistics')}
                 >
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">📊 Statistiche Atleti</h3>
-                  <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">Visualizza progressi e analisi dettagliate degli atleti</p>
-                  <button 
-                    onClick={() => handleNavigation('athlete-statistics')}
-                    className="w-full bg-orange-600 text-white py-2 px-3 sm:px-4 rounded-lg hover:bg-orange-700 transition-colors text-sm sm:text-base"
-                  >
-                    Visualizza Statistiche
-                  </button>
+                  <div className="flex items-center mb-3 sm:mb-4">
+                    <svg className="w-6 h-6 text-orange-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Statistiche Atleti</h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-gray-600">Visualizza progressi e analisi dettagliate degli atleti</p>
                 </div>
               </div>
               

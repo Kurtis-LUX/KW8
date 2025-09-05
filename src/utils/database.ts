@@ -92,7 +92,7 @@ export interface User {
 
 
 // Flag per controllare se usare Firestore o localStorage
-let useFirestore = true;
+let useFirestore = false; // Disabilitato per sviluppo locale senza Firebase
 
 // Funzione per abilitare/disabilitare Firestore
 export const setFirestoreEnabled = (enabled: boolean) => {

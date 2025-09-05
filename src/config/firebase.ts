@@ -3,6 +3,9 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
+// Flag per disabilitare Firebase in sviluppo locale
+const DISABLE_FIREBASE = true; // Disabilitato per sviluppo locale
+
 // Configurazione Firebase
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -23,19 +26,58 @@ const fallbackConfig = {
   appId: "demo-app-id"
 };
 
-// Usa la configurazione di fallback se le variabili d'ambiente non sono disponibili
-const config = firebaseConfig.projectId ? firebaseConfig : fallbackConfig;
+// Mock objects per sviluppo locale
+const createMockCollection = () => ({
+  doc: () => ({
+    get: () => Promise.resolve({ exists: false, data: () => ({}) }),
+    set: () => Promise.resolve(),
+    update: () => Promise.resolve(),
+    delete: () => Promise.resolve()
+  }),
+  add: () => Promise.resolve({ id: 'mock-id' }),
+  get: () => Promise.resolve({ docs: [] }),
+  where: () => createMockCollection(),
+  orderBy: () => createMockCollection(),
+  limit: () => createMockCollection(),
+  startAfter: () => createMockCollection()
+});
 
-// Inizializza Firebase
-const app = initializeApp(config);
+const mockDb = {
+  collection: createMockCollection
+} as any;
 
-// Inizializza Firestore
-export const db = getFirestore(app);
+const mockAuth = {
+  currentUser: null,
+  onAuthStateChanged: () => () => {},
+  signInAnonymously: () => Promise.resolve({ user: { uid: 'mock-user' } })
+} as any;
 
-// Inizializza Auth
-export const auth = getAuth(app);
+let app: any;
+let db: any;
+let auth: any;
+
+if (DISABLE_FIREBASE) {
+  console.log('🔧 Firebase disabled for local development');
+  db = mockDb;
+  auth = mockAuth;
+} else {
+  // Usa la configurazione di fallback se le variabili d'ambiente non sono disponibili
+  const config = firebaseConfig.projectId ? firebaseConfig : fallbackConfig;
+  
+  // Inizializza Firebase
+  app = initializeApp(config);
+  
+  // Inizializza Firestore
+  db = getFirestore(app);
+  
+  // Inizializza Auth
+  auth = getAuth(app);
+}
+
+export { db, auth };
 
 // Nota: L'emulatore Firestore richiede Java. Per ora usiamo il servizio cloud.
+// L'autenticazione anonima è gestita automaticamente dal firestoreService.
 // Se vuoi usare l'emulatore locale, installa Java e decomenta il codice seguente:
 /*
 if (import.meta.env.DEV) {
@@ -43,7 +85,7 @@ if (import.meta.env.DEV) {
     connectFirestoreEmulator(db, 'localhost', 8080);
     console.log('🔧 Connected to Firestore emulator on localhost:8080');
   } catch (error) {
-    console.log('⚠️ Firestore emulator connection failed:', error);
+    console.log('⚠️ Firestore emulator connection failed, using cloud Firestore:', error);
   }
 }
 */

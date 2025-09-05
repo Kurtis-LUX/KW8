@@ -116,7 +116,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
 
       // Filtra cartelle e schede per la cartella corrente
       const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
-      const currentWorkouts = allWorkoutPlans.filter(plan => plan.folderId === currentFolderId);
+      // Includi schede senza cartella quando siamo nella root (currentFolderId === undefined)
+      const currentWorkouts = allWorkoutPlans.filter(plan => 
+        plan.folderId === currentFolderId || 
+        (currentFolderId === undefined && (plan.folderId === undefined || plan.folderId === null))
+      );
 
       // Crea gli elementi dell'albero
       const treeItems: FolderTreeItem[] = [
@@ -498,7 +502,17 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     
     const handleItemMenuClick = (e: React.MouseEvent) => {
       e.stopPropagation();
+      e.preventDefault();
       toggleItemMenu();
+    };
+    
+    const handleCardClick = (e: React.MouseEvent) => {
+      // Previeni il click se si sta cliccando sul menu o sui suoi elementi
+      if ((e.target as HTMLElement).closest('.menu-button') || 
+          (e.target as HTMLElement).closest('.dropdown-menu')) {
+        return;
+      }
+      handleItemClick(item);
     };
     
     return (
@@ -510,7 +524,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
           } ${
             item.type === 'folder' ? 'bg-yellow-50' : 'bg-blue-50'
           }`}
-          onClick={() => handleItemClick(item)}
+          onClick={handleCardClick}
           draggable
           onDragStart={(e) => handleDragStart(e, item)}
           onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : e.preventDefault()}
@@ -574,7 +588,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
             ref={itemMenuTriggerRef}
-            className="p-1 rounded hover:bg-gray-100"
+            className="menu-button p-1 rounded hover:bg-gray-100"
             onClick={handleItemMenuClick}
           >
             <MoreVertical size={16} />

@@ -1,6 +1,7 @@
-// Hook personalizzato per gestire Firestore
+// Hook personalizzato per gestire Firestore e localStorage
 import { useState, useEffect, useCallback } from 'react';
 import { firestoreService } from '../services/firestoreService';
+import DB, { isFirestoreEnabled } from '../utils/database';
 import type {
   User,
   Ranking,
@@ -103,7 +104,12 @@ export const useWorkoutPlans = () => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedPlans = await firestoreService.getWorkoutPlans();
+      
+      // Usa localStorage se Firestore è disabilitato
+      const fetchedPlans = isFirestoreEnabled() 
+        ? await firestoreService.getWorkoutPlans()
+        : await DB.getWorkoutPlans();
+        
       setPlans(fetchedPlans);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nel caricamento piani');
@@ -116,7 +122,12 @@ export const useWorkoutPlans = () => {
   const createPlan = useCallback(async (planData: Omit<WorkoutPlan, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       setError(null);
-      const planId = await firestoreService.createWorkoutPlan(planData);
+      
+      // Usa localStorage se Firestore è disabilitato
+      const planId = isFirestoreEnabled()
+        ? await firestoreService.createWorkoutPlan(planData)
+        : await DB.saveWorkoutPlan({ ...planData, id: Date.now().toString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        
       await fetchPlans();
       return planId;
     } catch (err) {
@@ -128,7 +139,17 @@ export const useWorkoutPlans = () => {
   const updatePlan = useCallback(async (id: string, planData: Partial<WorkoutPlan>) => {
     try {
       setError(null);
-      await firestoreService.updateWorkoutPlan(id, planData);
+      
+      // Usa localStorage se Firestore è disabilitato
+      if (isFirestoreEnabled()) {
+        await firestoreService.updateWorkoutPlan(id, planData);
+      } else {
+        const existingPlan = await DB.getWorkoutPlanById(id);
+        if (existingPlan) {
+          await DB.saveWorkoutPlan({ ...existingPlan, ...planData, updatedAt: new Date().toISOString() });
+        }
+      }
+      
       await fetchPlans();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nell\'aggiornamento piano');
@@ -139,7 +160,14 @@ export const useWorkoutPlans = () => {
   const deletePlan = useCallback(async (id: string) => {
     try {
       setError(null);
-      await firestoreService.deleteWorkoutPlan(id);
+      
+      // Usa localStorage se Firestore è disabilitato
+      if (isFirestoreEnabled()) {
+        await firestoreService.deleteWorkoutPlan(id);
+      } else {
+        await DB.deleteWorkoutPlan(id);
+      }
+      
       await fetchPlans();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nell\'eliminazione piano');
@@ -152,13 +180,13 @@ export const useWorkoutPlans = () => {
   }, [fetchPlans]);
 
   return {
-    plans,
+    workoutPlans: plans,
     loading,
     error,
     refetch: fetchPlans,
-    createPlan,
-    updatePlan,
-    deletePlan
+    createWorkoutPlan: createPlan,
+    updateWorkoutPlan: updatePlan,
+    deleteWorkoutPlan: deletePlan
   };
 };
 

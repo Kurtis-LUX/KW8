@@ -278,11 +278,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {currentUser && currentUser.role === 'coach' && (
               <button
                 onClick={() => handleNavigation('workout-manager')}
-                className="flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black"
+                className="flex items-center transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black"
                 title="Gestione Schede"
               >
                 <FileText size={20} />
-                <span className="hidden md:inline font-medium">Gestione Schede</span>
               </button>
             )}
             
