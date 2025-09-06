@@ -89,6 +89,21 @@ export interface User {
   birthDate?: string;
 }
 
+export interface GymArea {
+  id: string;
+  title: string;
+  icon: React.ComponentType<any>;
+  iconName: string;
+  description: string;
+  image: string;
+  overlayColor: string;
+  overlayOpacity: number;
+  iconColor: string;
+  textColor: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 
 // Flag per controllare se usare Firestore o localStorage
@@ -482,6 +497,43 @@ const DB = {
 
 
   
+  // Funzioni per gestire le aree della palestra
+  getGymAreas: (): GymArea[] => {
+    try {
+      if (useFirestore && isFirestoreEnabled()) {
+        // TODO: Implementare recupero da Firestore
+        console.log('🔥 Getting gym areas from Firestore (not implemented yet)');
+      }
+      
+      // Fallback localStorage
+      const areas = DB.getItem('kw8_gymAreas');
+      return areas ? JSON.parse(areas) : [];
+    } catch (error) {
+      console.error('Error getting gym areas:', error);
+      return [];
+    }
+  },
+
+  saveGymAreas: (areas: GymArea[]): void => {
+    try {
+      const areasWithTimestamps = areas.map(area => ({
+        ...area,
+        updatedAt: new Date().toISOString()
+      }));
+      
+      if (useFirestore && isFirestoreEnabled()) {
+        // TODO: Implementare salvataggio su Firestore
+        console.log('🔥 Saving gym areas to Firestore (not implemented yet)');
+      }
+      
+      // Salva sempre su localStorage come backup
+      DB.setItem('kw8_gymAreas', JSON.stringify(areasWithTimestamps));
+      console.log('💾 Gym areas saved successfully');
+    } catch (error) {
+      console.error('Error saving gym areas:', error);
+    }
+  },
+
   // Inizializzazione del database con controlli di compatibilità
   initializeDatabase: async (): Promise<void> => {
     console.log('🔧 Initializing database...');

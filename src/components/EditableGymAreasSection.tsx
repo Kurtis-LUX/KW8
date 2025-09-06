@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Dumbbell, Zap, Shield, Heart, Edit, Plus, Trash2, Save, X, Upload, Palette } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
+import DB, { GymArea as DBGymArea } from '../utils/database';
 
 interface GymArea {
   id: string;
@@ -58,56 +59,87 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
   const sectionRef = useRef<HTMLElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  const [areas, setAreas] = useState<GymArea[]>([
-    {
-      id: 'sala-pesi',
-      title: t.weightRoom || 'Sala Pesi',
-      icon: Dumbbell,
-      iconName: 'Dumbbell',
-      description: t.weightRoomDesc || 'Allenamento con pesi e macchine professionali',
-      image: '/images/sala pesi.jpg',
-      overlayColor: 'bg-blue-900',
-      overlayOpacity: 70,
-      iconColor: 'text-red-600',
-      textColor: 'text-white'
-    },
-    {
-      id: 'crosstraining',
-      title: t.crossfit || 'CrossTraining',
-      icon: Zap,
-      iconName: 'Zap',
-      description: t.crossfitDesc || 'Allenamento funzionale ad alta intensità',
-      image: '/images/crossfit.jpg',
-      overlayColor: 'bg-red-600',
-      overlayOpacity: 30,
-      iconColor: 'text-blue-900',
-      textColor: 'text-white'
-    },
-    {
-      id: 'karate',
-      title: t.karate || 'Karate',
-      icon: Shield,
-      iconName: 'Shield',
-      description: t.karateDesc || 'Arte marziale tradizionale giapponese',
-      image: '/images/karate.jpg',
-      overlayColor: 'bg-white',
-      overlayOpacity: 70,
-      iconColor: 'text-yellow-400',
-      textColor: 'text-gray-900'
-    },
-    {
-      id: 'yoga',
-      title: t.yoga || 'Yoga',
-      icon: Heart,
-      iconName: 'Heart',
-      description: t.yogaDesc || 'Equilibrio tra mente e corpo',
-      image: '/images/yoga.jpg',
-      overlayColor: 'bg-white',
-      overlayOpacity: 30,
-      iconColor: 'text-white',
-      textColor: 'text-gray-900'
-    }
-  ]);
+  const [areas, setAreas] = useState<GymArea[]>([]);
+
+  // Carica le aree dal database all'avvio
+  useEffect(() => {
+    const loadAreas = () => {
+      const savedAreas = DB.getGymAreas();
+      if (savedAreas && savedAreas.length > 0) {
+        // Converte le aree dal database al formato del componente
+        const convertedAreas = savedAreas.map(area => ({
+          ...area,
+          icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
+        }));
+        setAreas(convertedAreas);
+      } else {
+        // Usa le aree predefinite se non ci sono dati salvati
+        const defaultAreas = [
+          {
+            id: 'sala-pesi',
+            title: t.weightRoom || 'Sala Pesi',
+            icon: Dumbbell,
+            iconName: 'Dumbbell',
+            description: t.weightRoomDesc || 'Allenamento con pesi e macchine professionali',
+            image: '/images/sala pesi.jpg',
+            overlayColor: 'bg-blue-900',
+            overlayOpacity: 70,
+            iconColor: 'text-red-600',
+            textColor: 'text-white',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: 'crosstraining',
+            title: t.crossfit || 'CrossTraining',
+            icon: Zap,
+            iconName: 'Zap',
+            description: t.crossfitDesc || 'Allenamento funzionale ad alta intensità',
+            image: '/images/crossfit.jpg',
+            overlayColor: 'bg-red-600',
+            overlayOpacity: 30,
+            iconColor: 'text-blue-900',
+            textColor: 'text-white',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: 'karate',
+            title: t.karate || 'Karate',
+            icon: Shield,
+            iconName: 'Shield',
+            description: t.karateDesc || 'Arte marziale tradizionale giapponese',
+            image: '/images/karate.jpg',
+            overlayColor: 'bg-white',
+            overlayOpacity: 70,
+            iconColor: 'text-yellow-400',
+            textColor: 'text-gray-900',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          {
+            id: 'yoga',
+            title: t.yoga || 'Yoga',
+            icon: Heart,
+            iconName: 'Heart',
+            description: t.yogaDesc || 'Equilibrio tra mente e corpo',
+            image: '/images/yoga.jpg',
+            overlayColor: 'bg-white',
+            overlayOpacity: 30,
+            iconColor: 'text-white',
+            textColor: 'text-gray-900',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }
+        ];
+        setAreas(defaultAreas);
+        // Salva le aree predefinite nel database
+        DB.saveGymAreas(defaultAreas);
+      }
+    };
+    
+    loadAreas();
+  }, [t]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -140,19 +172,18 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
   };
 
   const handleStart = (clientX: number) => {
-    if (isEditing) return;
     setIsDragging(true);
     setStartX(clientX);
     setCurrentX(clientX);
   };
 
   const handleMove = (clientX: number) => {
-    if (!isDragging || isEditing) return;
+    if (!isDragging) return;
     setCurrentX(clientX);
   };
 
   const handleEnd = () => {
-    if (!isDragging || isEditing) return;
+    if (!isDragging) return;
     setIsDragging(false);
     
     const diff = startX - currentX;
@@ -193,16 +224,24 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
       overlayColor: 'bg-gray-900',
       overlayOpacity: 50,
       iconColor: 'text-red-600',
-      textColor: 'text-white'
+      textColor: 'text-white',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     setAreas(prev => [...prev, newArea]);
     setShowAddModal(false);
   };
 
   const handleSave = () => {
+    // Salva nel database
+    DB.saveGymAreas(areas);
+    
+    // Chiama anche la callback se fornita
     if (onSave) {
       onSave(areas);
     }
+    
+    alert('Aree salvate con successo!');
   };
 
   const handleImageUpload = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,10 +296,9 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
             <div className="ml-4">
               <button
                 onClick={() => onSave && onSave(areas)}
-                className="flex items-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="flex items-center p-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
-                <Edit size={16} className="mr-1" />
-                Modifica
+                <Edit size={16} />
               </button>
             </div>
           )}
@@ -275,6 +313,13 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
           <div 
             ref={carouselRef}
             className="relative overflow-hidden rounded-xl shadow-2xl"
+            onMouseDown={(e) => handleStart(e.clientX)}
+            onMouseMove={(e) => handleMove(e.clientX)}
+            onMouseUp={handleEnd}
+            onMouseLeave={handleEnd}
+            onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+            onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+            onTouchEnd={handleEnd}
           >
             <div 
               className="flex transition-transform duration-700 ease-in-out"
@@ -445,33 +490,29 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
             </div>
           </div>
 
-          {!isEditing && (
-            <>
-              <button
-                onClick={prevSlide}
-                className={`absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 ${
-                  isVisible 
-                    ? 'translate-x-0 opacity-100' 
-                    : '-translate-x-8 opacity-0'
-                }`}
-                style={{ transitionDelay: '600ms' }}
-              >
-                <ChevronLeft size={24} />
-              </button>
+          <button
+            onClick={prevSlide}
+            className={`absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 z-20 ${
+              isVisible 
+                ? 'translate-x-0 opacity-100' 
+                : '-translate-x-8 opacity-0'
+            }`}
+            style={{ transitionDelay: '600ms' }}
+          >
+            <ChevronLeft size={24} />
+          </button>
 
-              <button
-                onClick={nextSlide}
-                className={`absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 ${
-                  isVisible 
-                    ? 'translate-x-0 opacity-100' 
-                    : 'translate-x-8 opacity-0'
-                }`}
-                style={{ transitionDelay: '600ms' }}
-              >
-                <ChevronRight size={24} />
-              </button>
-            </>
-          )}
+          <button
+            onClick={nextSlide}
+            className={`absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 z-20 ${
+              isVisible 
+                ? 'translate-x-0 opacity-100' 
+                : 'translate-x-8 opacity-0'
+            }`}
+            style={{ transitionDelay: '600ms' }}
+          >
+            <ChevronRight size={24} />
+          </button>
 
           <div className={`flex justify-center mt-8 space-x-3 transition-all duration-700 transform ${
             isVisible 

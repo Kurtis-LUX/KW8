@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Dumbbell, Zap, Shield, Heart } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
+import DB from '../utils/database';
 
 const GymAreasSection: React.FC = () => {
   const { t } = useLanguageContext();
@@ -12,36 +13,64 @@ const GymAreasSection: React.FC = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
 
-  const areas = [
-    {
-      id: 'sala-pesi',
-      title: t.weightRoom,
-      icon: Dumbbell,
-      description: t.weightRoomDesc,
-      image: '/images/sala pesi.jpg'
-    },
-    {
-      id: 'crosstraining',
-      title: t.crossfit,
-      icon: Zap,
-      description: t.crossfitDesc,
-      image: '/images/crossfit.jpg'
-    },
-    {
-      id: 'karate',
-      title: t.karate,
-      icon: Shield,
-      description: t.karateDesc,
-      image: '/images/karate.jpg'
-    },
-    {
-      id: 'yoga',
-      title: t.yoga,
-      icon: Heart,
-      description: t.yogaDesc,
-      image: '/images/yoga.jpg'
-    }
-  ];
+  const [areas, setAreas] = useState<any[]>([]);
+
+  const availableIcons = {
+    Dumbbell,
+    Zap,
+    Shield,
+    Heart
+  };
+
+  // Carica le aree dal database
+  useEffect(() => {
+    const loadAreas = () => {
+      const savedAreas = DB.getGymAreas();
+      if (savedAreas && savedAreas.length > 0) {
+        // Converte le aree dal database al formato del componente
+        const convertedAreas = savedAreas.map(area => ({
+          ...area,
+          icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
+        }));
+        setAreas(convertedAreas);
+      } else {
+        // Usa le aree predefinite se non ci sono dati salvati
+        const defaultAreas = [
+          {
+            id: 'sala-pesi',
+            title: t.weightRoom,
+            icon: Dumbbell,
+            description: t.weightRoomDesc,
+            image: '/images/sala pesi.jpg'
+          },
+          {
+            id: 'crosstraining',
+            title: t.crossfit,
+            icon: Zap,
+            description: t.crossfitDesc,
+            image: '/images/crossfit.jpg'
+          },
+          {
+            id: 'karate',
+            title: t.karate,
+            icon: Shield,
+            description: t.karateDesc,
+            image: '/images/karate.jpg'
+          },
+          {
+            id: 'yoga',
+            title: t.yoga,
+            icon: Heart,
+            description: t.yogaDesc,
+            image: '/images/yoga.jpg'
+          }
+        ];
+        setAreas(defaultAreas);
+      }
+    };
+    
+    loadAreas();
+  }, [t]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
