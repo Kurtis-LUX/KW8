@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CreditCard, Search, Filter, Calendar, User, CheckCircle, XCircle, AlertCircle, Euro, Phone, Mail, MapPin, Eye, Edit3, Plus, Download } from 'lucide-react';
-
+import Header from '../components/Header';
 import { User as UserType } from '../utils/database';
 import { useMembershipCards } from '../hooks/useFirestore';
 import { MembershipCard as FirestoreMembershipCard } from '../services/firestoreService';
@@ -8,6 +8,7 @@ import { MembershipCard as FirestoreMembershipCard } from '../services/firestore
 interface MembershipCardsPageProps {
   currentUser: UserType | null;
   onNavigate: (page: string) => void;
+  onLogout?: () => void;
 }
 
 interface MembershipCard {
@@ -34,7 +35,7 @@ interface MembershipCard {
   };
 }
 
-const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, onNavigate }) => {
+const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, onNavigate, onLogout }) => {
   const { cards: firestoreCards, loading, error, createCard, updateCard, deleteCard } = useMembershipCards();
   const [cards, setCards] = useState<MembershipCard[]>([]);
   const [filteredCards, setFilteredCards] = useState<MembershipCard[]>([]);
@@ -269,7 +270,8 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
   const expiringSoon = cards.filter(c => isExpiringSoon(c.expiryDate)).length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-20">
+      <Header onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} isDashboard={true} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Header compatto */}
         <div className="flex items-center justify-between mb-6">

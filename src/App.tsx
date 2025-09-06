@@ -400,6 +400,7 @@ function App() {
           <AthleteStatisticsPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
+            onLogout={handleLogout}
           /> : 
           <div className="p-8 text-center">
             <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
@@ -423,6 +424,7 @@ function App() {
           <AthleteManagerPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
+            onLogout={handleLogout}
           /> : 
           <div className="p-8 text-center">
             <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
@@ -446,6 +448,7 @@ function App() {
           <RankingsPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
+            onLogout={handleLogout}
           /> : 
           <div className="p-8 text-center">
             <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
@@ -469,6 +472,7 @@ function App() {
           <LinkManagerPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
+            onLogout={handleLogout}
           /> : 
           <div className="p-8 text-center">
             <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
@@ -489,7 +493,11 @@ function App() {
     return (
       <LanguageProvider>
         {currentUser && currentUser.role === 'coach' ? (
-          <MembershipCardsPage onBack={() => handleNavigation('home')} />
+          <MembershipCardsPage 
+            currentUser={currentUser} 
+            onNavigate={handleNavigation}
+            onLogout={handleLogout}
+          />
         ) : (
           <div className="min-h-screen bg-gray-100 flex items-center justify-center">
             <div className="text-center">

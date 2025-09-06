@@ -3,6 +3,7 @@ import { ArrowLeft, Link as LinkIcon, ExternalLink, Copy, Plus, Search, Filter, 
 import { useLinks } from '../hooks/useFirestore';
 import { Link as FirestoreLink } from '../services/firestoreService';
 import { User } from '../services/authService';
+import Header from '../components/Header';
 
 interface WorkoutLink {
   id: string;
@@ -23,9 +24,10 @@ interface WorkoutLink {
 interface LinkManagerPageProps {
   onNavigate: (page: string) => void;
   currentUser: User;
+  onLogout?: () => void;
 }
 
-const LinkManagerPage: React.FC<LinkManagerPageProps> = ({ onNavigate }) => {
+const LinkManagerPage: React.FC<LinkManagerPageProps> = ({ onNavigate, currentUser, onLogout }) => {
   const { links: firestoreLinks, loading, error, createLink, updateLink, deleteLink } = useLinks();
   const [links, setLinks] = useState<WorkoutLink[]>([]);
   const [filteredLinks, setFilteredLinks] = useState<WorkoutLink[]>([]);
@@ -154,18 +156,28 @@ const LinkManagerPage: React.FC<LinkManagerPageProps> = ({ onNavigate }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-20">
+      <Header onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} isDashboard={true} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => onNavigate('coach-dashboard')}
-            className="flex items-center justify-center w-10 h-10 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
-            title="Torna alla Dashboard"
+            className="flex items-center justify-center w-12 h-12 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
+            title="Torna alla Dashboard Coach"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Gestione Link</h1>
-          <div className="w-10"></div>
+          
+          <div className="text-center flex-1">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent mb-2">
+              Gestione Link
+            </h1>
+            <p className="text-gray-600">
+              Crea e gestisci i link per condividere le schede con i tuoi atleti
+            </p>
+          </div>
+          
+          <div className="w-12"></div>
         </div>
 
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">

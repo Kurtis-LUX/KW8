@@ -14,6 +14,7 @@ interface User {
 interface AthleteStatisticsPageProps {
   onNavigate: (page: string) => void;
   currentUser: User | null;
+  onLogout?: () => void;
 }
 
 interface AthleteData {
@@ -29,7 +30,7 @@ interface AthleteData {
   }[];
 }
 
-const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigate, currentUser }) => {
+const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigate, currentUser, onLogout }) => {
   const [selectedAthlete, setSelectedAthlete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'progress' | 'history'>('overview');
   const { users: firestoreUsers, loading, error } = useUsers();
@@ -154,6 +155,7 @@ const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigat
       <Header 
         onNavigate={onNavigate} 
         currentUser={currentUser}
+        onLogout={onLogout}
         showAuthButtons={false}
         isDashboard={true}
       />

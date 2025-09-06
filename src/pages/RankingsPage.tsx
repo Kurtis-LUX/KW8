@@ -4,6 +4,7 @@ import { useRankings } from '../hooks/useFirestore';
 import MuscleGroupForm from '../components/MuscleGroupForm';
 import ExerciseForm from '../components/ExerciseForm';
 import EditableRankings from '../components/EditableRankings';
+import Header from '../components/Header';
 import { User } from '../utils/database';
 
 interface ExerciseRecord {
@@ -27,9 +28,10 @@ interface ExerciseCategory {
 interface RankingsPageProps {
   onNavigate: (page: string) => void;
   currentUser: User | null;
+  onLogout?: () => void;
 }
 
-const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser }) => {
+const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, onLogout }) => {
   const { rankings, loading, error, createRanking, updateRanking, deleteRanking } = useRankings();
   const [records, setRecords] = useState<ExerciseRecord[]>([]);
   const [filteredRecords, setFilteredRecords] = useState<ExerciseRecord[]>([]);
@@ -309,23 +311,27 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser }) 
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-20">
+      <Header onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} isDashboard={true} />
       <div className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header compatto */}
           <div className="flex items-center justify-between mb-6">
             <button
-              onClick={() => onNavigate('home')}
+              onClick={() => onNavigate('coach-dashboard')}
               className="flex items-center justify-center w-10 h-10 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
-              title="Torna alla Dashboard"
+              title="Torna alla Dashboard Coach"
             >
               <ArrowLeft size={18} />
             </button>
             
             <div className="text-center flex-1">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent mb-2">
                 Classifiche
               </h1>
+              <p className="text-gray-600">
+                Visualizza i massimali e i record degli atleti per ogni esercizio
+              </p>
             </div>
             
             <div className="flex space-x-2">

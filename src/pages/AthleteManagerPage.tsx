@@ -10,6 +10,7 @@ import type { User as FirestoreUser } from '../services/firestoreService';
 interface AthleteManagerPageProps {
   onNavigate: (page: string) => void;
   currentUser: User | null;
+  onLogout?: () => void;
 }
 
 interface Athlete {
@@ -32,7 +33,7 @@ interface Athlete {
   };
 }
 
-const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, currentUser }) => {
+const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, currentUser, onLogout }) => {
   const { users, loading, error, createUser, updateUser, deleteUser } = useUsers();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [filteredAthletes, setFilteredAthletes] = useState<Athlete[]>([]);
@@ -210,6 +211,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
         <Header 
           onNavigate={onNavigate} 
           currentUser={currentUser}
+          onLogout={onLogout}
           showAuthButtons={false}
           isDashboard={true}
         />
@@ -229,6 +231,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
         <Header 
           onNavigate={onNavigate} 
           currentUser={currentUser}
+          onLogout={onLogout}
           showAuthButtons={false}
           isDashboard={true}
         />
@@ -258,6 +261,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
       <Header 
         onNavigate={onNavigate} 
         currentUser={currentUser}
+        onLogout={onLogout}
         showAuthButtons={false}
         isDashboard={true}
       />
@@ -303,9 +307,10 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
 
           {/* Filtri e ricerca */}
           <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Prima riga: Ricerca e Filtro Stato nella stessa riga */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
               {/* Ricerca */}
-              <div className="relative">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                 <input
                   type="text"
@@ -316,8 +321,24 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                 />
               </div>
 
+              {/* Filtro Stato (Menu) */}
+              <div className="relative sm:w-64">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 appearance-none bg-white"
+                >
+                  <option value="all">Tutti gli Stati</option>
+                  <option value="active">Attivi</option>
+                  <option value="inactive">Inattivi</option>
+                  <option value="suspended">Sospesi</option>
+                </select>
+              </div>
+            </div>
 
-
+            {/* Seconda riga: Ordinamento */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Ordinamento */}
               <select
                 value={sortBy}
