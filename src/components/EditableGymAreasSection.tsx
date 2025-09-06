@@ -236,7 +236,7 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
           }`}>
             {t.gymAreas || 'LE NOSTRE AREE'}
           </h2>
-          {isEditing && (
+          {isEditing ? (
             <div className="ml-4 flex space-x-2">
               <button
                 onClick={handleSave}
@@ -251,6 +251,16 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
               >
                 <Plus size={16} className="mr-1" />
                 Aggiungi Area
+              </button>
+            </div>
+          ) : (
+            <div className="ml-4">
+              <button
+                onClick={() => onSave && onSave(areas)}
+                className="flex items-center px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Edit size={16} className="mr-1" />
+                Modifica
               </button>
             </div>
           )}

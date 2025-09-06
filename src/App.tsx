@@ -5,6 +5,7 @@ import HeroSection from './components/HeroSection';
 import StatisticsSection from './components/StatisticsSection';
 import SubscriptionSection from './components/SubscriptionSection';
 import GymAreasSection from './components/GymAreasSection';
+import EditableGymAreasSection from './components/EditableGymAreasSection';
 import ScheduleSection from './components/ScheduleSection';
 import LocationSection from './components/LocationSection';
 import StaffSection from './components/StaffSection';
@@ -333,12 +334,69 @@ function App() {
                   </div>
                   <p className="text-sm sm:text-base text-gray-600">Visualizza progressi e analisi dettagliate degli atleti</p>
                 </div>
+                <div 
+                  className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                  onClick={() => setCurrentPage('gym-areas-editor')}
+                >
+                  <div className="flex items-center mb-3 sm:mb-4">
+                    <svg className="w-6 h-6 text-red-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Gestione Aree</h3>
+                  </div>
+                  <p className="text-sm sm:text-base text-gray-600">Modifica le aree della palestra mostrate nella home page</p>
+                </div>
               </div>
               
               {/* Sezione Migrazione Dati */}
               <div className="mt-8">
                 <DataMigration currentUser={currentUser} />
               </div>
+            </div>
+          </div>
+        </ProtectedRoute>
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'gym-areas-editor') {
+    return (
+      <LanguageProvider>
+        <ProtectedRoute requireAdmin={false}>
+          <div className="min-h-screen bg-gray-100">
+            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} />
+            <div className="bg-white shadow-sm border-b mt-20">
+              <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center py-4 sm:py-6">
+                  <button
+                    onClick={() => handleNavigation('coach-dashboard')}
+                    className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                    title="Torna alla Dashboard Coach"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Torna alla Dashboard
+                  </button>
+                  <div className="text-center">
+                    <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
+                      Gestione Aree Palestra
+                    </h1>
+                    <p className="text-sm sm:text-base text-gray-600">Modifica le aree mostrate nella home page</p>
+                  </div>
+                  <div className="w-32"></div>
+                </div>
+              </div>
+            </div>
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+              <EditableGymAreasSection 
+                isEditing={true} 
+                onSave={(areas) => {
+                  console.log('Aree salvate:', areas);
+                  // Qui si potrebbe implementare il salvataggio su database
+                  alert('Aree salvate con successo!');
+                }}
+              />
             </div>
           </div>
         </ProtectedRoute>
@@ -595,7 +653,17 @@ function App() {
         <HeroSection currentUser={currentUser} onNavigate={handleNavigation} />
         <StatisticsSection />
         <SectionSeparator variant="black" />
-        <GymAreasSection />
+        {currentUser && currentUser.role === 'coach' ? (
+          <EditableGymAreasSection 
+            isEditing={false} 
+            onSave={(areas) => {
+              console.log('Aree salvate dalla home:', areas);
+              handleNavigation('gym-areas-editor');
+            }}
+          />
+        ) : (
+          <GymAreasSection />
+        )}
         <SectionSeparator variant="black" />
         <ScheduleSection currentUser={currentUser} />
         <SectionSeparator variant="black" />
