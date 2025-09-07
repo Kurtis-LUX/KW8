@@ -1,5 +1,5 @@
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { app } from '../config/firebase';
+import app from '../config/firebase';
 
 class StorageService {
   private storage = getStorage(app);
