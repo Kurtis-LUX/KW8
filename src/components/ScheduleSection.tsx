@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Clock, Calendar, MapPin, Edit3, Save, X } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
-import { firestoreService, type GymSchedule } from '../services/firestoreService';
+import firestoreService, { type GymSchedule } from '../services/firestoreService';
 
 interface ScheduleSectionProps {
   currentUser?: any;

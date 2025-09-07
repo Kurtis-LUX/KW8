@@ -1,5 +1,5 @@
 // Database integrato con Firestore
-import { firestoreService } from '../services/firestoreService';
+import firestoreService from '../services/firestoreService';
 
 // Tipi di dati per il sistema di workout
 
@@ -498,14 +498,18 @@ const DB = {
 
   
   // Funzioni per gestire le aree della palestra
-  getGymAreas: (): GymArea[] => {
-    try {
-      if (useFirestore && isFirestoreEnabled()) {
-        // TODO: Implementare recupero da Firestore
-        console.log('🔥 Getting gym areas from Firestore (not implemented yet)');
+  getGymAreas: async (): Promise<GymArea[]> => {
+    if (useFirestore) {
+      try {
+        return await firestoreService.getGymAreas();
+      } catch (error) {
+        console.error('Error fetching gym areas from Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
       }
-      
-      // Fallback localStorage
+    }
+    
+    // Fallback localStorage
+    try {
       const areas = DB.getItem('kw8_gymAreas');
       return areas ? JSON.parse(areas) : [];
     } catch (error) {
@@ -514,21 +518,27 @@ const DB = {
     }
   },
 
-  saveGymAreas: (areas: GymArea[]): void => {
-    try {
-      const areasWithTimestamps = areas.map(area => ({
-        ...area,
-        updatedAt: new Date().toISOString()
-      }));
-      
-      if (useFirestore && isFirestoreEnabled()) {
-        // TODO: Implementare salvataggio su Firestore
-        console.log('🔥 Saving gym areas to Firestore (not implemented yet)');
+  saveGymAreas: async (areas: GymArea[]): Promise<void> => {
+    const areasWithTimestamps = areas.map(area => ({
+      ...area,
+      updatedAt: new Date().toISOString()
+    }));
+    
+    if (useFirestore) {
+      try {
+        await firestoreService.saveGymAreas(areasWithTimestamps);
+        console.log('✅ Gym areas saved successfully to Firestore');
+        return;
+      } catch (error) {
+        console.error('Error saving gym areas to Firestore, falling back to localStorage:', error);
+        disableFirestoreOnError(error);
       }
-      
-      // Salva sempre su localStorage come backup
+    }
+    
+    // Fallback localStorage
+    try {
       DB.setItem('kw8_gymAreas', JSON.stringify(areasWithTimestamps));
-      console.log('💾 Gym areas saved successfully');
+      console.log('💾 Gym areas saved successfully to localStorage');
     } catch (error) {
       console.error('Error saving gym areas:', error);
     }

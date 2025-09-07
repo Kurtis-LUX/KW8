@@ -90,6 +90,21 @@ export interface MembershipCard {
   updatedAt: string;
 }
 
+export interface GymArea {
+  id: string;
+  title: string;
+  icon: string;
+  iconName: string;
+  description: string;
+  image: string;
+  overlayColor: string;
+  overlayOpacity: number;
+  iconColor: string;
+  textColor: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface GymSchedule {
   id: string;
   lunedi: { open: string; close: string; isOpen: boolean };
@@ -113,7 +128,8 @@ class FirestoreService {
     rankings: 'rankings',
     links: 'links',
     membershipCards: 'membershipCards',
-    schedule: 'gymSchedule'
+    schedule: 'gymSchedule',
+    gymAreas: 'gymAreas'
   };
 
   private authPromise: Promise<void> | null = null;
@@ -870,8 +886,98 @@ class FirestoreService {
       }
     });
   }
+
+  // ==================== AREE PALESTRA ====================
+  
+  async getGymAreas(): Promise<GymArea[]> {
+    if (!(await this.isFirestoreEnabled())) {
+      return [];
+    }
+    
+    try {
+      await this.ensureAuth();
+      const q = query(
+        collection(db, this.collections.gymAreas),
+        orderBy('createdAt')
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as GymArea[];
+    } catch (error) {
+      console.error('Error fetching gym areas:', error);
+      return [];
+    }
+  }
+
+  async saveGymAreas(areas: GymArea[]): Promise<void> {
+    if (!(await this.isFirestoreEnabled())) {
+      return;
+    }
+    
+    try {
+      await this.ensureAuth();
+      const batch = writeBatch(db);
+      
+      // Prima elimina tutte le aree esistenti
+      const existingAreas = await this.getGymAreas();
+      existingAreas.forEach(area => {
+        const docRef = doc(db, this.collections.gymAreas, area.id);
+        batch.delete(docRef);
+      });
+      
+      // Poi aggiunge le nuove aree
+      areas.forEach(area => {
+        const docRef = doc(collection(db, this.collections.gymAreas));
+        batch.set(docRef, {
+          ...area,
+          id: docRef.id,
+          updatedAt: new Date().toISOString()
+        });
+      });
+      
+      await batch.commit();
+      console.log('✅ Gym areas saved to Firestore');
+    } catch (error) {
+      console.error('❌ Error saving gym areas:', error);
+      throw error;
+    }
+  }
+
+  async subscribeToGymAreas(callback: (areas: GymArea[]) => void): Promise<Unsubscribe> {
+    if (!(await this.isFirestoreEnabled())) {
+      callback([]);
+      return () => {};
+    }
+    
+    try {
+      await this.ensureAuth();
+      const q = query(
+        collection(db, this.collections.gymAreas),
+        orderBy('createdAt')
+      );
+      
+      return onSnapshot(q, (snapshot) => {
+        try {
+          const areas = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as GymArea[];
+          callback(areas);
+        } catch (error) {
+          console.error('Error in gym areas subscription:', error);
+          callback([]);
+        }
+      });
+    } catch (error) {
+      console.error('Error setting up gym areas subscription:', error);
+      callback([]);
+      return () => {};
+    }
+  }
 }
 
 // Esporta un'istanza singleton del servizio
-export const firestoreService = new FirestoreService();
+const firestoreService = new FirestoreService();
 export default firestoreService;

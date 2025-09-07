@@ -1,6 +1,6 @@
 // Hook personalizzato per gestire Firestore e localStorage
 import { useState, useEffect, useCallback } from 'react';
-import { firestoreService } from '../services/firestoreService';
+import firestoreService from '../services/firestoreService';
 import DB, { isFirestoreEnabled } from '../utils/database';
 import type {
   User,

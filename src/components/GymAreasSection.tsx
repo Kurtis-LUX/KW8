@@ -22,54 +22,84 @@ const GymAreasSection: React.FC = () => {
     Heart
   };
 
-  // Carica le aree dal database
+  // Carica le aree dal database e sottoscrive agli aggiornamenti
   useEffect(() => {
-    const loadAreas = () => {
-      const savedAreas = DB.getGymAreas();
-      if (savedAreas && savedAreas.length > 0) {
-        // Converte le aree dal database al formato del componente
-        const convertedAreas = savedAreas.map(area => ({
-          ...area,
-          icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
-        }));
-        setAreas(convertedAreas);
-      } else {
-        // Usa le aree predefinite se non ci sono dati salvati
-        const defaultAreas = [
-          {
-            id: 'sala-pesi',
-            title: t.weightRoom,
-            icon: Dumbbell,
-            description: t.weightRoomDesc,
-            image: '/images/sala pesi.jpg'
-          },
-          {
-            id: 'crosstraining',
-            title: t.crossfit,
-            icon: Zap,
-            description: t.crossfitDesc,
-            image: '/images/crossfit.jpg'
-          },
-          {
-            id: 'karate',
-            title: t.karate,
-            icon: Shield,
-            description: t.karateDesc,
-            image: '/images/karate.jpg'
-          },
-          {
-            id: 'yoga',
-            title: t.yoga,
-            icon: Heart,
-            description: t.yogaDesc,
-            image: '/images/yoga.jpg'
-          }
-        ];
-        setAreas(defaultAreas);
+    const loadAreas = async () => {
+      try {
+        const savedAreas = await DB.getGymAreas();
+        if (savedAreas && savedAreas.length > 0) {
+          // Converte le aree dal database al formato del componente
+          const convertedAreas = savedAreas.map(area => ({
+            ...area,
+            icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
+          }));
+          setAreas(convertedAreas);
+        } else {
+          // Usa le aree predefinite se non ci sono dati salvati
+          const defaultAreas = [
+            {
+              id: 'sala-pesi',
+              title: t.weightRoom,
+              icon: Dumbbell,
+              description: t.weightRoomDesc,
+              image: '/images/sala pesi.jpg'
+            },
+            {
+              id: 'crosstraining',
+              title: t.crossfit,
+              icon: Zap,
+              description: t.crossfitDesc,
+              image: '/images/crossfit.jpg'
+            },
+            {
+              id: 'karate',
+              title: t.karate,
+              icon: Shield,
+              description: t.karateDesc,
+              image: '/images/karate.jpg'
+            },
+            {
+              id: 'yoga',
+              title: t.yoga,
+              icon: Heart,
+              description: t.yogaDesc,
+              image: '/images/yoga.jpg'
+            }
+          ];
+          setAreas(defaultAreas);
+        }
+      } catch (error) {
+        console.error('Error loading gym areas:', error);
       }
     };
     
     loadAreas();
+    
+    // Sottoscrivi agli aggiornamenti in tempo reale
+    let unsubscribe: (() => void) | undefined;
+    const setupSubscription = async () => {
+      try {
+        unsubscribe = await DB.subscribeToGymAreas((updatedAreas) => {
+          if (updatedAreas.length > 0) {
+            const convertedAreas = updatedAreas.map(area => ({
+              ...area,
+              icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
+            }));
+            setAreas(convertedAreas);
+          }
+        });
+      } catch (error) {
+        console.error('Error setting up gym areas subscription:', error);
+      }
+    };
+    
+    setupSubscription();
+    
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, [t]);
 
   useEffect(() => {
