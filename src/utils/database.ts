@@ -622,4 +622,33 @@ const DB = {
   }
 };
 
+// Funzioni per la gestione della sezione staff
+export const getStaffSection = async () => {
+  try {
+    return await firestoreService.getDocument('staff', 'staff-section');
+  } catch (error) {
+    console.error('Error getting staff section:', error);
+    return null;
+  }
+};
+
+export const saveStaffSection = async (staffData: any) => {
+  try {
+    await firestoreService.setDocument('staff', 'staff-section', staffData);
+    return true;
+  } catch (error) {
+    console.error('Error saving staff section:', error);
+    throw error;
+  }
+};
+
+export const subscribeToStaffSection = (callback: (data: any) => void) => {
+  try {
+    return firestoreService.subscribeToDocument('staff', 'staff-section', callback);
+  } catch (error) {
+    console.error('Error subscribing to staff section:', error);
+    return () => {};
+  }
+};
+
 export default DB;

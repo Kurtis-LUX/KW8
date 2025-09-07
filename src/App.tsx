@@ -8,7 +8,7 @@ import GymAreasSection from './components/GymAreasSection';
 import EditableGymAreasSection from './components/EditableGymAreasSection';
 import ScheduleSection from './components/ScheduleSection';
 import LocationSection from './components/LocationSection';
-import StaffSection from './components/StaffSection';
+import EditableStaffSection from './components/EditableStaffSection';
 import NewsletterSection from './components/NewsletterSection';
 import SocialSection from './components/SocialSection';
 import TrustpilotSection from './components/TrustpilotSection';
@@ -669,7 +669,7 @@ function App() {
         <SectionSeparator variant="black" />
         <LocationSection />
         <SectionSeparator variant="black" />
-        <StaffSection />
+        <EditableStaffSection currentUser={currentUser} />
         <SectionSeparator variant="black" />
         <SubscriptionSection onNavigate={handleNavigation} />
         <NewsletterSection />

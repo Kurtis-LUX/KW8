@@ -146,7 +146,7 @@ const StaffSection: React.FC = () => {
             {t.ourTeam}
           </h2>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 gap-4 md:gap-8 max-w-4xl mx-auto">
             {staff.map((member, index) => {
               const Icon = member.icon;
               return (

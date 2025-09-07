@@ -221,9 +221,6 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
   const [editingArea, setEditingArea] = useState<number | null>(null);
   const [originalAreaState, setOriginalAreaState] = useState<GymArea | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'success' | 'error' | null>(null);
   const [newAreaData, setNewAreaData] = useState({
     title: 'Nuova Area',
     description: 'Descrizione della nuova area',
@@ -516,7 +513,6 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
         overlayOpacity: area.overlayOpacity,
         iconColor: area.iconColor,
         textColor: area.textColor,
-        titleColor: area.titleColor,
         createdAt: area.createdAt,
         updatedAt: new Date().toISOString()
       }));
@@ -529,12 +525,10 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
         onSave(areas);
       }
       
-      setSaveStatus('success');
-      setShowSaveModal(true);
+      alert('Aree salvate con successo!');
     } catch (error) {
       console.error('Error saving areas:', error);
-      setSaveStatus('error');
-      setShowSaveModal(true);
+      alert('Errore nel salvataggio. Riprova.');
     }
   };
 
@@ -1082,86 +1076,6 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
           </div>
         </div>
       )}
-      
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm !== null && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.962-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Conferma Eliminazione
-              </h3>
-              <p className="text-sm text-gray-500 mb-6">
-                Sei sicuro di voler eliminare l'area "{areas[showDeleteConfirm]?.title}"? Questa azione non può essere annullata.
-              </p>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => confirmDeleteArea(showDeleteConfirm)}
-                  className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-medium"
-                >
-                  Elimina
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(null)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium"
-                >
-                  Annulla
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-       )}
-       
-       {/* Save Status Modal */}
-       {showSaveModal && (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-             <div className="text-center">
-               <div className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4 ${
-                 saveStatus === 'success' ? 'bg-green-100' : 'bg-red-100'
-               }`}>
-                 {saveStatus === 'success' ? (
-                   <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                   </svg>
-                 ) : (
-                   <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                   </svg>
-                 )}
-               </div>
-               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                 {saveStatus === 'success' ? 'Salvataggio Completato' : 'Errore di Salvataggio'}
-               </h3>
-               <p className="text-sm text-gray-500 mb-6">
-                 {saveStatus === 'success' 
-                   ? 'Le aree sono state salvate con successo nel database.'
-                   : 'Si è verificato un errore durante il salvataggio. Riprova.'
-                 }
-               </p>
-               <button
-                 onClick={() => {
-                   setShowSaveModal(false);
-                   setSaveStatus(null);
-                 }}
-                 className={`w-full py-2 px-4 rounded-lg transition-colors font-medium ${
-                   saveStatus === 'success'
-                     ? 'bg-green-600 text-white hover:bg-green-700'
-                     : 'bg-red-600 text-white hover:bg-red-700'
-                 }`}
-               >
-                 OK
-               </button>
-             </div>
-           </div>
-         </div>
-       )}
     </section>
   );
 };

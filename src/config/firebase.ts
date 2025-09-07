@@ -4,7 +4,7 @@ import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 // Flag per disabilitare Firebase in sviluppo locale
-const DISABLE_FIREBASE = false; // Attivato per usare il database reale
+const DISABLE_FIREBASE = true; // Disabilitato per evitare errori di connessione in sviluppo
 
 // Configurazione Firebase
 const firebaseConfig = {

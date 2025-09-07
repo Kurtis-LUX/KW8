@@ -7,6 +7,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -885,6 +886,76 @@ class FirestoreService {
         callback(null);
       }
     });
+  }
+
+  // ==================== METODI GENERICI ====================
+  
+  async setDocument(collectionName: string, documentId: string, data: any): Promise<void> {
+    if (!(await this.isFirestoreEnabled())) {
+      console.log(`🔧 Firestore disabled: setDocument ${collectionName}/${documentId} skipped`);
+      return;
+    }
+    
+    try {
+      await this.ensureAuth();
+      const docRef = doc(db, collectionName, documentId);
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+      console.log(`✅ Document saved: ${collectionName}/${documentId}`);
+    } catch (error) {
+      // Se il documento non esiste, crealo
+       if (error.code === 'not-found') {
+          try {
+            const docRef = doc(db, collectionName, documentId);
+            await setDoc(docRef, {
+              ...data,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+            console.log(`✅ Document created: ${collectionName}/${documentId}`);
+          } catch (createError) {
+            console.error(`❌ Error creating document ${collectionName}/${documentId}:`, createError);
+            throw createError;
+          }
+      } else {
+        console.error(`❌ Error saving document ${collectionName}/${documentId}:`, error);
+        throw error;
+      }
+    }
+  }
+
+  async subscribeToDocument(collectionName: string, documentId: string, callback: (data: any) => void): Promise<Unsubscribe> {
+    if (!(await this.isFirestoreEnabled())) {
+      callback(null);
+      return () => {};
+    }
+    
+    try {
+      await this.ensureAuth();
+      const docRef = doc(db, collectionName, documentId);
+      
+      return onSnapshot(docRef, (docSnap) => {
+        try {
+          if (docSnap.exists()) {
+            callback({
+              id: docSnap.id,
+              ...docSnap.data()
+            });
+          } else {
+            callback(null);
+          }
+        } catch (error) {
+          console.error(`Error in document subscription ${collectionName}/${documentId}:`, error);
+          callback(null);
+        }
+      });
+    } catch (error) {
+      console.error(`Error setting up document subscription ${collectionName}/${documentId}:`, error);
+      callback(null);
+      return () => {};
+    }
   }
 
   // ==================== AREE PALESTRA ====================
