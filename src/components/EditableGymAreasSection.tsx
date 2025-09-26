@@ -213,37 +213,32 @@ const overlayColorOptions = [
 
 const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEditing = false, onSave }) => {
   const { t } = useLanguageContext();
+  const [areas, setAreas] = useState<GymArea[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
   const [editingArea, setEditingArea] = useState<number | null>(null);
-  const [originalAreaState, setOriginalAreaState] = useState<GymArea | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [internalEditMode, setInternalEditMode] = useState(isEditing);
   const [newAreaData, setNewAreaData] = useState({
     title: 'Nuova Area',
     description: 'Descrizione della nuova area',
     image: '/images/default-gym.jpg'
   });
-  const sectionRef = useRef<HTMLElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
-
-  const [areas, setAreas] = useState<GymArea[]>([]);
 
   // Carica le aree dal database all'avvio
   useEffect(() => {
     const loadAreas = async () => {
       try {
         const savedAreas = await DB.getGymAreas();
-        if (savedAreas && savedAreas.length > 0) {
-          // Converte le aree dal database al formato del componente
-          const convertedAreas = savedAreas.map(area => ({
-            ...area,
-            icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
-          }));
-          setAreas(convertedAreas);
-        } else {
+        
+        // Forza sempre il caricamento delle aree predefinite se non ci sono aree salvate
+        if (!savedAreas || savedAreas.length === 0) {
           // Usa le aree predefinite se non ci sono dati salvati
           const defaultAreas = [
             {
@@ -314,6 +309,13 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
           setAreas(convertedAreas);
           // Salva le aree predefinite nel database
           await DB.saveGymAreas(defaultAreas);
+        } else {
+          // Converte le aree dal database al formato del componente
+          const convertedAreas = savedAreas.map(area => ({
+            ...area,
+            icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
+          }));
+          setAreas(convertedAreas);
         }
       } catch (error) {
         console.error('Error loading gym areas:', error);
@@ -532,6 +534,26 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
     }
   };
 
+  const handleEditToggle = () => {
+    if (internalEditMode) {
+      // Salva quando si esce dalla modalità di modifica
+      handleSave();
+    }
+    setInternalEditMode(!internalEditMode);
+  };
+
+  const handleEditButtonClick = () => {
+    if (isEditing) {
+      // Se è già in modalità editing (pagina gestione aree), usa il comportamento originale
+      if (onSave) {
+        onSave(areas);
+      }
+    } else {
+      // Se non è in modalità editing (home coach), attiva la modalità interna
+      setInternalEditMode(true);
+    }
+  };
+
   const handleImageUpload = async (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -581,12 +603,12 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
           }`}>
             {t.gymAreas || 'LE NOSTRE AREE'}
           </h2>
-          {isEditing ? (
+          {internalEditMode ? (
             <div className="flex justify-center space-x-4 mt-6">
               <button
-                onClick={handleSave}
+                onClick={handleEditToggle}
                 className="flex items-center justify-center w-12 h-12 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors shadow-lg"
-                title="Salva modifiche"
+                title="Salva e chiudi modifica"
               >
                 <Save size={20} />
               </button>
@@ -597,11 +619,18 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
               >
                 <Plus size={20} />
               </button>
+              <button
+                onClick={() => setInternalEditMode(false)}
+                className="flex items-center justify-center w-12 h-12 bg-gray-600 text-white rounded-full hover:bg-gray-700 transition-colors shadow-lg"
+                title="Annulla modifiche"
+              >
+                <X size={20} />
+              </button>
             </div>
           ) : (
             <div className="flex justify-center mt-6">
               <button
-                onClick={() => onSave && onSave(areas)}
+                onClick={handleEditButtonClick}
                 className="flex items-center justify-center w-12 h-12 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors shadow-lg"
                 title="Modifica aree"
               >
@@ -611,30 +640,31 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
           )}
         </div>
 
-        <div className={`relative max-w-4xl mx-auto transition-all duration-1000 transform ${
-          isVisible 
-            ? 'translate-y-0 opacity-100 scale-100' 
-            : 'translate-y-16 opacity-0 scale-95'
-        }`}
-        style={{ transitionDelay: '300ms' }}>
-          <div 
-            ref={carouselRef}
-            className="relative overflow-hidden rounded-xl shadow-2xl"
-            onMouseDown={(e) => handleStart(e.clientX)}
-            onMouseMove={(e) => handleMove(e.clientX)}
-            onMouseUp={handleEnd}
-            onMouseLeave={handleEnd}
-            onTouchStart={(e) => handleStart(e.touches[0].clientX)}
-            onTouchMove={(e) => handleMove(e.touches[0].clientX)}
-            onTouchEnd={handleEnd}
-          >
+        {areas.length > 0 ? (
+          <div className={`relative max-w-4xl mx-auto transition-all duration-1000 transform ${
+            isVisible 
+              ? 'translate-y-0 opacity-100 scale-100' 
+              : 'translate-y-16 opacity-0 scale-95'
+          }`}
+          style={{ transitionDelay: '300ms' }}>
             <div 
-              className="flex transition-transform duration-700 ease-in-out"
-              style={{ 
-                transform: `translateX(-${currentSlide * 100}%)`,
-              }}
+              ref={carouselRef}
+              className="relative overflow-hidden rounded-xl shadow-2xl"
+              onMouseDown={(e) => handleStart(e.clientX)}
+              onMouseMove={(e) => handleMove(e.clientX)}
+              onMouseUp={handleEnd}
+              onMouseLeave={handleEnd}
+              onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+              onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+              onTouchEnd={handleEnd}
             >
-              {areas.map((area, index) => {
+              <div 
+                className="flex transition-transform duration-700 ease-in-out"
+                style={{ 
+                  transform: `translateX(-${currentSlide * 100}%)`,
+                }}
+              >
+                {areas.map((area, index) => {
                 const Icon = area.icon;
                 const overlayClass = `${area.overlayColor} bg-opacity-${area.overlayOpacity}`;
                 
@@ -654,7 +684,7 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
                         </div>
                       </div>
                       
-                      {isEditing && (
+                      {internalEditMode && (
                         <div className="absolute top-4 right-4 flex space-x-2">
                           <button
                             onClick={() => openEditModal(index)}
@@ -720,6 +750,11 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
             ))}
           </div>
         </div>
+        ) : (
+          <div className="text-center py-16">
+            <p className="text-gray-500 text-lg">Caricamento aree in corso...</p>
+          </div>
+        )}
       </div>
       
       {/* Edit Area Modal */}

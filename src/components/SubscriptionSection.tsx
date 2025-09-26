@@ -1,6 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
+import { loadTransformationCases } from '../utils/database';
+
+interface TransformationCase {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  beforeImage: string;
+  afterImage: string;
+  duration: string;
+}
 
 interface SubscriptionSectionProps {
   onNavigate?: (page: string, planType?: string) => void;
@@ -13,8 +24,93 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
+  const [transformationCases, setTransformationCases] = useState<TransformationCase[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Carica i casi di miglioramento dal database
+  useEffect(() => {
+    const loadCases = async () => {
+      try {
+        setIsLoading(true);
+        const savedCases = await loadTransformationCases();
+        
+        if (!savedCases || savedCases.length === 0) {
+          // Carica i casi predefiniti se non ci sono dati salvati
+          const defaultCases: TransformationCase[] = [
+            {
+              id: '1',
+              name: 'Marco',
+              title: 'Trasformazione Marco',
+              description: 'Perdita di 15kg in 6 mesi',
+              beforeImage: '/images/marco-prima.svg',
+              afterImage: '/images/marco-dopo.svg',
+              duration: '6 mesi'
+            },
+            {
+              id: '2',
+              name: 'Sara',
+              title: 'Miglioramento Sara',
+              description: 'Guadagno massa muscolare',
+              beforeImage: '/images/sara-prima.svg',
+              afterImage: '/images/sara-dopo.svg',
+              duration: '4 mesi'
+            },
+            {
+              id: '3',
+              name: 'Giuseppe',
+              title: 'Recupero Giuseppe',
+              description: 'Risoluzione dolori alla schiena',
+              beforeImage: '/images/giuseppe-prima.svg',
+              afterImage: '/images/giuseppe-dopo.svg',
+              duration: '3 mesi'
+            }
+          ];
+          setTransformationCases(defaultCases);
+        } else {
+          setTransformationCases(savedCases);
+        }
+      } catch (error) {
+        console.error('Errore nel caricamento dei casi:', error);
+        // In caso di errore, carica i casi predefiniti
+        const defaultCases: TransformationCase[] = [
+          {
+            id: '1',
+            name: 'Marco',
+            title: 'Trasformazione Marco',
+            description: 'Perdita di 15kg in 6 mesi',
+            beforeImage: '/images/marco-prima.svg',
+            afterImage: '/images/marco-dopo.svg',
+            duration: '6 mesi'
+          },
+          {
+            id: '2',
+            name: 'Sara',
+            title: 'Miglioramento Sara',
+            description: 'Guadagno massa muscolare',
+            beforeImage: '/images/sara-prima.svg',
+            afterImage: '/images/sara-dopo.svg',
+            duration: '4 mesi'
+          },
+          {
+            id: '3',
+            name: 'Giuseppe',
+            title: 'Recupero Giuseppe',
+            description: 'Risoluzione dolori alla schiena',
+            beforeImage: '/images/giuseppe-prima.svg',
+            afterImage: '/images/giuseppe-dopo.svg',
+            duration: '3 mesi'
+          }
+        ];
+        setTransformationCases(defaultCases);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCases();
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -102,26 +198,7 @@ const SubscriptionSection: React.FC<SubscriptionSectionProps> = ({ onNavigate })
     handleEnd();
   };
 
-  const transformationCases = [
-    {
-      name: t.transformations?.marco?.name || 'Marco',
-      description: t.transformations?.marco?.description || 'Perdita di 15kg in 6 mesi',
-      beforeImage: '/images/marco-prima.svg',
-      afterImage: '/images/marco-dopo.svg'
-    },
-    {
-      name: t.transformations?.sara?.name || 'Sara',
-      description: t.transformations?.sara?.description || 'Guadagno massa muscolare',
-      beforeImage: '/images/sara-prima.svg',
-      afterImage: '/images/sara-dopo.svg'
-    },
-    {
-      name: t.transformations?.giuseppe?.name || 'Giuseppe',
-      description: t.transformations?.giuseppe?.description || 'Risoluzione dolori alla schiena',
-      beforeImage: '/images/giuseppe-prima.svg',
-      afterImage: '/images/giuseppe-dopo.svg'
-    }
-  ];
+  // Questi dati sono già gestiti dallo stato transformationCases
 
   return (
     <section

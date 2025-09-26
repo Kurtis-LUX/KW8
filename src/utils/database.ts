@@ -1,5 +1,17 @@
 // Database integrato con Firestore
 import firestoreService from '../services/firestoreService';
+import { db } from '../config/firebase';
+
+// Controlla se Firebase è disabilitato controllando se db è un mock
+const checkFirebaseStatus = () => {
+  try {
+    // Se db.collection restituisce un mock, Firebase è disabilitato
+    const testCollection = db.collection('test');
+    return testCollection && typeof testCollection.get === 'function';
+  } catch (error) {
+    return false;
+  }
+};
 
 // Tipi di dati per il sistema di workout
 
@@ -521,13 +533,14 @@ const DB = {
   saveGymAreas: async (areas: GymArea[]): Promise<void> => {
     const areasWithTimestamps = areas.map(area => ({
       ...area,
+      createdAt: area.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }));
     
     if (useFirestore) {
       try {
         await firestoreService.saveGymAreas(areasWithTimestamps);
-        console.log('✅ Gym areas saved successfully to Firestore');
+        console.log('🔥 Gym areas saved successfully to Firestore');
         return;
       } catch (error) {
         console.error('Error saving gym areas to Firestore, falling back to localStorage:', error);
@@ -542,6 +555,44 @@ const DB = {
     } catch (error) {
       console.error('Error saving gym areas:', error);
     }
+  },
+
+  subscribeToGymAreas: (callback: (areas: GymArea[]) => void): (() => void) => {
+    // Se Firestore è disponibile, usa la subscription di Firestore
+    const setupFirestoreSubscription = async () => {
+      if (await isFirestoreEnabled()) {
+        try {
+          return firestoreService.subscribeToGymAreas(callback);
+        } catch (error) {
+          console.error('Error subscribing to gym areas via Firestore:', error);
+          // Fallback a localStorage
+        }
+      }
+
+      // Fallback per localStorage: carica i dati una volta e chiama il callback
+      try {
+        const areas = await DB.getGymAreas();
+        callback(areas);
+      } catch (error) {
+        console.error('Error loading gym areas for subscription:', error);
+        callback([]);
+      }
+
+      // Ritorna una funzione vuota per l'unsubscribe (localStorage non ha subscription reale)
+      return () => {};
+    };
+
+    // Esegui la configurazione e ritorna una funzione di cleanup
+    let unsubscribe: (() => void) | undefined;
+    setupFirestoreSubscription().then(unsub => {
+      unsubscribe = unsub;
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   },
 
   // Inizializzazione del database con controlli di compatibilità
@@ -647,6 +698,45 @@ export const subscribeToStaffSection = (callback: (data: any) => void) => {
     return firestoreService.subscribeToDocument('staff', 'staff-section', callback);
   } catch (error) {
     console.error('Error subscribing to staff section:', error);
+    return () => {};
+  }
+};
+
+// Funzioni per la gestione dei casi di miglioramento
+export const getTransformationCases = async () => {
+  try {
+    return await firestoreService.getDocument('transformations', 'transformation-cases');
+  } catch (error) {
+    console.error('Error getting transformation cases:', error);
+    return null;
+  }
+};
+
+export const saveTransformationCases = async (casesData: any) => {
+  try {
+    await firestoreService.setDocument('transformations', 'transformation-cases', { cases: casesData });
+    return true;
+  } catch (error) {
+    console.error('Error saving transformation cases:', error);
+    throw error;
+  }
+};
+
+export const loadTransformationCases = async () => {
+  try {
+    const data = await firestoreService.getDocument('transformations', 'transformation-cases');
+    return data?.cases || null;
+  } catch (error) {
+    console.error('Error loading transformation cases:', error);
+    return null;
+  }
+};
+
+export const subscribeToTransformationCases = (callback: (data: any) => void) => {
+  try {
+    return firestoreService.subscribeToDocument('transformations', 'transformation-cases', callback);
+  } catch (error) {
+    console.error('Error subscribing to transformation cases:', error);
     return () => {};
   }
 };

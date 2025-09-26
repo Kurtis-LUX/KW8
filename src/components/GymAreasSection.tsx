@@ -67,6 +67,32 @@ const GymAreasSection: React.FC = () => {
             }
           ];
           setAreas(defaultAreas);
+          
+          // Salva le aree predefinite nel database per future visualizzazioni
+          const areasToSave = defaultAreas.map(area => ({
+            ...area,
+            iconName: area.icon === Dumbbell ? 'Dumbbell' : 
+                     area.icon === Zap ? 'Zap' : 
+                     area.icon === Shield ? 'Shield' : 'Heart',
+            overlayColor: area.id === 'sala-pesi' ? 'rgba(30, 58, 138, 0.7)' :
+                         area.id === 'crosstraining' ? 'rgba(220, 38, 38, 0.3)' :
+                         area.id === 'karate' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)',
+            overlayOpacity: area.id === 'sala-pesi' || area.id === 'karate' ? 70 : 30,
+            iconColor: area.id === 'sala-pesi' ? 'text-red-600' :
+                      area.id === 'crosstraining' ? 'text-blue-900' :
+                      area.id === 'karate' ? 'text-yellow-400' : 'text-white',
+            textColor: area.id === 'karate' || area.id === 'yoga' ? 'text-gray-900' : 'text-white',
+            titleColor: area.id === 'karate' || area.id === 'yoga' ? 'text-gray-900' : 'text-white',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          }));
+          
+          try {
+            await DB.saveGymAreas(areasToSave);
+            console.log('Default gym areas saved to database');
+          } catch (error) {
+            console.error('Error saving default gym areas:', error);
+          }
         }
       } catch (error) {
         console.error('Error loading gym areas:', error);
@@ -76,24 +102,15 @@ const GymAreasSection: React.FC = () => {
     loadAreas();
     
     // Sottoscrivi agli aggiornamenti in tempo reale
-    let unsubscribe: (() => void) | undefined;
-    const setupSubscription = async () => {
-      try {
-        unsubscribe = await DB.subscribeToGymAreas((updatedAreas) => {
-          if (updatedAreas.length > 0) {
-            const convertedAreas = updatedAreas.map(area => ({
-              ...area,
-              icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
-            }));
-            setAreas(convertedAreas);
-          }
-        });
-      } catch (error) {
-        console.error('Error setting up gym areas subscription:', error);
+    const unsubscribe = DB.subscribeToGymAreas((updatedAreas) => {
+      if (updatedAreas.length > 0) {
+        const convertedAreas = updatedAreas.map(area => ({
+          ...area,
+          icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
+        }));
+        setAreas(convertedAreas);
       }
-    };
-    
-    setupSubscription();
+    });
     
     return () => {
       if (unsubscribe) {

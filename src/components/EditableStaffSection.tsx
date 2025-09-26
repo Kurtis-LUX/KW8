@@ -189,13 +189,13 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
   const [sectionData, setSectionData] = useState({
     title: 'Il nostro team',
     titleColor: 'text-white',
-    subtitle: '',
+    subtitle: '', // Sottotitolo rimosso per eliminare 'Incontra i nostri esperti'
     subtitleColor: 'text-gray-300',
     description: 'Il nostro team di professionisti qualificati è qui per guidarti nel tuo percorso di fitness.',
     descriptionColor: 'text-gray-400',
     icon: 'Users',
     iconColor: 'text-blue-400',
-    backgroundImage: '/images/team-bg.jpg'
+    backgroundImage: '/images/heropalestra.jpg'
   });
 
   const [newMemberData, setNewMemberData] = useState({
@@ -230,7 +230,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
             descriptionColor: data.descriptionColor || 'text-gray-400',
             icon: data.icon || 'Users',
             iconColor: data.iconColor || 'text-blue-400',
-            backgroundImage: data.backgroundImage || '/images/team-bg.jpg'
+            backgroundImage: data.backgroundImage || '/images/heropalestra.jpg'
           });
         }
       } catch (error) {
@@ -312,7 +312,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
         descriptionColor: originalStaffData.descriptionColor || 'text-gray-400',
         icon: originalStaffData.icon || 'Users',
         iconColor: originalStaffData.iconColor || 'text-blue-400',
-        backgroundImage: originalStaffData.backgroundImage || '/images/team-bg.jpg'
+        backgroundImage: originalStaffData.backgroundImage || '/images/heropalestra.jpg'
       });
     }
     setShowSectionEditModal(false);
@@ -532,7 +532,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
         </div>
 
         {/* Layout dei coach */}
-        <div className="flex flex-wrap justify-center gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
           {staffData.staff.map((member, index) => {
             const IconComponent = getIconComponent(member.iconName);
             

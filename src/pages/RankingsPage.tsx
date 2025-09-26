@@ -31,6 +31,40 @@ interface RankingsPageProps {
   onLogout?: () => void;
 }
 
+// Move exerciseCategories outside component to prevent recreation on every render
+const exerciseCategories: ExerciseCategory[] = [
+  {
+    name: 'Petto',
+    exercises: ['Panca Piana', 'Panca Inclinata', 'Panca Declinata', 'Dips', 'Croci'],
+    icon: <Target className="w-5 h-5" />,
+    color: 'bg-red-500'
+  },
+  {
+    name: 'Schiena',
+    exercises: ['Stacco da Terra', 'Trazioni', 'Rematore', 'Lat Machine', 'Pulley'],
+    icon: <BarChart3 className="w-5 h-5" />,
+    color: 'bg-blue-500'
+  },
+  {
+    name: 'Gambe',
+    exercises: ['Squat', 'Leg Press', 'Affondi', 'Stacco Rumeno', 'Leg Extension'],
+    icon: <TrendingUp className="w-5 h-5" />,
+    color: 'bg-green-500'
+  },
+  {
+    name: 'Spalle',
+    exercises: ['Military Press', 'Alzate Laterali', 'Alzate Posteriori', 'Arnold Press'],
+    icon: <Award className="w-5 h-5" />,
+    color: 'bg-yellow-500'
+  },
+  {
+    name: 'Braccia',
+    exercises: ['Curl Bilanciere', 'French Press', 'Hammer Curl', 'Dips Tricipiti'],
+    icon: <Medal className="w-5 h-5" />,
+    color: 'bg-purple-500'
+  }
+];
+
 const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, onLogout }) => {
   const { rankings, loading, error, createRanking, updateRanking, deleteRanking } = useRankings();
   const [records, setRecords] = useState<ExerciseRecord[]>([]);
@@ -49,40 +83,6 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
   const [selectedExerciseData, setSelectedExerciseData] = useState<any>(null);
   const [muscleGroups, setMuscleGroups] = useState<Array<{ name: string; color: string; exercises: string[]; description?: string }>>([]);
   const [exercises, setExercises] = useState<Array<{ name: string; muscleGroup: string; difficulty: string; instructions: string[]; equipment: string[] }>>([]);
-
-  // Categorie di esercizi
-  const exerciseCategories: ExerciseCategory[] = [
-    {
-      name: 'Petto',
-      exercises: ['Panca Piana', 'Panca Inclinata', 'Panca Declinata', 'Dips', 'Croci'],
-      icon: <Target className="w-5 h-5" />,
-      color: 'bg-red-500'
-    },
-    {
-      name: 'Schiena',
-      exercises: ['Stacco da Terra', 'Trazioni', 'Rematore', 'Lat Machine', 'Pulley'],
-      icon: <BarChart3 className="w-5 h-5" />,
-      color: 'bg-blue-500'
-    },
-    {
-      name: 'Gambe',
-      exercises: ['Squat', 'Leg Press', 'Affondi', 'Stacco Rumeno', 'Leg Extension'],
-      icon: <TrendingUp className="w-5 h-5" />,
-      color: 'bg-green-500'
-    },
-    {
-      name: 'Spalle',
-      exercises: ['Military Press', 'Alzate Laterali', 'Alzate Posteriori', 'Arnold Press'],
-      icon: <Award className="w-5 h-5" />,
-      color: 'bg-yellow-500'
-    },
-    {
-      name: 'Braccia',
-      exercises: ['Curl Bilanciere', 'French Press', 'Hammer Curl', 'Dips Tricipiti'],
-      icon: <Medal className="w-5 h-5" />,
-      color: 'bg-purple-500'
-    }
-  ];
 
   // Converti classifiche Firestore in record di esercizi
   useEffect(() => {
@@ -151,7 +151,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
     });
 
     setFilteredRecords(filtered);
-  }, [records, searchTerm, selectedExercise, selectedCategory, sortBy, timeFilter, exerciseCategories]);
+  }, [records, searchTerm, selectedExercise, selectedCategory, sortBy, timeFilter]);
 
   // Ottieni tutti gli esercizi unici
   const allExercises = Array.from(new Set(records.map(r => r.exercise))).sort();

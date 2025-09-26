@@ -1,13 +1,195 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Award, Dumbbell, Zap, Shield, Heart } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
+import { getStaffSection } from '../utils/database';
+
+interface StaffMember {
+  id: string;
+  name: string;
+  role: string;
+  description: string;
+  image: string;
+  iconName: string;
+  certifications: string[];
+}
 
 const StaffSection: React.FC = () => {
   const { t } = useLanguageContext();
   const [selectedCoach, setSelectedCoach] = useState<number | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
+
+  const availableIcons = {
+    Dumbbell,
+    Zap,
+    Shield,
+    Heart
+  };
+
+  // Carica i membri dello staff dal database
+  useEffect(() => {
+    const loadStaff = async () => {
+      try {
+        setIsLoading(true);
+        const savedStaff = await getStaffSection();
+        
+        if (savedStaff && savedStaff.members && savedStaff.members.length > 0) {
+          // Converte i membri dal database al formato del componente
+          const convertedMembers = savedStaff.members.map((member: any) => ({
+            ...member,
+            icon: availableIcons[member.iconName as keyof typeof availableIcons] || Dumbbell
+          }));
+          setStaffMembers(convertedMembers);
+        } else {
+          // Usa i membri predefiniti se non ci sono dati salvati
+          const defaultMembers: StaffMember[] = [
+            {
+              id: '1',
+              name: 'Giuseppe Luca Scuderi Russo',
+              role: 'Coach Sala Pesi',
+              description: 'Certificazioni, attenzione agli obiettivi individuali.',
+              image: '/images/giuseppe luca scuderi russo.jpg',
+              iconName: 'Dumbbell',
+              certifications: [
+                'Certificazione ISSA Personal Trainer',
+                'Corso Biomeccanica Avanzata',
+                'Corso Nutrizione Sportiva',
+                '5+ anni di esperienza',
+                'Specialista in Powerlifting'
+              ]
+            },
+            {
+              id: '2',
+              name: 'Saverio Di Maria',
+              role: 'Coach Cross training',
+              description: 'Certificazioni, attenzione agli obiettivi individuali.',
+              image: '/images/saverio dimaria.jpg',
+              iconName: 'Zap',
+              certifications: [
+                'Certificazione CrossFit Level 2',
+                'Functional Movement Screen',
+                'Corso Olimpic Lifting',
+                '4+ anni di esperienza',
+                'Specialista in Functional Training'
+              ]
+            },
+            {
+              id: '3',
+              name: 'Simone La Rosa',
+              role: 'Maestro Karate',
+              description: 'Cintura, certificazioni, focus su autodifesa e disciplina.',
+              image: '/images/simone larosa.jpg',
+              iconName: 'Shield',
+              certifications: [
+                'Cintura Nera 3° Dan',
+                'Istruttore Federale FIJLKAM',
+                'Corso Autodifesa',
+                '10+ anni di esperienza',
+                'Specialista in Karate Tradizionale'
+              ]
+            },
+            {
+              id: '4',
+              name: 'Eleonora Perico',
+              role: 'Maestra Yoga',
+              description: 'Approccio olistico e personalizzazione in base alle esigenze.',
+              image: '/images/eleonora nonnehoidea.jpg',
+              iconName: 'Heart',
+              certifications: [
+                'Certificazione Yoga Alliance 500h',
+                'Specializzazione Hatha Yoga',
+                'Corso Meditazione Mindfulness',
+                '6+ anni di esperienza',
+                'Specialista in Yoga Terapeutico'
+              ]
+            }
+          ];
+          const convertedMembers = defaultMembers.map(member => ({
+            ...member,
+            icon: availableIcons[member.iconName as keyof typeof availableIcons] || Dumbbell
+          }));
+          setStaffMembers(convertedMembers);
+        }
+      } catch (error) {
+        console.error('Errore nel caricamento dello staff:', error);
+        // In caso di errore, carica i membri predefiniti
+        const defaultMembers: StaffMember[] = [
+          {
+            id: '1',
+            name: 'Giuseppe Luca Scuderi Russo',
+            role: 'Coach Sala Pesi',
+            description: 'Certificazioni, attenzione agli obiettivi individuali.',
+            image: '/images/giuseppe luca scuderi russo.jpg',
+            iconName: 'Dumbbell',
+            certifications: [
+              'Certificazione ISSA Personal Trainer',
+              'Corso Biomeccanica Avanzata',
+              'Corso Nutrizione Sportiva',
+              '5+ anni di esperienza',
+              'Specialista in Powerlifting'
+            ]
+          },
+          {
+            id: '2',
+            name: 'Saverio Di Maria',
+            role: 'Coach Cross training',
+            description: 'Certificazioni, attenzione agli obiettivi individuali.',
+            image: '/images/saverio dimaria.jpg',
+            iconName: 'Zap',
+            certifications: [
+              'Certificazione CrossFit Level 2',
+              'Functional Movement Screen',
+              'Corso Olimpic Lifting',
+              '4+ anni di esperienza',
+              'Specialista in Functional Training'
+            ]
+          },
+          {
+            id: '3',
+            name: 'Simone La Rosa',
+            role: 'Maestro Karate',
+            description: 'Cintura, certificazioni, focus su autodifesa e disciplina.',
+            image: '/images/simone larosa.jpg',
+            iconName: 'Shield',
+            certifications: [
+              'Cintura Nera 3° Dan',
+              'Istruttore Federale FIJLKAM',
+              'Corso Autodifesa',
+              '10+ anni di esperienza',
+              'Specialista in Karate Tradizionale'
+            ]
+          },
+          {
+            id: '4',
+            name: 'Eleonora Perico',
+            role: 'Maestra Yoga',
+            description: 'Approccio olistico e personalizzazione in base alle esigenze.',
+            image: '/images/eleonora nonnehoidea.jpg',
+            iconName: 'Heart',
+            certifications: [
+              'Certificazione Yoga Alliance 500h',
+              'Specializzazione Hatha Yoga',
+              'Corso Meditazione Mindfulness',
+              '6+ anni di esperienza',
+              'Specialista in Yoga Terapeutico'
+            ]
+          }
+        ];
+        const convertedMembers = defaultMembers.map(member => ({
+          ...member,
+          icon: availableIcons[member.iconName as keyof typeof availableIcons] || Dumbbell
+        }));
+        setStaffMembers(convertedMembers);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadStaff();
+  }, []);
 
   // Intersection Observer per le transizioni
   useEffect(() => {
@@ -67,64 +249,31 @@ const StaffSection: React.FC = () => {
     }
   }, [selectedCoach]);
 
-  const staff = [
-    {
-      name: 'Giuseppe Pandolfo',
-      role: 'Personal Trainer Sala Pesi',
-      description: 'Certificazioni, esperienza, lavoro affiancato personalizzato.',
-      image: '/images/giuseppe pandolfo.jpg',
-      icon: Dumbbell,
-      certifications: [
-        'Certificazione ISSA Personal Trainer',
-        'Specializzazione Bodybuilding',
-        'Corso Nutrizione Sportiva',
-        '5+ anni di esperienza',
-        'Specialista in Powerlifting'
-      ]
-    },
-    {
-      name: 'Saverio Di Maria',
-      role: 'Coach Cross training',
-      description: 'Certificazioni, attenzione agli obiettivi individuali.',
-      image: '/images/saverio dimaria.jpg',
-      icon: Zap,
-      certifications: [
-        'Certificazione CrossFit Level 2',
-        'Functional Movement Screen',
-        'Corso Olimpic Lifting',
-        '4+ anni di esperienza',
-        'Specialista in Functional Training'
-      ]
-    },
-    {
-      name: 'Simone La Rosa',
-      role: 'Maestro Karate',
-      description: 'Cintura, certificazioni, focus su autodifesa e disciplina.',
-      image: '/images/simone larosa.jpg',
-      icon: Shield,
-      certifications: [
-        'Cintura Nera 3° Dan',
-        'Istruttore Federale FIJLKAM',
-        'Corso Autodifesa',
-        '10+ anni di esperienza',
-        'Specialista in Karate Tradizionale'
-      ]
-    },
-    {
-      name: 'Eleonora Perico',
-      role: 'Maestra Yoga',
-      description: 'Approccio olistico e personalizzazione in base alle esigenze.',
-      image: '/images/eleonora nonnehoidea.jpg',
-      icon: Heart,
-      certifications: [
-        'Certificazione Yoga Alliance 500h',
-        'Specializzazione Hatha Yoga',
-        'Corso Meditazione Mindfulness',
-        '6+ anni di esperienza',
-        'Specialista in Yoga Terapeutico'
-      ]
-    }
-  ];
+  // Mostra indicatore di caricamento se i dati non sono ancora caricati
+  if (isLoading) {
+    return (
+      <section
+        ref={sectionRef}
+        id="team"
+        className="py-20 bg-gradient-to-br from-navy-50 to-white"
+      >
+        <div className="container mx-auto px-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-navy-900 text-center mb-16">
+            {t.team?.title || 'IL NOSTRO TEAM'}
+          </h2>
+          <div className="flex justify-center items-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+            <span className="ml-4 text-navy-700">Caricamento team...</span>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Non mostrare nulla se non ci sono membri dello staff
+  if (!staffMembers || staffMembers.length === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -147,7 +296,7 @@ const StaffSection: React.FC = () => {
           </h2>
 
           <div className="grid grid-cols-2 gap-4 md:gap-8 max-w-4xl mx-auto">
-            {staff.map((member, index) => {
+            {staffMembers.map((member, index) => {
               const Icon = member.icon;
               return (
                 <div 

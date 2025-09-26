@@ -228,8 +228,39 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
           
           {/* Container per il pulsante Google */}
           <div className="flex justify-center">
-            <div id="google-signin-button" className="w-full" style={{ width: '100%' }}></div>
+            <div 
+              id="google-signin-button" 
+              className="w-full" 
+              style={{ 
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center'
+              }}
+            ></div>
           </div>
+          
+          <style jsx>{`
+            #google-signin-button {
+              display: flex !important;
+              justify-content: center !important;
+              align-items: center !important;
+            }
+            
+            #google-signin-button > div {
+              width: auto !important;
+              min-width: 240px !important;
+              max-width: 320px !important;
+              height: 44px !important;
+              border-radius: 4px !important;
+              transition: none !important;
+            }
+            
+            #google-signin-button iframe {
+              width: 100% !important;
+              height: 44px !important;
+              border-radius: 4px !important;
+            }
+          `}</style>
           
 
           

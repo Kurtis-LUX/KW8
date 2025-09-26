@@ -4,6 +4,7 @@ import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import StatisticsSection from './components/StatisticsSection';
 import SubscriptionSection from './components/SubscriptionSection';
+import EditableSubscriptionSection from './components/EditableSubscriptionSection';
 import GymAreasSection from './components/GymAreasSection';
 import EditableGymAreasSection from './components/EditableGymAreasSection';
 import ScheduleSection from './components/ScheduleSection';
@@ -671,7 +672,11 @@ function App() {
         <SectionSeparator variant="black" />
         <EditableStaffSection currentUser={currentUser} />
         <SectionSeparator variant="black" />
-        <SubscriptionSection onNavigate={handleNavigation} />
+        {currentUser && currentUser.role === 'coach' ? (
+          <EditableSubscriptionSection currentUser={currentUser} />
+        ) : (
+          <SubscriptionSection onNavigate={handleNavigation} />
+        )}
         <NewsletterSection />
         <TrustpilotSection />
         <SectionSeparator variant="default" />
