@@ -101,12 +101,17 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
     let unsubscribe: (() => void) | null = null;
     
     const setupSubscription = async () => {
-      unsubscribe = await firestoreService.subscribeToGymSchedule((schedule) => {
-        if (schedule) {
-          const { id, createdAt, updatedAt, ...scheduleOnly } = schedule;
-          setScheduleData(scheduleOnly);
-        }
-      });
+      try {
+        unsubscribe = await firestoreService.subscribeToGymSchedule((schedule) => {
+          if (schedule) {
+            const { id, createdAt, updatedAt, ...scheduleOnly } = schedule;
+            setScheduleData(scheduleOnly);
+          }
+        });
+      } catch (error) {
+        console.error('Errore nella sottoscrizione agli aggiornamenti degli orari:', error);
+        // Non fare nulla, continua con i dati già caricati
+      }
     };
     
     setupSubscription();

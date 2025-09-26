@@ -100,18 +100,31 @@ function App() {
         const checkAutoLogin = async () => {
           try {
             console.log('🔐 Checking for existing authentication...');
+            
+            // Prima prova con il sistema JWT
+            const jwtUser = await authService.autoLogin();
+            if (jwtUser) {
+              setCurrentUser(jwtUser);
+              // Sincronizza con localStorage per compatibilità
+              localStorage.setItem('currentUser', JSON.stringify(jwtUser));
+              console.log('👤 Restored JWT user session:', jwtUser.email);
+              return;
+            }
+            
+            // Fallback per sessioni legacy (solo se non c'è JWT)
             const savedUser = localStorage.getItem('currentUser');
-            if (savedUser) {
+            if (savedUser && !authService.getToken()) {
               const user = JSON.parse(savedUser);
               setCurrentUser(user);
-              console.log('👤 Restored user session:', user.name);
+              console.log('👤 Restored legacy user session:', user.name);
             } else {
               console.log('👤 No existing session found');
             }
           } catch (error) {
             console.error('❌ Auto-login failed:', error);
-            // Rimuovi dati di sessione non validi
+            // Pulisci tutti i dati di sessione non validi
             localStorage.removeItem('currentUser');
+            authService.logout();
           }
         };
 
@@ -179,6 +192,7 @@ function App() {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    // Mantieni la sincronizzazione con localStorage per compatibilità
     localStorage.setItem('currentUser', JSON.stringify(user));
     setCurrentPage('home');
   };
@@ -578,7 +592,9 @@ function App() {
   if (currentPage === 'workout-card') {
     return (
       <LanguageProvider>
-        <WorkoutCardPage />
+        <ProtectedRoute requireAdmin={false}>
+          <WorkoutCardPage />
+        </ProtectedRoute>
       </LanguageProvider>
     );
   }

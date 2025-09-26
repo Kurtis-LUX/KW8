@@ -18,7 +18,7 @@ import {
   serverTimestamp,
   onSnapshot,
   Unsubscribe
-} from 'firebase/firestore';
+} from '../config/firebase';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../config/firebase';
 import type {
@@ -890,6 +890,32 @@ class FirestoreService {
 
   // ==================== METODI GENERICI ====================
   
+  async getDocument(collectionName: string, documentId: string): Promise<any | null> {
+    if (!(await this.isFirestoreEnabled())) {
+      console.log(`🔧 Firestore disabled: getDocument ${collectionName}/${documentId} skipped`);
+      return null;
+    }
+    
+    try {
+      await this.ensureAuth();
+      const docRef = doc(db, collectionName, documentId);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return {
+          id: docSnap.id,
+          ...docSnap.data()
+        };
+      } else {
+        console.log(`📄 Document not found: ${collectionName}/${documentId}`);
+        return null;
+      }
+    } catch (error) {
+      console.error(`❌ Error getting document ${collectionName}/${documentId}:`, error);
+      throw error;
+    }
+  }
+
   async setDocument(collectionName: string, documentId: string, data: any): Promise<void> {
     if (!(await this.isFirestoreEnabled())) {
       console.log(`🔧 Firestore disabled: setDocument ${collectionName}/${documentId} skipped`);

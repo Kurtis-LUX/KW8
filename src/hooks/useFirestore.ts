@@ -102,20 +102,28 @@ export const useWorkoutPlans = () => {
 
   const fetchPlans = useCallback(async () => {
     try {
+      console.log('🔄 useWorkoutPlans: Starting fetchPlans...');
       setLoading(true);
       setError(null);
       
       // Usa localStorage se Firestore è disabilitato
-      const firestoreEnabled = await isFirestoreEnabled();
+      const firestoreEnabled = isFirestoreEnabled();
+      console.log('🔧 useWorkoutPlans: Firestore enabled:', firestoreEnabled);
+      
       const fetchedPlans = firestoreEnabled 
         ? await firestoreService.getWorkoutPlans()
         : await DB.getWorkoutPlans();
+      
+      console.log('📊 useWorkoutPlans: Fetched plans:', fetchedPlans.length, 'plans');
+      console.log('📋 useWorkoutPlans: Plans data:', fetchedPlans);
         
       setPlans(fetchedPlans);
     } catch (err) {
+      console.error('❌ useWorkoutPlans: Error in fetchPlans:', err);
       setError(err instanceof Error ? err.message : 'Errore nel caricamento piani');
       console.error('Error fetching workout plans:', err);
     } finally {
+      console.log('✅ useWorkoutPlans: fetchPlans completed, setting loading to false');
       setLoading(false);
     }
   }, []);
@@ -125,7 +133,7 @@ export const useWorkoutPlans = () => {
       setError(null);
       
       // Usa localStorage se Firestore è disabilitato
-      const firestoreEnabled = await isFirestoreEnabled();
+      const firestoreEnabled = isFirestoreEnabled();
       const planId = firestoreEnabled
         ? await firestoreService.createWorkoutPlan(planData)
         : await DB.saveWorkoutPlan({ ...planData, id: Date.now().toString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
@@ -143,7 +151,7 @@ export const useWorkoutPlans = () => {
       setError(null);
       
       // Usa localStorage se Firestore è disabilitato
-      const firestoreEnabled = await isFirestoreEnabled();
+      const firestoreEnabled = isFirestoreEnabled();
       if (firestoreEnabled) {
         await firestoreService.updateWorkoutPlan(id, planData);
       } else {
@@ -165,7 +173,7 @@ export const useWorkoutPlans = () => {
       setError(null);
       
       // Usa localStorage se Firestore è disabilitato
-      const firestoreEnabled = await isFirestoreEnabled();
+      const firestoreEnabled = isFirestoreEnabled();
       if (firestoreEnabled) {
         await firestoreService.deleteWorkoutPlan(id);
       } else {

@@ -157,14 +157,22 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 
   // Carica i dati della scheda dal database
   useEffect(() => {
-    if (workoutId) {
-      const workoutData = DB.getWorkoutPlanById(workoutId);
-      if (workoutData) {
-        setWorkoutTitle(workoutData.name);
-        setWorkoutDescription(workoutData.description || '');
-        // Carica altri dati se necessario
+    const loadWorkoutData = async () => {
+      if (workoutId) {
+        try {
+          const workoutData = await DB.getWorkoutPlanById(workoutId);
+          if (workoutData) {
+            setWorkoutTitle(workoutData.name);
+            setWorkoutDescription(workoutData.description || '');
+            // Carica altri dati se necessario
+          }
+        } catch (error) {
+          console.error('Error loading workout data:', error);
+        }
       }
-    }
+    };
+    
+    loadWorkoutData();
   }, [workoutId]);
   
 
@@ -298,8 +306,23 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
       () => {
         const updatedVariants = variants.filter(v => v.id !== variantId);
         setVariants(updatedVariants);
-        if (activeVariantId === variantId && updatedVariants.length > 0) {
-          handleSwitchVariant(updatedVariants[0].id);
+        
+        // Se stiamo eliminando la variante attiva
+        if (activeVariantId === variantId) {
+          if (updatedVariants.length > 0) {
+            // Passa alla prima variante disponibile
+            const nextVariant = updatedVariants[0];
+            setActiveVariantId(nextVariant.id);
+            setWorkoutTitle(nextVariant.name);
+            // Aggiorna lo stato di attivazione delle varianti
+            setVariants(updatedVariants.map(v => ({ 
+              ...v, 
+              isActive: v.id === nextVariant.id 
+            })));
+          } else {
+            // Se non ci sono più varianti, torna alla scheda originale
+            onClose();
+          }
         }
       }
     );
@@ -384,14 +407,12 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                 >
                   {variant.name}
                 </button>
-                {variants.length > 1 && (
-                  <button
-                    onClick={() => handleRemoveVariant(variant.id)}
-                    className="absolute top-1 right-1 p-1 text-gray-500 hover:text-red-500 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
+                <button
+                  onClick={() => handleRemoveVariant(variant.id)}
+                  className="absolute top-1 right-1 p-1 text-gray-500 hover:text-red-500 transition-colors"
+                >
+                  <X size={14} />
+                </button>
               </div>
             ))}
           </div>
@@ -497,66 +518,66 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             {/* Duration Selector */}
             <button
               onClick={() => setIsEditingDates(!isEditingDates)}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
             >
               <span>📅</span>
-              <span>Gestisci Durata</span>
+              <span className="font-semibold text-gray-900">Durata</span>
             </button>
             
             {/* Create Exercise */}
             <button
               onClick={() => setShowExerciseForm(true)}
-              className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
             >
-              <Plus size={16} />
-              <span>Crea Esercizio</span>
+              <Plus size={16} className="text-green-600" />
+              <span className="font-semibold text-gray-900">Crea</span>
             </button>
             
             {/* Associate Athlete */}
             <button
               onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
-              className="flex items-center space-x-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
             >
-              <Users size={16} />
-              <span>Associa Atleta</span>
+              <Users size={16} className="text-purple-600" />
+              <span className="font-semibold text-gray-900">Associa</span>
             </button>
             
             {/* View Associated Athletes */}
             <button
               onClick={() => setShowAthletesList(!showAthletesList)}
-              className="flex items-center space-x-2 px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
             >
-              <Eye size={16} />
-              <span>Visualizza Atleti ({associatedAthletes.length})</span>
+              <Eye size={16} className="text-indigo-600" />
+              <span className="font-semibold text-gray-900">Visualizza</span>
             </button>
             
             {/* Generate Link */}
             <button
               onClick={handleGenerateLink}
-              className="flex items-center space-x-2 px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
             >
-              <Link size={16} />
-              <span>Genera Link</span>
+              <Link size={16} className="text-orange-600" />
+              <span className="font-semibold text-gray-900">Link</span>
             </button>
             
             {/* Clone Workout */}
             <button
               onClick={handleCloneWorkout}
-              className="flex items-center space-x-2 px-3 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors text-sm"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
             >
-              <Copy size={16} />
-              <span>Clona Scheda</span>
+              <Copy size={16} className="text-teal-600" />
+              <span className="font-semibold text-gray-900">Clona</span>
             </button>
             
             {/* Workout Status */}
             <button
               onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="flex items-center space-x-2 px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
             >
               <div className={`w-3 h-3 rounded-full ${
                 workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
               }`}></div>
-              <span>{workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}</span>
+              <span className="font-semibold text-gray-900">{workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}</span>
             </button>
           </div>
         </div>

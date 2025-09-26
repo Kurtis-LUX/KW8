@@ -1,12 +1,12 @@
-// Configurazione Firebase per il frontend
+// Servizio Firebase per l'applicazione
 import { initializeApp } from 'firebase/app';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-// Flag per disabilitare Firebase in sviluppo locale
+// Disabilita Firebase per lo sviluppo locale per evitare errori di connessione
 const DISABLE_FIREBASE = true; // Disabilitato per evitare errori di connessione in sviluppo
 
-// Configurazione Firebase
+// Configurazione Firebase dalle variabili d'ambiente
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -16,7 +16,7 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Configurazione di fallback per sviluppo locale
+// Configurazione di fallback per lo sviluppo
 const fallbackConfig = {
   apiKey: "demo-api-key",
   authDomain: "palestra-kw8.firebaseapp.com",
@@ -26,25 +26,49 @@ const fallbackConfig = {
   appId: "demo-app-id"
 };
 
-// Mock objects per sviluppo locale
+// Mock per le collezioni Firestore
 const createMockCollection = () => ({
-  doc: () => ({
-    get: () => Promise.resolve({ exists: false, data: () => ({}) }),
+  doc: (id?: string) => ({
+    id: id || 'mock-doc-id',
+    get: () => Promise.resolve({ 
+      exists: false, 
+      data: () => ({}),
+      id: id || 'mock-doc-id'
+    }),
     set: () => Promise.resolve(),
     update: () => Promise.resolve(),
     delete: () => Promise.resolve()
   }),
   add: () => Promise.resolve({ id: 'mock-id' }),
-  get: () => Promise.resolve({ docs: [] }),
+  get: () => Promise.resolve({ docs: [], empty: true }),
   where: () => createMockCollection(),
   orderBy: () => createMockCollection(),
   limit: () => createMockCollection(),
   startAfter: () => createMockCollection()
 });
 
-const mockDb = {
-  collection: createMockCollection
-} as any;
+// Mock completo per Firestore
+const createMockFirestore = () => ({
+  collection: (path: string) => createMockCollection(),
+  doc: (path: string) => ({
+    id: 'mock-doc-id',
+    get: () => Promise.resolve({ 
+      exists: false, 
+      data: () => ({}),
+      id: 'mock-doc-id'
+    }),
+    set: () => Promise.resolve(),
+    update: () => Promise.resolve(),
+    delete: () => Promise.resolve()
+  }),
+  // Aggiungi altri metodi necessari
+  batch: () => ({
+    set: () => {},
+    update: () => {},
+    delete: () => {},
+    commit: () => Promise.resolve()
+  })
+});
 
 const mockAuth = {
   currentUser: null,
@@ -58,7 +82,7 @@ let auth: any;
 
 if (DISABLE_FIREBASE) {
   console.log('🔧 Firebase disabled for local development');
-  db = mockDb;
+  db = createMockFirestore();
   auth = mockAuth;
 } else {
   // Usa la configurazione di fallback se le variabili d'ambiente non sono disponibili o non valide
@@ -82,6 +106,90 @@ if (DISABLE_FIREBASE) {
   // Inizializza Auth
   auth = getAuth(app);
 }
+
+// Mock delle funzioni Firebase per quando è disabilitato
+export const collection = DISABLE_FIREBASE 
+  ? (db: any, path: string) => createMockCollection()
+  : require('firebase/firestore').collection;
+
+export const doc = DISABLE_FIREBASE
+  ? (db: any, path: string, id?: string) => ({
+      id: id || 'mock-doc-id',
+      get: () => Promise.resolve({ 
+        exists: false, 
+        data: () => ({}),
+        id: id || 'mock-doc-id'
+      }),
+      set: () => Promise.resolve(),
+      update: () => Promise.resolve(),
+      delete: () => Promise.resolve()
+    })
+  : require('firebase/firestore').doc;
+
+export const getDocs = DISABLE_FIREBASE
+  ? (collection: any) => Promise.resolve({ docs: [], empty: true })
+  : require('firebase/firestore').getDocs;
+
+export const getDoc = DISABLE_FIREBASE
+  ? (docRef: any) => Promise.resolve({ 
+      exists: false, 
+      data: () => ({}),
+      id: 'mock-doc-id'
+    })
+  : require('firebase/firestore').getDoc;
+
+export const addDoc = DISABLE_FIREBASE
+  ? (collection: any, data: any) => Promise.resolve({ id: 'mock-doc-id' })
+  : require('firebase/firestore').addDoc;
+
+export const updateDoc = DISABLE_FIREBASE
+  ? (docRef: any, data: any) => Promise.resolve()
+  : require('firebase/firestore').updateDoc;
+
+export const deleteDoc = DISABLE_FIREBASE
+  ? (docRef: any) => Promise.resolve()
+  : require('firebase/firestore').deleteDoc;
+
+export const setDoc = DISABLE_FIREBASE
+  ? (docRef: any, data: any) => Promise.resolve()
+  : require('firebase/firestore').setDoc;
+
+export const query = DISABLE_FIREBASE
+  ? (...args: any[]) => ({ get: () => Promise.resolve({ docs: [], empty: true }) })
+  : require('firebase/firestore').query;
+
+export const where = DISABLE_FIREBASE
+  ? (...args: any[]) => ({})
+  : require('firebase/firestore').where;
+
+export const orderBy = DISABLE_FIREBASE
+  ? (...args: any[]) => ({})
+  : require('firebase/firestore').orderBy;
+
+export const limit = DISABLE_FIREBASE
+  ? (limitCount: number) => ({})
+  : require('firebase/firestore').limit;
+
+export const startAfter = DISABLE_FIREBASE
+  ? (snapshot: any) => ({})
+  : require('firebase/firestore').startAfter;
+
+export const writeBatch = DISABLE_FIREBASE
+  ? (db: any) => ({
+      set: () => {},
+      update: () => {},
+      delete: () => {},
+      commit: () => Promise.resolve()
+    })
+  : require('firebase/firestore').writeBatch;
+
+export const serverTimestamp = DISABLE_FIREBASE
+  ? () => new Date().toISOString()
+  : require('firebase/firestore').serverTimestamp;
+
+export const onSnapshot = DISABLE_FIREBASE
+  ? (query: any, callback: any) => () => {}
+  : require('firebase/firestore').onSnapshot;
 
 export { db, auth };
 

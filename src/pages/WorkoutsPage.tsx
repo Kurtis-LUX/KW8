@@ -261,15 +261,6 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
                       </div>
                     )}
 
-        {/* Manager Tab - File Explorer */}
-        {activeTab === 'manager' && (
-          <div className="max-w-7xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden" style={{ height: '85vh' }}>
-              <FileExplorer currentUser={currentUser} />
-            </div>
-          </div>
-        )}
-
                     <div className="mb-6">
                       <h3 className="text-lg font-semibold text-navy-900 mb-4">Esercizi</h3>
                       {selectedWorkout.exercises && selectedWorkout.exercises.length > 0 ? (
@@ -335,6 +326,15 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manager Tab - File Explorer */}
+        {activeTab === 'manager' && (
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden" style={{ height: '85vh' }}>
+              <FileExplorer currentUser={currentUser} />
             </div>
           </div>
         )}

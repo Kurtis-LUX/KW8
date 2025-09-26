@@ -71,14 +71,18 @@ class AuthService {
     // Se non c'è token in localStorage ma c'è nei cookie, ripristina la sessione
     if (!this.getToken() && cookieToken) {
       localStorage.setItem(this.TOKEN_KEY, cookieToken);
+      console.log('🔐 Token ripristinato dai cookie');
     }
     
     if (!this.getCurrentUser() && cookieUser) {
       try {
         const user = JSON.parse(decodeURIComponent(cookieUser));
         localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+        console.log('👤 Utente ripristinato dai cookie:', user.email);
       } catch (error) {
         console.error('Errore nel parsing del cookie utente:', error);
+        // Pulisci cookie corrotti
+        this.deleteCookie(this.USER_KEY);
       }
     }
   }
@@ -448,7 +452,10 @@ class AuthService {
   // Gestione Cookie - Imposta un cookie con scadenza
   private setCookie(name: string, value: string, maxAge: number): void {
     const expires = new Date(Date.now() + maxAge).toUTCString();
-    document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax; Secure=${location.protocol === 'https:'}`;
+    // Usa SameSite=Lax per compatibilità e Secure solo su HTTPS
+    const secure = location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax${secure}`;
+    console.log(`🍪 Cookie impostato: ${name} (scade: ${expires})`);
   }
   
   // Gestione Cookie - Legge un cookie
@@ -466,6 +473,7 @@ class AuthService {
   // Gestione Cookie - Elimina un cookie
   private deleteCookie(name: string): void {
     document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+    console.log(`🍪 Cookie eliminato: ${name}`);
   }
   
   // Verifica se la sessione è ancora valida (entro 7 giorni)

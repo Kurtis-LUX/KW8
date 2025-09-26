@@ -119,7 +119,7 @@ export interface GymArea {
 
 
 // Flag per controllare se usare Firestore o localStorage
-let useFirestore = true; // Abilitato per usare Firebase in produzione
+let useFirestore = false; // Disabilitato per usare localStorage in sviluppo (Firebase è disabilitato)
 
 // Funzione per abilitare/disabilitare Firestore
 export const setFirestoreEnabled = (enabled: boolean) => {

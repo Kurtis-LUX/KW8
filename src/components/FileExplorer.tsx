@@ -91,8 +91,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   // Stati per ricerca e filtraggio
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
-    showFolders: true,
-    showWorkouts: true,
+    showFolders: false,
+    showWorkouts: false,
     sortBy: 'name' as 'name' | 'date'
   });
   
@@ -115,6 +115,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       const folders = await DB.getWorkoutFolders();
       const allWorkoutPlans = workoutPlans || await DB.getWorkoutPlans();
 
+      console.log('🔍 FileExplorer Debug - loadFolderContent:');
+      console.log('📁 Folders loaded:', folders);
+      console.log('💪 Workout plans loaded:', allWorkoutPlans);
+      console.log('📍 Current folder ID:', currentFolderId);
+
       // Filtra cartelle e schede per la cartella corrente
       const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
       // Includi schede senza cartella quando siamo nella root (currentFolderId === undefined)
@@ -122,6 +127,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
         plan.folderId === currentFolderId || 
         (currentFolderId === undefined && (plan.folderId === undefined || plan.folderId === null))
       );
+
+      console.log('📂 Current folders filtered:', currentFolders);
+      console.log('🏋️ Current workouts filtered:', currentWorkouts);
 
       // Crea gli elementi dell'albero
       const treeItems: FolderTreeItem[] = [
@@ -151,9 +159,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
         }))
       ];
 
+      console.log('🌳 Tree items created:', treeItems);
       setFolderTree(treeItems);
     } catch (error) {
-      console.error('Error loading folder content:', error);
+      console.error('❌ Error loading folder content:', error);
     }
   };
 
@@ -249,15 +258,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
         const folder = draggedItem.data as WorkoutFolder;
         const updatedFolder = { ...folder, parentId: targetFolderId };
         await DB.saveWorkoutFolder(updatedFolder);
+        await loadFolderContent(); // Ricarica per le cartelle
       } else {
         // Sposta scheda
         const workout = draggedItem.data as WorkoutPlan;
         const updatedWorkout = { ...workout, folderId: targetFolderId };
-        await DB.saveWorkoutPlan(updatedWorkout);
+        await updateWorkoutPlan(workout.id, { folderId: targetFolderId });
+        // Non serve chiamare loadFolderContent() perché updateWorkoutPlan già ricarica i dati
       }
       
-      // Ricarica il contenuto
-      await loadFolderContent();
       setDraggedItem(null);
     } catch (error) {
       console.error('Errore durante lo spostamento:', error);
@@ -281,8 +290,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       setBreadcrumb([{ name: 'Home' }]);
     }
     
-    // Ricarica il contenuto della cartella
-    await loadFolderContent();
+    // Non chiamare loadFolderContent() qui - sarà chiamato automaticamente dal useEffect
+    // quando currentFolderId cambia, evitando il doppio caricamento
   };
 
   const navigateToBreadcrumb = (index: number) => {
@@ -316,7 +325,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     filtered.sort((a, b) => {
       switch (filters.sortBy) {
         case 'name':
-          return a.name.localeCompare(b.name);
+          const aName = a.name || '';
+          const bName = b.name || '';
+          return aName.localeCompare(bName);
         case 'date':
           const aDate = a.data && 'createdAt' in a.data ? a.data.createdAt : '';
           const bDate = b.data && 'createdAt' in b.data ? b.data.createdAt : '';
@@ -346,15 +357,53 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   };
 
 
+  const generateUniqueName = async (baseName: string, type: 'folder' | 'workout', parentId?: string): Promise<string> => {
+    const folders = await DB.getWorkoutFolders();
+    const allWorkoutPlans = workoutPlans || await DB.getWorkoutPlans();
+    
+    let existingNames: string[] = [];
+    
+    if (type === 'folder') {
+      // Ottieni i nomi delle cartelle nella stessa directory
+      existingNames = folders
+        .filter(folder => folder.parentId === parentId)
+        .map(folder => folder.name);
+    } else {
+      // Ottieni i nomi delle schede nella stessa directory
+      existingNames = allWorkoutPlans
+        .filter(plan => plan.folderId === parentId || (parentId === undefined && (plan.folderId === undefined || plan.folderId === null)))
+        .map(plan => plan.name);
+    }
+    
+    // Se il nome base non esiste, restituiscilo
+    if (!existingNames.includes(baseName)) {
+      return baseName;
+    }
+    
+    // Altrimenti, trova il primo numero disponibile
+    let counter = 1;
+    let uniqueName = `${baseName} ${counter}`;
+    
+    while (existingNames.includes(uniqueName)) {
+      counter++;
+      uniqueName = `${baseName} ${counter}`;
+    }
+    
+    return uniqueName;
+  };
+
   const createNewItem = async (type: 'folder' | 'workout', name: string, icon?: string, color?: string, variants?: WorkoutVariant[]) => {
     const now = new Date().toISOString();
     const id = `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     try {
+      // Genera un nome unico
+      const uniqueName = await generateUniqueName(name, type, currentFolderId);
+      
       if (type === 'folder') {
         const newFolder: WorkoutFolder = {
           id,
-          name,
+          name: uniqueName,
           icon: icon || 'Folder',
           color: color || '#3B82F6',
           parentId: currentFolderId,
@@ -364,9 +413,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
           isExpanded: false
         };
         await DB.saveWorkoutFolder(newFolder);
+        // Ricarica immediatamente dopo la creazione della cartella
+        await loadFolderContent();
       } else {
         const newWorkoutData = {
-          name,
+          name: uniqueName,
           description: '',
           coach: currentUser?.name || 'Coach',
           startDate: now,
@@ -384,9 +435,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
           variants: variants || []
         };
         await createWorkoutPlan(newWorkoutData);
+        // Non serve chiamare loadFolderContent() qui perché createWorkoutPlan 
+        // già ricarica i dati tramite fetchPlans() nel hook useWorkoutPlans
       }
 
-      await loadFolderContent();
       setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
       setShowCreateModal(false);
     } catch (error) {
@@ -394,27 +446,38 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     }
   };
 
-  const deleteItem = (itemId: string, itemType: 'folder' | 'file') => {
-    if (itemType === 'folder') {
-      DB.deleteWorkoutFolder(itemId);
-    } else {
-      DB.deleteWorkoutPlan(itemId);
+  const deleteItem = async (itemId: string, itemType: 'folder' | 'file') => {
+    try {
+      if (itemType === 'folder') {
+        await DB.deleteWorkoutFolder(itemId);
+        await loadFolderContent(); // Ricarica per le cartelle
+      } else {
+        await deleteWorkoutPlan(itemId);
+        // Non serve chiamare loadFolderContent() perché deleteWorkoutPlan già ricarica i dati
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
     }
-    loadFolderContent();
   };
 
-  const handleRename = (item: FolderTreeItem, newName: string) => {
-    if (item.type === 'folder' && item.data && 'icon' in item.data) {
-      const updatedFolder = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
-      DB.saveWorkoutFolder(updatedFolder);
-    } else if (item.type === 'file' && item.data && 'name' in item.data) {
-      const updatedWorkout = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
-      DB.saveWorkoutPlan(updatedWorkout);
+  const handleRename = async (item: FolderTreeItem, newName: string) => {
+    try {
+      if (item.type === 'folder' && item.data && 'icon' in item.data) {
+        const updatedFolder = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
+        await DB.saveWorkoutFolder(updatedFolder);
+        await loadFolderContent(); // Ricarica per le cartelle
+      } else if (item.type === 'file' && item.data && 'name' in item.data) {
+        const updatedWorkout = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
+        await updateWorkoutPlan(item.id, { name: newName });
+        // Non serve chiamare loadFolderContent() perché updateWorkoutPlan già ricarica i dati
+      }
+      
+      setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
+      setShowRenameModal(false);
+      setItemToRename(null);
+    } catch (error) {
+      console.error('Error renaming item:', error);
     }
-    loadFolderContent();
-    setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
-    setShowRenameModal(false);
-    setItemToRename(null);
   };
 
   const handleDelete = async (item: FolderTreeItem) => {
@@ -442,11 +505,12 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
         
         await deleteRecursive(item.id);
         await DB.deleteWorkoutFolder(item.id);
+        await loadFolderContent(); // Ricarica solo per le cartelle
       } else if (item.type === 'file') {
         await deleteWorkoutPlan(item.id);
+        // Non chiamare loadFolderContent() perché deleteWorkoutPlan già ricarica i dati
       }
       
-      await loadFolderContent();
       setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
       setShowDeleteModal(false);
       setItemToDelete(null);

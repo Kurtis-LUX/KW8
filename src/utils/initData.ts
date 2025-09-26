@@ -1,4 +1,4 @@
-import DB, { WorkoutPlan, Exercise, Subscription, User } from './database';
+import DB, { WorkoutPlan, Exercise, Subscription, User, WorkoutFolder } from './database';
 import { v4 as uuidv4 } from 'uuid';
 
 // Funzione per inizializzare il database con dati di esempio
@@ -36,6 +36,40 @@ export const initializeData = () => {
   
   // Salva gli abbonamenti
   subscriptions.forEach(subscription => DB.saveSubscription(subscription));
+  
+  // Crea cartelle di esempio
+  const workoutFolders: WorkoutFolder[] = [
+    {
+      id: uuidv4(),
+      name: 'Programmi Forza',
+      icon: 'Dumbbell',
+      color: '#EF4444',
+      order: 0,
+      createdAt: new Date(2025, 0, 1).toISOString(),
+      updatedAt: new Date(2025, 0, 1).toISOString(),
+      isExpanded: false
+    },
+    {
+      id: uuidv4(),
+      name: 'Tonificazione',
+      icon: 'Target',
+      color: '#10B981',
+      order: 1,
+      createdAt: new Date(2025, 0, 1).toISOString(),
+      updatedAt: new Date(2025, 0, 1).toISOString(),
+      isExpanded: false
+    },
+    {
+      id: uuidv4(),
+      name: 'Cardio',
+      icon: 'Heart',
+      color: '#F59E0B',
+      order: 2,
+      createdAt: new Date(2025, 0, 1).toISOString(),
+      updatedAt: new Date(2025, 0, 1).toISOString(),
+      isExpanded: false
+    }
+  ];
   
   // Crea utenti di esempio (l'admin viene creato automaticamente da database.ts)
   const users: User[] = [
@@ -140,7 +174,7 @@ export const initializeData = () => {
         exercises[3], // Military Press
         exercises[4]  // Trazioni
       ],
-      userId: users[0].id, // Assegna a Mario Rossi
+      folderId: workoutFolders[0].id, // Assegna alla cartella "Programmi Forza"
       category: 'strength',
       status: 'published',
       mediaFiles: {
@@ -167,7 +201,7 @@ export const initializeData = () => {
         exercises[0], // Squat
         exercises[3]  // Military Press
       ],
-      userId: users[1].id, // Assegna a Giulia Bianchi
+      folderId: workoutFolders[1].id, // Assegna alla cartella "Tonificazione"
       category: 'cardio',
       status: 'published',
       mediaFiles: {
@@ -181,6 +215,54 @@ export const initializeData = () => {
       updatedAt: new Date(2025, 0, 10).toISOString(),
       difficulty: 'beginner',
       targetMuscles: ['dorsali', 'quadricipiti', 'spalle']
+    },
+    {
+      id: uuidv4(),
+      name: 'HIIT Cardio Intenso',
+      description: 'Allenamento cardio ad alta intensità',
+      coach: 'Giuseppe Pandolfo',
+      startDate: new Date(2025, 0, 20).toISOString(),
+      duration: 28, // 4 settimane in giorni
+      exercises: [
+        {
+          id: uuidv4(),
+          name: 'Burpees',
+          sets: 4,
+          reps: 15,
+          rest: 30,
+          description: 'Corpo libero'
+        },
+        {
+          id: uuidv4(),
+          name: 'Mountain Climbers',
+          sets: 4,
+          reps: 20,
+          rest: 30,
+          description: 'Corpo libero'
+        },
+        {
+          id: uuidv4(),
+          name: 'Jump Squats',
+          sets: 4,
+          reps: 12,
+          rest: 45,
+          description: 'Corpo libero'
+        }
+      ],
+      folderId: workoutFolders[2].id, // Assegna alla cartella "Cardio"
+      category: 'cardio',
+      status: 'published',
+      mediaFiles: {
+        images: [],
+        videos: [],
+        audio: []
+      },
+      tags: ['cardio', 'hiit', 'intenso'],
+      order: 2,
+      createdAt: new Date(2025, 0, 8).toISOString(),
+      updatedAt: new Date(2025, 0, 20).toISOString(),
+      difficulty: 'advanced',
+      targetMuscles: ['tutto il corpo']
     }
   ];
   
@@ -190,6 +272,7 @@ export const initializeData = () => {
   
   // Salva tutti i dati nel database
   users.forEach(user => DB.saveUser(user));
+  workoutFolders.forEach(folder => DB.saveWorkoutFolder(folder));
   workoutPlans.forEach(plan => DB.saveWorkoutPlan(plan));
   
   // Segna il database come inizializzato con dati di esempio

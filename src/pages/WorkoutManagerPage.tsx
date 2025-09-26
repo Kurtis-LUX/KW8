@@ -42,7 +42,7 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
           </div>
           
           <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <FileExplorer />
+            <FileExplorer currentUser={currentUser} />
           </div>
         </div>
       </div>
