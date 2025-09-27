@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3 } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -199,7 +199,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           {/* Desktop Navigation - Hidden on mobile */}
           <nav className="hidden lg:flex items-center space-x-8">
             {isDashboard ? (
-              // Menu semplificato per Dashboard
+              // Menu completo per Dashboard
               <>
                 <button
                   onClick={() => handleNavigation('coach-dashboard')}
@@ -220,27 +220,45 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   Atleti
                 </button>
                 <button
+                  onClick={() => handleNavigation('rankings')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Classifiche
+                </button>
+                <button
                   onClick={() => handleNavigation('link-manager')}
                   className="text-black hover:text-red-600 transition-all duration-300 font-medium"
                 >
                   Link
                 </button>
                 <button
-                  onClick={() => handleNavigation('statistics')}
+                  onClick={() => handleNavigation('membership-cards')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Tesserini
+                </button>
+                <button
+                  onClick={() => handleNavigation('athlete-statistics')}
                   className="text-black hover:text-red-600 transition-all duration-300 font-medium"
                 >
                   Statistiche
                 </button>
+                <button
+                  onClick={() => handleNavigation('areas-manager')}
+                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                >
+                  Aree
+                </button>
               </>
             ) : (
               // Menu normale per le altre pagine
-              <>
-                <button
-                  onClick={() => scrollToSection('orari')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
-                >
-                  Orari
-                </button>
+               <>
+                 <button
+                   onClick={() => scrollToSection('orari')}
+                   className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                 >
+                   Orari
+                 </button>
                 <button
                   onClick={handleShowRules}
                   className="text-black hover:text-red-600 transition-all duration-300 font-medium"
@@ -417,7 +435,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         <nav className="px-3 sm:px-8 py-4 sm:py-8 overflow-y-auto max-h-[calc(100vh-80px)]">
           <ul className="space-y-1 sm:space-y-3">
             {isDashboard ? (
-              // Menu Dashboard
+              // Menu Dashboard completo
               <>
                 {/* 1. Dashboard */}
                 <li>
@@ -425,7 +443,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                     onClick={() => handleNavigation('coach-dashboard')}
                     className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
-                    <Home size={20} className="sm:w-6 sm:h-6" />
+                    <Settings size={20} className="sm:w-6 sm:h-6" />
                     <span>Dashboard</span>
                   </button>
                 </li>
@@ -449,40 +467,70 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                     <span>Atleti</span>
                   </button>
                 </li>
-                {/* 4. Link */}
+                {/* 4. Classifiche */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('rankings')}
+                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <Trophy size={20} className="sm:w-6 sm:h-6" />
+                    <span>Classifiche</span>
+                  </button>
+                </li>
+                {/* 5. Link */}
                 <li>
                   <button
                     onClick={() => handleNavigation('link-manager')}
                     className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
-                    <Settings size={20} className="sm:w-6 sm:h-6" />
+                    <Link size={20} className="sm:w-6 sm:h-6" />
                     <span>Link</span>
                   </button>
                 </li>
-                {/* 5. Statistiche */}
+                {/* 6. Tesserini */}
                 <li>
                   <button
-                    onClick={() => handleNavigation('statistics')}
+                    onClick={() => handleNavigation('membership-cards')}
                     className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
-                    <Dumbbell size={20} className="sm:w-6 sm:h-6" />
+                    <CreditCard size={20} className="sm:w-6 sm:h-6" />
+                    <span>Tesserini</span>
+                  </button>
+                </li>
+                {/* 7. Statistiche */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('athlete-statistics')}
+                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  >
+                    <BarChart3 size={20} className="sm:w-6 sm:h-6" />
                     <span>Statistiche</span>
                   </button>
                 </li>
-              </>
-            ) : (
-              // Menu Standard
-              <>
-                {/* 1. Informazioni */}
+                {/* 8. Aree */}
                 <li>
                   <button
-                    onClick={scrollToFooter}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    onClick={() => handleNavigation('areas-manager')}
+                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
-                    <Mail size={20} className="sm:w-6 sm:h-6" />
-                    <span>{t.header.information}</span>
+                    <MapPin size={20} className="sm:w-6 sm:h-6" />
+                    <span>Aree</span>
                   </button>
                 </li>
+               </>
+             ) : (
+               // Menu Standard
+                <>
+                  {/* 1. Informazioni */}
+                  <li>
+                    <button
+                      onClick={scrollToFooter}
+                      className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    >
+                      <Mail size={20} className="sm:w-6 sm:h-6" />
+                      <span>{t.header.information}</span>
+                    </button>
+                  </li>
                 {/* 2. Orari */}
                 <li>
                   <button

@@ -46,10 +46,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [workoutStatus, setWorkoutStatus] = useState<'published' | 'draft'>('draft');
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
-  const [variants, setVariants] = useState<WorkoutVariant[]>([
-    { id: '1', name: 'Gestionale schede', isActive: true }
-  ]);
+  const [variants, setVariants] = useState<WorkoutVariant[]>([]);
   const [activeVariantId, setActiveVariantId] = useState('1');
+  const [originalWorkoutTitle, setOriginalWorkoutTitle] = useState('');
   
   // Athletes management
   const [associatedAthletes, setAssociatedAthletes] = useState<string[]>([]);
@@ -163,7 +162,10 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
           const workoutData = await DB.getWorkoutPlanById(workoutId);
           if (workoutData) {
             setWorkoutTitle(workoutData.name);
+            setOriginalWorkoutTitle(workoutData.name);
             setWorkoutDescription(workoutData.description || '');
+            // Inizializza con la variante principale
+            setVariants([{ id: '1', name: workoutData.name, isActive: true }]);
             // Carica altri dati se necessario
           }
         } catch (error) {
@@ -285,7 +287,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const handleCloneWorkout = () => {
     const newVariant: WorkoutVariant = {
       id: Date.now().toString(),
-      name: `Variante di ${workoutTitle}`,
+      name: `Variante di ${originalWorkoutTitle}`,
       isActive: false
     };
     setVariants([...variants, newVariant]);
@@ -298,6 +300,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     if (activeVariant) {
       setWorkoutTitle(activeVariant.name);
     }
+    // Non modificare il titolo originale quando si cambia variante
   };
   
   const handleRemoveVariant = (variantId: string) => {

@@ -374,6 +374,51 @@ function App() {
     );
   }
 
+  if (currentPage === 'areas-manager') {
+    return (
+      <LanguageProvider>
+        <ProtectedRoute requireAdmin={false}>
+          <div className="min-h-screen bg-gray-100">
+            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} />
+            <div className="bg-white shadow-sm border-b mt-20">
+              <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center py-4 sm:py-6">
+                  <button
+                    onClick={() => handleNavigation('coach-dashboard')}
+                    className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                    title="Torna alla Dashboard Coach"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Torna alla Dashboard
+                  </button>
+                  <div className="text-center">
+                    <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
+                      Gestione Aree Palestra
+                    </h1>
+                    <p className="text-sm sm:text-base text-gray-600">Modifica le aree mostrate nella home page</p>
+                  </div>
+                  <div className="w-32"></div>
+                </div>
+              </div>
+            </div>
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+              <EditableGymAreasSection 
+                isEditing={true} 
+                onSave={(areas) => {
+                  console.log('Aree salvate:', areas);
+                  // Qui si potrebbe implementare il salvataggio su database
+                  alert('Aree salvate con successo!');
+                }}
+              />
+            </div>
+          </div>
+        </ProtectedRoute>
+      </LanguageProvider>
+    );
+  }
+
   if (currentPage === 'gym-areas-editor') {
     return (
       <LanguageProvider>
