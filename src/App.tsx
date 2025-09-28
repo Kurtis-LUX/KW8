@@ -36,6 +36,7 @@ import Modal from './components/Modal';
 import DataMigration from './components/DataMigration';
 
 import ProtectedRoute from './components/ProtectedRoute';
+import LoadingTransition from './components/LoadingTransition';
 import DB from './utils/database';
 import initializeData from './utils/initData';
 
@@ -213,10 +214,14 @@ function App() {
     // Pulisci database locale
     DB.clearAutoLogin();
     
-    // Se l'utente è in una pagina riservata, reindirizza alla home
-    if (currentPage === 'workouts' || currentPage === 'admin-dashboard' || currentPage === 'coach-dashboard') {
-      setCurrentPage('home');
-    }
+    // Reindirizza sempre alla home e refresha la pagina
+    setCurrentPage('home');
+    
+    // Refresh della pagina dopo un breve delay per renderlo più visibile
+    setTimeout(() => {
+      console.log('🔄 Ricaricamento pagina in corso...');
+      window.location.reload();
+    }, 500);
     
     console.log('✅ Logout completato');
   };
@@ -491,22 +496,12 @@ function App() {
   if (currentPage === 'workout-manager') {
     return (
       <LanguageProvider>
-        {currentUser ? 
+        <ProtectedRoute requireAdmin={false}>
           <WorkoutManagerPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
-          /> : 
-          <div className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
-            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
-            <button 
-              onClick={() => handleNavigation('auth')} 
-              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
-            >
-              Accedi
-            </button>
-          </div>
-        }
+          />
+        </ProtectedRoute>
       </LanguageProvider>
     );
   }
@@ -514,23 +509,13 @@ function App() {
   if (currentPage === 'athlete-statistics') {
     return (
       <LanguageProvider>
-        {currentUser ? 
+        <ProtectedRoute requireAdmin={false}>
           <AthleteStatisticsPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
             onLogout={handleLogout}
-          /> : 
-          <div className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
-            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
-            <button 
-              onClick={() => handleNavigation('auth')} 
-              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
-            >
-              Accedi
-            </button>
-          </div>
-        }
+          />
+        </ProtectedRoute>
       </LanguageProvider>
     );
   }
@@ -538,23 +523,13 @@ function App() {
   if (currentPage === 'athlete-manager') {
     return (
       <LanguageProvider>
-        {currentUser ? 
+        <ProtectedRoute requireAdmin={false}>
           <AthleteManagerPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
             onLogout={handleLogout}
-          /> : 
-          <div className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
-            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
-            <button 
-              onClick={() => handleNavigation('auth')} 
-              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
-            >
-              Accedi
-            </button>
-          </div>
-        }
+          />
+        </ProtectedRoute>
       </LanguageProvider>
     );
   }
@@ -562,23 +537,13 @@ function App() {
   if (currentPage === 'rankings') {
     return (
       <LanguageProvider>
-        {currentUser ? 
+        <ProtectedRoute requireAdmin={false}>
           <RankingsPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
             onLogout={handleLogout}
-          /> : 
-          <div className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
-            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
-            <button 
-              onClick={() => handleNavigation('auth')} 
-              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
-            >
-              Accedi
-            </button>
-          </div>
-        }
+          />
+        </ProtectedRoute>
       </LanguageProvider>
     );
   }
@@ -586,23 +551,13 @@ function App() {
   if (currentPage === 'link-manager') {
     return (
       <LanguageProvider>
-        {currentUser ? 
+        <ProtectedRoute requireAdmin={false}>
           <LinkManagerPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
             onLogout={handleLogout}
-          /> : 
-          <div className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
-            <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
-            <button 
-              onClick={() => handleNavigation('auth')} 
-              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
-            >
-              Accedi
-            </button>
-          </div>
-        }
+          />
+        </ProtectedRoute>
       </LanguageProvider>
     );
   }
@@ -610,26 +565,13 @@ function App() {
   if (currentPage === 'membership-cards') {
     return (
       <LanguageProvider>
-        {currentUser && currentUser.role === 'coach' ? (
+        <ProtectedRoute requireAdmin={false}>
           <MembershipCardsPage 
+            onNavigate={handleNavigation} 
             currentUser={currentUser} 
-            onNavigate={handleNavigation}
             onLogout={handleLogout}
           />
-        ) : (
-          <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Accesso Negato</h2>
-              <p className="text-gray-600 mb-6">Non hai i permessi per accedere a questa pagina.</p>
-              <button
-                onClick={() => handleNavigation('home')}
-                className="px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
-              >
-                Torna alla Home
-              </button>
-            </div>
-          </div>
-        )}
+        </ProtectedRoute>
       </LanguageProvider>
     );
   }

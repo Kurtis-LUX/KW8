@@ -857,12 +857,120 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
                 </Portal>
               )}
             </div>
-          </div>
+
+            {/* Menu Toolbar */}
+            <div className="relative">
+              <button
+                ref={toolbarTriggerRef}
+                onClick={toggleToolbarDropdown}
+                className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105"
+              >
+                <SlidersHorizontal size={16} />
+                <span>Menu</span>
+                <ChevronDown size={14} className={`transition-transform duration-200 ${isToolbarOpen ? 'rotate-180' : ''}`} />
+               </button>
+               
+               {/* Dropdown Menu con Portal */}
+               {isToolbarOpen && (
+                 <Portal>
+                   <div 
+                     ref={toolbarDropdownRef}
+                     className="dropdown-menu w-64"
+                     style={{
+                       position: 'fixed',
+                       left: toolbarPosition?.left || 0,
+                       top: toolbarPosition?.top || 0,
+                     }}
+                   >
+                     {/* Vista ad albero */}
+                     <button
+                       onClick={() => {
+                         setShowTreeView(!showTreeView);
+                         closeToolbarDropdown();
+                       }}
+                       className={`dropdown-item justify-between ${
+                         showTreeView ? 'text-red-600 bg-red-50' : ''
+                       }`}
+                     >
+                       <div className="flex items-center space-x-3">
+                         <ChevronRight size={16} className={`transition-transform duration-200 ${showTreeView ? 'rotate-90' : ''}`} />
+                         <span>Vista ad albero</span>
+                       </div>
+                       {showTreeView && <div className="w-2 h-2 bg-red-600 rounded-full"></div>}
+                     </button>
+                     
+                     <hr className="my-2" />
+                     
+                     {/* Modalità vista */}
+                     <div className="px-4 py-2">
+                       <p className="text-sm font-medium text-gray-700 mb-2">Modalità vista</p>
+                       <div className="flex space-x-2">
+                         <button
+                           onClick={() => {
+                             setViewMode('list');
+                             closeToolbarDropdown();
+                           }}
+                           className={`flex-1 p-2 rounded-md transition-all duration-200 flex items-center justify-center space-x-2 ${
+                             viewMode === 'list' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
+                           }`}
+                         >
+                           <List size={16} />
+                           <span className="text-sm">Lista</span>
+                         </button>
+                         <button
+                           onClick={() => {
+                             setViewMode('grid');
+                             closeToolbarDropdown();
+                           }}
+                           className={`flex-1 p-2 rounded-md transition-all duration-200 flex items-center justify-center space-x-2 ${
+                             viewMode === 'grid' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
+                           }`}
+                         >
+                           <Grid3X3 size={16} />
+                           <span className="text-sm">Griglia</span>
+                         </button>
+                       </div>
+                     </div>
+                     
+                     <hr className="my-2" />
+                     
+                     {/* Filtri */}
+                     <button
+                       onClick={() => {
+                         toggleFilters();
+                         closeToolbarDropdown();
+                       }}
+                       className={`dropdown-item justify-between ${
+                         isFiltersOpen ? 'text-red-600 bg-red-50' : ''
+                       }`}
+                     >
+                       <Filter size={16} />
+                       <span>Filtri</span>
+                     </button>
+                     
+                     <hr className="my-2" />
+                     
+                     {/* Crea nuovo */}
+                     <button
+                       onClick={() => {
+                         setShowCreateModal(true);
+                         closeToolbarDropdown();
+                       }}
+                       className="dropdown-item text-red-600 hover:bg-red-50 font-medium"
+                     >
+                       <Plus size={16} />
+                       <span>Crea nuovo</span>
+                     </button>
+                   </div>
+                 </Portal>
+               )}
+             </div>
+           </div>
         </div>
         
         <div className="flex items-center justify-between">
           {/* Breadcrumb con pulsante indietro */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 min-w-0 flex-1">
             {/* Pulsante freccia indietro */}
             {breadcrumb.length > 1 && (
               <button
@@ -870,137 +978,40 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
                   const parentIndex = breadcrumb.length - 2;
                   navigateToBreadcrumb(parentIndex);
                 }}
-                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-all duration-200 ease-in-out hover:scale-105"
+                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-all duration-200 ease-in-out hover:scale-105 flex-shrink-0"
                 title="Torna indietro"
               >
                 <ArrowLeft size={16} />
               </button>
             )}
             
-            {/* Breadcrumb */}
-            <nav className="flex items-center space-x-2 text-sm">
-              {breadcrumb.map((crumb, index) => (
-                <React.Fragment key={index}>
-                  <button
-                    onClick={() => navigateToBreadcrumb(index)}
-                    className="text-gray-600 hover:text-gray-900 font-medium"
-                  >
-                    {crumb.name}
-                  </button>
-                  {index < breadcrumb.length - 1 && (
-                    <ChevronRight size={16} className="text-gray-400" />
-                  )}
-                </React.Fragment>
-              ))}
-            </nav>
-          </div>
-
-          {/* Menu Toolbar */}
-          <div className="relative">
-            <button
-              ref={toolbarTriggerRef}
-              onClick={toggleToolbarDropdown}
-              className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105"
-            >
-              <SlidersHorizontal size={16} />
-              <span>Menu</span>
-              <ChevronDown size={14} className={`transition-transform duration-200 ${isToolbarOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {/* Dropdown Menu con Portal */}
-            {isToolbarOpen && (
-              <Portal>
-                <div 
-                  ref={toolbarDropdownRef}
-                  className="dropdown-menu w-64"
-                  style={{
-                    position: 'fixed',
-                    left: toolbarPosition?.left || 0,
-                    top: toolbarPosition?.top || 0,
-                  }}
-                >
-                  {/* Vista ad albero */}
-                  <button
-                    onClick={() => {
-                      setShowTreeView(!showTreeView);
-                      closeToolbarDropdown();
-                    }}
-                    className={`dropdown-item justify-between ${
-                      showTreeView ? 'text-red-600 bg-red-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <ChevronRight size={16} className={`transition-transform duration-200 ${showTreeView ? 'rotate-90' : ''}`} />
-                      <span>Vista ad albero</span>
-                    </div>
-                    {showTreeView && <div className="w-2 h-2 bg-red-600 rounded-full"></div>}
-                  </button>
-                  
-                  <hr className="my-2" />
-                  
-                  {/* Modalità vista */}
-                  <div className="px-4 py-2">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Modalità vista</p>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => {
-                          setViewMode('list');
-                          closeToolbarDropdown();
-                        }}
-                        className={`flex-1 p-2 rounded-md transition-all duration-200 flex items-center justify-center space-x-2 ${
-                          viewMode === 'list' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        <List size={16} />
-                        <span className="text-sm">Lista</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setViewMode('grid');
-                          closeToolbarDropdown();
-                        }}
-                        className={`flex-1 p-2 rounded-md transition-all duration-200 flex items-center justify-center space-x-2 ${
-                          viewMode === 'grid' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        <Grid3X3 size={16} />
-                        <span className="text-sm">Griglia</span>
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <hr className="my-2" />
-                  
-                  {/* Filtri */}
-                  <button
-                    onClick={() => {
-                      toggleFilters();
-                      closeToolbarDropdown();
-                    }}
-                    className={`dropdown-item justify-between ${
-                      isFiltersOpen ? 'text-red-600 bg-red-50' : ''
-                    }`}
-                  >
-                    <Filter size={16} />
-                    <span>Filtri</span>
-                  </button>
-                  
-                  <hr className="my-2" />
-                  
-                  {/* Crea nuovo */}
-                  <button
-                    onClick={() => {
-                      setShowCreateModal(true);
-                      closeToolbarDropdown();
-                    }}
-                    className="dropdown-item text-red-600 hover:bg-red-50 font-medium"
-                  >
-                    <Plus size={16} />
-                    <span>Crea nuovo</span>
-                  </button>
+            {/* Breadcrumb con scroll orizzontale */}
+            <div className="min-w-0 flex-1">
+              <nav className="flex items-center space-x-2 text-sm overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pb-1">
+                <div className="flex items-center space-x-2 whitespace-nowrap">
+                  {breadcrumb.map((crumb, index) => {
+                    const isCurrentFolder = index === breadcrumb.length - 1;
+                    return (
+                      <React.Fragment key={index}>
+                        <button
+                          onClick={() => navigateToBreadcrumb(index)}
+                          className={`font-medium whitespace-nowrap ${
+                            isCurrentFolder 
+                              ? 'text-red-600 hover:text-red-700' 
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          {crumb.name}
+                        </button>
+                        {index < breadcrumb.length - 1 && (
+                          <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
-              </Portal>
-            )}
+              </nav>
+            </div>
           </div>
         </div>
       </div>

@@ -123,6 +123,33 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     setIsMenuOpen(false);
   };
 
+  // Funzione per navigazione con logout (per Menu Home e Dashboard Coach)
+  const handleNavigationWithLogout = (page: string) => {
+    console.log(`🚪 Navigazione con logout verso: ${page}`);
+    
+    // Chiudi tutti i menu aperti
+    setIsMenuOpen(false);
+    setShowUserMenu(false);
+    
+    // Se l'utente è loggato, esegui il logout
+    if (currentUser && onLogout) {
+      onLogout();
+    }
+    
+    // Naviga alla pagina richiesta
+    if (onNavigate) {
+      onNavigate(page);
+    }
+    
+    // Aggiorna la pagina dopo un breve delay per renderlo più visibile
+    setTimeout(() => {
+      console.log('🔄 Header: Ricaricamento pagina in corso...');
+      window.location.reload();
+    }, 500);
+    
+    console.log(`✅ Navigazione con logout completata verso: ${page}`);
+  };
+
   const handleLogout = () => {
     console.log('🚪 Header: Logout iniziato');
     
@@ -135,10 +162,16 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       onLogout();
     }
     
-    // Reindirizza alla home senza reload
+    // Reindirizza alla home e aggiorna la pagina
     if (onNavigate) {
       onNavigate('home');
     }
+    
+    // Aggiorna la pagina dopo un breve delay per renderlo più visibile
+    setTimeout(() => {
+      console.log('🔄 Header: Ricaricamento pagina in corso...');
+      window.location.reload();
+    }, 500);
     
     console.log('✅ Header: Logout completato');
   };
@@ -416,10 +449,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   onNavigate('home');
                 }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-                // Refresh della pagina dopo un breve delay per permettere la navigazione
-                setTimeout(() => {
-                  window.location.reload();
-                }, 100);
                 setIsMenuOpen(false); // Chiude il menu mobile
               }}
             />
@@ -604,30 +633,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               </>
             )}
             
-            {/* Dashboard Coach - Solo per coach */}
-            {currentUser && currentUser.role === 'coach' && (
-              <li>
-                <button
-                  onClick={() => handleNavigation('coach-dashboard')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <Settings size={20} className="sm:w-6 sm:h-6" />
-                  <span>Dashboard Coach</span>
-                </button>
-              </li>
-            )}
-            
-            {currentUser && (
-              <li>
-                <button
-                  onClick={() => handleNavigation('cookie-settings')}
-                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
-                >
-                  <FileText size={20} className="sm:w-6 sm:h-6" />
-                  <span>{t.header.cookieSettings}</span>
-                </button>
-              </li>
-            )}
+
             
 
             

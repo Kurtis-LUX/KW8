@@ -1,6 +1,7 @@
 // Componente per proteggere le rotte che richiedono autenticazione
 import React, { useEffect, useState } from 'react';
 import { authService } from '../services/authService';
+import LoadingTransition from './LoadingTransition';
 
 interface AuthUser {
   id: string;
@@ -115,7 +116,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-navy-900 mx-auto mb-4"></div>
-          <p className="text-gray-600">Verifica autenticazione...</p>
+          <p className="text-gray-600 animate-pulse">Verifica autenticazione...</p>
         </div>
       </div>
     );
@@ -161,7 +162,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Authenticated and authorized
-  return <>{children}</>;
+  return (
+    <LoadingTransition isLoading={false}>
+      {children}
+    </LoadingTransition>
+  );
 };
 
 export default ProtectedRoute;
