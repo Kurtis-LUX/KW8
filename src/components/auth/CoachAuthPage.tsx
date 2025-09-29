@@ -227,24 +227,44 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
           </div>
           
           {/* Container per il pulsante Google */}
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center min-h-[60px]">
             <div 
               id="google-signin-button" 
-              className="w-full" 
+              className="google-button-container"
               style={{ 
-                width: '100%',
+                width: '240px',
+                height: '44px',
                 display: 'flex',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                alignItems: 'center',
+                position: 'relative',
+                margin: '0 auto'
               }}
             ></div>
           </div>
           
           <style jsx>{`
+            .google-button-container {
+              display: flex !important;
+              justify-content: center !important;
+              align-items: center !important;
+              position: relative !important;
+              width: 240px !important;
+              height: 44px !important;
+              margin: 0 auto !important;
+              box-sizing: border-box !important;
+            }
+            
             #google-signin-button {
               display: flex !important;
               justify-content: center !important;
               align-items: center !important;
               position: relative !important;
+              width: 240px !important;
+              height: 44px !important;
+              margin: 0 auto !important;
+              box-sizing: border-box !important;
+              overflow: hidden !important;
             }
             
             #google-signin-button > div {
@@ -252,31 +272,79 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
               min-width: 240px !important;
               max-width: 240px !important;
               height: 44px !important;
+              min-height: 44px !important;
+              max-height: 44px !important;
               border-radius: 4px !important;
               transition: none !important;
               transform: none !important;
               animation: none !important;
               position: static !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              box-sizing: border-box !important;
+              display: flex !important;
+              justify-content: center !important;
+              align-items: center !important;
             }
             
             #google-signin-button iframe {
               width: 240px !important;
+              min-width: 240px !important;
+              max-width: 240px !important;
               height: 44px !important;
+              min-height: 44px !important;
+              max-height: 44px !important;
               border-radius: 4px !important;
               transition: none !important;
               transform: none !important;
               animation: none !important;
               position: static !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              box-sizing: border-box !important;
+              border: none !important;
+              outline: none !important;
             }
             
-            #google-signin-button * {
+            #google-signin-button *,
+            #google-signin-button *:before,
+            #google-signin-button *:after {
               transition: none !important;
               transform: none !important;
               animation: none !important;
+              box-sizing: border-box !important;
+            }
+            
+            /* Prevent any hover effects or state changes */
+            #google-signin-button:hover,
+            #google-signin-button:focus,
+            #google-signin-button:active,
+            #google-signin-button > div:hover,
+            #google-signin-button > div:focus,
+            #google-signin-button > div:active,
+            #google-signin-button iframe:hover,
+            #google-signin-button iframe:focus,
+            #google-signin-button iframe:active {
+              transform: none !important;
+              transition: none !important;
+              animation: none !important;
+              width: 240px !important;
+              height: 44px !important;
+            }
+            
+            /* Force stable positioning */
+            #google-signin-button,
+            #google-signin-button > div,
+            #google-signin-button iframe {
+              left: auto !important;
+              right: auto !important;
+              top: auto !important;
+              bottom: auto !important;
+              position: static !important;
             }
           `}</style>
           
-
+          
           
           {loading && (
             <div className="flex items-center justify-center py-4">
