@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DB from '../utils/database';
 import { v4 as uuidv4 } from 'uuid';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, ChevronLeft } from 'lucide-react';
 import Modal from '../components/Modal';
 
 import { authService } from '../services/authService';
@@ -140,10 +140,15 @@ const AuthPage: React.FC<AuthPageProps> = ({ onNavigate, onLogin }) => {
         <div className="flex items-center mb-8">
           <button
             onClick={() => onNavigate('home')}
-            className="flex items-center space-x-2 text-white hover:text-red-300 transition-colors duration-300"
+            className="transition-all duration-300 transform hover:scale-110 p-2 text-white"
+            style={{
+              filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+              background: 'transparent',
+              border: 'none'
+            }}
+            title="Torna alla home"
           >
-            <ArrowLeft size={24} />
-            <span className="font-semibold">Torna alla home</span>
+            <ChevronLeft size={32} />
           </button>
         </div>
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { User } from '../utils/database';
 import FileExplorer from '../components/FileExplorer';
 import Header from '../components/Header';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronLeft } from 'lucide-react';
 
 interface WorkoutManagerPageProps {
   onNavigate: (page: string) => void;
@@ -25,12 +25,17 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
             {/* Header con tasto indietro e titolo centralizzato */}
             <div className="flex items-center justify-between">
               <button
-                onClick={() => onNavigate('coach-dashboard')}
-                className="flex items-center justify-center w-12 h-12 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
-                title="Torna alla Dashboard Coach"
-              >
-                <ArrowLeft size={20} />
-              </button>
+              onClick={() => onNavigate('coach-dashboard')}
+              className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
+              style={{
+                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+                background: 'transparent',
+                border: 'none'
+              }}
+              title="Torna alla Dashboard Coach"
+            >
+              <ChevronLeft size={32} />
+            </button>
               
               <div className="text-center flex-1">
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent mb-2">Gestione Schede</h1>

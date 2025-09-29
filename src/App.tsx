@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, ChevronLeft } from 'lucide-react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import StatisticsSection from './components/StatisticsSection';
@@ -228,14 +228,6 @@ function App() {
 
   // Gestione delle pagine
 
-  if (currentPage === 'auth') {
-    return (
-      <LanguageProvider>
-        <AuthPage onNavigate={handleNavigation} onLogin={handleLogin} />
-      </LanguageProvider>
-    );
-  }
-
   if (currentPage === 'login') {
     return (
       <LanguageProvider>
@@ -267,7 +259,7 @@ function App() {
       <LanguageProvider>
         <ProtectedRoute requireAdmin={false}>
           <div className="min-h-screen bg-gray-100">
-            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} />
+            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} currentPage={currentPage} />
             <div className="bg-white shadow-sm border-b mt-20">
               <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                 <div className="flex justify-center items-center py-4 sm:py-6">
@@ -384,19 +376,21 @@ function App() {
       <LanguageProvider>
         <ProtectedRoute requireAdmin={false}>
           <div className="min-h-screen bg-gray-100">
-            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} />
+            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} currentPage={currentPage} />
             <div className="bg-white shadow-sm border-b mt-20">
               <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-4 sm:py-6">
                   <button
                     onClick={() => handleNavigation('coach-dashboard')}
-                    className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                    className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+                      background: 'transparent',
+                      border: 'none'
+                    }}
                     title="Torna alla Dashboard Coach"
                   >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Torna alla Dashboard
+                    <ChevronLeft size={32} />
                   </button>
                   <div className="text-center">
                     <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
@@ -429,19 +423,21 @@ function App() {
       <LanguageProvider>
         <ProtectedRoute requireAdmin={false}>
           <div className="min-h-screen bg-gray-100">
-            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} />
+            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} currentPage={currentPage} />
             <div className="bg-white shadow-sm border-b mt-20">
               <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center py-4 sm:py-6">
                   <button
                     onClick={() => handleNavigation('coach-dashboard')}
-                    className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                    className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+                      background: 'transparent',
+                      border: 'none'
+                    }}
                     title="Torna alla Dashboard Coach"
                   >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Torna alla Dashboard
+                    <ChevronLeft size={32} />
                   </button>
                   <div className="text-center">
                     <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
@@ -482,10 +478,10 @@ function App() {
             <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
             <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
             <button 
-              onClick={() => handleNavigation('auth')} 
+              onClick={() => handleNavigation('login')} 
               className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
             >
-              Accedi
+              Accedi come Coach
             </button>
           </div>
         }
@@ -640,7 +636,7 @@ function App() {
   return (
     <LanguageProvider>
       <div className="min-h-screen bg-white">
-        <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} />
+        <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} currentPage={currentPage} />
         {showCookieConsent && (
           <CookieConsent 
             onAccept={handleCookieAccept} 

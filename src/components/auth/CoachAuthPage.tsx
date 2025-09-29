@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authService } from '../../services/authService';
 import { envConfig, debugEnvConfig } from '../../config/envConfig';
+import { ChevronLeft } from 'lucide-react';
 
 interface CoachAuthPageProps {
   onAuthSuccess?: () => void;
@@ -179,10 +180,15 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
       {/* Pulsante Torna alla home in alto a sinistra */}
       <button
         onClick={() => onNavigateHome && onNavigateHome()}
-        className="absolute top-4 left-4 flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black font-medium hover:bg-red-50"
+        className="absolute top-4 left-4 transition-all duration-300 transform hover:scale-110 p-2 text-white"
+        style={{
+          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+          background: 'transparent',
+          border: 'none'
+        }}
+        title="Torna alla home"
       >
-        <span>←</span>
-        <span className="hidden sm:inline">Home</span>
+        <ChevronLeft size={32} />
       </button>
       
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
@@ -227,120 +233,37 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
           </div>
           
           {/* Container per il pulsante Google */}
-          <div className="flex justify-center items-center min-h-[60px]">
+          <div className="w-full flex justify-center items-center min-h-[60px]">
             <div 
               id="google-signin-button" 
-              className="google-button-container"
-              style={{ 
-                width: '240px',
-                height: '44px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                position: 'relative',
-                margin: '0 auto'
-              }}
+              className="flex justify-center items-center"
             ></div>
           </div>
           
           <style jsx>{`
-            .google-button-container {
-              display: flex !important;
-              justify-content: center !important;
-              align-items: center !important;
-              position: relative !important;
-              width: 240px !important;
-              height: 44px !important;
-              margin: 0 auto !important;
-              box-sizing: border-box !important;
-            }
-            
             #google-signin-button {
               display: flex !important;
               justify-content: center !important;
               align-items: center !important;
-              position: relative !important;
-              width: 240px !important;
-              height: 44px !important;
-              margin: 0 auto !important;
-              box-sizing: border-box !important;
-              overflow: hidden !important;
+              text-align: center !important;
             }
             
             #google-signin-button > div {
-              width: 240px !important;
-              min-width: 240px !important;
-              max-width: 240px !important;
-              height: 44px !important;
-              min-height: 44px !important;
-              max-height: 44px !important;
-              border-radius: 4px !important;
-              transition: none !important;
-              transform: none !important;
-              animation: none !important;
-              position: static !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              box-sizing: border-box !important;
               display: flex !important;
               justify-content: center !important;
               align-items: center !important;
+              margin: 0 auto !important;
+              text-align: center !important;
             }
             
             #google-signin-button iframe {
-              width: 240px !important;
-              min-width: 240px !important;
-              max-width: 240px !important;
-              height: 44px !important;
-              min-height: 44px !important;
-              max-height: 44px !important;
-              border-radius: 4px !important;
-              transition: none !important;
-              transform: none !important;
-              animation: none !important;
-              position: static !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              box-sizing: border-box !important;
-              border: none !important;
-              outline: none !important;
+              margin: 0 auto !important;
+              display: block !important;
             }
             
-            #google-signin-button *,
-            #google-signin-button *:before,
-            #google-signin-button *:after {
-              transition: none !important;
-              transform: none !important;
-              animation: none !important;
-              box-sizing: border-box !important;
-            }
-            
-            /* Prevent any hover effects or state changes */
-            #google-signin-button:hover,
-            #google-signin-button:focus,
-            #google-signin-button:active,
-            #google-signin-button > div:hover,
-            #google-signin-button > div:focus,
-            #google-signin-button > div:active,
-            #google-signin-button iframe:hover,
-            #google-signin-button iframe:focus,
-            #google-signin-button iframe:active {
-              transform: none !important;
-              transition: none !important;
-              animation: none !important;
-              width: 240px !important;
-              height: 44px !important;
-            }
-            
-            /* Force stable positioning */
-            #google-signin-button,
-            #google-signin-button > div,
-            #google-signin-button iframe {
-              left: auto !important;
-              right: auto !important;
-              top: auto !important;
-              bottom: auto !important;
-              position: static !important;
+            #google-signin-button button {
+              margin: 0 auto !important;
+              display: block !important;
             }
           `}</style>
           

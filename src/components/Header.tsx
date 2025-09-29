@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3 } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3, User, AlignJustify } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -9,9 +9,10 @@ interface HeaderProps {
   currentUser?: User | null;
   onLogout?: () => void;
   isDashboard?: boolean;
+  currentPage?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDashboard = false }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDashboard = false, currentPage = 'home' }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -117,9 +118,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
 
   const handleNavigation = (page: string) => {
     if (page === 'workouts' && !currentUser) {
-      // Reindirizza alla pagina di autenticazione se l'utente tenta di accedere alle schede senza essere loggato
+      // Reindirizza alla pagina di login coach se l'utente tenta di accedere alle schede senza essere loggato
       if (onNavigate) {
-        onNavigate('auth');
+        onNavigate('login');
       }
     } else {
       if (onNavigate) {
@@ -246,49 +247,65 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               <>
                 <button
                   onClick={() => handleNavigation('coach-dashboard')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                  className={`transition-all duration-300 font-medium ${
+                    currentPage === 'coach-dashboard' ? 'text-red-600' : 'text-black hover:text-red-600'
+                  }`}
                 >
                   Dashboard
                 </button>
                 <button
                   onClick={() => handleNavigation('workout-manager')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                  className={`transition-all duration-300 font-medium ${
+                    currentPage === 'workout-manager' ? 'text-red-600' : 'text-black hover:text-red-600'
+                  }`}
                 >
                   Schede
                 </button>
                 <button
                   onClick={() => handleNavigation('athlete-manager')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                  className={`transition-all duration-300 font-medium ${
+                    currentPage === 'athlete-manager' ? 'text-red-600' : 'text-black hover:text-red-600'
+                  }`}
                 >
                   Atleti
                 </button>
                 <button
                   onClick={() => handleNavigation('rankings')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                  className={`transition-all duration-300 font-medium ${
+                    currentPage === 'rankings' ? 'text-red-600' : 'text-black hover:text-red-600'
+                  }`}
                 >
                   Classifiche
                 </button>
                 <button
                   onClick={() => handleNavigation('link-manager')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                  className={`transition-all duration-300 font-medium ${
+                    currentPage === 'link-manager' ? 'text-red-600' : 'text-black hover:text-red-600'
+                  }`}
                 >
                   Link
                 </button>
                 <button
                   onClick={() => handleNavigation('membership-cards')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                  className={`transition-all duration-300 font-medium ${
+                    currentPage === 'membership-cards' ? 'text-red-600' : 'text-black hover:text-red-600'
+                  }`}
                 >
                   Tesserini
                 </button>
                 <button
                   onClick={() => handleNavigation('athlete-statistics')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                  className={`transition-all duration-300 font-medium ${
+                    currentPage === 'athlete-statistics' ? 'text-red-600' : 'text-black hover:text-red-600'
+                  }`}
                 >
                   Statistiche
                 </button>
                 <button
                   onClick={() => handleNavigation('areas-manager')}
-                  className="text-black hover:text-red-600 transition-all duration-300 font-medium"
+                  className={`transition-all duration-300 font-medium ${
+                    currentPage === 'areas-manager' ? 'text-red-600' : 'text-black hover:text-red-600'
+                  }`}
                 >
                   Aree
                 </button>
@@ -348,10 +365,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {currentUser && currentUser.role === 'coach' && (
               <button
                 onClick={() => handleNavigation('workout-manager')}
-                className="flex items-center transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black"
+                className="flex items-center transition-all duration-300 transform hover:scale-110 p-2 text-black hover:text-red-600"
+                style={{
+                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+                  background: 'transparent',
+                  border: 'none'
+                }}
                 title="Gestione Schede"
               >
-                <FileText size={20} />
+                <FileText size={32} />
               </button>
             )}
             
@@ -360,9 +382,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={toggleUserMenu}
-                  className="flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black"
+                  className="flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-2 text-black hover:text-red-600"
+                  style={{
+                    filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+                    background: 'transparent',
+                    border: 'none'
+                  }}
                 >
-                  <UserIcon size={20} />
+                  <User size={28} />
                   <span className="hidden md:inline font-medium">{currentUser.name}</span>
                 </button>
                 
@@ -428,9 +455,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             ) : (
               <button
                 onClick={() => handleNavigation('login')}
-                className="flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-3 bg-white border-2 border-red-600 rounded-full text-black"
+                className="flex items-center space-x-2 transition-all duration-300 transform hover:scale-110 py-2 px-2 text-black hover:text-red-600"
+                style={{
+                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+                  background: 'transparent',
+                  border: 'none'
+                }}
               >
-                <UserIcon size={20} />
+                <User size={28} />
                 <span className="hidden md:inline font-medium">Coach</span>
               </button>
             )}
@@ -438,9 +470,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {/* Hamburger Menu */}
             <button
               onClick={toggleMenu}
-              className="transition-all duration-300 transform hover:scale-110 p-2 bg-white border-2 border-red-600 rounded-full text-black"
+              className="transition-all duration-300 transform hover:scale-110 p-2 text-black hover:text-red-600"
+              style={{
+                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))',
+                background: 'transparent',
+                border: 'none'
+              }}
             >
-              <Menu size={28} />
+              <AlignJustify size={32} />
             </button>
           </div>
         </div>
@@ -480,7 +517,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('coach-dashboard')}
-                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'coach-dashboard' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
                   >
                     <Settings size={20} className="sm:w-6 sm:h-6" />
                     <span>Dashboard</span>
@@ -490,7 +529,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('workout-manager')}
-                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'workout-manager' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
                   >
                     <FileText size={20} className="sm:w-6 sm:h-6" />
                     <span>Schede</span>
@@ -500,7 +541,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('athlete-manager')}
-                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'athlete-manager' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
                   >
                     <Users size={20} className="sm:w-6 sm:h-6" />
                     <span>Atleti</span>
@@ -510,7 +553,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('rankings')}
-                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'rankings' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
                   >
                     <Trophy size={20} className="sm:w-6 sm:h-6" />
                     <span>Classifiche</span>
@@ -520,37 +565,45 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('link-manager')}
-                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'link-manager' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
                   >
                     <Link size={20} className="sm:w-6 sm:h-6" />
                     <span>Link</span>
                   </button>
                 </li>
-                {/* 6. Tesserini */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('membership-cards')}
-                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
-                  >
-                    <CreditCard size={20} className="sm:w-6 sm:h-6" />
-                    <span>Tesserini</span>
-                  </button>
-                </li>
-                {/* 7. Statistiche */}
+                {/* 6. Statistiche */}
                 <li>
                   <button
                     onClick={() => handleNavigation('athlete-statistics')}
-                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'athlete-statistics' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
                   >
                     <BarChart3 size={20} className="sm:w-6 sm:h-6" />
                     <span>Statistiche</span>
+                  </button>
+                </li>
+                {/* 7. Tessere */}
+                <li>
+                  <button
+                    onClick={() => handleNavigation('membership-cards')}
+                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'membership-cards' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
+                  >
+                    <CreditCard size={20} className="sm:w-6 sm:h-6" />
+                    <span>Tessere</span>
                   </button>
                 </li>
                 {/* 8. Aree */}
                 <li>
                   <button
                     onClick={() => handleNavigation('areas-manager')}
-                    className="flex items-center space-x-2 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'areas-manager' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
                   >
                     <MapPin size={20} className="sm:w-6 sm:h-6" />
                     <span>Aree</span>
@@ -564,7 +617,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <li>
                     <button
                       onClick={scrollToFooter}
-                      className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                      className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                     >
                       <Mail size={20} className="sm:w-6 sm:h-6" />
                       <span>{t.header.information}</span>
@@ -574,7 +627,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => scrollToSection('orari')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Clock size={20} className="sm:w-6 sm:h-6" />
                     <span>Orari</span>
@@ -584,7 +637,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={handleShowRules}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <BookOpen size={20} className="sm:w-6 sm:h-6" />
                     <span>{t.header.rules}</span>
@@ -594,7 +647,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('workouts')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className={`flex items-center space-x-3 sm:space-x-4 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white ${
+                      currentPage === 'workouts' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
+                    }`}
                   >
                     <FileText size={20} className="sm:w-6 sm:h-6" />
                     <span>{t.header.workouts}</span>
@@ -604,7 +659,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => scrollToSection('aree')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Dumbbell size={20} className="sm:w-6 sm:h-6" />
                     <span>Aree</span>
@@ -614,7 +669,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => scrollToSection('coach')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Users size={20} className="sm:w-6 sm:h-6" />
                     <span>Coach</span>
@@ -624,7 +679,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => scrollToSection('posizione')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <MapPin size={20} className="sm:w-6 sm:h-6" />
                     <span>{t.header.location}</span>
@@ -634,7 +689,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => scrollToSection('contatti')}
-                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                    className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                   >
                     <Phone size={20} className="sm:w-6 sm:h-6" />
                     <span>Contatti</span>
@@ -650,7 +705,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             <li>
               <button
                 onClick={toggleLanguage}
-                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-gray-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
               >
                 <Globe size={20} className="sm:w-6 sm:h-6" />
                 <span className="flex items-center space-x-2">
@@ -664,7 +719,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               <li>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-3 sm:space-x-4 text-red-600 hover:text-red-700 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
+                  className="flex items-center space-x-3 sm:space-x-4 text-gray-800 hover:text-red-600 transition-all duration-300 text-lg sm:text-xl font-semibold w-full text-left py-2 px-3 rounded-lg bg-white/90 hover:bg-white"
                 >
                   <UserIcon size={20} className="sm:w-6 sm:h-6" />
                   <span>{t.header.logout}</span>

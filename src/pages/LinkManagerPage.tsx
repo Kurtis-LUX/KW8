@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Link as LinkIcon, ExternalLink, Copy, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Users, Database, QrCode, BarChart3, Check } from 'lucide-react';
+import { ArrowLeft, Link as LinkIcon, ExternalLink, Copy, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Users, Database, QrCode, BarChart3, Check, ChevronLeft } from 'lucide-react';
 import { useLinks } from '../hooks/useFirestore';
 import { Link as FirestoreLink } from '../services/firestoreService';
 import { User } from '../services/authService';
@@ -162,10 +162,15 @@ const LinkManagerPage: React.FC<LinkManagerPageProps> = ({ onNavigate, currentUs
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => onNavigate('coach-dashboard')}
-            className="flex items-center justify-center w-12 h-12 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
+            className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
+            style={{
+              filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+              background: 'transparent',
+              border: 'none'
+            }}
             title="Torna alla Dashboard Coach"
           >
-            <ArrowLeft size={20} />
+            <ChevronLeft size={32} />
           </button>
           
           <div className="text-center flex-1">

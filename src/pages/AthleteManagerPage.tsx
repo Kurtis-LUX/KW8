@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Activity, TrendingUp, Mail, Phone, MapPin, Upload, Download } from 'lucide-react';
+import { ArrowLeft, Users, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Activity, TrendingUp, Mail, Phone, MapPin, Upload, Download, ChevronLeft } from 'lucide-react';
 import Header from '../components/Header';
 import AthleteForm from '../components/AthleteForm';
 import AthleteImport from '../components/AthleteImport';
@@ -272,10 +272,15 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => onNavigate('coach-dashboard')}
-              className="flex items-center justify-center w-12 h-12 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
+              className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
+              style={{
+                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+                background: 'transparent',
+                border: 'none'
+              }}
               title="Torna alla Dashboard Coach"
             >
-              <ArrowLeft size={20} />
+              <ChevronLeft size={32} />
             </button>
             
             <div className="text-center flex-1">

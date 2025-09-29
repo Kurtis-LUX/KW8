@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Trophy, Search, Filter, TrendingUp, Users, Target, Calendar, Medal, Edit, Plus, Settings, Dumbbell, BarChart3, Award } from 'lucide-react';
+import { ArrowLeft, Trophy, Search, Filter, TrendingUp, Users, Target, Calendar, Medal, Edit, Plus, Settings, Dumbbell, BarChart3, Award, ChevronLeft } from 'lucide-react';
 import { useRankings } from '../hooks/useFirestore';
 import MuscleGroupForm from '../components/MuscleGroupForm';
 import ExerciseForm from '../components/ExerciseForm';
@@ -319,10 +319,15 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => onNavigate('coach-dashboard')}
-              className="flex items-center justify-center w-10 h-10 bg-white border-2 border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 transform hover:scale-110 shadow-lg"
+              className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
+              style={{
+                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+                background: 'transparent',
+                border: 'none'
+              }}
               title="Torna alla Dashboard Coach"
             >
-              <ArrowLeft size={18} />
+              <ChevronLeft size={32} />
             </button>
             
             <div className="text-center flex-1">

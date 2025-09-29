@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CreditCard, Search, Filter, Calendar, User, CheckCircle, XCircle, AlertCircle, Euro, Phone, Mail, MapPin, Eye, Edit3, Plus, Download } from 'lucide-react';
+import { ArrowLeft, CreditCard, Search, Filter, Calendar, User, CheckCircle, XCircle, AlertCircle, Euro, Phone, Mail, MapPin, Eye, Edit3, Plus, Download, ChevronLeft } from 'lucide-react';
 import Header from '../components/Header';
 import { User as UserType } from '../utils/database';
 import { useMembershipCards } from '../hooks/useFirestore';
@@ -277,10 +277,15 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => onNavigate('coach-dashboard')}
-            className="flex items-center justify-center w-8 h-8 bg-white border border-red-600 rounded-full text-red-600 hover:bg-red-50 transition-colors"
+            className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
+            style={{
+              filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
+              background: 'transparent',
+              border: 'none'
+            }}
             title="Torna alla Dashboard Coach"
           >
-            <ArrowLeft size={16} />
+            <ChevronLeft size={32} />
           </button>
           
           <div className="text-center flex-1">
