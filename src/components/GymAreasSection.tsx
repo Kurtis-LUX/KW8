@@ -306,26 +306,32 @@ const GymAreasSection: React.FC = () => {
           {/* Navigation Arrows */}
           <button
             onClick={prevSlide}
-            className={`absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 ${
+            className={`absolute left-4 top-1/2 transform -translate-y-1/2 text-white p-3 transition-all duration-500 hover:scale-110 ${
               isVisible 
                 ? 'translate-x-0 opacity-100' 
                 : '-translate-x-8 opacity-0'
             }`}
-            style={{ transitionDelay: '600ms' }}
+            style={{ 
+              transitionDelay: '600ms',
+              filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8))'
+            }}
           >
-            <ChevronLeft size={24} />
+            <ChevronLeft size={32} strokeWidth={3} />
           </button>
 
           <button
             onClick={nextSlide}
-            className={`absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-90 hover:bg-opacity-100 text-navy-900 p-3 rounded-full shadow-lg transition-all duration-500 hover:scale-110 ${
+            className={`absolute right-4 top-1/2 transform -translate-y-1/2 text-white p-3 transition-all duration-500 hover:scale-110 ${
               isVisible 
                 ? 'translate-x-0 opacity-100' 
                 : 'translate-x-8 opacity-0'
             }`}
-            style={{ transitionDelay: '600ms' }}
+            style={{ 
+              transitionDelay: '600ms',
+              filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8))'
+            }}
           >
-            <ChevronRight size={24} />
+            <ChevronRight size={32} strokeWidth={3} />
           </button>
 
           {/* Dots Indicator */}

@@ -203,16 +203,22 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
             {/* Navigation Arrows */}
             <button
               onClick={prevRule}
-              className="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-95 hover:bg-opacity-100 text-navy-900 p-3 md:p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 z-10 opacity-90 hover:opacity-100"
+              className="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 text-white p-3 md:p-4 transition-all duration-300 hover:scale-110 z-10"
+              style={{ 
+                filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8))'
+              }}
             >
-              <ChevronLeft size={24} className="md:w-7 md:h-7" />
+              <ChevronLeft size={32} strokeWidth={3} className="md:w-9 md:h-9" />
             </button>
 
             <button
               onClick={nextRule}
-              className="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-95 hover:bg-opacity-100 text-navy-900 p-3 md:p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110 z-10 opacity-90 hover:opacity-100"
+              className="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 text-white p-3 md:p-4 transition-all duration-300 hover:scale-110 z-10"
+              style={{ 
+                filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8))'
+              }}
             >
-              <ChevronRight size={24} className="md:w-7 md:h-7" />
+              <ChevronRight size={32} strokeWidth={3} className="md:w-9 md:h-9" />
             </button>
           </div>
 

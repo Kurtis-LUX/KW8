@@ -40,23 +40,6 @@ input, select, textarea {
   }
 }
 
-/* Fix per problemi di layout mobile - elementi stabili */
-body {
-  position: fixed;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
-#root {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-}
-
 /* Previeni il bounce scrolling su iOS */
 .no-bounce {
   overscroll-behavior: none;

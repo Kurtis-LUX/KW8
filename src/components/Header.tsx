@@ -74,7 +74,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   };
 
   const scrollToSection = (sectionId: string) => {
-    if (onNavigate) {
+    // Controlla se l'elemento esiste già nella pagina corrente
+    const element = document.getElementById(sectionId);
+    
+    if (element) {
+      // Se l'elemento esiste, fai scroll direttamente senza navigare
+      element.scrollIntoView({ behavior: 'smooth' });
+      setIsMenuOpen(false);
+    } else if (onNavigate) {
+      // Solo se l'elemento non esiste, naviga alla home e poi fai scroll
       onNavigate('home');
       setTimeout(() => {
         const element = document.getElementById(sectionId);
@@ -82,17 +90,20 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           element.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
-    } else {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
+      setIsMenuOpen(false);
     }
-    setIsMenuOpen(false);
   };
 
   const scrollToFooter = () => {
-    if (onNavigate) {
+    // Controlla se il footer esiste già nella pagina corrente
+    const footer = document.querySelector('footer');
+    
+    if (footer) {
+      // Se il footer esiste, fai scroll direttamente senza navigare
+      footer.scrollIntoView({ behavior: 'smooth' });
+      setIsMenuOpen(false);
+    } else if (onNavigate) {
+      // Solo se il footer non esiste, naviga alla home e poi fai scroll
       onNavigate('home');
       setTimeout(() => {
         const footer = document.querySelector('footer');
@@ -100,13 +111,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           footer.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
-    } else {
-      const footer = document.querySelector('footer');
-      if (footer) {
-        footer.scrollIntoView({ behavior: 'smooth' });
-      }
+      setIsMenuOpen(false);
     }
-    setIsMenuOpen(false);
   };
 
   const handleNavigation = (page: string) => {
@@ -194,7 +200,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   return (
     <>
       <header 
-        className={`fixed top-0 left-0 right-0 z-40 ${isScrolled ? 'bg-white shadow-lg' : 'bg-transparent'} backdrop-blur-sm transition-all duration-300 cursor-pointer`}
+        className={`fixed top-0 left-0 right-0 z-40 bg-transparent backdrop-blur-sm transition-all duration-300 cursor-pointer`}
+        style={{ 
+          marginRight: '0px',
+          boxSizing: 'border-box'
+        }}
         onClick={handleHeaderClick}
       >
         <div 

@@ -656,7 +656,6 @@ function App() {
         )}
         <HeroSection currentUser={currentUser} onNavigate={handleNavigation} />
         <StatisticsSection />
-        <SectionSeparator variant="black" />
         {currentUser && currentUser.role === 'coach' ? (
           <EditableGymAreasSection 
             isEditing={false} 
@@ -668,13 +667,9 @@ function App() {
         ) : (
           <GymAreasSection />
         )}
-        <SectionSeparator variant="black" />
         <ScheduleSection currentUser={currentUser} />
-        <SectionSeparator variant="black" />
         <LocationSection />
-        <SectionSeparator variant="black" />
         <EditableStaffSection currentUser={currentUser} />
-        <SectionSeparator variant="black" />
         {currentUser && currentUser.role === 'coach' ? (
           <EditableSubscriptionSection currentUser={currentUser} />
         ) : (
@@ -682,7 +677,6 @@ function App() {
         )}
         <NewsletterSection />
         <TrustpilotSection />
-        <SectionSeparator variant="default" />
         <SocialSection />
         <Footer onNavigate={handleNavigation} />
       

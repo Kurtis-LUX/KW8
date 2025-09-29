@@ -96,7 +96,7 @@ const StatisticsSection: React.FC = () => {
               return (
                 <div 
                   key={index} 
-                  className="text-center transform hover:scale-110 transition-all duration-300"
+                  className="text-center"
                 >
                   <div className="text-5xl md:text-6xl font-bold text-navy-900 mb-2 transition-all duration-300">
                     {stat.number}
@@ -111,28 +111,28 @@ const StatisticsSection: React.FC = () => {
         </div>
 
         {/* Values */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {values.map((value, index) => {
             const Icon = value.icon;
             return (
               <div 
                 key={index} 
-                className={`text-center p-4 rounded-xl bg-white hover:shadow-xl transition-all duration-150 transform hover:-translate-y-2 border border-gray-100 ${
+                className={`text-center p-3 rounded-lg bg-white shadow-lg transition-all duration-150 border border-gray-100 ${
                   isVisible 
                     ? 'translate-y-0 opacity-100 scale-100' 
                     : 'translate-y-8 opacity-0 scale-90'
                 }`}
                 style={{ transitionDelay: `${600 + index * 100}ms` }}
               >
-                <div className={`flex justify-center mb-3 transform hover:scale-110 transition-all duration-150 ${
+                <div className={`flex justify-center mb-2 transition-all duration-150 ${
                   isVisible 
                     ? 'rotate-0 scale-100' 
                     : 'rotate-180 scale-0'
                 }`}
                 style={{ transitionDelay: `${800 + index * 100}ms` }}>
-                  <Icon size={40} className="text-red-600 drop-shadow-sm" />
+                  <Icon size={32} className="text-red-600 drop-shadow-sm" />
                 </div>
-                <h3 className="text-lg font-bold text-navy-900 mb-2">
+                <h3 className="text-base font-bold text-navy-900 mb-1">
                   {value.title}
                 </h3>
                 <p className="text-navy-700 text-xs leading-relaxed">
