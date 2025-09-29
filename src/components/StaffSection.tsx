@@ -232,22 +232,32 @@ const StaffSection: React.FC = () => {
   useEffect(() => {
     if (selectedCoach !== null) {
       // Salva la posizione di scroll corrente
-      setScrollPosition(window.pageYOffset);
+      const currentScrollY = window.pageYOffset;
+      setScrollPosition(currentScrollY);
+      
+      // Applica il blocco dello scroll in modo più stabile
       document.body.style.overflow = 'hidden';
       document.body.style.position = 'fixed';
-      document.body.style.top = `-${window.pageYOffset}px`;
+      document.body.style.top = `-${currentScrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
       document.body.style.width = '100%';
-    } else if (selectedCoach === null && scrollPosition > 0) {
-      // Ripristina la posizione di scroll solo quando si chiude il modal
-      document.body.style.overflow = 'unset';
-      document.body.style.position = 'unset';
-      document.body.style.top = 'unset';
-      document.body.style.width = 'unset';
-      setTimeout(() => {
+    } else if (selectedCoach === null && scrollPosition >= 0) {
+      // Ripristina la posizione di scroll in modo più fluido
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      
+      // Usa requestAnimationFrame per un ripristino più fluido
+      requestAnimationFrame(() => {
         window.scrollTo(0, scrollPosition);
-      }, 0);
+        setScrollPosition(0);
+      });
     }
-  }, [selectedCoach]);
+  }, [selectedCoach, scrollPosition]);
 
   // Mostra indicatore di caricamento se i dati non sono ancora caricati
   if (isLoading) {

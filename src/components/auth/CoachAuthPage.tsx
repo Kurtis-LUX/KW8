@@ -244,21 +244,35 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
               display: flex !important;
               justify-content: center !important;
               align-items: center !important;
+              position: relative !important;
             }
             
             #google-signin-button > div {
-              width: auto !important;
+              width: 240px !important;
               min-width: 240px !important;
-              max-width: 320px !important;
+              max-width: 240px !important;
               height: 44px !important;
               border-radius: 4px !important;
               transition: none !important;
+              transform: none !important;
+              animation: none !important;
+              position: static !important;
             }
             
             #google-signin-button iframe {
-              width: 100% !important;
+              width: 240px !important;
               height: 44px !important;
               border-radius: 4px !important;
+              transition: none !important;
+              transform: none !important;
+              animation: none !important;
+              position: static !important;
+            }
+            
+            #google-signin-button * {
+              transition: none !important;
+              transform: none !important;
+              animation: none !important;
             }
           `}</style>
           

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface ModalProps {
   isOpen: boolean;
@@ -8,19 +8,51 @@ interface ModalProps {
 }
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+  const [scrollPosition, setScrollPosition] = useState(0);
+
   // Blocca lo scroll della pagina quando il modal è aperto
   useEffect(() => {
     if (isOpen) {
+      // Salva la posizione di scroll corrente
+      const currentScrollY = window.pageYOffset;
+      setScrollPosition(currentScrollY);
+      
+      // Applica il blocco dello scroll in modo stabile
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${currentScrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
     } else {
-      document.body.style.overflow = 'unset';
+      // Ripristina la posizione di scroll in modo fluido
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      
+      // Usa requestAnimationFrame per un ripristino più fluido
+      if (scrollPosition > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo(0, scrollPosition);
+        });
+      }
     }
     
     // Cleanup quando il componente viene smontato
     return () => {
-      document.body.style.overflow = 'unset';
+      if (isOpen) {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+      }
     };
-  }, [isOpen]);
+  }, [isOpen, scrollPosition]);
 
   if (!isOpen) return null;
 

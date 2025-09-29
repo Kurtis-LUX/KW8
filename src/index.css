@@ -5,7 +5,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Assicura che body e html abbiano sfondo bianco */
+/* Assicura che body e html abbiano sfondo bianco e layout stabile */
 html, body {
   background-color: white;
   margin: 0;
@@ -15,12 +15,18 @@ html, body {
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
+  /* Stabilizza il layout durante lo scroll */
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   background-color: white;
   width: 100%;
   min-height: 100vh;
+  /* Previeni layout shifts */
+  position: relative;
 }
 
 /* Fix per dispositivi mobili */
@@ -52,6 +58,14 @@ input, select, textarea {
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Previeni layout shifts durante le transizioni */
+.stable-layout {
+  contain: layout style paint;
+  will-change: auto;
 }
 
 /* Fix per viewport mobile */
@@ -62,6 +76,9 @@ input, select, textarea {
   
   body {
     min-height: -webkit-fill-available;
+    /* Stabilizza il layout su mobile */
+    position: relative;
+    overflow-x: hidden;
   }
   
   /* Previeni il ridimensionamento durante la rotazione */
