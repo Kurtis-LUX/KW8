@@ -128,15 +128,26 @@ export const useWorkoutPlans = () => {
     }
   }, []);
 
-  const createPlan = useCallback(async (planData: Omit<WorkoutPlan, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const createPlan = useCallback(async (planData: Omit<WorkoutPlan, 'createdAt' | 'updatedAt'> | WorkoutPlan) => {
     try {
       setError(null);
       
       // Usa localStorage se Firestore è disabilitato
       const firestoreEnabled = isFirestoreEnabled();
+      
+      // Se l'ID è già presente nei dati, usalo; altrimenti generane uno nuovo
+      const planWithId = 'id' in planData && planData.id 
+        ? planData as WorkoutPlan
+        : { 
+            ...planData, 
+            id: Date.now().toString(), 
+            createdAt: new Date().toISOString(), 
+            updatedAt: new Date().toISOString() 
+          };
+      
       const planId = firestoreEnabled
-        ? await firestoreService.createWorkoutPlan(planData)
-        : await DB.saveWorkoutPlan({ ...planData, id: Date.now().toString(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        ? await firestoreService.createWorkoutPlan(planWithId)
+        : await DB.saveWorkoutPlan(planWithId);
         
       await fetchPlans();
       return planId;
@@ -157,7 +168,36 @@ export const useWorkoutPlans = () => {
       } else {
         const existingPlan = await DB.getWorkoutPlanById(id);
         if (existingPlan) {
+          // Aggiorna scheda esistente
           await DB.saveWorkoutPlan({ ...existingPlan, ...planData, updatedAt: new Date().toISOString() });
+        } else {
+          // Crea nuova scheda se non esiste
+          console.log('🆕 Creating new workout plan with ID:', id);
+          const now = new Date().toISOString();
+          const newWorkoutPlan = {
+            id,
+            name: 'Nuova scheda',
+            description: '',
+            coach: 'Coach',
+            startDate: now,
+            duration: 30,
+            exercises: [],
+            category: 'strength' as const,
+            status: 'draft' as const,
+            mediaFiles: { images: [], videos: [], audio: [] },
+            tags: [],
+            order: 0,
+            difficulty: 1,
+            targetMuscles: [],
+            folderId: null,
+            color: '#10B981',
+            variants: [],
+            createdAt: now,
+            updatedAt: now,
+            ...planData // Sovrascrivi con i dati forniti
+          };
+          await DB.saveWorkoutPlan(newWorkoutPlan);
+          console.log('✅ New workout plan created successfully');
         }
       }
       

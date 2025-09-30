@@ -222,7 +222,10 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
                         </div>
                         <div className="flex items-center space-x-2">
                           <Target size={16} />
-                          <span>Esercizi: {workout.exercises?.length || 0}</span>
+                          <span>Esercizi: {
+                            // Mostra sempre il numero di esercizi originali, non delle varianti
+                            workout.exercises?.length || 0
+                          }</span>
                         </div>
                       </div>
                       <div className="mt-4">

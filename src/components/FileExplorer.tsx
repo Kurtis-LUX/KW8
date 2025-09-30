@@ -66,7 +66,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   const [showToolbarDropdown, setShowToolbarDropdown] = useState(false);
   
   // Hook Firestore per gestire i piani di allenamento
-  const { workoutPlans, loading, error, createWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan } = useWorkoutPlans();
+  const { workoutPlans, loading, error, createWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan, refetch } = useWorkoutPlans();
   
   // Hook per il posizionamento del menu toolbar
   const {
@@ -109,6 +109,32 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     offset: 8,
     autoAdjust: true
   });
+
+  // Funzione per contare schede e sottocartelle
+  const getFolderCounts = (folderId: string, allFolders: WorkoutFolder[], allWorkouts: WorkoutPlan[]) => {
+    const subfolders = allFolders.filter(folder => folder.parentId === folderId);
+    const workouts = allWorkouts.filter(workout => workout.folderId === folderId);
+    
+    // Conta ricorsivamente tutte le schede nelle sottocartelle
+    const countWorkoutsRecursive = (folderIds: string[]): number => {
+      let count = 0;
+      folderIds.forEach(id => {
+        count += allWorkouts.filter(workout => workout.folderId === id).length;
+        const childFolders = allFolders.filter(folder => folder.parentId === id);
+        if (childFolders.length > 0) {
+          count += countWorkoutsRecursive(childFolders.map(f => f.id));
+        }
+      });
+      return count;
+    };
+    
+    const totalWorkouts = workouts.length + countWorkoutsRecursive(subfolders.map(f => f.id));
+    
+    return {
+      subfolders: subfolders.length,
+      workouts: totalWorkouts
+    };
+  };
 
   const loadFolderContent = async () => {
     try {
@@ -203,32 +229,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
       </div>
     );
   }
-
-  // Funzione per contare schede e sottocartelle
-  const getFolderCounts = (folderId: string, allFolders: WorkoutFolder[], allWorkouts: WorkoutPlan[]) => {
-    const subfolders = allFolders.filter(folder => folder.parentId === folderId);
-    const workouts = allWorkouts.filter(workout => workout.folderId === folderId);
-    
-    // Conta ricorsivamente tutte le schede nelle sottocartelle
-    const countWorkoutsRecursive = (folderIds: string[]): number => {
-      let count = 0;
-      folderIds.forEach(id => {
-        count += allWorkouts.filter(workout => workout.folderId === id).length;
-        const childFolders = allFolders.filter(folder => folder.parentId === id);
-        if (childFolders.length > 0) {
-          count += countWorkoutsRecursive(childFolders.map(f => f.id));
-        }
-      });
-      return count;
-    };
-    
-    const totalWorkouts = workouts.length + countWorkoutsRecursive(subfolders.map(f => f.id));
-    
-    return {
-      subfolders: subfolders.length,
-      workouts: totalWorkouts
-    };
-  };
 
   // Funzioni drag & drop
   const handleDragStart = (e: React.DragEvent, item: FolderTreeItem) => {
@@ -351,9 +351,13 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     }
   };
 
-  const handleCloseWorkoutDetail = () => {
+  const handleCloseWorkoutDetail = async () => {
     setShowWorkoutDetail(false);
     setSelectedWorkoutId(null);
+    
+    // Ricarica i dati per mostrare le modifiche aggiornate
+    console.log('🔄 FileExplorer: Reloading data after workout detail close...');
+    await refetch();
   };
 
 
@@ -417,6 +421,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
         await loadFolderContent();
       } else {
         const newWorkoutData = {
+          id, // Usa l'ID generato qui
           name: uniqueName,
           description: '',
           coach: currentUser?.name || 'Coach',
@@ -432,7 +437,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
           targetMuscles: [],
           folderId: currentFolderId,
           color: color || '#10B981',
-          variants: variants || []
+          variants: variants || [],
+          createdAt: now,
+          updatedAt: now
         };
         await createWorkoutPlan(newWorkoutData);
         // Non serve chiamare loadFolderContent() qui perché createWorkoutPlan 
@@ -620,19 +627,40 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
               <FolderIcon item={item} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-gray-900 truncate">{item.name}</h3>
+              <h3 className="font-medium text-gray-900 truncate">
+                {item.name}
+              </h3>
               {item.type === 'folder' && (
                 <p className="text-sm text-gray-500">
                   {item.workoutCount || 0} schede, {item.subfolderCount || 0} sottocartelle
                 </p>
               )}
               {item.type === 'file' && item.data && 'coach' in item.data && (
-                <p className="text-sm text-gray-500">
-                  Coach: {item.data.coach}
-                  {item.data && 'variants' in item.data && item.data.variants && item.data.variants.length > 0 && (
-                    <span> • {item.data.variants.length} varianti</span>
+                <div className="flex items-center space-x-2">
+                  <p className="text-sm text-gray-500">
+                    Coach: {item.data.coach}
+                    {item.data && 'variants' in item.data && item.data.variants && item.data.variants.length > 0 && (
+                      <span> • {item.data.variants.length} variant{item.data.variants.length === 1 ? 'e' : 'i'}</span>
+                    )}
+                  </p>
+                  {/* Status indicator */}
+                  {item.data && 'status' in item.data && (
+                    <div className="flex items-center">
+                      <div 
+                        className={`w-2 h-2 rounded-full ${
+                          item.data.status === 'published' ? 'bg-green-500' : 
+                          item.data.status === 'draft' ? 'bg-yellow-500' : 
+                          'bg-gray-400'
+                        }`}
+                        title={
+                          item.data.status === 'published' ? 'Pubblicata' : 
+                          item.data.status === 'draft' ? 'Bozza' : 
+                          'Archiviata'
+                        }
+                      />
+                    </div>
                   )}
-                </p>
+                </div>
               )}
             </div>
           </div>
@@ -642,7 +670,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
             <div className="flex items-center space-x-4 text-xs text-gray-500">
               <div className="flex items-center space-x-1">
                 <Target size={12} />
-                <span>{item.data.exercises?.length || 0} esercizi</span>
+                <span>
+                  {/* Mostra sempre il numero di esercizi originali, non delle varianti */}
+                  {(() => {
+                    const workout = item.data as WorkoutPlan;
+                    // Se la scheda ha varianti, conta solo gli esercizi originali
+                    // Gli esercizi originali sono quelli nella proprietà exercises della scheda principale
+                    return workout.exercises?.length || 0;
+                  })()} esercizi
+                </span>
               </div>
               <div className="flex items-center space-x-1">
                 <Calendar size={12} />

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Edit3, Plus, Save, Copy, Users, Link, ArrowLeft, Eye, X, Trash2 } from 'lucide-react';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
@@ -32,6 +32,11 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   
+  // Refs
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const exerciseDropdownRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  
   // Hook Firestore per gestire i piani di allenamento e gli utenti
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
   const { users: athletes, loading: athletesLoading } = useUsers();
@@ -41,9 +46,14 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [endDate, setEndDate] = useState('');
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [originalExercises, setOriginalExercises] = useState<Exercise[] | null>(null); // Esercizi originali - null indica che non sono ancora stati caricati
   const [showExerciseForm, setShowExerciseForm] = useState(false);
+  const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [showAthleteDropdown, setShowAthleteDropdown] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState('');
   const [workoutStatus, setWorkoutStatus] = useState<'published' | 'draft'>('draft');
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [variants, setVariants] = useState<WorkoutVariant[]>([]);
@@ -64,26 +74,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   
-  // Default exercises (non eliminabili)
-  const defaultExercises = [
-    'Squat',
-    'Panca piana',
-    'Stacco da terra',
-    'Trazioni',
-    'Military press',
-    'Rematore',
-    'Dips',
-    'Curl bicipiti'
-  ];
-  
-  // Custom exercises (eliminabili)
-  const [customExercises, setCustomExercises] = useState<string[]>([]);
-  
-  // Tutti gli esercizi (default + personalizzati)
-  const predefinedExercises = [...defaultExercises, ...customExercises];
-  
-  // Current exercise form state
-  const [currentExercise, setCurrentExercise] = useState({
+  // Exercise form states
+  const [currentExercise, setCurrentExercise] = useState<Exercise>({
+    id: '',
     name: '',
     notes: '',
     sets: '',
@@ -92,49 +85,168 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     recovery: '',
     videoLink: ''
   });
-  
   const [newExerciseName, setNewExerciseName] = useState('');
-  const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
+  const [customExercises, setCustomExercises] = useState<string[]>([]);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
-  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
-  const [showAthleteDropdown, setShowAthleteDropdown] = useState(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   
+  // Predefined exercises list
+  const predefinedExercises = [
+    'Squat', 'Deadlift', 'Bench Press', 'Pull-up', 'Push-up', 'Plank',
+    'Lunges', 'Burpees', 'Mountain Climbers', 'Jumping Jacks'
+  ];
+  
+  // Auto-save functionality
+  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  const autoSave = useCallback(async () => {
+    if (workoutId) {
+      try {
+        console.log('🔄 AutoSave triggered for workout ID:', workoutId);
+        console.log('📊 Current exercises in state:', exercises);
+        console.log('📝 Current workout title:', workoutTitle);
+        
+        let workoutData = await DB.getWorkoutPlanById(workoutId);
+        console.log('🔍 Workout data from DB:', workoutData);
+        
+        // Se il workout non esiste ancora, crealo con i dati di base
+        if (!workoutData) {
+          console.log('🆕 Workout not found, creating new workout with ID:', workoutId);
+          console.log('💪 Creating with exercises:', exercises);
+          const now = new Date().toISOString();
+          const newWorkoutData = {
+            id: workoutId,
+            name: workoutTitle || 'Nuova scheda',
+            description: workoutDescription || '',
+            coach: 'Coach',
+            startDate: startDate || now,
+            duration: 30,
+            exercises: exercises || [], // Include gli esercizi esistenti nella creazione iniziale
+            category: 'strength' as const,
+            status: workoutStatus || 'draft',
+            mediaFiles: { images: [], videos: [], audio: [] },
+            tags: [],
+            order: 0,
+            difficulty: 1,
+            targetMuscles: [],
+            folderId: null,
+            color: '#10B981',
+            variants: [],
+            createdAt: now,
+            updatedAt: now
+          };
+          // Usa updateWorkoutPlan per creare il nuovo workout (che gestisce sia creazione che aggiornamento)
+          console.log('💾 Creating new workout via updateWorkoutPlan:', newWorkoutData);
+          await updateWorkoutPlan(workoutId, newWorkoutData);
+          console.log('✅ New workout created with', exercises.length, 'exercises');
+          
+          // Ricarica i dati dal database per assicurarsi che la scheda sia stata creata
+          workoutData = await DB.getWorkoutPlanById(workoutId);
+          if (!workoutData) {
+            console.error('❌ Failed to create workout in database');
+            return;
+          }
+        }
 
-  
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
-  
-  // Filtra solo gli atleti (ruolo 'athlete')
-  const athletesList = athletes?.filter(user => user.role === 'athlete') || [];
-  
-  useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus();
+        // Calcola automaticamente la durata in giorni se sono presenti entrambe le date
+        let calculatedDuration = workoutData.duration;
+        if (startDate && endDate) {
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          if (end >= start) {
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            calculatedDuration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          }
+        }
+
+        // Aggiorna gli esercizi in base alla variante attiva
+        let exercisesToSave = exercises;
+        let updatedVariants = variants;
+        
+        if (activeVariantId === 'original') {
+          // Se siamo nell'originale, salva gli esercizi nell'originale
+          exercisesToSave = exercises;
+        } else {
+          // Se siamo in una variante, salva gli esercizi nella variante
+          updatedVariants = variants.map(v => 
+            v.id === activeVariantId 
+              ? { ...v, exercises: exercises, updatedAt: new Date().toISOString() }
+              : v
+          );
+          // Per l'originale, mantieni gli esercizi originali
+          exercisesToSave = originalExercises;
+        }
+
+        const updatedWorkout = { 
+          ...workoutData, 
+          name: workoutTitle, 
+          description: workoutDescription,
+          startDate,
+          endDate,
+          duration: calculatedDuration,
+          exercises: exercisesToSave,
+          associatedAthletes,
+          status: workoutStatus,
+          variants: updatedVariants,
+          activeVariantId,
+          originalWorkoutTitle: originalWorkoutTitle || workoutData.originalWorkoutTitle || workoutData.name,
+          updatedAt: new Date().toISOString() 
+        };
+        
+        console.log('💾 Saving workout with exercises:', exercisesToSave.length, 'exercises');
+        console.log('🔍 Exercises to save:', exercisesToSave);
+        console.log('🔄 Updated workout object:', updatedWorkout);
+        await updateWorkoutPlan(workoutId, updatedWorkout);
+        console.log('✅ Workout updated successfully');
+        
+        // Verifica che il salvataggio sia andato a buon fine
+        const verifyData = await DB.getWorkoutPlanById(workoutId);
+        console.log('🔍 Verification: workout after save:', verifyData);
+        console.log('💪 Verification: exercises after save:', verifyData?.exercises);
+      } catch (error) {
+        console.error('Error saving workout:', error);
+      }
     }
-  }, [isEditingTitle]);
+  }, [workoutId, workoutTitle, workoutDescription, startDate, endDate, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, originalWorkoutTitle, updateWorkoutPlan]);
   
+  // Trigger auto-save immediately
+  const triggerAutoSave = useCallback(() => {
+    // Salvataggio istantaneo senza timeout
+    autoSave();
+  }, [autoSave]);
 
-  
   const handleSaveTitle = async () => {
     setIsEditingTitle(false);
-    // Salva il titolo nel database
+    // Salva il titolo nel database e aggiorna la vista
     if (workoutId) {
       try {
         const workoutData = await DB.getWorkoutPlanById(workoutId);
         if (workoutData) {
-          const updatedWorkout = { ...workoutData, name: workoutTitle, updatedAt: new Date().toISOString() };
+          // Se non esiste originalWorkoutTitle, usa il nome corrente come originale
+          // Se esiste già, mantienilo invariato
+          const originalTitle = workoutData.originalWorkoutTitle || workoutData.name;
+          
+          const updatedWorkout = { 
+            ...workoutData, 
+            name: workoutTitle, 
+            originalWorkoutTitle: originalTitle,
+            updatedAt: new Date().toISOString() 
+          };
           await updateWorkoutPlan(workoutId, updatedWorkout);
+          
+          // Aggiorna anche lo stato locale se non era già impostato
+          if (!originalWorkoutTitle) {
+            setOriginalWorkoutTitle(originalTitle);
+          }
         }
       } catch (error) {
         console.error('Error saving title:', error);
       }
     }
   };
-  
+
   const handleSaveDescription = async () => {
     setIsEditingDescription(false);
-    // Salva la descrizione nel database
+    // Salva la descrizione nel database e aggiorna la vista
     if (workoutId) {
       try {
         const workoutData = await DB.getWorkoutPlanById(workoutId);
@@ -154,22 +266,85 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     }
   }, [isEditingDescription]);
 
+  // Handle clicks outside exercise dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exerciseDropdownRef.current && !exerciseDropdownRef.current.contains(event.target as Node)) {
+        setShowExerciseDropdown(false);
+        setShowSearchSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // Carica i dati della scheda dal database
   useEffect(() => {
     const loadWorkoutData = async () => {
       if (workoutId) {
         try {
+          console.log('🔄 Loading workout data for ID:', workoutId);
           const workoutData = await DB.getWorkoutPlanById(workoutId);
+          console.log('📊 Workout data loaded:', workoutData);
+          
           if (workoutData) {
             setWorkoutTitle(workoutData.name);
-            setOriginalWorkoutTitle(workoutData.name);
+            setOriginalWorkoutTitle(workoutData.originalWorkoutTitle || workoutData.name);
             setWorkoutDescription(workoutData.description || '');
-            // Inizializza con la variante principale
-            setVariants([{ id: '1', name: workoutData.name, isActive: true }]);
-            // Carica altri dati se necessario
+            
+            // Carica sempre gli esercizi della scheda corrente, resettando lo stato precedente
+            console.log('💪 Loading exercises for workout:', workoutId, workoutData.exercises);
+            
+            if (workoutData.exercises && workoutData.exercises.length > 0) {
+              setOriginalExercises(workoutData.exercises); // Salva gli esercizi originali
+              setExercises(workoutData.exercises); // Carica sempre gli esercizi della scheda corrente
+              console.log('✅ Exercises loaded from database:', workoutData.exercises);
+            } else {
+              // Resetta sempre a array vuoto per nuove schede
+              setOriginalExercises([]);
+              setExercises([]);
+              console.log('📝 No exercises found, setting empty array for workout:', workoutId);
+            }
+            
+            // Carica gli atleti associati
+            if (workoutData.associatedAthletes) {
+              setAssociatedAthletes(workoutData.associatedAthletes);
+            }
+            
+            // Carica lo status
+            if (workoutData.status) {
+              setWorkoutStatus(workoutData.status);
+            }
+            
+            // Carica le date
+            if (workoutData.startDate) {
+              setStartDate(workoutData.startDate);
+            }
+            if (workoutData.endDate) {
+              setEndDate(workoutData.endDate);
+            }
+            
+            // Carica le varianti se esistono
+            if (workoutData.variants && workoutData.variants.length > 0) {
+              setVariants(workoutData.variants);
+              if (workoutData.activeVariantId) {
+                setActiveVariantId(workoutData.activeVariantId);
+                // Se c'è una variante attiva, carica i suoi esercizi
+                const activeVariant = workoutData.variants.find(v => v.id === workoutData.activeVariantId);
+                if (activeVariant && activeVariant.exercises) {
+                  setExercises(activeVariant.exercises);
+                }
+              }
+            } else {
+              // Non inizializzare varianti di default - lascia l'array vuoto
+              setVariants([]);
+            }
           }
         } catch (error) {
-          console.error('Error loading workout data:', error);
+          console.error('❌ Error loading workout data:', error);
         }
       }
     };
@@ -177,9 +352,24 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     loadWorkoutData();
   }, [workoutId]);
   
+  // Auto-save function with debouncing is already defined above
+
+  // Debounced auto-save effect - ora istantaneo
+  useEffect(() => {
+    // Solo salva se i dati sono stati caricati (evita di salvare durante il caricamento iniziale)
+    if (workoutId && originalExercises !== null) {
+      console.log('🔄 Auto-save effect triggered - data loaded, proceeding with save');
+      autoSave();
+    } else {
+      console.log('⏳ Auto-save effect triggered - waiting for data to load');
+    }
+  }, [workoutTitle, workoutDescription, startDate, endDate, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, autoSave, originalExercises]);
 
   
   const handleAddExercise = () => {
+    console.log('➕ Adding new exercise to workout ID:', workoutId);
+    console.log('📊 Current exercises before adding:', exercises);
+    
     if (editingExerciseId) {
       handleUpdateExercise();
     } else {
@@ -188,7 +378,12 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
           id: Date.now().toString(),
           ...currentExercise
         };
-        setExercises([...exercises, newExercise]);
+        console.log('🆕 New exercise created:', newExercise);
+        
+        const updatedExercises = [...exercises, newExercise];
+        console.log('📊 Exercises after adding:', updatedExercises);
+        
+        setExercises(updatedExercises);
         setCurrentExercise({
           name: '',
           notes: '',
@@ -199,15 +394,30 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
           videoLink: ''
         });
         setShowExerciseForm(false);
+        
+        // Trigger auto-save immediately for exercise changes
+        console.log('🔄 Triggering auto-save after adding exercise');
+        triggerAutoSave();
       }
     }
   };
   
-  const handleSaveCustomExercise = () => {
-    if (newExerciseName.trim() && !predefinedExercises.includes(newExerciseName)) {
-      setCustomExercises([...customExercises, newExerciseName]);
-      setCurrentExercise({ ...currentExercise, name: newExerciseName });
-      setNewExerciseName('');
+  const handleSaveCustomExercise = (exerciseName?: string) => {
+    const nameToSave = exerciseName || newExerciseName;
+    if (nameToSave.trim() && !predefinedExercises.includes(nameToSave) && !customExercises.includes(nameToSave)) {
+      setCustomExercises([...customExercises, nameToSave]);
+      if (exerciseName) {
+        // Se viene passato un nome, aggiorna il campo corrente
+        if (editingExercise) {
+          setEditingExercise({ ...editingExercise, name: nameToSave });
+        } else {
+          setCurrentExercise({ ...currentExercise, name: nameToSave });
+        }
+      } else {
+        // Se non viene passato un nome, usa il comportamento originale
+        setCurrentExercise({ ...currentExercise, name: nameToSave });
+        setNewExerciseName('');
+      }
     }
   };
   
@@ -277,6 +487,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     const link = `${window.location.origin}/workout/${workoutId}`;
     setGeneratedLink(link);
     setShowLinkModal(true);
+    
+    // Trigger auto-save to update link generation timestamp
+    triggerAutoSave();
   };
   
   const handleCopyLink = () => {
@@ -284,29 +497,86 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     alert('Link copiato negli appunti!');
   };
   
-  const handleCloneWorkout = () => {
+  const handleCloneWorkout = async () => {
+    // Calcola il numero della prossima variante
+    const existingVariantNumbers = variants
+      .map(v => {
+        const match = v.name.match(/Variante (\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      })
+      .filter(num => num > 0);
+    
+    const nextVariantNumber = existingVariantNumbers.length > 0 
+      ? Math.max(...existingVariantNumbers) + 1 
+      : 1;
+
     const newVariant: WorkoutVariant = {
       id: Date.now().toString(),
-      name: `Variante di ${originalWorkoutTitle}`,
-      isActive: false
+      name: `Variante ${nextVariantNumber}`,
+      isActive: true, // La nuova variante diventa attiva
+      exercises: [...originalExercises], // Inizia con una copia degli esercizi originali
+      parentWorkoutId: workoutId,
+      modifications: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
-    setVariants([...variants, newVariant]);
+    
+    // Disattiva tutte le altre varianti e attiva la nuova
+    const updatedVariants = [...variants.map(v => ({ ...v, isActive: false })), newVariant];
+    setVariants(updatedVariants);
+    setActiveVariantId(newVariant.id);
+    
+    // Carica gli esercizi della nuova variante
+    setExercises([...originalExercises]);
+    
+    // NON modificare il titolo della scheda - mantieni quello originale
+    // La variante avrà il suo nome ma la scheda mantiene il titolo originale
+    
+    // Salva immediatamente le modifiche nel database
+    try {
+      const workoutData = await DB.getWorkoutPlanById(workoutId);
+      if (workoutData) {
+        const updatedWorkout = { 
+          ...workoutData, 
+          variants: updatedVariants,
+          activeVariantId: newVariant.id,
+          updatedAt: new Date().toISOString() 
+        };
+        await updateWorkoutPlan(workoutId, updatedWorkout);
+      }
+    } catch (error) {
+      console.error('Error saving new variant:', error);
+    }
   };
   
   const handleSwitchVariant = (variantId: string) => {
     setVariants(variants.map(v => ({ ...v, isActive: v.id === variantId })));
     setActiveVariantId(variantId);
-    const activeVariant = variants.find(v => v.id === variantId);
-    if (activeVariant) {
-      setWorkoutTitle(activeVariant.name);
+    
+    // Carica gli esercizi della variante selezionata
+    if (variantId === 'original') {
+      // Torna agli esercizi originali
+      setExercises(originalExercises);
+    } else {
+      // Carica gli esercizi della variante
+      const selectedVariant = variants.find(v => v.id === variantId);
+      if (selectedVariant && selectedVariant.exercises) {
+        setExercises(selectedVariant.exercises);
+      } else {
+        // Se la variante non ha esercizi, inizia con una copia degli originali
+        setExercises([...originalExercises]);
+      }
     }
-    // Non modificare il titolo originale quando si cambia variante
+    
+    // NON modificare il titolo della scheda quando si cambia variante
+    // Il titolo della scheda rimane sempre quello originale
+    // Solo il nome della variante cambia nei tab
   };
   
   const handleRemoveVariant = (variantId: string) => {
     showConfirmation(
       'Vuoi davvero chiudere questa variante della scheda?',
-      () => {
+      async () => {
         const updatedVariants = variants.filter(v => v.id !== variantId);
         setVariants(updatedVariants);
         
@@ -316,7 +586,6 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             // Passa alla prima variante disponibile
             const nextVariant = updatedVariants[0];
             setActiveVariantId(nextVariant.id);
-            setWorkoutTitle(nextVariant.name);
             // Aggiorna lo stato di attivazione delle varianti
             setVariants(updatedVariants.map(v => ({ 
               ...v, 
@@ -324,8 +593,25 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             })));
           } else {
             // Se non ci sono più varianti, torna alla scheda originale
-            onClose();
+            setActiveVariantId('original');
+            setVariants([]);
           }
+        }
+        
+        // Salva immediatamente le modifiche nel database
+        try {
+          const workoutData = await DB.getWorkoutPlanById(workoutId);
+          if (workoutData) {
+            const updatedWorkout = { 
+              ...workoutData, 
+              variants: updatedVariants,
+              activeVariantId: activeVariantId === variantId ? (updatedVariants[0]?.id || null) : activeVariantId,
+              updatedAt: new Date().toISOString() 
+            };
+            await updateWorkoutPlan(workoutId, updatedWorkout);
+          }
+        } catch (error) {
+          console.error('Error saving variant deletion:', error);
         }
       }
     );
@@ -344,46 +630,53 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   
   const handleAssociateAthlete = (athlete: string) => {
     if (!associatedAthletes.includes(athlete)) {
-      setAssociatedAthletes([...associatedAthletes, athlete]);
+      const updatedAthletes = [...associatedAthletes, athlete];
+      setAssociatedAthletes(updatedAthletes);
+      setShowAthleteDropdown(false);
+      
+      // Trigger auto-save immediately for athlete association
+      triggerAutoSave();
     }
-    setSelectedAthlete(athlete);
-    setShowAthleteDropdown(false);
   };
   
   const handleRemoveAthlete = (athlete: string) => {
-    showConfirmation(
-      'Vuoi davvero rimuovere questo atleta dalla scheda?',
-      () => {
-        setAssociatedAthletes(associatedAthletes.filter(a => a !== athlete));
-        if (selectedAthlete === athlete) {
-          setSelectedAthlete('');
-        }
-      }
-    );
+    const updatedAthletes = associatedAthletes.filter(a => a !== athlete);
+    setAssociatedAthletes(updatedAthletes);
+    
+    // Trigger auto-save immediately for athlete removal
+    triggerAutoSave();
   };
   
   const handleEditExercise = (exercise: Exercise) => {
     setEditingExerciseId(exercise.id);
     setEditingExercise({ ...exercise });
-    setShowExerciseForm(true);
+    setShowExerciseDropdown(true);
   };
   
   const handleUpdateExercise = () => {
     if (editingExercise && editingExerciseId) {
-      setExercises(exercises.map(ex => 
+      const updatedExercises = exercises.map(ex => 
         ex.id === editingExerciseId ? editingExercise : ex
-      ));
+      );
+      setExercises(updatedExercises);
       setEditingExerciseId(null);
       setEditingExercise(null);
-      setShowExerciseForm(false);
+      setShowExerciseDropdown(false);
+      
+      // Trigger auto-save immediately for exercise updates
+      triggerAutoSave();
     }
   };
   
   const handleRemoveExercise = (exerciseId: string) => {
     showConfirmation(
-      'Vuoi davvero rimuovere questo esercizio dalla scheda?',
+      'Sei sicuro di voler rimuovere questo esercizio?',
       () => {
-        setExercises(exercises.filter(ex => ex.id !== exerciseId));
+        const updatedExercises = exercises.filter(ex => ex.id !== exerciseId);
+        setExercises(updatedExercises);
+        
+        // Trigger auto-save immediately for exercise removal
+        triggerAutoSave();
       }
     );
   };
@@ -395,9 +688,27 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   return (
     <div>
       {/* Workout Variants Tabs */}
-      {variants.length > 1 && (
+      {variants.length > 0 && (
         <div className="mb-6 bg-gray-50 p-6">
           <div className="flex space-x-2 border-b border-gray-200">
+            {/* Tab per la scheda originale */}
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setVariants(variants.map(v => ({ ...v, isActive: false })));
+                  setActiveVariantId('original');
+                }}
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                  !variants.some(v => v.isActive)
+                    ? 'bg-blue-500 text-white border-b-2 border-blue-500'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {originalWorkoutTitle || workoutTitle}
+              </button>
+            </div>
+            
+            {/* Tab per le varianti */}
             {variants.map((variant) => (
               <div key={variant.id} className="relative">
                 <button
@@ -648,10 +959,10 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               <div className="max-h-40 overflow-y-auto">
                 {athletesLoading ? (
                   <div className="p-4 text-gray-500 text-center">Caricamento atleti...</div>
-                ) : athletesList.length === 0 ? (
+                ) : athletes.length === 0 ? (
                   <div className="p-4 text-gray-500 text-center">Nessun atleta disponibile</div>
                 ) : (
-                  athletesList.map((athlete) => (
+                  athletes.map((athlete) => (
                     <button
                       key={athlete.id}
                       onClick={() => handleAssociateAthlete(athlete.name)}
@@ -745,7 +1056,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Esercizio</label>
               <div className="flex space-x-2">
-                <div className="flex-1 relative">
+                <div className="flex-1 relative" ref={exerciseDropdownRef}>
                   <input
                     type="text"
                     value={editingExercise ? editingExercise.name : currentExercise.name}
@@ -833,6 +1144,24 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                     </div>
                   )}
                 </div>
+                
+                {/* Save New Exercise Button */}
+                {(editingExercise ? editingExercise.name : currentExercise.name).trim() && 
+                 !getFilteredExercises().includes(editingExercise ? editingExercise.name : currentExercise.name) && (
+                  <button
+                    onClick={() => {
+                      const exerciseName = editingExercise ? editingExercise.name : currentExercise.name;
+                      if (exerciseName.trim() && !predefinedExercises.includes(exerciseName) && !customExercises.includes(exerciseName)) {
+                        handleSaveCustomExercise(exerciseName);
+                      }
+                    }}
+                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center"
+                    title="Salva nuovo esercizio"
+                  >
+                    <Save size={16} />
+                  </button>
+                )}
+                
                 <div className="relative">
                   <button
                     onClick={() => {
@@ -882,23 +1211,6 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                     </div>
                   )}
                 </div>
-              </div>
-              
-              {/* Add Custom Exercise */}
-              <div className="mt-2 flex space-x-2">
-                <input
-                  type="text"
-                  value={newExerciseName}
-                  onChange={(e) => setNewExerciseName(e.target.value)}
-                  placeholder="Aggiungi nuovo esercizio personalizzato"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <button
-                  onClick={handleSaveCustomExercise}
-                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
-                >
-                  <Save size={16} />
-                </button>
               </div>
             </div>
             
@@ -950,7 +1262,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                       setCurrentExercise({ ...currentExercise, intensity: e.target.value });
                     }
                   }}
-                  placeholder="es. 70% 1RM"
+                  placeholder="es. RPE 8 o RIR 2 o 70% 1RM"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -1039,9 +1351,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         )}
         
         {/* Exercises List */}
-        {exercises.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4">Esercizi</h3>
+        <div className="mb-8">
+          <h3 className="text-xl font-semibold mb-4">Esercizi</h3>
+          {exercises.length > 0 ? (
             <div className="space-y-4">
               {exercises.map((exercise) => (
                 <div key={exercise.id} className="p-4 bg-gray-50 rounded-lg">
@@ -1082,8 +1394,13 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="text-gray-500 text-center py-8">
+              <p>Nessun esercizio aggiunto ancora.</p>
+              <p className="text-sm mt-2">Clicca su "Aggiungi Esercizio" per iniziare.</p>
+            </div>
+          )}
+        </div>
       </div>
       
       {/* Link Generation Modal */}

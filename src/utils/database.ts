@@ -21,6 +21,7 @@ export interface WorkoutPlan {
   description?: string;
   coach: string;
   startDate: string;
+  endDate?: string; // Data di fine per calcolo durata
   duration: number; // in giorni
   exercises: Exercise[];
   category?: string;
@@ -39,6 +40,7 @@ export interface WorkoutPlan {
   folderId?: string; // ID della cartella contenitore
   color?: string;
   variants?: WorkoutVariant[];
+  originalWorkoutTitle?: string; // Titolo originale per le varianti
 }
 
 export interface WorkoutVariant {
@@ -46,6 +48,7 @@ export interface WorkoutVariant {
   name: string;
   description?: string;
   parentWorkoutId: string;
+  exercises?: Exercise[]; // Esercizi specifici della variante
   modifications: {
     exerciseId: string;
     changes: {

@@ -38,9 +38,25 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
   const handleAddVariant = () => {
     if (!variantName.trim()) return;
 
+    // Calcola il numero della prossima variante
+    const variantNumbers = variants
+      .map(v => {
+        const match = v.name.match(/^Variante (\d+) di/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(num => num > 0);
+    
+    const nextVariantNumber = variantNumbers.length > 0 ? Math.max(...variantNumbers) + 1 : 1;
+    
+    // Se il nome inserito non segue il pattern "Variante X di", lo formattiamo automaticamente
+    let finalVariantName = variantName.trim();
+    if (!finalVariantName.startsWith('Variante ') || !finalVariantName.includes(' di ')) {
+      finalVariantName = `Variante ${nextVariantNumber} di "${finalVariantName}"`;
+    }
+
     const newVariant: WorkoutVariant = {
       id: `variant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: variantName.trim(),
+      name: finalVariantName,
       description: variantDescription.trim() || undefined,
       parentWorkoutId: workoutId || '',
       modifications: [],
