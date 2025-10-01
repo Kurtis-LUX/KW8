@@ -103,7 +103,11 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
       {/* Tabs */}
       <div className="flex bg-gray-100 rounded-lg p-1">
         <button
-          onClick={() => setActiveTab('icon')}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setActiveTab('icon');
+          }}
           className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
             activeTab === 'icon' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
           }`}
@@ -111,7 +115,11 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
           Icona
         </button>
         <button
-          onClick={() => setActiveTab('color')}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setActiveTab('color');
+          }}
           className={`flex-1 py-2 px-4 rounded-md font-medium transition-colors ${
             activeTab === 'color' ? 'bg-white shadow-sm' : 'hover:bg-gray-200'
           }`}
@@ -130,7 +138,11 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
             return (
               <button
                 key={icon.name}
-                onClick={() => onIconChange(icon.name)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onIconChange(icon.name);
+                }}
                 className={`p-3 rounded-lg border-2 transition-all hover:scale-105 ${
                   isSelected
                     ? 'border-red-500 bg-red-50'
@@ -157,7 +169,11 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
             return (
               <button
                 key={color.value}
-                onClick={() => onColorChange(color.value)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onColorChange(color.value);
+                }}
                 className={`p-3 rounded-lg border-2 transition-all hover:scale-105 ${
                   isSelected
                     ? 'border-gray-800 ring-2 ring-gray-300'

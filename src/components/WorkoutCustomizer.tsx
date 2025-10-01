@@ -121,7 +121,11 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
           {AVAILABLE_COLORS.map((color) => (
             <button
               key={color}
-              onClick={() => onColorChange(color)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onColorChange(color);
+              }}
               className={`w-8 h-8 rounded-full border-2 transition-all ${
                 selectedColor === color
                   ? 'border-gray-800 scale-110'
@@ -154,7 +158,11 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
             Varianti ({variants.length})
           </label>
           <button
-            onClick={() => setShowVariantForm(true)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowVariantForm(true);
+            }}
             className="flex items-center space-x-1 text-sm text-red-600 hover:text-red-700"
           >
             <Plus size={14} />
@@ -178,13 +186,21 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => handleEditVariant(variant)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleEditVariant(variant);
+                    }}
                     className="p-1 text-gray-500 hover:text-gray-700"
                   >
                     <Edit3 size={14} />
                   </button>
                   <button
-                    onClick={() => handleDeleteVariant(variant.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteVariant(variant.id);
+                    }}
                     className="p-1 text-red-500 hover:text-red-700"
                   >
                     <Trash2 size={14} />

@@ -934,26 +934,21 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
                          </div>
                        </div>
                      </div>
-                     
-                     <hr className="my-2" />
-                     
-                     {/* Crea nuovo */}
-                     <button
-                       onClick={() => {
-                         setShowCreateModal(true);
-                         closeToolbarDropdown();
-                       }}
-                       className="dropdown-item text-red-600 hover:bg-red-50 font-medium"
-                     >
-                       <Plus size={16} />
-                       <span>Crea nuovo</span>
-                     </button>
                    </div>
                  </Portal>
                )}
              </div>
+
+             {/* Pulsante Aggiungi */}
+             <button
+               onClick={() => setShowCreateModal(true)}
+               className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105"
+             >
+               <Plus size={16} />
+               <span>Aggiungi</span>
+             </button>
            </div>
-        </div>
+         </div>
         
         <div className="flex items-center justify-between">
           {/* Breadcrumb con pulsante indietro */}
