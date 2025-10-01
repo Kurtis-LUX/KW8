@@ -83,6 +83,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
     autoAdjust: true
   });
   const [showTreeView, setShowTreeView] = useState(false);
+  const [showFiltersSubmenu, setShowFiltersSubmenu] = useState(false);
   const [treeViewKey, setTreeViewKey] = useState(0); // Per forzare il re-render del TreeView
   const [draggedItem, setDraggedItem] = useState<FolderTreeItem | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
@@ -811,7 +812,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
                  <Portal>
                    <div 
                      ref={toolbarDropdownRef}
-                     className="dropdown-menu w-64"
+                     className="dropdown-menu w-64 max-h-96 overflow-y-auto"
                      style={{
                        position: 'fixed',
                        left: toolbarPosition?.left || 0,
@@ -870,69 +871,82 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
                      
                      <hr className="my-2" />
                      
-                     {/* Filtri */}
-                     <div className="px-4 py-2">
-                       <p className="text-sm font-medium text-gray-700 mb-2">Filtri</p>
-                       <div className="space-y-3">
-                         {/* Filtri tipo */}
-                         <div>
-                           <label className="block text-xs font-medium text-gray-600 mb-1">Mostra</label>
-                           <div className="space-y-1">
-                             <label className="flex items-center text-sm">
-                               <input
-                                 type="checkbox"
-                                 checked={filters.showFolders}
-                                 onChange={(e) => setFilters(prev => ({ ...prev, showFolders: e.target.checked }))}
-                                 className="mr-2 text-red-600 focus:ring-red-500"
-                               />
-                               <Folder size={14} className="mr-1" />
-                               Cartelle
-                             </label>
-                             <label className="flex items-center text-sm">
-                               <input
-                                 type="checkbox"
-                                 checked={filters.showWorkouts}
-                                 onChange={(e) => setFilters(prev => ({ ...prev, showWorkouts: e.target.checked }))}
-                                 className="mr-2 text-red-600 focus:ring-red-500"
-                               />
-                               <FileText size={14} className="mr-1" />
-                               Schede
-                             </label>
+                     {/* Filtri - Menu a tendina interno */}
+                     <div className="relative">
+                       <button
+                         onClick={() => setShowFiltersSubmenu(!showFiltersSubmenu)}
+                         className="dropdown-item justify-between w-full"
+                       >
+                         <div className="flex items-center space-x-3">
+                           <Filter size={16} />
+                           <span>Filtri</span>
+                         </div>
+                         <ChevronRight size={14} className={`transition-transform duration-200 ${showFiltersSubmenu ? 'rotate-90' : ''}`} />
+                       </button>
+                       
+                       {/* Submenu Filtri */}
+                       {showFiltersSubmenu && (
+                         <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200 pl-4">
+                           {/* Filtri tipo */}
+                           <div>
+                             <label className="block text-xs font-medium text-gray-600 mb-1">Mostra</label>
+                             <div className="space-y-1">
+                               <label className="flex items-center text-sm">
+                                 <input
+                                   type="checkbox"
+                                   checked={filters.showFolders}
+                                   onChange={(e) => setFilters(prev => ({ ...prev, showFolders: e.target.checked }))}
+                                   className="mr-2 text-red-600 focus:ring-red-500"
+                                 />
+                                 <Folder size={14} className="mr-1" />
+                                 Cartelle
+                               </label>
+                               <label className="flex items-center text-sm">
+                                 <input
+                                   type="checkbox"
+                                   checked={filters.showWorkouts}
+                                   onChange={(e) => setFilters(prev => ({ ...prev, showWorkouts: e.target.checked }))}
+                                   className="mr-2 text-red-600 focus:ring-red-500"
+                                 />
+                                 <FileText size={14} className="mr-1" />
+                                 Schede
+                               </label>
+                             </div>
+                           </div>
+                           
+                           {/* Ordinamento */}
+                           <div>
+                             <label className="block text-xs font-medium text-gray-600 mb-1">Ordina per</label>
+                             <select
+                               value={filters.sortBy}
+                               onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as 'name' | 'date' }))}
+                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-transparent"
+                             >
+                               <option value="name">Nome</option>
+                               <option value="date">Data creazione</option>
+                             </select>
+                           </div>
+                           
+                           {/* Azioni filtri */}
+                           <div className="flex justify-between pt-2">
+                             <button
+                               onClick={() => {
+                                 setSearchTerm('');
+                                 setFilters({ showFolders: false, showWorkouts: false, sortBy: 'name' });
+                               }}
+                               className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50"
+                             >
+                               Reset
+                             </button>
+                             <button
+                               onClick={() => setShowFiltersSubmenu(false)}
+                               className="px-2 py-1 text-xs text-white bg-red-600 hover:bg-red-700 rounded"
+                             >
+                               Applica
+                             </button>
                            </div>
                          </div>
-                         
-                         {/* Ordinamento */}
-                         <div>
-                           <label className="block text-xs font-medium text-gray-600 mb-1">Ordina per</label>
-                           <select
-                             value={filters.sortBy}
-                             onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as 'name' | 'date' }))}
-                             className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-transparent"
-                           >
-                             <option value="name">Nome</option>
-                             <option value="date">Data creazione</option>
-                           </select>
-                         </div>
-                         
-                         {/* Azioni filtri */}
-                         <div className="flex justify-between pt-2">
-                           <button
-                             onClick={() => {
-                               setSearchTerm('');
-                               setFilters({ showFolders: false, showWorkouts: false, sortBy: 'name' });
-                             }}
-                             className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50"
-                           >
-                             Reset
-                           </button>
-                           <button
-                             onClick={closeToolbarDropdown}
-                             className="px-2 py-1 text-xs text-white bg-red-600 hover:bg-red-700 rounded"
-                           >
-                             Applica
-                           </button>
-                         </div>
-                       </div>
+                       )}
                      </div>
                    </div>
                  </Portal>

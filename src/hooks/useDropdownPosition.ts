@@ -46,8 +46,11 @@ export const useDropdownPosition = ({
     
     // Su mobile, usa document.documentElement.scrollTop/Left per maggiore affidabilità
     const isMobile = window.innerWidth <= 768;
-    const scrollX = isMobile ? (document.documentElement.scrollLeft || document.body.scrollLeft || window.scrollX) : window.scrollX;
-    const scrollY = isMobile ? (document.documentElement.scrollTop || document.body.scrollTop || window.scrollY) : window.scrollY;
+    
+    // Su mobile, non aggiungere scroll perché usiamo position: fixed
+    // che è relativo al viewport, non al documento
+    const scrollX = 0;
+    const scrollY = 0;
 
     let top = 0;
     let left = 0;
@@ -60,17 +63,21 @@ export const useDropdownPosition = ({
       switch (preferredPosition) {
         case 'bottom-right':
         case 'top-right':
-          top = triggerRect.bottom + scrollY + offset;
+          top = triggerRect.bottom + offset;
           // Su mobile, allinea il dropdown al bordo destro del trigger per evitare overflow
-          left = Math.max(8, triggerRect.right + scrollX - dropdownRect.width);
+          left = Math.max(8, triggerRect.right - dropdownRect.width);
           break;
         case 'bottom-left':
         case 'top-left':
-          top = triggerRect.bottom + scrollY + offset;
-          left = triggerRect.left + scrollX;
+          top = triggerRect.bottom + offset;
+          left = triggerRect.left;
           break;
       }
     } else {
+      // Desktop: usa scroll normale
+      const scrollX = window.scrollX;
+      const scrollY = window.scrollY;
+      
       switch (preferredPosition) {
         case 'bottom-right':
           top = triggerRect.bottom + scrollY + offset;
@@ -97,34 +104,38 @@ export const useDropdownPosition = ({
       const horizontalMargin = isMobile ? 16 : 8;
       const verticalMargin = isMobile ? 16 : 8;
       
+      // Su mobile, usa coordinate viewport-relative per i controlli
+      const checkScrollX = isMobile ? 0 : (window.scrollX || 0);
+      const checkScrollY = isMobile ? 0 : (window.scrollY || 0);
+      
       // Controlla se il dropdown esce dal viewport orizzontalmente
-      if (left < scrollX) {
-        left = scrollX + horizontalMargin;
-      } else if (left + dropdownRect.width > scrollX + viewportWidth) {
-        left = scrollX + viewportWidth - dropdownRect.width - horizontalMargin;
+      if (left < checkScrollX) {
+        left = checkScrollX + horizontalMargin;
+      } else if (left + dropdownRect.width > checkScrollX + viewportWidth) {
+        left = checkScrollX + viewportWidth - dropdownRect.width - horizontalMargin;
       }
 
       // Controlla se il dropdown esce dal viewport verticalmente
-      if (top < scrollY) {
+      if (top < checkScrollY) {
         // Se non c'è spazio sopra, posiziona sotto
-        top = triggerRect.bottom + scrollY + offset;
-      } else if (top + dropdownRect.height > scrollY + viewportHeight) {
+        top = (isMobile ? triggerRect.bottom : triggerRect.bottom + (window.scrollY || 0)) + offset;
+      } else if (top + dropdownRect.height > checkScrollY + viewportHeight) {
         // Se non c'è spazio sotto, posiziona sopra
-        top = triggerRect.top + scrollY - dropdownRect.height - offset;
+        top = (isMobile ? triggerRect.top : triggerRect.top + (window.scrollY || 0)) - dropdownRect.height - offset;
         
         // Se ancora non c'è spazio, posiziona al centro del viewport con margini
-        if (top < scrollY) {
-          top = scrollY + verticalMargin;
+        if (top < checkScrollY) {
+          top = checkScrollY + verticalMargin;
           // Su mobile, assicurati che il dropdown non sia troppo alto
           if (isMobile && dropdownRect.height > viewportHeight - (verticalMargin * 2)) {
-            top = scrollY + (viewportHeight - dropdownRect.height) / 2;
+            top = checkScrollY + (viewportHeight - dropdownRect.height) / 2;
           }
         }
       }
       
       // Su mobile, assicurati che il dropdown non vada mai sotto la fold
-      if (isMobile && top + dropdownRect.height > scrollY + viewportHeight) {
-        top = scrollY + viewportHeight - dropdownRect.height - verticalMargin;
+      if (isMobile && top + dropdownRect.height > checkScrollY + viewportHeight) {
+        top = checkScrollY + viewportHeight - dropdownRect.height - verticalMargin;
       }
     }
 
