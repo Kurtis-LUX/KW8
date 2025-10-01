@@ -61,7 +61,8 @@ export const useDropdownPosition = ({
         case 'bottom-right':
         case 'top-right':
           top = triggerRect.bottom + scrollY + offset;
-          left = triggerRect.right + scrollX - dropdownRect.width;
+          // Su mobile, allinea il dropdown al centro del trigger per una migliore accessibilità
+          left = triggerRect.left + scrollX + (triggerRect.width / 2) - (dropdownRect.width / 2);
           break;
         case 'bottom-left':
         case 'top-left':

@@ -799,11 +799,11 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
               <button
                 ref={toolbarTriggerRef}
                 onClick={toggleToolbarDropdown}
-                className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105"
+                className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105 sm:px-4 px-2"
               >
                 <Menu size={16} />
-                <span>Menu</span>
-                <ChevronDown size={14} className={`transition-transform duration-200 ${isToolbarOpen ? 'rotate-180' : ''}`} />
+                <span className="hidden sm:inline">Menu</span>
+                <ChevronDown size={14} className={`transition-transform duration-200 ${isToolbarOpen ? 'rotate-180' : ''} hidden sm:inline`} />
                </button>
                
                {/* Dropdown Menu con Portal */}
@@ -942,10 +942,10 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
              {/* Pulsante Aggiungi */}
              <button
                onClick={() => setShowCreateModal(true)}
-               className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105"
+               className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105 sm:px-4 px-2"
              >
                <Plus size={16} />
-               <span>Aggiungi</span>
+               <span className="hidden sm:inline">Aggiungi</span>
              </button>
            </div>
          </div>
