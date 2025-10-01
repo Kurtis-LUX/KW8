@@ -42,9 +42,8 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const { users: athletes, loading: athletesLoading } = useUsers();
   
   // Gestione tempo scheda
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [isEditingDates, setIsEditingDates] = useState(false);
+  const [durationWeeks, setDurationWeeks] = useState(1);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [originalExercises, setOriginalExercises] = useState<Exercise[] | null>(null); // Esercizi originali - null indica che non sono ancora stati caricati
   const [showExerciseForm, setShowExerciseForm] = useState(false);
@@ -57,7 +56,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [variants, setVariants] = useState<WorkoutVariant[]>([]);
-  const [activeVariantId, setActiveVariantId] = useState('1');
+  const [activeVariantId, setActiveVariantId] = useState('original');
   const [originalWorkoutTitle, setOriginalWorkoutTitle] = useState('');
   
   // Athletes management
@@ -86,13 +85,120 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     videoLink: ''
   });
   const [newExerciseName, setNewExerciseName] = useState('');
+  
+  // Separate sets and reps state
+  const [currentSets, setCurrentSets] = useState('');
+  const [currentReps, setCurrentReps] = useState('');
+  const [editingSets, setEditingSets] = useState('');
+  const [editingReps, setEditingReps] = useState('');
   const [customExercises, setCustomExercises] = useState<string[]>([]);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
   
-  // Predefined exercises list
+  // Predefined exercises list - Comprehensive list organized by muscle groups
   const predefinedExercises = [
-    'Squat', 'Deadlift', 'Bench Press', 'Pull-up', 'Push-up', 'Plank',
-    'Lunges', 'Burpees', 'Mountain Climbers', 'Jumping Jacks'
+    // PETTO
+    'Panca Piana', 'Panca Inclinata', 'Panca Declinata', 'Panca con Manubri', 
+    'Panca Inclinata con Manubri', 'Croci su Panca', 'Croci Inclinata', 'Croci ai Cavi',
+    'Dips alle Parallele', 'Push-up', 'Push-up Inclinati', 'Push-up Declinati',
+    'Chest Press', 'Pectoral Machine', 'Cable Crossover',
+    
+    // SCHIENA
+    'Stacco da Terra', 'Stacco Rumeno', 'Stacco Sumo', 'Trazioni alla Sbarra',
+    'Trazioni Presa Larga', 'Trazioni Presa Stretta', 'Lat Machine', 'Lat Machine Presa Stretta',
+    'Rematore con Bilanciere', 'Rematore con Manubrio', 'Rematore ai Cavi', 'Pulley Basso',
+    'T-Bar Row', 'Seal Row', 'Hyperextension', 'Good Morning', 'Shrug con Bilanciere',
+    'Shrug con Manubri', 'Face Pull', 'Reverse Fly',
+    
+    // GAMBE - QUADRICIPITI
+    'Squat', 'Squat Frontale', 'Squat Bulgaro', 'Squat Sumo', 'Hack Squat',
+    'Leg Press', 'Leg Press 45°', 'Leg Extension', 'Affondi', 'Affondi Laterali',
+    'Affondi Inversi', 'Step Up', 'Sissy Squat', 'Wall Sit',
+    
+    // GAMBE - FEMORALI E GLUTEI
+    'Stacco Rumeno', 'Stacco a Gambe Tese', 'Leg Curl', 'Nordic Curl',
+    'Hip Thrust', 'Hip Thrust con Bilanciere', 'Glute Bridge', 'Sumo Deadlift',
+    'Good Morning', 'Hyperextension', 'Calf Raise in Piedi', 'Calf Raise Seduto',
+    
+    // SPALLE
+    'Military Press', 'Shoulder Press con Manubri', 'Arnold Press', 'Push Press',
+    'Alzate Laterali', 'Alzate Frontali', 'Alzate Posteriori', 'Alzate a 90°',
+    'Upright Row', 'Handstand Push-up', 'Pike Push-up', 'Shoulder Press Machine',
+    'Cable Lateral Raise', 'Reverse Pec Deck',
+    
+    // BICIPITI
+    'Curl con Bilanciere', 'Curl con Manubri', 'Hammer Curl', 'Curl Concentrato',
+    'Curl ai Cavi', 'Curl Scott', 'Curl 21', 'Curl a Martello ai Cavi',
+    'Chin-up', 'Curl con Bilanciere EZ', 'Drag Curl', 'Zottman Curl',
+    
+    // TRICIPITI
+    'French Press', 'French Press con Manubri', 'Dips ai Tricipiti', 'Push-down ai Cavi',
+    'Kick Back', 'Overhead Extension', 'Close Grip Bench Press', 'Diamond Push-up',
+    'Tricep Dips', 'Skull Crusher', 'JM Press',
+    
+    // ADDOMINALI E CORE
+    'Plank', 'Plank Laterale', 'Crunch', 'Crunch Inverso', 'Bicycle Crunch',
+    'Russian Twist', 'Mountain Climbers', 'Dead Bug', 'Bird Dog', 'Hollow Hold',
+    'V-Up', 'Leg Raise', 'Hanging Leg Raise', 'Ab Wheel', 'Pallof Press',
+    'Woodchop', 'Bear Crawl', 'Superman',
+    
+    // CARDIO E FUNZIONALE
+    'Burpees', 'Jumping Jacks', 'High Knees', 'Butt Kicks', 'Jump Squats',
+    'Jump Lunges', 'Box Jump', 'Broad Jump', 'Tuck Jump', 'Star Jump',
+    'Battle Ropes', 'Kettlebell Swing', 'Turkish Get-up', 'Farmer Walk',
+    'Sled Push', 'Sled Pull', 'Tire Flip', 'Medicine Ball Slam',
+    
+    // STRETCHING E MOBILITÀ
+    'Cat-Cow Stretch', 'Child Pose', 'Downward Dog', 'Cobra Stretch',
+    'Hip Flexor Stretch', 'Hamstring Stretch', 'Quad Stretch', 'Calf Stretch',
+    'Shoulder Stretch', 'Chest Stretch', 'Spinal Twist', 'Pigeon Pose',
+    
+    // ESERCIZI ISOMETRICI
+    'Wall Sit', 'Hollow Hold', 'L-Sit', 'Front Lever', 'Back Lever',
+    'Human Flag', 'Handstand Hold', 'Single Leg Glute Bridge Hold',
+    
+    // ESERCIZI CON ATTREZZI SPECIFICI
+    'Kettlebell Swing', 'Kettlebell Clean', 'Kettlebell Snatch', 'Kettlebell Press',
+    'TRX Row', 'TRX Push-up', 'TRX Squat', 'TRX Pike', 'Resistance Band Pull Apart',
+    'Resistance Band Squat', 'Bosu Ball Squat', 'Swiss Ball Crunch', 'Swiss Ball Pike',
+    
+    // MACCHINARI DA PALESTRA
+    // Petto
+    'Chest Press Machine', 'Pec Deck', 'Cable Crossover Machine', 'Incline Chest Press Machine',
+    'Decline Chest Press Machine', 'Chest Fly Machine', 'Dip Machine',
+    
+    // Schiena
+    'Lat Pulldown Machine', 'Cable Row Machine', 'T-Bar Row Machine', 'Hyperextension Machine',
+    'Assisted Pull-up Machine', 'Low Row Machine', 'High Row Machine', 'Reverse Fly Machine',
+    'Shrug Machine', 'Deadlift Machine',
+    
+    // Spalle
+    'Shoulder Press Machine', 'Lateral Raise Machine', 'Rear Delt Machine', 'Upright Row Machine',
+    'Cable Lateral Raise Machine', 'Multi-Station Shoulder Machine',
+    
+    // Braccia
+    'Bicep Curl Machine', 'Tricep Extension Machine', 'Preacher Curl Machine', 'Cable Bicep Machine',
+    'Cable Tricep Machine', 'Hammer Curl Machine', 'Tricep Dip Machine',
+    
+    // Gambe
+    'Leg Press Machine', 'Leg Extension Machine', 'Leg Curl Machine', 'Hack Squat Machine',
+    'Smith Machine Squat', 'Calf Raise Machine', 'Seated Calf Machine', 'Leg Abduction Machine',
+    'Leg Adduction Machine', 'Glute Machine', 'Hip Thrust Machine', 'Bulgarian Split Squat Machine',
+    
+    // Core e Addominali
+    'Ab Crunch Machine', 'Oblique Machine', 'Roman Chair', 'Captain\'s Chair', 'Ab Coaster',
+    'Torso Rotation Machine', 'Cable Crunch Machine',
+    
+    // Cardio Machines
+    'Treadmill', 'Elliptical', 'Stationary Bike', 'Rowing Machine', 'Stair Climber',
+    'Arc Trainer', 'Spin Bike', 'Recumbent Bike', 'Air Bike', 'Ski Erg',
+    
+    // Macchine Funzionali
+    'Cable Machine', 'Functional Trainer', 'Multi-Station Gym', 'Power Rack', 'Smith Machine',
+    'Cable Crossover Station', 'Adjustable Cable Machine', 'Pulley System',
+    
+    // Macchine Specializzate
+    'Inversion Table', 'Vibration Platform', 'Pneumatic Machines', 'Hydraulic Machines',
+    'Isokinetic Machines', 'Multi-Hip Machine', 'Pendulum Squat Machine', 'Belt Squat Machine'
   ];
   
   // Auto-save functionality
@@ -118,7 +224,6 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             name: workoutTitle || 'Nuova scheda',
             description: workoutDescription || '',
             coach: 'Coach',
-            startDate: startDate || now,
             duration: 30,
             exercises: exercises || [], // Include gli esercizi esistenti nella creazione iniziale
             category: 'strength' as const,
@@ -149,40 +254,31 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 
         // Calcola automaticamente la durata in giorni se sono presenti entrambe le date
         let calculatedDuration = workoutData.duration;
-        if (startDate && endDate) {
-          const start = new Date(startDate);
-          const end = new Date(endDate);
-          if (end >= start) {
-            const diffTime = Math.abs(end.getTime() - start.getTime());
-            calculatedDuration = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          }
-        }
 
         // Aggiorna gli esercizi in base alla variante attiva
         let exercisesToSave = exercises;
         let updatedVariants = variants;
         
-        if (activeVariantId === 'original') {
-          // Se siamo nell'originale, salva gli esercizi nell'originale
+        if (activeVariantId === 'original' || !variants.length || !variants.find(v => v.id === activeVariantId)) {
+          // Se siamo nell'originale o non ci sono varianti, salva gli esercizi nell'originale
           exercisesToSave = exercises;
         } else {
-          // Se siamo in una variante, salva gli esercizi nella variante
+          // Se siamo in una variante esistente, salva gli esercizi nella variante
           updatedVariants = variants.map(v => 
             v.id === activeVariantId 
               ? { ...v, exercises: exercises, updatedAt: new Date().toISOString() }
               : v
           );
           // Per l'originale, mantieni gli esercizi originali
-          exercisesToSave = originalExercises;
+          exercisesToSave = originalExercises || [];
         }
 
         const updatedWorkout = { 
           ...workoutData, 
           name: workoutTitle, 
           description: workoutDescription,
-          startDate,
-          endDate,
           duration: calculatedDuration,
+          durationWeeks,
           exercises: exercisesToSave,
           associatedAthletes,
           status: workoutStatus,
@@ -206,7 +302,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         console.error('Error saving workout:', error);
       }
     }
-  }, [workoutId, workoutTitle, workoutDescription, startDate, endDate, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, originalWorkoutTitle, updateWorkoutPlan]);
+  }, [workoutId, workoutTitle, workoutDescription, durationWeeks, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, originalWorkoutTitle, updateWorkoutPlan]);
   
   // Trigger auto-save immediately
   const triggerAutoSave = useCallback(() => {
@@ -297,11 +393,33 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             
             // Carica sempre gli esercizi della scheda corrente, resettando lo stato precedente
             console.log('💪 Loading exercises for workout:', workoutId, workoutData.exercises);
+            console.log('🔍 Exercise IDs from database:', workoutData.exercises?.map(ex => ({ name: ex.name, id: ex.id, idType: typeof ex.id })));
             
             if (workoutData.exercises && workoutData.exercises.length > 0) {
-              setOriginalExercises(workoutData.exercises); // Salva gli esercizi originali
-              setExercises(workoutData.exercises); // Carica sempre gli esercizi della scheda corrente
-              console.log('✅ Exercises loaded from database:', workoutData.exercises);
+              // Fix exercises with empty or missing IDs
+              const exercisesWithValidIds = workoutData.exercises.map(exercise => {
+                if (!exercise.id || exercise.id.trim() === '') {
+                  const newId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+                  console.log('🔧 Fixing exercise with empty ID:', exercise.name, 'New ID:', newId);
+                  return { ...exercise, id: newId };
+                }
+                return exercise;
+              });
+              
+              // Check if we need to save the updated exercises back to the database
+              const needsUpdate = exercisesWithValidIds.some((ex, index) => ex.id !== workoutData.exercises[index].id);
+              if (needsUpdate) {
+                console.log('💾 Updating exercises with new IDs in database');
+                // Update the database with the fixed IDs
+                const updatedWorkout = { ...workoutData, exercises: exercisesWithValidIds };
+                updateWorkoutPlan(workoutId, updatedWorkout).catch(error => {
+                  console.error('Error updating exercise IDs:', error);
+                });
+              }
+              
+              setOriginalExercises(exercisesWithValidIds); // Salva gli esercizi originali
+              setExercises(exercisesWithValidIds); // Carica sempre gli esercizi della scheda corrente
+              console.log('✅ Exercises loaded from database:', exercisesWithValidIds);
             } else {
               // Resetta sempre a array vuoto per nuove schede
               setOriginalExercises([]);
@@ -319,12 +437,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               setWorkoutStatus(workoutData.status);
             }
             
-            // Carica le date
-            if (workoutData.startDate) {
-              setStartDate(workoutData.startDate);
-            }
-            if (workoutData.endDate) {
-              setEndDate(workoutData.endDate);
+            // Carica i dati della durata
+            if (workoutData.durationWeeks) {
+              setDurationWeeks(workoutData.durationWeeks);
             }
             
             // Carica le varianti se esistono
@@ -363,7 +478,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     } else {
       console.log('⏳ Auto-save effect triggered - waiting for data to load');
     }
-  }, [workoutTitle, workoutDescription, startDate, endDate, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, autoSave, originalExercises]);
+  }, [workoutTitle, workoutDescription, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, autoSave, originalExercises]);
 
   
   const handleAddExercise = () => {
@@ -374,9 +489,14 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
       handleUpdateExercise();
     } else {
       if (currentExercise.name.trim()) {
+        // Combine sets and reps for the exercise object
+        const setsValue = currentSets && currentReps ? `${currentSets} x ${currentReps}` : 
+                         currentSets || currentReps || '';
+        
         const newExercise: Exercise = {
           id: Date.now().toString(),
-          ...currentExercise
+          ...currentExercise,
+          sets: setsValue
         };
         console.log('🆕 New exercise created:', newExercise);
         
@@ -385,6 +505,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         
         setExercises(updatedExercises);
         setCurrentExercise({
+          id: '',
           name: '',
           notes: '',
           sets: '',
@@ -393,6 +514,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
           recovery: '',
           videoLink: ''
         });
+        // Clear separate sets/reps state
+        setCurrentSets('');
+        setCurrentReps('');
         setShowExerciseForm(false);
         
         // Trigger auto-save immediately for exercise changes
@@ -432,37 +556,23 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   
   // Filtra gli esercizi in base alla query di ricerca
   const getFilteredExercises = () => {
+    // Combina esercizi predefiniti e personalizzati, rimuovendo duplicati e stringhe vuote
+    const allExercises = [...predefinedExercises, ...customExercises.filter(ex => ex.trim() !== '')];
+    const uniqueExercises = Array.from(new Set(allExercises));
+    
     if (!exerciseSearchQuery.trim()) {
-      return predefinedExercises;
+      return uniqueExercises;
     }
     
     const query = exerciseSearchQuery.toLowerCase();
-    return predefinedExercises.filter(exercise => 
+    return uniqueExercises.filter(exercise => 
       exercise.toLowerCase().includes(query)
     );
   };
   
-  // Calcola la durata tra le date
+  // Calcola la durata in settimane
   const calculateDuration = () => {
-    if (!startDate || !endDate) return null;
-    
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    if (end < start) return null;
-    
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const diffWeeks = Math.floor(diffDays / 7);
-    
-    if (diffWeeks > 0) {
-      const remainingDays = diffDays % 7;
-      return remainingDays > 0 
-        ? `${diffWeeks} settimana${diffWeeks > 1 ? 'e' : ''} e ${remainingDays} giorno${remainingDays > 1 ? 'i' : ''}`
-        : `${diffWeeks} settimana${diffWeeks > 1 ? 'e' : ''}`;
-    } else {
-      return `${diffDays} giorno${diffDays > 1 ? 'i' : ''}`;
-    }
+    return `${durationWeeks} settimana${durationWeeks > 1 ? 'e' : ''}`;
   };
   
   // Gestisce l'eliminazione della scheda
@@ -479,8 +589,14 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   };
   
   const handleSelectPredefinedExercise = (exerciseName: string) => {
-    setCurrentExercise({ ...currentExercise, name: exerciseName });
+    if (editingExercise) {
+      setEditingExercise({ ...editingExercise, name: exerciseName });
+    } else {
+      setCurrentExercise({ ...currentExercise, name: exerciseName });
+    }
+    setExerciseSearchQuery('');
     setShowExerciseDropdown(false);
+    setShowSearchSuggestions(false);
   };
   
   const handleGenerateLink = () => {
@@ -648,22 +764,73 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   };
   
   const handleEditExercise = (exercise: Exercise) => {
+    console.log('✏️ Editing exercise:', exercise);
+    console.log('🆔 Exercise ID type:', typeof exercise.id);
+    console.log('🆔 Exercise ID value:', exercise.id);
+    console.log('🆔 Exercise ID length:', exercise.id?.length);
+    console.log('🆔 Setting editingExerciseId to:', exercise.id);
+    
     setEditingExerciseId(exercise.id);
     setEditingExercise({ ...exercise });
-    setShowExerciseDropdown(true);
+    
+    // Parse existing sets format (e.g., "3 x 10" or "3x10") into separate values
+    const setsString = exercise.sets || '';
+    const setsMatch = setsString.match(/(\d+)\s*x\s*(\d+)/i);
+    if (setsMatch) {
+      setEditingSets(setsMatch[1]);
+      setEditingReps(setsMatch[2]);
+    } else {
+      // If no 'x' format, try to parse as just sets or just reps
+      const numMatch = setsString.match(/(\d+)/);
+      if (numMatch) {
+        setEditingSets(numMatch[1]);
+        setEditingReps('');
+      } else {
+        setEditingSets('');
+        setEditingReps('');
+      }
+    }
+    
+    setShowExerciseForm(true);
+    setShowExerciseDropdown(false);
+    
+    console.log('✅ Edit state set - editingExerciseId should be:', exercise.id);
   };
   
   const handleUpdateExercise = () => {
     if (editingExercise && editingExerciseId) {
+      // Ensure we have the most up-to-date data from the form
+      const updatedExercise = {
+        ...editingExercise,
+        id: editingExerciseId
+      };
+      
       const updatedExercises = exercises.map(ex => 
-        ex.id === editingExerciseId ? editingExercise : ex
+        ex.id === editingExerciseId ? updatedExercise : ex
       );
+      
+      console.log('🔄 Updating exercise:', updatedExercise);
+      console.log('📊 Updated exercises list:', updatedExercises);
+      
       setExercises(updatedExercises);
       setEditingExerciseId(null);
       setEditingExercise(null);
+      setShowExerciseForm(false);
       setShowExerciseDropdown(false);
       
+      // Reset current exercise form
+      setCurrentExercise({
+        name: '',
+        notes: '',
+        sets: '',
+        intensity: '',
+        tut: '',
+        recovery: '',
+        videoLink: ''
+      });
+      
       // Trigger auto-save immediately for exercise updates
+      console.log('🔄 Triggering auto-save after updating exercise');
       triggerAutoSave();
     }
   };
@@ -906,32 +1073,22 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               className="w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Inizio</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Fine</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Durata scheda (settimane)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="52"
+                  value={durationWeeks}
+                  onChange={(e) => setDurationWeeks(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <div className="text-xs text-gray-500 mt-1">Inserisci un numero da 1 a 52 settimane</div>
               </div>
-              {startDate && endDate && new Date(endDate) < new Date(startDate) && (
-                <div className="text-xs text-red-600 mb-2">⚠️ Data fine precedente all'inizio</div>
-              )}
+
               <button
                 onClick={() => setIsEditingDates(false)}
-                className="w-full px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
+                className="w-full px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
               >
                 Salva
               </button>
@@ -1067,18 +1224,58 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                       } else {
                         setCurrentExercise({ ...currentExercise, name: value });
                       }
+                      // Update search query for intelligent search
                       setExerciseSearchQuery(value);
-                      setShowSearchSuggestions(value.length > 0);
+                      // Show search suggestions only if there's text and we're not showing the full dropdown
+                      if (value.length > 0 && !showExerciseDropdown) {
+                        setShowSearchSuggestions(true);
+                      } else {
+                        setShowSearchSuggestions(false);
+                      }
                     }}
                     onFocus={() => {
-                      if ((editingExercise ? editingExercise.name : currentExercise.name).length > 0) {
-                        setExerciseSearchQuery(editingExercise ? editingExercise.name : currentExercise.name);
+                      // Show suggestions if there's text in the field
+                      const currentName = editingExercise ? editingExercise.name : currentExercise.name;
+                      if (currentName.length > 0 && !showExerciseDropdown) {
+                        setExerciseSearchQuery(currentName);
                         setShowSearchSuggestions(true);
                       }
                     }}
-                    onBlur={() => {
-                      // Ritarda la chiusura per permettere il click sui suggerimenti
-                      setTimeout(() => setShowSearchSuggestions(false), 200);
+                    onBlur={(e) => {
+                      console.log('🔍 Input blur event triggered');
+                      
+                      // Check if the related target is within our dropdown
+                      const relatedTarget = e.relatedTarget as HTMLElement;
+                      const dropdownContainer = exerciseDropdownRef.current;
+                      
+                      // If there's no relatedTarget (like when clicking on scrollbar), don't close immediately
+                      if (!relatedTarget) {
+                        console.log('🔍 No related target (possibly scrollbar click) - delaying close');
+                        setTimeout(() => {
+                          // Only close if the dropdown is still not focused
+                          if (!document.activeElement || !dropdownContainer?.contains(document.activeElement)) {
+                            console.log('🔍 Closing dropdown after scrollbar interaction');
+                            setShowSearchSuggestions(false);
+                            if (!showExerciseDropdown) {
+                              setShowSearchSuggestions(false);
+                            }
+                          }
+                        }, 300);
+                        return;
+                      }
+                      
+                      if (dropdownContainer && relatedTarget && dropdownContainer.contains(relatedTarget)) {
+                        console.log('🔍 Blur cancelled - click is within dropdown');
+                        return; // Don't hide if clicking within dropdown
+                      }
+                      
+                      // Delay hiding suggestions to allow clicking on them
+                      setTimeout(() => {
+                        console.log('🔍 Hiding suggestions after blur delay');
+                        if (!showExerciseDropdown) {
+                          setShowSearchSuggestions(false);
+                        }
+                      }, 200);
                     }}
                     placeholder="Cerca o digita nome esercizio..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1096,7 +1293,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                           
                           return (
                             <div
-                              key={exercise}
+                              key={`search-${exercise}`}
                               className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer"
                               onClick={() => {
                                 if (editingExercise) {
@@ -1165,8 +1362,25 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                 <div className="relative">
                   <button
                     onClick={() => {
-                      setShowExerciseDropdown(!showExerciseDropdown);
-                      setShowSearchSuggestions(false);
+                      console.log('🔽 Dropdown button clicked');
+                      console.log('showExerciseDropdown before:', showExerciseDropdown);
+                      
+                      const isOpening = !showExerciseDropdown;
+                      setShowExerciseDropdown(isOpening);
+                      
+                      console.log('isOpening:', isOpening);
+                      
+                      if (isOpening) {
+                        // When opening dropdown, hide search suggestions and set search query
+                        setShowSearchSuggestions(false);
+                        const currentName = editingExercise ? editingExercise.name : currentExercise.name;
+                        setExerciseSearchQuery(currentName);
+                        console.log('Setting search query to:', currentName);
+                      } else {
+                        // When closing dropdown, clear search query
+                        setExerciseSearchQuery('');
+                        console.log('Clearing search query');
+                      }
                     }}
                     className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
                     title="Mostra tutti gli esercizi"
@@ -1174,36 +1388,91 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                     ▼
                   </button>
                   {showExerciseDropdown && (
-                    <div className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                      <div className="max-h-40 overflow-y-auto">
-                        {predefinedExercises.map((exercise) => {
+                    <div 
+                      className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                      ref={exerciseDropdownRef}
+                      onMouseDown={(e) => {
+                        console.log('🖱️ Mouse down on dropdown container');
+                        e.preventDefault(); // Prevent blur from input field
+                        e.stopPropagation(); // Prevent event bubbling
+                      }}
+                      onClick={(e) => {
+                        // Prevent clicks on the dropdown container (including scrollbar) from closing
+                        e.stopPropagation();
+                      }}
+                    >
+                      <div 
+                        className="max-h-40 overflow-y-auto"
+                        onMouseDown={(e) => {
+                          // Prevent scrollbar clicks from triggering blur
+                          e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                          // Prevent scrollbar clicks from closing dropdown
+                          e.stopPropagation();
+                        }}
+                      >
+                        {getFilteredExercises().map((exercise) => {
                           const isCustomExercise = customExercises.includes(exercise);
                           return (
                             <div
-                              key={exercise}
-                              className="flex items-center justify-between px-4 py-2 hover:bg-gray-100 transition-colors"
+                              key={`dropdown-${exercise}`}
+                              className="hover:bg-gray-100 transition-colors"
                             >
                               <button
-                                onClick={() => {
-                                  handleSelectPredefinedExercise(exercise);
+                                onMouseDown={(e) => {
+                                  console.log('🖱️ Mouse down on exercise button:', exercise);
+                                  e.preventDefault(); // Prevent blur
+                                  e.stopPropagation(); // Prevent event bubbling
+                                  
+                                  // Immediately handle the selection here instead of waiting for onClick
+                                  console.log('🎯 Processing exercise selection:', exercise);
+                                  console.log('📝 editingExercise before:', editingExercise);
+                                  console.log('💪 currentExercise before:', currentExercise);
+                                  
+                                  if (editingExercise) {
+                                    const updatedExercise = { ...editingExercise, name: exercise };
+                                    console.log('✏️ Setting editingExercise to:', updatedExercise);
+                                    setEditingExercise(updatedExercise);
+                                    console.log('✏️ editingExercise after set:', updatedExercise);
+                                  } else {
+                                    const updatedExercise = { ...currentExercise, name: exercise };
+                                    console.log('🔄 Setting currentExercise to:', updatedExercise);
+                                    setCurrentExercise(updatedExercise);
+                                    console.log('🔄 currentExercise after set:', updatedExercise);
+                                  }
+                                  
+                                  console.log('🔄 Closing dropdowns...');
                                   setShowExerciseDropdown(false);
+                                  setShowSearchSuggestions(false);
+                                  setExerciseSearchQuery('');
+                                  
+                                  console.log('✅ Exercise selection completed in mouseDown');
                                 }}
-                                className="flex-1 text-left"
+                                onClick={(e) => {
+                                  console.log('🎯 onClick triggered for exercise:', exercise);
+                                  // This is now just a fallback, the main logic is in mouseDown
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                }}
+                                className="w-full text-left px-4 py-2 flex items-center justify-between"
                               >
-                                {exercise}
+                                <span>{exercise}</span>
+                                {isCustomExercise && (
+                                  <button
+                                    onClick={(e) => {
+                                      console.log('🗑️ Removing custom exercise:', exercise);
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleRemoveCustomExercise(exercise);
+                                    }}
+                                    className="p-1 text-red-500 hover:text-red-700 transition-colors ml-2"
+                                    title="Elimina esercizio personalizzato"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                )}
                               </button>
-                              {isCustomExercise && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveCustomExercise(exercise);
-                                  }}
-                                  className="p-1 text-red-500 hover:text-red-700 transition-colors ml-2"
-                                  title="Elimina esercizio personalizzato"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
                             </div>
                           );
                         })}
@@ -1235,19 +1504,63 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Serie x Ripetizioni</label>
-                <input
-                  type="text"
-                  value={editingExercise ? editingExercise.sets : currentExercise.sets}
-                  onChange={(e) => {
-                    if (editingExercise) {
-                      setEditingExercise({ ...editingExercise, sets: e.target.value });
-                    } else {
-                      setCurrentExercise({ ...currentExercise, sets: e.target.value });
-                    }
-                  }}
-                  placeholder="es. 3x10"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={editingExercise ? editingSets : currentSets}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (editingExercise) {
+                        setEditingSets(value);
+                        // Update the combined sets field for backward compatibility
+                        const reps = editingReps || '';
+                        setEditingExercise({ 
+                          ...editingExercise, 
+                          sets: reps ? `${value} x ${reps}` : value 
+                        });
+                      } else {
+                        setCurrentSets(value);
+                        // Update the combined sets field for backward compatibility
+                        const reps = currentReps || '';
+                        setCurrentExercise({ 
+                          ...currentExercise, 
+                          sets: reps ? `${value} x ${reps}` : value 
+                        });
+                      }
+                    }}
+                    placeholder="Serie"
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="1"
+                  />
+                  <span className="text-gray-500 font-medium">x</span>
+                  <input
+                    type="number"
+                    value={editingExercise ? editingReps : currentReps}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (editingExercise) {
+                        setEditingReps(value);
+                        // Update the combined sets field for backward compatibility
+                        const sets = editingSets || '';
+                        setEditingExercise({ 
+                          ...editingExercise, 
+                          sets: sets ? `${sets} x ${value}` : value 
+                        });
+                      } else {
+                        setCurrentReps(value);
+                        // Update the combined sets field for backward compatibility
+                        const sets = currentSets || '';
+                        setCurrentExercise({ 
+                          ...currentExercise, 
+                          sets: sets ? `${sets} x ${value}` : value 
+                        });
+                      }
+                    }}
+                    placeholder="Ripetizioni"
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    min="1"
+                  />
+                </div>
               </div>
               
               <div>
@@ -1325,7 +1638,11 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                 onClick={handleAddExercise}
                 className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
-                {editingExerciseId ? 'Salva Modifiche' : 'Aggiungi Esercizio'}
+                {(() => {
+                  console.log('🔍 Button render - editingExerciseId:', editingExerciseId);
+                  console.log('🔍 Button render - editingExercise:', editingExercise);
+                  return editingExerciseId ? 'Salva Modifiche' : 'Aggiungi Esercizio';
+                })()}
               </button>
               <button
                 onClick={() => {
@@ -1333,6 +1650,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                   setEditingExerciseId(null);
                   setEditingExercise(null);
                   setCurrentExercise({
+                    id: '',
                     name: '',
                     notes: '',
                     sets: '',
@@ -1341,6 +1659,11 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                     recovery: '',
                     videoLink: ''
                   });
+                  // Clear separate sets/reps state
+                  setCurrentSets('');
+                  setCurrentReps('');
+                  setEditingSets('');
+                  setEditingReps('');
                 }}
                 className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
               >
