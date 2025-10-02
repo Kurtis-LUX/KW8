@@ -60,6 +60,12 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [activeVariantId, setActiveVariantId] = useState('original');
   const [originalWorkoutTitle, setOriginalWorkoutTitle] = useState('');
   
+  // Scorrimento orizzontale dei tab varianti via drag/swipe
+  const variantTabsRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartXRef = useRef(0);
+  const scrollStartLeftRef = useRef(0);
+  
   // Athletes management
   const [associatedAthletes, setAssociatedAthletes] = useState<string[]>([]);
   const [showAthletesList, setShowAthletesList] = useState(false);
@@ -1073,12 +1079,41 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     onClose();
   };
   
+  // Handler per drag-to-scroll su tab varianti
+  const handleVariantTabsPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!variantTabsRef.current) return;
+    setIsDragging(true);
+    dragStartXRef.current = e.clientX;
+    scrollStartLeftRef.current = variantTabsRef.current.scrollLeft;
+    try { variantTabsRef.current.setPointerCapture(e.pointerId); } catch {}
+  };
+  
+  const handleVariantTabsPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging || !variantTabsRef.current) return;
+    const deltaX = e.clientX - dragStartXRef.current;
+    variantTabsRef.current.scrollLeft = scrollStartLeftRef.current - deltaX;
+    e.preventDefault();
+  };
+  
+  const handleVariantTabsPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!variantTabsRef.current) return;
+    setIsDragging(false);
+    try { variantTabsRef.current.releasePointerCapture(e.pointerId); } catch {}
+  };
+  
   return (
     <div>
       {/* Workout Variants Tabs */}
       {variants.length > 0 && (
         <div className="mb-6 bg-gray-50 p-6">
-          <div className="flex flex-nowrap space-x-2 border-b border-gray-200 overflow-x-auto">
+          <div
+            ref={variantTabsRef}
+            onPointerDown={handleVariantTabsPointerDown}
+            onPointerMove={handleVariantTabsPointerMove}
+            onPointerUp={handleVariantTabsPointerUp}
+            className={`flex flex-nowrap space-x-2 border-b border-gray-200 overflow-x-auto no-scrollbar select-none relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            style={{ touchAction: 'pan-x' }}
+          >
             {/* Tab per la scheda originale */}
             <div className="relative flex-shrink-0">
               <button
