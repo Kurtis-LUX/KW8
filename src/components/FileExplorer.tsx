@@ -729,19 +729,6 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
                   <span>Scarica</span>
                 </button>
                 
-                {item.type === 'workout' && (
-                   <button
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       handleGenerateLink(item);
-                       toggleItemMenu();
-                     }}
-                     className="dropdown-item"
-                   >
-                     <Link size={14} />
-                     <span>Genera link</span>
-                   </button>
-                 )}
                 
                 <hr className="my-1" />
                 

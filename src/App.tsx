@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, ChevronLeft } from 'lucide-react';
+import { Settings, ChevronLeft, Users } from 'lucide-react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import StatisticsSection from './components/StatisticsSection';
@@ -22,7 +22,7 @@ import WorkoutManagerPage from './pages/WorkoutManagerPage';
 import AthleteStatisticsPage from './pages/AthleteStatisticsPage';
 import AthleteManagerPage from './pages/AthleteManagerPage';
 import RankingsPage from './pages/RankingsPage';
-import LinkManagerPage from './pages/LinkManagerPage';
+
 import MembershipCardsPage from './pages/MembershipCardsPage';
 import WorkoutCardPage from './pages/WorkoutCardPage';
 import CoachAuthPage from './components/auth/CoachAuthPage';
@@ -291,9 +291,7 @@ function App() {
                   onClick={() => handleNavigation('athlete-manager')}
                 >
                   <div className="flex items-center mb-3 sm:mb-4">
-                    <svg className="w-6 h-6 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
+                    <Users className="w-6 h-6 text-green-600 mr-3" />
                     <h3 className="text-base sm:text-lg font-semibold text-gray-900">Gestione Atleti</h3>
                   </div>
                   <p className="text-sm sm:text-base text-gray-600">Visualizza e gestisci i profili dei tuoi atleti</p>
@@ -309,18 +307,6 @@ function App() {
                     <h3 className="text-base sm:text-lg font-semibold text-gray-900">Classifiche</h3>
                   </div>
                   <p className="text-sm sm:text-base text-gray-600">Visualizza i massimali e i record degli atleti</p>
-                </div>
-                <div 
-                  className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
-                  onClick={() => handleNavigation('link-manager')}
-                >
-                  <div className="flex items-center mb-3 sm:mb-4">
-                    <svg className="w-6 h-6 text-indigo-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-900">Gestione Link</h3>
-                  </div>
-                  <p className="text-sm sm:text-base text-gray-600">Gestisci i link di accesso alle schede per gli atleti</p>
                 </div>
                 <div 
                   className="bg-white rounded-lg shadow p-4 sm:p-6 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl"
@@ -544,19 +530,7 @@ function App() {
     );
   }
 
-  if (currentPage === 'link-manager') {
-    return (
-      <LanguageProvider>
-        <ProtectedRoute requireAdmin={false}>
-          <LinkManagerPage 
-            onNavigate={handleNavigation} 
-            currentUser={currentUser} 
-            onLogout={handleLogout}
-          />
-        </ProtectedRoute>
-      </LanguageProvider>
-    );
-  }
+
 
   if (currentPage === 'membership-cards') {
     return (

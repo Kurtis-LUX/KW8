@@ -88,3 +88,31 @@ input, select, textarea {
     }
   }
 }
+
+/* Utility: nascondi scrollbar ma mantieni scroll orizzontale */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE e Edge */
+  scrollbar-width: none;    /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;            /* Chrome, Safari */
+}
+
+/* Indicatori di scroll ai bordi (sfumature) */
+.scroll-gradient:before,
+.scroll-gradient:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+}
+.scroll-gradient:before {
+  left: 0;
+  background: linear-gradient(to right, rgba(255,255,255,1), rgba(255,255,255,0));
+}
+.scroll-gradient:after {
+  right: 0;
+  background: linear-gradient(to left, rgba(255,255,255,1), rgba(255,255,255,0));
+}

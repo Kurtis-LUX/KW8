@@ -277,14 +277,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 >
                   Classifiche
                 </button>
-                <button
-                  onClick={() => handleNavigation('link-manager')}
-                  className={`transition-all duration-300 font-medium ${
-                    currentPage === 'link-manager' ? 'text-red-600' : 'text-black hover:text-red-600'
-                  }`}
-                >
-                  Link
-                </button>
+>
                 <button
                   onClick={() => handleNavigation('membership-cards')}
                   className={`transition-all duration-300 font-medium ${
@@ -561,18 +554,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                     <span>Classifiche</span>
                   </button>
                 </li>
-                {/* 5. Link */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('link-manager')}
-                    className={`flex items-center space-x-2 sm:space-x-4 transition-all duration-300 text-base sm:text-xl font-semibold w-full text-left py-3 px-3 rounded-lg bg-white/90 hover:bg-white ${
-                      currentPage === 'link-manager' ? 'text-red-600' : 'text-gray-800 hover:text-red-600'
-                    }`}
-                  >
-                    <Link size={20} className="sm:w-6 sm:h-6" />
-                    <span>Link</span>
-                  </button>
-                </li>
+>
                 {/* 6. Statistiche */}
                 <li>
                   <button

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit3, Plus, Save, Copy, Users, Link, ArrowLeft, Eye, X, Trash2 } from 'lucide-react';
+import { Edit3, Plus, Save, Copy, Users, ArrowLeft, Eye, X, Trash2, Calendar } from 'lucide-react';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
 
@@ -36,6 +36,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
   const exerciseDropdownRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
   
   // Hook Firestore per gestire i piani di allenamento e gli utenti
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
@@ -106,6 +107,65 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [editingReps, setEditingReps] = useState('');
   const [customExercises, setCustomExercises] = useState<string[]>([]);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
+
+  // Drag-to-scroll per toolbar
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+    let lastMove = 0;
+
+    const onMouseDown = (e: MouseEvent) => {
+      isDown = true;
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
+      lastMove = Date.now();
+    };
+    const onMouseLeave = () => { isDown = false; };
+    const onMouseUp = () => { isDown = false; };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      const walk = (x - startX);
+      el.scrollLeft = scrollLeft - walk;
+      lastMove = Date.now();
+    };
+
+    // Touch support
+    let touchStartX = 0;
+    let touchScrollLeft = 0;
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.touches[0];
+      touchStartX = t.pageX - el.offsetLeft;
+      touchScrollLeft = el.scrollLeft;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      const t = e.touches[0];
+      const x = t.pageX - el.offsetLeft;
+      const walk = (x - touchStartX);
+      el.scrollLeft = touchScrollLeft - walk;
+    };
+
+    el.addEventListener('mousedown', onMouseDown as any);
+    el.addEventListener('mouseleave', onMouseLeave as any);
+    el.addEventListener('mouseup', onMouseUp as any);
+    el.addEventListener('mousemove', onMouseMove as any);
+    el.addEventListener('touchstart', onTouchStart as any, { passive: true } as any);
+    el.addEventListener('touchmove', onTouchMove as any, { passive: true } as any);
+
+    return () => {
+      el.removeEventListener('mousedown', onMouseDown as any);
+      el.removeEventListener('mouseleave', onMouseLeave as any);
+      el.removeEventListener('mouseup', onMouseUp as any);
+      el.removeEventListener('mousemove', onMouseMove as any);
+      el.removeEventListener('touchstart', onTouchStart as any);
+      el.removeEventListener('touchmove', onTouchMove as any);
+    };
+  }, [toolbarRef]);
   
   // Predefined exercises list - Comprehensive list organized by muscle groups
   const predefinedExercises = [
@@ -334,31 +394,40 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 
   const handleSaveTitle = async () => {
     setIsEditingTitle(false);
-    // Salva il titolo nel database e aggiorna la vista
-    if (workoutId) {
-      try {
-        const workoutData = await DB.getWorkoutPlanById(workoutId);
-        if (workoutData) {
-          // Se non esiste originalWorkoutTitle, usa il nome corrente come originale
-          // Se esiste già, mantienilo invariato
-          const originalTitle = workoutData.originalWorkoutTitle || workoutData.name;
-          
-          const updatedWorkout = { 
-            ...workoutData, 
-            name: workoutTitle, 
-            originalWorkoutTitle: originalTitle,
-            updatedAt: new Date().toISOString() 
-          };
-          await updateWorkoutPlan(workoutId, updatedWorkout);
-          
-          // Aggiorna anche lo stato locale se non era già impostato
-          if (!originalWorkoutTitle) {
-            setOriginalWorkoutTitle(originalTitle);
-          }
+    // Salva il titolo nel database e aggiorna la vista in base alla variante attiva
+    if (!workoutId) return;
+    try {
+      const workoutData = await DB.getWorkoutPlanById(workoutId);
+      if (!workoutData) return;
+
+      if (activeVariantId === 'original') {
+        // Aggiorna il titolo della scheda originale
+        const originalTitle = workoutData.originalWorkoutTitle || workoutData.name;
+        const updatedWorkout = {
+          ...workoutData,
+          name: workoutTitle,
+          originalWorkoutTitle: originalTitle,
+          updatedAt: new Date().toISOString()
+        };
+        await updateWorkoutPlan(workoutId, updatedWorkout);
+        if (!originalWorkoutTitle) {
+          setOriginalWorkoutTitle(originalTitle);
         }
-      } catch (error) {
-        console.error('Error saving title:', error);
+      } else {
+        // Aggiorna il nome della variante attiva
+        const currentVariantName = variants.find(v => v.id === activeVariantId)?.name;
+        const updatedVariants = (workoutData.variants || []).map(v =>
+          v.id === activeVariantId ? { ...v, name: currentVariantName || v.name } : v
+        );
+        const updatedWorkout = {
+          ...workoutData,
+          variants: updatedVariants,
+          updatedAt: new Date().toISOString()
+        };
+        await updateWorkoutPlan(workoutId, updatedWorkout);
       }
+    } catch (error) {
+      console.error('Error saving title:', error);
     }
   };
 
@@ -704,7 +773,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 
     const newVariant: WorkoutVariant = {
       id: Date.now().toString(),
-      name: `Variante ${nextVariantNumber}`,
+      name: `Variante ${nextVariantNumber} di ${originalWorkoutTitle || workoutTitle}`,
       isActive: true, // La nuova variante diventa attiva
       exercises: deepCloneExercises(originalExercises), // Usa deep clone per indipendenza
       parentWorkoutId: workoutId,
@@ -1009,9 +1078,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
       {/* Workout Variants Tabs */}
       {variants.length > 0 && (
         <div className="mb-6 bg-gray-50 p-6">
-          <div className="flex space-x-2 border-b border-gray-200">
+          <div className="flex flex-nowrap space-x-2 border-b border-gray-200 overflow-x-auto">
             {/* Tab per la scheda originale */}
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button
                 onClick={() => {
                   // Prima di tornare all'originale, salva gli esercizi correnti nella variante attiva
@@ -1035,22 +1104,22 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                   console.log('📥 Loading original exercises:', originalExercises?.length || 0);
                   setExercises(originalExercises ? [...originalExercises] : []); // Crea una copia indipendente
                 }}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                   !variants.some(v => v.isActive)
                     ? 'bg-blue-500 text-white border-b-2 border-blue-500'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {originalWorkoutTitle || workoutTitle}
+                {workoutTitle}
               </button>
             </div>
             
             {/* Tab per le varianti */}
             {variants.map((variant) => (
-              <div key={variant.id} className="relative">
+              <div key={variant.id} className="relative flex-shrink-0">
                 <button
                   onClick={() => handleSwitchVariant(variant.id)}
-                  className={`px-4 py-2 pr-8 text-sm font-medium rounded-t-lg transition-colors ${
+                  className={`px-4 py-2 pr-8 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                     variant.isActive
                       ? 'bg-blue-500 text-white border-b-2 border-blue-500'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -1073,121 +1142,136 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
       <div className="w-full max-w-none mx-auto bg-white rounded-lg shadow-lg p-6 relative">
 
         
-        {/* Back to Folder Button */}
-        <div className="flex justify-start mb-4">
-          <button
-            onClick={onClose}
-            className="flex items-center justify-center p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            title="Torna alla Cartella"
-          >
-            <ArrowLeft size={20} />
-          </button>
-        </div>
-
-        {/* Centered Title and Description */}
-        <div 
-          className="text-center mb-6 cursor-pointer" 
-          onClick={(e) => {
-            // Solo se il click è sullo sfondo (non sui pulsanti di edit)
-            if (e.target === e.currentTarget) {
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-          }}
-        >
-            {/* Editable Title */}
-            <div className="flex justify-center items-center mb-2">
+        {/* Header Row: Back button + centered Title within card container */}
+        <div className="grid grid-cols-[auto_1fr_auto] items-center mb-4">
+          <div className="flex justify-start">
+            <button
+              onClick={onClose}
+              className="flex items-center justify-center p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
+              title="Torna alla Cartella"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          </div>
+          <div className="min-w-0 flex justify-center">
             {isEditingTitle ? (
-              <div className="flex items-center space-x-2">
-                <input
-                  ref={titleInputRef}
-                  type="text"
-                  value={workoutTitle}
-                  onChange={(e) => setWorkoutTitle(e.target.value)}
-                  onBlur={handleSaveTitle}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
-                  className="text-2xl font-bold text-center border-b-2 border-blue-500 bg-transparent outline-none max-w-md"
-                />
-              </div>
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  if (activeVariantId === 'original') {
+                    setWorkoutTitle(newTitle);
+                  } else {
+                    setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: newTitle } : v));
+                  }
+                }}
+                onBlur={handleSaveTitle}
+                onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
+                className="w-full text-2xl font-bold border-b-2 border-blue-500 bg-transparent outline-none text-center"
+              />
             ) : (
-              <div className="flex items-center space-x-2">
-                <h1 
-                  className="text-2xl font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors"
-                  onClick={() => setIsEditingTitle(true)}
-                  title="Clicca per modificare il titolo"
-                >
-                  {workoutTitle}
-                </h1>
-                <button
-                  onClick={() => setIsEditingTitle(true)}
-                  className="p-1 text-gray-500 hover:text-blue-500 transition-colors"
-                >
-                  <Edit3 size={18} />
-                </button>
-              </div>
-            )}
-            </div>
-          
-            {/* Editable Description */}
-            <div className="flex justify-center items-center">
-            {isEditingDescription ? (
-              <div className="flex items-center space-x-2 w-full max-w-md">
-                <textarea
-                  ref={descriptionInputRef}
-                  value={workoutDescription}
-                  onChange={(e) => setWorkoutDescription(e.target.value)}
-                  onBlur={handleSaveDescription}
-                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
-                  placeholder="Aggiungi una descrizione..."
-                  className="w-full border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600 text-center"
-                  rows={2}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setIsEditingDescription(true)}>
-                {workoutDescription ? (
-                  <p className="text-gray-600 max-w-md text-center">{workoutDescription}</p>
-                ) : (
-                  <p className="text-gray-400 italic text-center">Clicca per aggiungere una descrizione</p>
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsEditingDescription(true);
-                  }}
-                  className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
-                >
-                  <Edit3 size={14} />
-                </button>
-              </div>
+              <h1
+                className="text-2xl font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors truncate text-center"
+                onClick={() => setIsEditingTitle(true)}
+                title="Clicca per modificare il titolo"
+              >
+                {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+              </h1>
             )}
           </div>
+          <div className="flex justify-end">
+            {!isEditingTitle && (
+              <button
+                onClick={() => setIsEditingTitle(true)}
+                className="p-2 text-gray-500 hover:text-blue-500 transition-colors shrink-0"
+              >
+                <Edit3 size={18} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Editable Description */}
+        <div className="flex justify-center items-center mb-6">
+          {isEditingDescription ? (
+            <textarea
+              ref={descriptionInputRef}
+              value={workoutDescription}
+              onChange={(e) => setWorkoutDescription(e.target.value)}
+              onBlur={handleSaveDescription}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
+              placeholder="Aggiungi una descrizione..."
+              className="w-full max-w-2xl border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600 text-center"
+              rows={2}
+            />
+          ) : (
+            <div className="flex items-center gap-2 justify-center">
+              {workoutDescription ? (
+                <p className="text-gray-600 max-w-2xl text-center break-words">{workoutDescription}</p>
+              ) : (
+                <p className="text-gray-400 italic text-center">Clicca per aggiungere una descrizione</p>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditingDescription(true);
+                }}
+                className="p-1 text-gray-400 hover:text-blue-500 transition-colors shrink-0"
+              >
+                <Edit3 size={14} />
+              </button>
+            </div>
+          )}
         </div>
         
         {/* Toolbar - Moved below title */}
         <div className="flex justify-center mb-8">
-          <div className="flex flex-wrap justify-center gap-2 max-w-4xl">
-            {/* Duration Selector */}
-            <button
-              onClick={() => setIsEditingDates(!isEditingDates)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
-            >
-              <span>📅</span>
-              <span className="font-semibold text-gray-900">Durata</span>
-            </button>
-            
+          <div ref={toolbarRef} className="relative flex flex-nowrap gap-2 w-full max-w-4xl overflow-x-auto no-scrollbar px-3 scroll-gradient">
             {/* Create Exercise */}
             <button
               onClick={() => setShowExerciseForm(true)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
             >
               <Plus size={16} className="text-green-600" />
               <span className="font-semibold text-gray-900">Crea</span>
             </button>
             
+            {/* Duration Selector */}
+            <button
+              onClick={() => setIsEditingDates(!isEditingDates)}
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
+            >
+              <Calendar size={16} className="text-blue-600" />
+              <span className="font-semibold text-gray-900">Durata</span>
+            </button>
+            
+            {/* Clone Workout */}
+            <button
+              onClick={handleCloneWorkout}
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
+            >
+              <Copy size={16} className="text-purple-600" />
+              <span className="font-semibold text-gray-900">Clona</span>
+            </button>
+            
+            {/* Workout Status */}
+            <button
+              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
+            >
+              <div className={`w-3 h-3 rounded-full ${
+                workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
+              }`}></div
+              >
+              <span className="font-semibold text-gray-900">{workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}</span>
+            </button>
+            
             {/* Associate Athlete */}
             <button
               onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
             >
               <Users size={16} className="text-purple-600" />
               <span className="font-semibold text-gray-900">Associa</span>
@@ -1196,39 +1280,10 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             {/* View Associated Athletes */}
             <button
               onClick={() => setShowAthletesList(!showAthletesList)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
+              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all durata-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
             >
               <Eye size={16} className="text-indigo-600" />
               <span className="font-semibold text-gray-900">Visualizza</span>
-            </button>
-            
-            {/* Generate Link */}
-            <button
-              onClick={handleGenerateLink}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
-            >
-              <Link size={16} className="text-orange-600" />
-              <span className="font-semibold text-gray-900">Link</span>
-            </button>
-            
-            {/* Clone Workout */}
-            <button
-              onClick={handleCloneWorkout}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
-            >
-              <Copy size={16} className="text-teal-600" />
-              <span className="font-semibold text-gray-900">Clona</span>
-            </button>
-            
-            {/* Workout Status */}
-            <button
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2"
-            >
-              <div className={`w-3 h-3 rounded-full ${
-                workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
-              }`}></div>
-              <span className="font-semibold text-gray-900">{workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}</span>
             </button>
           </div>
         </div>
