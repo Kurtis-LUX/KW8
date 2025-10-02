@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 
 interface Position {
   top: number;
@@ -165,13 +165,40 @@ export const useDropdownPosition = ({
     }
   }, [isOpen, openDropdown, closeDropdown]);
 
-  // Calcola la posizione quando il dropdown si apre
-  useEffect(() => {
-    if (isOpen) {
-      // Usa setTimeout per assicurarsi che il DOM sia aggiornato
-      const timer = setTimeout(calculatePosition, 0);
-      return () => clearTimeout(timer);
-    }
+  // Calcola la posizione quando il dropdown si apre in modo affidabile anche con Portal
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+
+    let attempts = 0;
+    let rafId: number | null = null;
+    let timeoutId: number | null = null;
+
+    const tryCalc = () => {
+      attempts++;
+      if (triggerRef.current && dropdownRef.current) {
+        // Assicura che il dropdown sia stato renderizzato con dimensioni misurabili
+        const hasSize = dropdownRef.current.offsetWidth > 0 || dropdownRef.current.offsetHeight > 0;
+        if (hasSize) {
+          calculatePosition();
+          cleanup();
+          return;
+        }
+      }
+      if (attempts < 6) {
+        rafId = requestAnimationFrame(tryCalc);
+      } else {
+        // Fallback: prova comunque a calcolare
+        timeoutId = window.setTimeout(calculatePosition, 0);
+      }
+    };
+
+    const cleanup = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (timeoutId !== null) clearTimeout(timeoutId);
+    };
+
+    rafId = requestAnimationFrame(tryCalc);
+    return () => cleanup();
   }, [isOpen, calculatePosition]);
 
   // Ricalcola la posizione quando la finestra viene ridimensionata o si fa scroll
