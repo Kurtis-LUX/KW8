@@ -699,8 +699,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
                 className="dropdown-menu min-w-[150px]"
                 style={{
                    position: 'fixed',
-                   left: itemMenuPosition?.left || 0,
-                   top: itemMenuPosition?.top || 0,
+                   left: itemMenuPosition?.left ?? -9999,
+                   top: itemMenuPosition?.top ?? -9999,
+                   visibility: itemMenuPosition ? 'visible' : 'hidden',
                  }}
               >
                 <button
@@ -815,8 +816,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
                      className="dropdown-menu w-64 max-h-96 overflow-y-auto"
                      style={{
                        position: 'fixed',
-                       left: toolbarPosition?.left || 0,
-                       top: toolbarPosition?.top || 0,
+                       left: toolbarPosition?.left ?? -9999,
+                       top: toolbarPosition?.top ?? -9999,
+                       visibility: toolbarPosition ? 'visible' : 'hidden',
                      }}
                    >
                      {/* Vista ad albero */}
