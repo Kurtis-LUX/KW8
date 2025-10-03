@@ -156,99 +156,53 @@ useEffect(() => {
   const [currentReps, setCurrentReps] = useState('');
   const [editingSets, setEditingSets] = useState('');
   const [editingReps, setEditingReps] = useState('');
-  const [customExercises, setCustomExercises] = useState<string[]>([]);
-  const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
-
-  // Persistenza libreria esercizi personalizzati
-  const customExercisesInitializedRef = useRef(false);
-  useEffect(() => {
-    const key = 'kw8_customExercises';
-    const saved = DB.getItem(key);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const normalized = Array.from(new Set(parsed.filter((ex: any) => typeof ex === 'string' && ex.trim() !== '')));
-          setCustomExercises(normalized);
-        }
-      } catch (e) {
-        console.warn('⚠️ Impossibile leggere libreria esercizi personalizzati:', e);
-      }
-    }
-    // Evita il salvataggio iniziale dello stato vuoto
-    customExercisesInitializedRef.current = true;
-  }, []);
-
-  useEffect(() => {
-    // Non salvare all'initial render per evitare di sovrascrivere con []
-    if (!customExercisesInitializedRef.current) return;
+  const [customExercises, setCustomExercises] = useState<string[]>(() => {
     const key = 'kw8_customExercises';
     try {
-      DB.setItem(key, JSON.stringify(Array.from(new Set(customExercises))));
+      const saved = DB.getItem(key);
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return Array.from(new Set(parsed.filter((ex: any) => typeof ex === 'string' && ex.trim() !== '')));
+      }
+    } catch (e) {
+      console.warn('⚠️ Impossibile leggere libreria esercizi personalizzati:', e);
+    }
+    return [];
+  });
+  const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
+  // Notifica salvataggio e debug libreria
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [showLibraryDebug, setShowLibraryDebug] = useState(true);
+  const [debugLocalCustomExercisesRaw, setDebugLocalCustomExercisesRaw] = useState<string>('null');
+  const [debugLocalAvailable, setDebugLocalAvailable] = useState<boolean>(false);
+
+  // Persistenza libreria esercizi personalizzati - salvataggio su storage quando la libreria cambia
+  useEffect(() => {
+    try {
+      DB.setItem('kw8_customExercises', JSON.stringify(Array.from(new Set(customExercises))));
     } catch (e) {
       console.warn('⚠️ Impossibile salvare libreria esercizi personalizzati:', e);
     }
   }, [customExercises]);
 
-  // Drag-to-scroll per toolbar
   useEffect(() => {
-    const el = toolbarRef.current;
-    if (!el) return;
+    try {
+      setDebugLocalAvailable(DB.isStorageAvailable());
+      const raw = DB.getItem('kw8_customExercises');
+      setDebugLocalCustomExercisesRaw(raw ?? 'null');
+    } catch (e) {
+      console.warn('⚠️ Debug read error:', e);
+    }
+  }, [customExercises]);
 
-    let isDown = false;
-    let startX = 0;
-    let scrollLeft = 0;
-    let lastMove = 0;
+  // Auto-hide save notification after a short delay
+  useEffect(() => {
+    if (!saveMessage) return;
+    const t = setTimeout(() => setSaveMessage(null), 3000);
+    return () => clearTimeout(t);
+  }, [saveMessage]);
 
-    const onMouseDown = (e: MouseEvent) => {
-      isDown = true;
-      startX = e.pageX - el.offsetLeft;
-      scrollLeft = el.scrollLeft;
-      lastMove = Date.now();
-    };
-    const onMouseLeave = () => { isDown = false; };
-    const onMouseUp = () => { isDown = false; };
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - el.offsetLeft;
-      const walk = (x - startX);
-      el.scrollLeft = scrollLeft - walk;
-      lastMove = Date.now();
-    };
-
-    // Touch support
-    let touchStartX = 0;
-    let touchScrollLeft = 0;
-    const onTouchStart = (e: TouchEvent) => {
-      const t = e.touches[0];
-      touchStartX = t.pageX - el.offsetLeft;
-      touchScrollLeft = el.scrollLeft;
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      const t = e.touches[0];
-      const x = t.pageX - el.offsetLeft;
-      const walk = (x - touchStartX);
-      el.scrollLeft = touchScrollLeft - walk;
-    };
-
-    el.addEventListener('mousedown', onMouseDown as any);
-    el.addEventListener('mouseleave', onMouseLeave as any);
-    el.addEventListener('mouseup', onMouseUp as any);
-    el.addEventListener('mousemove', onMouseMove as any);
-    el.addEventListener('touchstart', onTouchStart as any, { passive: true } as any);
-    el.addEventListener('touchmove', onTouchMove as any, { passive: true } as any);
-
-    return () => {
-      el.removeEventListener('mousedown', onMouseDown as any);
-      el.removeEventListener('mouseleave', onMouseLeave as any);
-      el.removeEventListener('mouseup', onMouseUp as any);
-      el.removeEventListener('mousemove', onMouseMove as any);
-      el.removeEventListener('touchstart', onTouchStart as any);
-      el.removeEventListener('touchmove', onTouchMove as any);
-    };
-  }, [toolbarRef]);
-  
   // Predefined exercises list - Comprehensive list organized by muscle groups
   const predefinedExercises = [
     // PETTO
@@ -738,6 +692,15 @@ useEffect(() => {
           console.log('🔄 Updated ONLY original exercises:', updatedExercises.length);
           console.log('🔍 Original exercises content:', updatedExercises.map(ex => ex.name));
         }
+
+        // ➕ Aggiunge automaticamente il nome alla libreria personalizzata se non presente
+        const addedName = newExercise.name.trim();
+        if (addedName && !predefinedExercises.includes(addedName) && !customExercises.includes(addedName)) {
+          console.log('📚 Adding to custom exercise library:', addedName);
+          setCustomExercises([...customExercises, addedName]);
+          setSaveMessage(`Esercizio "${addedName}" salvato nella libreria personale`);
+        }
+
         setCurrentExercise({
           id: '',
           name: '',
@@ -1120,6 +1083,14 @@ useEffect(() => {
       setEditingExercise(null);
       setShowExerciseForm(false);
       setShowExerciseDropdown(false);
+      
+      // ➕ Aggiunge automaticamente il nome alla libreria personalizzata se non presente
+      const updatedName = (updatedExercise.name || '').trim();
+      if (updatedName && !predefinedExercises.includes(updatedName) && !customExercises.includes(updatedName)) {
+        console.log('📚 Adding updated name to custom exercise library:', updatedName);
+        setCustomExercises([...customExercises, updatedName]);
+        setSaveMessage(`Esercizio "${updatedName}" salvato nella libreria personale`);
+      }
       
       // Reset current exercise form
       setCurrentExercise({
@@ -1740,6 +1711,8 @@ useEffect(() => {
                       )}
                     </div>
                   )}
+
+
                 </div>
                 
                 {/* Save New Exercise Button */}
@@ -1750,6 +1723,7 @@ useEffect(() => {
                       const exerciseName = editingExercise ? editingExercise.name : currentExercise.name;
                       if (exerciseName.trim() && !predefinedExercises.includes(exerciseName) && !customExercises.includes(exerciseName)) {
                         handleSaveCustomExercise(exerciseName);
+                        setSaveMessage(`Esercizio \"${exerciseName}\" salvato nella libreria personale`);
                       }
                     }}
                     className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center"
@@ -1928,7 +1902,7 @@ useEffect(() => {
                         });
                       }
                     }}
-                    placeholder="Serie"
+                    placeholder="es. 3"
                     className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
@@ -1956,62 +1930,64 @@ useEffect(() => {
                         });
                       }
                     }}
-                    placeholder="Ripetizioni"
+                    placeholder="es. 8"
                     className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     min="1"
                   />
                 </div>
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Intensità</label>
-                <input
-                  type="text"
-                  value={editingExercise ? editingExercise.intensity : currentExercise.intensity}
-                  onChange={(e) => {
-                    if (editingExercise) {
-                      setEditingExercise({ ...editingExercise, intensity: e.target.value });
-                    } else {
-                      setCurrentExercise({ ...currentExercise, intensity: e.target.value });
-                    }
-                  }}
-                  placeholder="es. RPE 8 o RIR 2 o 70% 1RM"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">TUT</label>
-                <input
-                  type="text"
-                  value={editingExercise ? editingExercise.tut : currentExercise.tut}
-                  onChange={(e) => {
-                    if (editingExercise) {
-                      setEditingExercise({ ...editingExercise, tut: e.target.value });
-                    } else {
-                      setCurrentExercise({ ...currentExercise, tut: e.target.value });
-                    }
-                  }}
-                  placeholder="es. 3-1-2-1"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Recupero</label>
-                <input
-                  type="text"
-                  value={editingExercise ? editingExercise.recovery : currentExercise.recovery}
-                  onChange={(e) => {
-                    if (editingExercise) {
-                      setEditingExercise({ ...editingExercise, recovery: e.target.value });
-                    } else {
-                      setCurrentExercise({ ...currentExercise, recovery: e.target.value });
-                    }
-                  }}
-                  placeholder="es. 90 secondi"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Intensità</label>
+                    <input
+                      type="text"
+                      value={editingExercise ? editingExercise.intensity : currentExercise.intensity}
+                      onChange={(e) => {
+                        if (editingExercise) {
+                          setEditingExercise({ ...editingExercise, intensity: e.target.value });
+                        } else {
+                          setCurrentExercise({ ...currentExercise, intensity: e.target.value });
+                        }
+                      }}
+                      placeholder="es. RPE 8 o RIR 2 o 70% 1RM"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">TUT</label>
+                    <input
+                      type="text"
+                      value={editingExercise ? editingExercise.tut : currentExercise.tut}
+                      onChange={(e) => {
+                        if (editingExercise) {
+                          setEditingExercise({ ...editingExercise, tut: e.target.value });
+                        } else {
+                          setCurrentExercise({ ...currentExercise, tut: e.target.value });
+                        }
+                      }}
+                      placeholder="es. 3-1-2-1"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Recupero</label>
+                    <input
+                      type="text"
+                      value={editingExercise ? editingExercise.recovery : currentExercise.recovery}
+                      onChange={(e) => {
+                        if (editingExercise) {
+                          setEditingExercise({ ...editingExercise, recovery: e.target.value });
+                        } else {
+                          setCurrentExercise({ ...currentExercise, recovery: e.target.value });
+                        }
+                      }}
+                      placeholder="es. 90 secondi"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
               
               <div>

@@ -277,7 +277,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 >
                   Classifiche
                 </button>
->
                 <button
                   onClick={() => handleNavigation('membership-cards')}
                   className={`transition-all duration-300 font-medium ${
@@ -554,7 +553,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                     <span>Classifiche</span>
                   </button>
                 </li>
->
                 {/* 6. Statistiche */}
                 <li>
                   <button
