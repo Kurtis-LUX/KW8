@@ -58,6 +58,64 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Home' }]);
 
+// Riferimenti e logica per auto-scroll e drag-to-scroll del breadcrumb
+const breadcrumbNavRef = useRef<HTMLElement | null>(null);
+const isDraggingBreadcrumbRef = useRef(false);
+const startXRef = useRef(0);
+const scrollLeftStartRef = useRef(0);
+
+const onBreadcrumbMouseDown = (e: React.MouseEvent<HTMLElement>) => {
+  const container = breadcrumbNavRef.current;
+  if (!container) return;
+  isDraggingBreadcrumbRef.current = true;
+  startXRef.current = e.clientX;
+  scrollLeftStartRef.current = container.scrollLeft;
+};
+
+const onBreadcrumbMouseMove = (e: React.MouseEvent<HTMLElement>) => {
+  if (!isDraggingBreadcrumbRef.current) return;
+  e.preventDefault();
+  const container = breadcrumbNavRef.current;
+  if (!container) return;
+  const dx = e.clientX - startXRef.current;
+  container.scrollLeft = scrollLeftStartRef.current - dx;
+};
+
+const onBreadcrumbMouseUp = () => {
+  isDraggingBreadcrumbRef.current = false;
+};
+
+const onBreadcrumbMouseLeave = () => {
+  isDraggingBreadcrumbRef.current = false;
+};
+
+const onBreadcrumbTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+  const container = breadcrumbNavRef.current;
+  if (!container) return;
+  isDraggingBreadcrumbRef.current = true;
+  startXRef.current = e.touches[0].clientX;
+  scrollLeftStartRef.current = container.scrollLeft;
+};
+
+const onBreadcrumbTouchMove = (e: React.TouchEvent<HTMLElement>) => {
+  if (!isDraggingBreadcrumbRef.current) return;
+  const container = breadcrumbNavRef.current;
+  if (!container) return;
+  const dx = e.touches[0].clientX - startXRef.current;
+  container.scrollLeft = scrollLeftStartRef.current - dx;
+};
+
+const onBreadcrumbTouchEnd = () => {
+  isDraggingBreadcrumbRef.current = false;
+};
+
+// Auto-scroll all'ultimo elemento del breadcrumb quando cambia
+useEffect(() => {
+  const container = breadcrumbNavRef.current;
+  if (!container) return;
+  container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+}, [breadcrumb]);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createType, setCreateType] = useState<'folder' | 'workout'>('folder');
   const [showRenameModal, setShowRenameModal] = useState(false);
@@ -972,7 +1030,18 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
             
             {/* Breadcrumb con scroll orizzontale */}
             <div className="min-w-0 flex-1">
-              <nav className="flex items-center space-x-2 text-sm overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 pb-1">
+              <nav
+                ref={breadcrumbNavRef}
+                className="flex items-center space-x-2 text-sm overflow-x-auto no-scrollbar pb-1 cursor-grab active:cursor-grabbing select-none"
+                style={{ touchAction: 'pan-x' }}
+                onMouseDown={onBreadcrumbMouseDown}
+                onMouseMove={onBreadcrumbMouseMove}
+                onMouseUp={onBreadcrumbMouseUp}
+                onMouseLeave={onBreadcrumbMouseLeave}
+                onTouchStart={onBreadcrumbTouchStart}
+                onTouchMove={onBreadcrumbTouchMove}
+                onTouchEnd={onBreadcrumbTouchEnd}
+              >
                 <div className="flex items-center space-x-2 whitespace-nowrap">
                   {breadcrumb.map((crumb, index) => {
                     const isCurrentFolder = index === breadcrumb.length - 1;
@@ -1232,6 +1301,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
                     onColorChange={setSelectedColor}
                     variants={workoutVariants}
                     onVariantsChange={setWorkoutVariants}
+                    originalWorkoutTitle={name}
                   />
                 )}
               </div>

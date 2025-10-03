@@ -8,6 +8,7 @@ interface WorkoutCustomizerProps {
   variants: WorkoutVariant[];
   onVariantsChange: (variants: WorkoutVariant[]) => void;
   workoutId?: string;
+  originalWorkoutTitle?: string;
 }
 
 const AVAILABLE_COLORS = [
@@ -28,7 +29,8 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
   onColorChange,
   variants,
   onVariantsChange,
-  workoutId
+  workoutId,
+  originalWorkoutTitle
 }) => {
   const [showVariantForm, setShowVariantForm] = useState(false);
   const [editingVariant, setEditingVariant] = useState<WorkoutVariant | null>(null);
@@ -36,23 +38,18 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
   const [variantDescription, setVariantDescription] = useState('');
 
   const handleAddVariant = () => {
-    if (!variantName.trim()) return;
-
     // Calcola il numero della prossima variante
     const variantNumbers = variants
       .map(v => {
-        const match = v.name.match(/^Variante (\d+) di/);
+        const match = v.name.match(/Variante (\d+)/);
         return match ? parseInt(match[1], 10) : 0;
       })
       .filter(num => num > 0);
     
     const nextVariantNumber = variantNumbers.length > 0 ? Math.max(...variantNumbers) + 1 : 1;
     
-    // Se il nome inserito non segue il pattern "Variante X di", lo formattiamo automaticamente
-    let finalVariantName = variantName.trim();
-    if (!finalVariantName.startsWith('Variante ') || !finalVariantName.includes(' di ')) {
-      finalVariantName = `Variante ${nextVariantNumber} di "${finalVariantName}"`;
-    }
+    const baseTitle = (originalWorkoutTitle && originalWorkoutTitle.trim()) ? originalWorkoutTitle.trim() : 'Nuova scheda';
+    const finalVariantName = `Variante ${nextVariantNumber} di ${baseTitle}`;
 
     const newVariant: WorkoutVariant = {
       id: `variant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -227,7 +224,7 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
                   type="text"
                   value={variantName}
                   onChange={(e) => setVariantName(e.target.value)}
-                  placeholder="Es. Versione principianti, Con pesi maggiori..."
+                  placeholder="Es. Versione principianti, Con pesi maggiori... (verrà generato automaticamente)"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 />
               </div>
@@ -255,7 +252,7 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
               </button>
               <button
                 onClick={editingVariant ? handleUpdateVariant : handleAddVariant}
-                disabled={!variantName.trim()}
+                disabled={editingVariant ? !variantName.trim() : false}
                 className="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {editingVariant ? 'Aggiorna' : 'Aggiungi'}

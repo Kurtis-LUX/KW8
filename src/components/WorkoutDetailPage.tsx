@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit3, Plus, Save, Copy, Users, ArrowLeft, Eye, X, Trash2, Calendar } from 'lucide-react';
+import { Edit3, Plus, Save, Copy, Users, ArrowLeft, Eye, X, Trash2, Calendar, Star } from 'lucide-react';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
 
@@ -18,6 +18,12 @@ interface WorkoutVariant {
   id: string;
   name: string;
   isActive: boolean;
+  description?: string;
+  exercises?: Exercise[];
+  parentWorkoutId?: string;
+  modifications?: any[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface WorkoutDetailPageProps {
@@ -29,6 +35,7 @@ interface WorkoutDetailPageProps {
 const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClose, folderPath }) => {
   const [workoutTitle, setWorkoutTitle] = useState('Nuova scheda');
   const [workoutDescription, setWorkoutDescription] = useState('');
+  const [originalWorkoutDescription, setOriginalWorkoutDescription] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   
@@ -62,9 +69,35 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
   const variantTabsRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartXRef = useRef(0);
-  const scrollStartLeftRef = useRef(0);
+const [isDragging, setIsDragging] = useState(false);
+const dragStartXRef = useRef(0);
+const scrollStartLeftRef = useRef(0);
+const dragInitiatedRef = useRef(false);
+
+// Ref per i tab per auto-scroll verso la variante attiva
+const originalTabRef = useRef<HTMLDivElement | null>(null);
+const variantTabRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+// Effetto: quando cambia la variante attiva, porta il relativo tab in vista
+useEffect(() => {
+  const container = variantTabsRef.current;
+  if (!container) return;
+  const targetEl = activeVariantId === 'original' ? originalTabRef.current : (variantTabRefs.current[activeVariantId] || null);
+  if (!targetEl) return;
+  try {
+    targetEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  } catch {
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+    const overflowLeft = targetRect.left - containerRect.left;
+    const overflowRight = targetRect.right - containerRect.right;
+    if (overflowLeft < 0) {
+      container.scrollLeft += overflowLeft;
+    } else if (overflowRight > 0) {
+      container.scrollLeft += overflowRight;
+    }
+  }
+}, [activeVariantId, variants.length]);
   
   // Athletes management
   const [associatedAthletes, setAssociatedAthletes] = useState<string[]>([]);
@@ -439,17 +472,26 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 
   const handleSaveDescription = async () => {
     setIsEditingDescription(false);
-    // Salva la descrizione nel database e aggiorna la vista
-    if (workoutId) {
-      try {
-        const workoutData = await DB.getWorkoutPlanById(workoutId);
-        if (workoutData) {
-          const updatedWorkout = { ...workoutData, description: workoutDescription, updatedAt: new Date().toISOString() };
-          await updateWorkoutPlan(workoutId, updatedWorkout);
-        }
-      } catch (error) {
-        console.error('Error saving description:', error);
+    // Salva la descrizione nel database e aggiorna la vista in base alla variante attiva
+    if (!workoutId) return;
+    try {
+      const workoutData = await DB.getWorkoutPlanById(workoutId);
+      if (!workoutData) return;
+
+      if (activeVariantId === 'original') {
+        // Aggiorna la descrizione della scheda originale
+        const updatedWorkout = { ...workoutData, description: workoutDescription, updatedAt: new Date().toISOString() };
+        await updateWorkoutPlan(workoutId, updatedWorkout);
+      } else {
+        // Aggiorna la descrizione della variante attiva
+        const updatedVariants = (workoutData.variants || []).map(v =>
+          v.id === activeVariantId ? { ...v, description: workoutDescription, updatedAt: new Date().toISOString() } : v
+        );
+        const updatedWorkout = { ...workoutData, variants: updatedVariants, updatedAt: new Date().toISOString() };
+        await updateWorkoutPlan(workoutId, updatedWorkout);
       }
+    } catch (error) {
+      console.error('Error saving description:', error);
     }
   };
   
@@ -487,6 +529,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             setWorkoutTitle(workoutData.name);
             setOriginalWorkoutTitle(workoutData.originalWorkoutTitle || workoutData.name);
             setWorkoutDescription(workoutData.description || '');
+            setOriginalWorkoutDescription(workoutData.description || '');
             
             // Carica sempre gli esercizi della scheda corrente, resettando lo stato precedente
             console.log('💪 Loading exercises for workout:', workoutId, workoutData.exercises);
@@ -521,21 +564,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               setOriginalExercises(exercisesWithValidIds); // Salva gli esercizi originali dal database
               console.log('🔒 Original exercises set:', exercisesWithValidIds.length, 'exercises');
               
-              // Se c'è una variante attiva, carica gli esercizi della variante
-              // Altrimenti carica gli esercizi originali
-              if (workoutData.activeVariantId && workoutData.activeVariantId !== 'original' && workoutData.variants) {
-                const activeVariant = workoutData.variants.find(v => v.id === workoutData.activeVariantId);
-                if (activeVariant && activeVariant.exercises && activeVariant.exercises.length > 0) {
-                  console.log('🔄 Loading active variant exercises:', activeVariant.exercises.length);
-                  setExercises(activeVariant.exercises);
-                } else {
-                  console.log('📥 Loading original exercises for active variant');
-                  setExercises(exercisesWithValidIds);
-                }
-              } else {
-                console.log('📥 Loading original exercises');
-                setExercises(exercisesWithValidIds); // Carica sempre gli esercizi della scheda corrente
-              }
+              // Carica sempre gli esercizi originali all'ingresso nella pagina
+              console.log('📥 Loading original exercises (default on entry)');
+              setExercises(exercisesWithValidIds); // Carica sempre gli esercizi della scheda originale
               
               console.log('✅ Exercises loaded from database:', exercisesWithValidIds);
             } else {
@@ -560,21 +591,17 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               setDurationWeeks(workoutData.durationWeeks);
             }
             
-            // Carica le varianti se esistono
-            if (workoutData.variants && workoutData.variants.length > 0) {
-              setVariants(workoutData.variants);
-              if (workoutData.activeVariantId) {
-                setActiveVariantId(workoutData.activeVariantId);
-                // Se c'è una variante attiva, carica i suoi esercizi
-                const activeVariant = workoutData.variants.find(v => v.id === workoutData.activeVariantId);
-                if (activeVariant && activeVariant.exercises) {
-                  setExercises(activeVariant.exercises);
-                }
+            // Carica le varianti se esistono, ma all'ingresso forziamo la scheda originale attiva
+              if (workoutData.variants && workoutData.variants.length > 0) {
+                setVariants(workoutData.variants.map(v => ({ ...v, isActive: false })));
+                setActiveVariantId('original');
+                setWorkoutDescription(workoutData.description || '');
+              } else {
+                // Non inizializzare varianti di default - lascia l'array vuoto e mantieni l'originale attiva
+                setVariants([]);
+                setActiveVariantId('original');
+                setWorkoutDescription(workoutData.description || '');
               }
-            } else {
-              // Non inizializzare varianti di default - lascia l'array vuoto
-              setVariants([]);
-            }
           }
         } catch (error) {
           console.error('❌ Error loading workout data:', error);
@@ -779,7 +806,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 
     const newVariant: WorkoutVariant = {
       id: Date.now().toString(),
-      name: `Variante ${nextVariantNumber} di ${originalWorkoutTitle || workoutTitle}`,
+      name: `Variante ${nextVariantNumber} di ${workoutTitle}`,
       isActive: true, // La nuova variante diventa attiva
       exercises: deepCloneExercises(originalExercises), // Usa deep clone per indipendenza
       parentWorkoutId: workoutId,
@@ -851,11 +878,13 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     setVariants(variants.map(v => ({ ...v, isActive: v.id === variantId })));
     setActiveVariantId(variantId);
     
-    // Carica gli esercizi della variante/originale selezionata
+    // Aggiorna la descrizione mostrata in base alla variante
     if (variantId === 'original') {
       // Torna agli esercizi originali
       console.log('📥 Loading original exercises:', originalExercises?.length || 0);
       setExercises(originalExercises ? [...originalExercises] : []); // Crea una copia indipendente
+      // Usa la descrizione originale della scheda
+      setWorkoutDescription(originalWorkoutDescription || '');
     } else {
       // Carica gli esercizi della variante
       const selectedVariant = variants.find(v => v.id === variantId);
@@ -876,6 +905,8 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         );
         setVariants(updatedVariants);
       }
+      // Usa la descrizione della variante se presente
+      setWorkoutDescription(selectedVariant?.description || '');
     }
     
     console.log('✅ SWITCH VARIANT - Complete:', {
@@ -892,36 +923,61 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     showConfirmation(
       'Vuoi davvero chiudere questa variante della scheda?',
       async () => {
-        const updatedVariants = variants.filter(v => v.id !== variantId);
-        setVariants(updatedVariants);
-        
-        // Se stiamo eliminando la variante attiva
+        const deletedIndex = variants.findIndex(v => v.id === variantId);
+        const filteredVariants = variants.filter(v => v.id !== variantId);
+
+        // Determina quale variante deve diventare attiva (o originale)
+        let nextActiveVariantId: string | null;
         if (activeVariantId === variantId) {
-          if (updatedVariants.length > 0) {
-            // Passa alla prima variante disponibile
-            const nextVariant = updatedVariants[0];
-            setActiveVariantId(nextVariant.id);
-            // Aggiorna lo stato di attivazione delle varianti
-            setVariants(updatedVariants.map(v => ({ 
-              ...v, 
-              isActive: v.id === nextVariant.id 
-            })));
+          if (filteredVariants.length > 0) {
+            // Se esiste una precedente nella lista, attivala; altrimenti torna all'originale
+            nextActiveVariantId = deletedIndex > 0 ? variants[deletedIndex - 1].id : null;
           } else {
-            // Se non ci sono più varianti, torna alla scheda originale
-            setActiveVariantId('original');
-            setVariants([]);
+            nextActiveVariantId = null; // originale
+          }
+        } else {
+          // La variante eliminata non era attiva, mantieni l'attuale attiva
+          nextActiveVariantId = activeVariantId === 'original' ? null : activeVariantId;
+        }
+
+        // Costruisci la lista finale delle varianti con isActive coerente e esercizi garantiti per la variante attiva
+        let finalVariants = filteredVariants.map(v => ({ ...v, isActive: false }));
+        if (nextActiveVariantId) {
+          const idx = finalVariants.findIndex(v => v.id === nextActiveVariantId);
+          if (idx !== -1) {
+            const hasExercises = finalVariants[idx].exercises && (finalVariants[idx].exercises as Exercise[]).length > 0;
+            const ensuredExercises = hasExercises ? [ ...(finalVariants[idx].exercises as Exercise[]) ] : deepCloneExercises(originalExercises);
+            finalVariants[idx] = {
+              ...finalVariants[idx],
+              isActive: true,
+              exercises: ensuredExercises,
+              updatedAt: new Date().toISOString(),
+            };
           }
         }
-        
-        // Salva immediatamente le modifiche nel database
+
+        // Aggiorna stato UI in modo atomico e coerente
+        setVariants(finalVariants);
+        if (nextActiveVariantId) {
+          setActiveVariantId(nextActiveVariantId);
+          const nextActiveVariant = finalVariants.find(v => v.id === nextActiveVariantId);
+          setExercises(nextActiveVariant?.exercises ? [ ...(nextActiveVariant.exercises as Exercise[]) ] : []);
+          setWorkoutDescription(nextActiveVariant?.description || '');
+        } else {
+          setActiveVariantId('original');
+          setExercises(originalExercises ? [...originalExercises] : []);
+          setWorkoutDescription(originalWorkoutDescription || '');
+        }
+
+        // Persisti nel database
         try {
           const workoutData = await DB.getWorkoutPlanById(workoutId);
           if (workoutData) {
-            const updatedWorkout = { 
-              ...workoutData, 
-              variants: updatedVariants,
-              activeVariantId: activeVariantId === variantId ? (updatedVariants[0]?.id || null) : activeVariantId,
-              updatedAt: new Date().toISOString() 
+            const updatedWorkout = {
+              ...workoutData,
+              variants: finalVariants,
+              activeVariantId: nextActiveVariantId ?? null,
+              updatedAt: new Date().toISOString(),
             };
             await updateWorkoutPlan(workoutId, updatedWorkout);
           }
@@ -1079,26 +1135,31 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     onClose();
   };
   
-  // Handler per drag-to-scroll su tab varianti
+  // Handler per drag-to-scroll su tab varianti (con soglia per non bloccare i click)
   const handleVariantTabsPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!variantTabsRef.current) return;
-    setIsDragging(true);
+    // Consenti l'avvio del drag ovunque; i click dei bottoni restano funzionanti grazie alla soglia e alle guardie negli onClick
+    setIsDragging(false); // diventa true solo dopo aver superato la soglia di movimento
+    dragInitiatedRef.current = true;
     dragStartXRef.current = e.clientX;
     scrollStartLeftRef.current = variantTabsRef.current.scrollLeft;
-    try { variantTabsRef.current.setPointerCapture(e.pointerId); } catch {}
   };
   
   const handleVariantTabsPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDragging || !variantTabsRef.current) return;
+    if (!variantTabsRef.current || !dragInitiatedRef.current) return;
     const deltaX = e.clientX - dragStartXRef.current;
-    variantTabsRef.current.scrollLeft = scrollStartLeftRef.current - deltaX;
-    e.preventDefault();
+    // Attiva dragging solo se supera una piccola soglia
+    if (Math.abs(deltaX) > 5) {
+      if (!isDragging) setIsDragging(true);
+      variantTabsRef.current.scrollLeft = scrollStartLeftRef.current - deltaX;
+      // Previeni il comportamento di selezione solo quando stai trascinando davvero
+      e.preventDefault();
+    }
   };
   
-  const handleVariantTabsPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!variantTabsRef.current) return;
+  const handleVariantTabsPointerUp = (_e: React.PointerEvent<HTMLDivElement>) => {
     setIsDragging(false);
-    try { variantTabsRef.current.releasePointerCapture(e.pointerId); } catch {}
+    dragInitiatedRef.current = false;
   };
   
   return (
@@ -1111,13 +1172,14 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
             onPointerDown={handleVariantTabsPointerDown}
             onPointerMove={handleVariantTabsPointerMove}
             onPointerUp={handleVariantTabsPointerUp}
-            className={`flex flex-nowrap space-x-2 border-b border-gray-200 overflow-x-auto no-scrollbar select-none relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`flex flex-nowrap space-x-1 border-b border-gray-200 overflow-x-auto no-scrollbar select-none relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{ touchAction: 'pan-x' }}
           >
             {/* Tab per la scheda originale */}
-            <div className="relative flex-shrink-0">
+            <div className="relative flex-shrink-0" ref={originalTabRef}>
               <button
-                onClick={() => {
+                onClick={(e) => {
+                  if (isDragging) { e.preventDefault(); return; }
                   // Prima di tornare all'originale, salva gli esercizi correnti nella variante attiva
                   if (activeVariantId !== 'original') {
                     console.log('💾 Saving current exercises to variant before switching to original');
@@ -1139,32 +1201,45 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
                   console.log('📥 Loading original exercises:', originalExercises?.length || 0);
                   setExercises(originalExercises ? [...originalExercises] : []); // Crea una copia indipendente
                 }}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
-                  !variants.some(v => v.isActive)
-                    ? 'bg-blue-500 text-white border-b-2 border-blue-500'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                className={`${activeVariantId === 'original' ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} inline-flex items-center justify-center leading-none font-medium rounded-t-lg transition-colors whitespace-nowrap ${
+                  activeVariantId === 'original'
+                    ? 'bg-blue-500 text-white border-b-2 border-blue-500 -mb-px'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
                 }`}
+                title={workoutTitle}
+                aria-label={`Scheda originale: ${workoutTitle}`}
               >
-                {workoutTitle}
+                <Star size={16} />
               </button>
             </div>
             
             {/* Tab per le varianti */}
-            {variants.map((variant) => (
-              <div key={variant.id} className="relative flex-shrink-0">
+            {variants.map((variant, index) => (
+              <div key={variant.id} className="relative flex-shrink-0" ref={(el) => { variantTabRefs.current[variant.id] = el; }}>
                 <button
-                  onClick={() => handleSwitchVariant(variant.id)}
-                  className={`px-4 py-2 pr-8 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
+                  onClick={(e) => {
+                    if (isDragging) { e.preventDefault(); return; }
+                    handleSwitchVariant(variant.id);
+                  }}
+                  className={`inline-flex items-center gap-2 ${variant.isActive ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} pr-8 font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                     variant.isActive
-                      ? 'bg-blue-500 text-white border-b-2 border-blue-500'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-red-500 text-white border-b-2 border-red-700'
+                      : 'bg-red-500 text-white hover:bg-red-600'
                   }`}
+                  title={variant.name}
+                  aria-label={`Variante: ${variant.name}`}
                 >
-                  {variant.name}
+                  <span className="inline-block shrink-0">{index + 1}</span>
+                  <Copy size={16} />
                 </button>
                 <button
-                  onClick={() => handleRemoveVariant(variant.id)}
-                  className="absolute top-1 right-1 p-1 text-gray-500 hover:text-red-500 transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (isDragging) return;
+                    handleRemoveVariant(variant.id);
+                  }}
+                  className="absolute top-1 right-1 p-1 text-gray-500 hover:text-black transition-colors"
                 >
                   <X size={14} />
                 </button>
@@ -1174,7 +1249,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         </div>
       )}
       
-      <div className="w-full max-w-none mx-auto bg-white rounded-lg shadow-lg p-6 relative">
+      <div className="w-full max-w-none mx-auto bg-white rounded-lg shadow-lg px-6 pt-2 pb-6 relative">
 
         
         {/* Header Row: Back button + centered Title within card container */}
@@ -1242,11 +1317,11 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
               rows={2}
             />
           ) : (
-            <div className="flex items-center gap-2 justify-center">
+            <div className="flex items-center gap-2 justify-center group" onClick={() => setIsEditingDescription(true)} title="Clicca per modificare la descrizione">
               {workoutDescription ? (
-                <p className="text-gray-600 max-w-2xl text-center break-words">{workoutDescription}</p>
+                <p className="text-gray-600 max-w-2xl text-center break-words transition-colors group-hover:text-blue-600">{workoutDescription}</p>
               ) : (
-                <p className="text-gray-400 italic text-center">Clicca per aggiungere una descrizione</p>
+                <p className="text-gray-400 italic text-center transition-colors group-hover:text-blue-600">Clicca per aggiungere una descrizione</p>
               )}
               <button
                 onClick={(e) => {
@@ -1263,63 +1338,70 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
         
         {/* Toolbar - Moved below title */}
         <div className="flex justify-center mb-8">
-          <div ref={toolbarRef} className="relative flex flex-nowrap gap-2 w-full max-w-4xl overflow-x-auto no-scrollbar px-3 scroll-gradient">
-            {/* Create Exercise */}
-            <button
-              onClick={() => setShowExerciseForm(true)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
-            >
-              <Plus size={16} className="text-green-600" />
-              <span className="font-semibold text-gray-900">Crea</span>
-            </button>
-            
-            {/* Duration Selector */}
-            <button
-              onClick={() => setIsEditingDates(!isEditingDates)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
-            >
-              <Calendar size={16} className="text-blue-600" />
-              <span className="font-semibold text-gray-900">Durata</span>
-            </button>
-            
-            {/* Clone Workout */}
-            <button
-              onClick={handleCloneWorkout}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
-            >
-              <Copy size={16} className="text-purple-600" />
-              <span className="font-semibold text-gray-900">Clona</span>
-            </button>
-            
-            {/* Workout Status */}
-            <button
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
-            >
-              <div className={`w-3 h-3 rounded-full ${
-                workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
-              }`}></div
+          <div ref={toolbarRef} className="relative w-full flex justify-center px-0 -mx-6 sm:mx-0">
+            <div className="flex flex-nowrap justify-center gap-2 p-2.5 bg-white rounded-xl shadow-md border border-gray-200 w-full">
+              {/* Create Exercise */}
+              <button
+                onClick={() => setShowExerciseForm(true)}
+                title="Crea"
+                aria-label="Crea"
+                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
               >
-              <span className="font-semibold text-gray-900">{workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}</span>
-            </button>
-            
-            {/* Associate Athlete */}
-            <button
-              onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
-            >
-              <Users size={16} className="text-purple-600" />
-              <span className="font-semibold text-gray-900">Associa</span>
-            </button>
-            
-            {/* View Associated Athletes */}
-            <button
-              onClick={() => setShowAthletesList(!showAthletesList)}
-              className="bg-white rounded-lg shadow p-4 cursor-pointer transform transition-all durata-300 hover:scale-105 hover:shadow-xl flex items-center space-x-2 shrink-0"
-            >
-              <Eye size={16} className="text-indigo-600" />
-              <span className="font-semibold text-gray-900">Visualizza</span>
-            </button>
+                <Plus size={18} className="text-green-600" />
+              </button>
+              
+              {/* Duration Selector */}
+              <button
+                onClick={() => setIsEditingDates(!isEditingDates)}
+                title="Durata"
+                aria-label="Durata"
+                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+              >
+                <Calendar size={18} className="text-blue-600" />
+              </button>
+              
+              {/* Clone Workout */}
+              <button
+                onClick={handleCloneWorkout}
+                title="Clona"
+                aria-label="Clona"
+                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+              >
+                <Copy size={18} className="text-purple-600" />
+              </button>
+              
+              {/* Workout Status */}
+              <button
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
+                aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
+                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+              >
+                <div className={`w-3 h-3 rounded-full ${
+                  workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
+                }`}></div>
+              </button>
+              
+              {/* Associate Athlete */}
+              <button
+                onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
+                title="Associa"
+                aria-label="Associa"
+                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+              >
+                <Users size={18} className="text-purple-600" />
+              </button>
+              
+              {/* View Associated Athletes */}
+              <button
+                onClick={() => setShowAthletesList(!showAthletesList)}
+                title="Visualizza"
+                aria-label="Visualizza"
+                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+              >
+                <Eye size={18} className="text-indigo-600" />
+              </button>
+            </div>
           </div>
         </div>
         
