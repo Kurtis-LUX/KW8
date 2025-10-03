@@ -29,7 +29,6 @@ import { useWorkoutPlans } from '../hooks/useFirestore';
 import DB, { WorkoutPlan, WorkoutFolder, WorkoutVariant } from '../utils/database';
 import FolderCustomizer, { AVAILABLE_ICONS } from './FolderCustomizer';
 import WorkoutCustomizer from './WorkoutCustomizer';
-import TreeView from './TreeView';
 import WorkoutDetailPage from './WorkoutDetailPage';
 
 interface FileExplorerProps {
@@ -123,6 +122,7 @@ useEffect(() => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<FolderTreeItem | null>(null);
   const [showToolbarDropdown, setShowToolbarDropdown] = useState(false);
+  const [showFiltersSubmenu, setShowFiltersSubmenu] = useState(false);
   
   // Hook Firestore per gestire i piani di allenamento
   const { workoutPlans, loading, error, createWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan, refetch } = useWorkoutPlans();
@@ -140,9 +140,7 @@ useEffect(() => {
     offset: 8,
     autoAdjust: true
   });
-  const [showTreeView, setShowTreeView] = useState(false);
-  const [showFiltersSubmenu, setShowFiltersSubmenu] = useState(false);
-  const [treeViewKey, setTreeViewKey] = useState(0); // Per forzare il re-render del TreeView
+
   const [draggedItem, setDraggedItem] = useState<FolderTreeItem | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
@@ -492,7 +490,7 @@ useEffect(() => {
         // già ricarica i dati tramite fetchPlans() nel hook useWorkoutPlans
       }
 
-      setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
+
       setShowCreateModal(false);
     } catch (error) {
       console.error('Error creating new item:', error);
@@ -525,9 +523,7 @@ useEffect(() => {
         // Non serve chiamare loadFolderContent() perché updateWorkoutPlan già ricarica i dati
       }
       
-      setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
-      setShowRenameModal(false);
-      setItemToRename(null);
+
     } catch (error) {
       console.error('Error renaming item:', error);
     }
@@ -564,7 +560,6 @@ useEffect(() => {
         // Non chiamare loadFolderContent() perché deleteWorkoutPlan già ricarica i dati
       }
       
-      setTreeViewKey(prev => prev + 1); // Forza il refresh del TreeView
       setShowDeleteModal(false);
       setItemToDelete(null);
     } catch (error) {
@@ -871,23 +866,6 @@ useEffect(() => {
                        visibility: toolbarPosition ? 'visible' : 'hidden',
                      }}
                    >
-                     {/* Vista ad albero */}
-                     <button
-                       onClick={() => {
-                         setShowTreeView(!showTreeView);
-                         closeToolbarDropdown();
-                       }}
-                       className={`dropdown-item justify-between ${
-                         showTreeView ? 'text-red-600 bg-red-50' : ''
-                       }`}
-                     >
-                       <div className="flex items-center space-x-3">
-                         <ChevronRight size={16} className={`transition-transform duration-200 ${showTreeView ? 'rotate-90' : ''}`} />
-                         <span>Vista ad albero</span>
-                       </div>
-                       {showTreeView && <div className="w-2 h-2 bg-red-600 rounded-full"></div>}
-                     </button>
-                     
                      <hr className="my-2" />
                      
                      {/* Modalità vista */}
@@ -1078,17 +1056,7 @@ useEffect(() => {
       {/* Contenuto */}
       <div className="flex-1 p-4 overflow-auto min-h-[calc(100vh-300px)]">
         {/* Layout principale con sidebar opzionale */}
-        <div className={`flex ${showTreeView ? 'space-x-4' : ''}`}>
-          {/* Sidebar navigazione ad albero */}
-          {showTreeView && (
-            <div className="w-64 flex-shrink-0">
-              <TreeView
-                key={treeViewKey}
-                currentFolderId={currentFolderId}
-                onFolderSelect={navigateToFolder}
-              />
-            </div>
-          )}
+        <div className="flex">
           
           {/* Contenuto principale */}
           <div 
@@ -1284,7 +1252,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
               <button
                 type="button"
                 onClick={() => setShowCustomizer(!showCustomizer)}
-                className="flex items-center space-x-1 text-sm text-red-600 hover:text-red-700"
+                className="flex items-center space-x-1 text_sm text-red-600 hover:text-red-700"
               >
                 <Palette size={14} />
                 <span>{showCustomizer ? 'Nascondi' : 'Personalizza'}</span>
@@ -1354,8 +1322,8 @@ const RenameModal: React.FC<RenameModalProps> = ({ item, onClose, onRename }) =>
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify_center z-50">
+      <div className="bg-white rounded-lg p-6 w_full max-w-md mx-4">
         <h2 className="text-xl font-bold text-gray-900 mb-4">
           Rinomina {item.type === 'folder' ? 'Cartella' : 'Scheda'}
         </h2>
@@ -1410,7 +1378,7 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ item, onClose, onDelete }) =>
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+      <div className="bg-white rounded-lg p-6 w_full max-w-md mx-4">
         <h2 className="text-xl font-bold text-gray-900 mb-4">
           Elimina {item.type === 'folder' ? 'Cartella' : 'Scheda'}
         </h2>

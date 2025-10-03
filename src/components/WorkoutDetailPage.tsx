@@ -52,6 +52,8 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   // Gestione tempo scheda
   const [isEditingDates, setIsEditingDates] = useState(false);
   const [durationWeeks, setDurationWeeks] = useState(4);
+  // Stato temporaneo per consentire editing libero (compresa cancellazione)
+  const [durationWeeksTemp, setDurationWeeksTemp] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [originalExercises, setOriginalExercises] = useState<Exercise[] | null>(null); // Esercizi originali - null indica che non sono ancora stati caricati
   const [showExerciseForm, setShowExerciseForm] = useState(false);
@@ -98,6 +100,13 @@ useEffect(() => {
     }
   }
 }, [activeVariantId, variants.length]);
+
+// Inizializza input temporaneo quando si apre il modal
+useEffect(() => {
+  if (isEditingDates) {
+    setDurationWeeksTemp(String(durationWeeks));
+  }
+}, [isEditingDates, durationWeeks]);
   
   // Athletes management
   const [associatedAthletes, setAssociatedAthletes] = useState<string[]>([]);
@@ -1465,15 +1474,20 @@ useEffect(() => {
                   type="number"
                   min="1"
                   max="52"
-                  value={durationWeeks}
-                  onChange={(e) => setDurationWeeks(Math.max(1, parseInt(e.target.value) || 1))}
+                  value={durationWeeksTemp}
+                  onChange={(e) => setDurationWeeksTemp(e.target.value)}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <div className="text-xs text-gray-500 mt-1">Inserisci un numero da 1 a 52 settimane</div>
               </div>
 
               <button
-                onClick={() => setIsEditingDates(false)}
+                onClick={() => {
+                  const parsed = parseInt(durationWeeksTemp, 10);
+                  const n = Number.isFinite(parsed) ? Math.min(52, Math.max(1, parsed)) : 1;
+                  setDurationWeeks(n);
+                  setIsEditingDates(false);
+                }}
                 className="w-full px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
               >
                 Salva
