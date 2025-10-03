@@ -20,7 +20,7 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
       />
       
       <div className="pt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full px-0 py-8">
           <div className="mb-8">
             {/* Header con tasto indietro e titolo centralizzato */}
             <div className="flex items-center justify-between">
@@ -46,9 +46,8 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <FileExplorer currentUser={currentUser} />
-          </div>
+          {/* Rimosso il contenitore inferiore (div sotto) */}
+          <FileExplorer currentUser={currentUser} />
         </div>
       </div>
     </div>
