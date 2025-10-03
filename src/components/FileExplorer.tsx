@@ -729,10 +729,15 @@ useEffect(() => {
               <div className="flex items-center space-x-1">
                 <Calendar size={12} />
                 <span>
-                  {item.data.durationWeeks 
-                    ? `${item.data.durationWeeks} ${item.data.durationWeeks === 1 ? 'settimana' : 'settimane'}`
-                    : `${item.data.duration} giorni`
-                  }
+                  {(() => {
+                    const dw = (item.data as any).durationWeeks;
+                    if (dw && dw > 0) {
+                      return `${dw} ${dw === 1 ? 'settimana' : 'settimane'}`;
+                    }
+                    const days = (item.data as any).duration;
+                    const weeks = days ? Math.round(days / 7) : 0;
+                    return weeks > 0 ? `${weeks} ${weeks === 1 ? 'settimana' : 'settimane'}` : '—';
+                  })()}
                 </span>
               </div>
             </div>

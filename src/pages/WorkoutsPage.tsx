@@ -218,7 +218,15 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
                         </div>
                         <div className="flex items-center space-x-2">
                           <Clock size={16} />
-                          <span>Durata: {workout.duration} giorni</span>
+                          <span>
+                            Durata: {(() => {
+                              const dw = (workout as any).durationWeeks;
+                              if (dw && dw > 0) return `${dw} ${dw === 1 ? 'settimana' : 'settimane'}`;
+                              const days = (workout as any).duration;
+                              const weeks = days ? Math.round(days / 7) : 0;
+                              return weeks > 0 ? `${weeks} ${weeks === 1 ? 'settimana' : 'settimane'}` : '—';
+                            })()}
+                          </span>
                         </div>
                         <div className="flex items-center space-x-2">
                           <Target size={16} />

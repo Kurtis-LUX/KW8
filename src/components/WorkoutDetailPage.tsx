@@ -51,7 +51,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   
   // Gestione tempo scheda
   const [isEditingDates, setIsEditingDates] = useState(false);
-  const [durationWeeks, setDurationWeeks] = useState(1);
+  const [durationWeeks, setDurationWeeks] = useState(4);
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [originalExercises, setOriginalExercises] = useState<Exercise[] | null>(null); // Esercizi originali - null indica che non sono ancora stati caricati
   const [showExerciseForm, setShowExerciseForm] = useState(false);
@@ -117,7 +117,10 @@ useEffect(() => {
   const deepCloneExercises = (exercises: any[]): any[] => {
     return exercises.map(exercise => ({
       ...exercise,
-      id: exercise.id ? `${exercise.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}` : undefined,
+      // Assegna sempre un id valido e unico ai cloni
+      id: (exercise.id && exercise.id.trim() !== '')
+        ? `${exercise.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       instructions: exercise.instructions ? [...exercise.instructions] : [],
       equipment: exercise.equipment ? [...exercise.equipment] : [],
       // Clone any nested objects or arrays that might exist
@@ -146,6 +149,37 @@ useEffect(() => {
   const [editingReps, setEditingReps] = useState('');
   const [customExercises, setCustomExercises] = useState<string[]>([]);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
+
+  // Persistenza libreria esercizi personalizzati
+  const customExercisesInitializedRef = useRef(false);
+  useEffect(() => {
+    const key = 'kw8_customExercises';
+    const saved = DB.getItem(key);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const normalized = Array.from(new Set(parsed.filter((ex: any) => typeof ex === 'string' && ex.trim() !== '')));
+          setCustomExercises(normalized);
+        }
+      } catch (e) {
+        console.warn('⚠️ Impossibile leggere libreria esercizi personalizzati:', e);
+      }
+    }
+    // Evita il salvataggio iniziale dello stato vuoto
+    customExercisesInitializedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    // Non salvare all'initial render per evitare di sovrascrivere con []
+    if (!customExercisesInitializedRef.current) return;
+    const key = 'kw8_customExercises';
+    try {
+      DB.setItem(key, JSON.stringify(Array.from(new Set(customExercises))));
+    } catch (e) {
+      console.warn('⚠️ Impossibile salvare libreria esercizi personalizzati:', e);
+    }
+  }, [customExercises]);
 
   // Drag-to-scroll per toolbar
   useEffect(() => {
@@ -336,7 +370,8 @@ useEffect(() => {
             name: workoutTitle || 'Nuova scheda',
             description: workoutDescription || '',
             coach: 'Coach',
-            duration: 30,
+            duration: Math.max(1, durationWeeks) * 7,
+            durationWeeks,
             exercises: exercises || [], // Include gli esercizi esistenti nella creazione iniziale
             category: 'strength' as const,
             status: workoutStatus || 'draft',
@@ -593,7 +628,19 @@ useEffect(() => {
             
             // Carica le varianti se esistono, ma all'ingresso forziamo la scheda originale attiva
               if (workoutData.variants && workoutData.variants.length > 0) {
-                setVariants(workoutData.variants.map(v => ({ ...v, isActive: false })));
+                // Normalizza gli ID degli esercizi all'interno delle varianti
+                const normalizedVariants = workoutData.variants.map(v => {
+                  const fixedExercises = (v.exercises || []).map(ex => {
+                    if (!ex.id || ex.id.trim() === '') {
+                      const newId = Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+                      console.log('🔧 Fixing variant exercise with empty ID:', ex.name, 'New ID:', newId);
+                      return { ...ex, id: newId };
+                    }
+                    return ex;
+                  });
+                  return { ...v, isActive: false, exercises: fixedExercises };
+                });
+                setVariants(normalizedVariants);
                 setActiveVariantId('original');
                 setWorkoutDescription(workoutData.description || '');
               } else {
@@ -643,8 +690,8 @@ useEffect(() => {
                          currentSets || currentReps || '';
         
         const newExercise: Exercise = {
-          id: Date.now().toString(),
           ...currentExercise,
+          id: Date.now().toString(),
           sets: setsValue
         };
         console.log('🆕 New exercise created:', {
@@ -892,18 +939,10 @@ useEffect(() => {
       if (selectedVariant && selectedVariant.exercises && selectedVariant.exercises.length > 0) {
         setExercises([...selectedVariant.exercises]); // Crea una copia indipendente
       } else {
-        // Se la variante non ha esercizi, inizia con una copia deep clonata degli originali
-        const clonedExercises = deepCloneExercises(originalExercises);
-        console.log('🔄 Creating cloned exercises for new variant:', clonedExercises.length);
-        setExercises(clonedExercises);
-        
-        // Salva immediatamente gli esercizi clonati nella variante
-        const updatedVariants = variants.map(v => 
-          v.id === variantId 
-            ? { ...v, exercises: clonedExercises, updatedAt: new Date().toISOString() }
-            : v
-        );
-        setVariants(updatedVariants);
+        // La variante non ha esercizi: NON copiare quelli dell'originale
+        console.log('📭 Variant has no exercises. Starting with empty list.');
+        setExercises([]);
+        // Non salvare nulla nella variante: resta vuota finché l’utente non aggiunge esercizi
       }
       // Usa la descrizione della variante se presente
       setWorkoutDescription(selectedVariant?.description || '');
@@ -1091,6 +1130,11 @@ useEffect(() => {
   };
   
   const handleRemoveExercise = (exerciseId: string) => {
+    // Guardia: evita cancellazioni massive se l'id è vuoto/invalid
+    if (!exerciseId || typeof exerciseId !== 'string' || exerciseId.trim() === '') {
+      console.warn('⚠️ Invalid exerciseId for removal, aborting to prevent mass deletion:', exerciseId);
+      return;
+    }
     showConfirmation(
       'Sei sicuro di voler rimuovere questo esercizio?',
       () => {
