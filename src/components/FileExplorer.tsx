@@ -171,11 +171,25 @@ useEffect(() => {
       });
       return count;
     };
+
+    // Conta ricorsivamente tutte le sottocartelle discendenti
+    const countSubfoldersRecursive = (folderIds: string[]): number => {
+      let count = 0;
+      folderIds.forEach(id => {
+        const childFolders = allFolders.filter(folder => folder.parentId === id);
+        count += childFolders.length;
+        if (childFolders.length > 0) {
+          count += countSubfoldersRecursive(childFolders.map(f => f.id));
+        }
+      });
+      return count;
+    };
     
     const totalWorkouts = workouts.length + countWorkoutsRecursive(subfolders.map(f => f.id));
+    const totalSubfolders = subfolders.length + countSubfoldersRecursive(subfolders.map(f => f.id));
     
     return {
-      subfolders: subfolders.length,
+      subfolders: totalSubfolders,
       workouts: totalWorkouts
     };
   };
