@@ -62,7 +62,6 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [showAthleteDropdown, setShowAthleteDropdown] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState('');
   const [workoutStatus, setWorkoutStatus] = useState<'published' | 'draft'>('draft');
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [variants, setVariants] = useState<WorkoutVariant[]>([]);
@@ -1396,7 +1395,15 @@ useEffect(() => {
               
               {/* Workout Status */}
               <button
-                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                onClick={() => {
+                  const prev = workoutStatus;
+                  const next = prev === 'published' ? 'draft' : 'published';
+                  setWorkoutStatus(next);
+                  updateWorkoutPlan(workoutId, { status: next }).catch((err) => {
+                    console.error('Errore aggiornando lo status:', err);
+                    setWorkoutStatus(prev);
+                  });
+                }}
                 title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
@@ -1540,40 +1547,6 @@ useEffect(() => {
             </div>
           </div>
         )}
-        
-        {/* Status Modal */}
-        {showStatusDropdown && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            onClick={() => setShowStatusDropdown(false)}
-          >
-            <div 
-              className="w-32 bg-white border border-gray-200 rounded-lg shadow-lg"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => {
-                  setWorkoutStatus('published');
-                  setShowStatusDropdown(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
-              >
-                Pubblicata
-              </button>
-              <button
-                onClick={() => {
-                  setWorkoutStatus('draft');
-                  setShowStatusDropdown(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
-              >
-                Bozza
-              </button>
-            </div>
-          </div>
-        )}
-        
-
         
         {/* Exercise Form */}
         {showExerciseForm && (

@@ -291,6 +291,11 @@ useEffect(() => {
   // Funzioni drag & drop
   const handleDragStart = (e: React.DragEvent, item: FolderTreeItem) => {
     setDraggedItem(item);
+    try {
+      // Alcuni browser richiedono setData per abilitare il drop
+      e.dataTransfer.setData('application/json', JSON.stringify({ id: item.id, type: item.type }));
+      e.dataTransfer.setData('text/plain', item.id);
+    } catch {}
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -312,17 +317,33 @@ useEffect(() => {
     
     try {
       if (draggedItem.type === 'folder') {
+        // Evita spostamenti non validi: dentro sé stessa o una sua sottocartella
+        if (targetFolderId === draggedItem.id) {
+          return;
+        }
+        if (targetFolderId) {
+          const folders = await DB.getWorkoutFolders();
+          let currentId: string | null = targetFolderId;
+          let isTargetDescendant = false;
+          while (currentId) {
+            if (currentId === draggedItem.id) { isTargetDescendant = true; break; }
+            const current = folders.find(f => f.id === currentId);
+            currentId = current?.parentId ?? null;
+          }
+          if (isTargetDescendant) {
+            alert('Non puoi spostare una cartella dentro sé stessa o una sua sottocartella.');
+            return;
+          }
+        }
         // Sposta cartella
         const folder = draggedItem.data as WorkoutFolder;
-        const updatedFolder = { ...folder, parentId: targetFolderId };
-        await DB.saveWorkoutFolder(updatedFolder);
-        await loadFolderContent(); // Ricarica per le cartelle
+        await DB.saveWorkoutFolder({ ...folder, parentId: targetFolderId });
+        await loadFolderContent();
       } else {
         // Sposta scheda
         const workout = draggedItem.data as WorkoutPlan;
-        const updatedWorkout = { ...workout, folderId: targetFolderId };
         await updateWorkoutPlan(workout.id, { folderId: targetFolderId });
-        // Non serve chiamare loadFolderContent() perché updateWorkoutPlan già ricarica i dati
+        await loadFolderContent();
       }
       
       setDraggedItem(null);
@@ -652,11 +673,12 @@ useEffect(() => {
           } ${
             isDragging ? 'scale-95' : ''
           } ${
-            item.type === 'folder' ? 'bg-yellow-50' : 'bg-blue-50'
+            item.type === 'folder' ? 'bg-gray-100' : 'bg-white'
           }`}
           onClick={handleCardClick}
           draggable
           onDragStart={(e) => handleDragStart(e, item)}
+          onDragEnd={() => { setDragOverItem(null); setDraggedItem(null); }}
           onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : e.preventDefault()}
           onDragLeave={handleDragLeave}
           onDrop={(e) => item.type === 'folder' ? handleDrop(e, item.id) : e.preventDefault()}
@@ -671,12 +693,12 @@ useEffect(() => {
                   ? item.data.color + '20' 
                   : item.type === 'workout' && item.data && 'color' in item.data
                   ? item.data.color + '20'
-                  : item.type === 'folder' ? '#3B82F620' : '#10B98120',
+                  : item.type === 'folder' ? '#3B82F620' : '#EF444420',
                 color: item.type === 'folder' && item.data && 'color' in item.data 
                   ? item.data.color 
                   : item.type === 'workout' && item.data && 'color' in item.data
                   ? item.data.color
-                  : item.type === 'folder' ? '#3B82F6' : '#10B981'
+                  : item.type === 'folder' ? '#3B82F6' : '#EF4444'
               }}
             >
               <FolderIcon item={item} />
