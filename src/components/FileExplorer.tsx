@@ -1208,6 +1208,11 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
   const [workoutVariants, setWorkoutVariants] = useState<WorkoutVariant[]>([]);
   const [showCustomizer, setShowCustomizer] = useState(false);
 
+  // Sync default color with selected type
+  useEffect(() => {
+    setSelectedColor(type === 'folder' ? '#EF4444' : '#3B82F6');
+  }, [type]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Usa il nome inserito o il nome predefinito
@@ -1240,7 +1245,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
             onClick={() => onTypeChange('folder')}
             className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${
               type === 'folder'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                ? 'border-red-500 bg-red-50 text-red-700'
                 : 'border-gray-300 hover:bg-gray-50'
             }`}
           >
@@ -1251,7 +1256,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
             onClick={() => onTypeChange('workout')}
             className={`flex-1 py-2 px-4 rounded-lg border transition-colors ${
               type === 'workout'
-                ? 'border-green-500 bg-green-50 text-green-700'
+                ? 'border-blue-500 bg-blue-50 text-blue-700'
                 : 'border-gray-300 hover:bg-gray-50'
             }`}
           >
