@@ -1272,7 +1272,7 @@ useEffect(() => {
         </div>
       )}
       
-      <div className="w-full max-w-none mx-auto bg-white rounded-lg shadow-lg px-6 pt-2 pb-6 relative">
+      <div className="w-full max-w-none mx-auto bg-white rounded-lg shadow-none px-6 pt-2 pb-6 relative min-h-[calc(100vh-300px)]">
 
         
         {/* Header Row: Back button + centered Title within card container */}

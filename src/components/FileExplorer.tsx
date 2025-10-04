@@ -342,7 +342,7 @@ useEffect(() => {
       } else {
         // Sposta scheda
         const workout = draggedItem.data as WorkoutPlan;
-        await updateWorkoutPlan(workout.id, { folderId: targetFolderId });
+        await updateWorkoutPlan(workout.id, { folderId: targetFolderId ?? null });
         await loadFolderContent();
       }
       
@@ -488,7 +488,7 @@ useEffect(() => {
           id,
           name: uniqueName,
           icon: icon || 'Folder',
-          color: color || '#3B82F6',
+          color: color || '#EF4444',
           parentId: currentFolderId,
           order: folderTree.filter(item => item.type === 'folder').length,
           createdAt: now,
@@ -515,7 +515,7 @@ useEffect(() => {
           difficulty: 1,
           targetMuscles: [],
           folderId: currentFolderId,
-          color: color || '#10B981',
+          color: color || '#3B82F6',
           variants: variants || [],
           createdAt: now,
           updatedAt: now
@@ -678,7 +678,7 @@ useEffect(() => {
           onClick={handleCardClick}
           draggable
           onDragStart={(e) => handleDragStart(e, item)}
-          onDragEnd={() => { setDragOverItem(null); setDraggedItem(null); }}
+          onDragEnd={() => { setDragOverItem(null); }}
           onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : e.preventDefault()}
           onDragLeave={handleDragLeave}
           onDrop={(e) => item.type === 'folder' ? handleDrop(e, item.id) : e.preventDefault()}
@@ -689,16 +689,12 @@ useEffect(() => {
             <div 
               className="p-2 rounded-lg"
               style={{
-                backgroundColor: item.type === 'folder' && item.data && 'color' in item.data 
-                  ? item.data.color + '20' 
-                  : item.type === 'workout' && item.data && 'color' in item.data
-                  ? item.data.color + '20'
-                  : item.type === 'folder' ? '#3B82F620' : '#EF444420',
-                color: item.type === 'folder' && item.data && 'color' in item.data 
-                  ? item.data.color 
-                  : item.type === 'workout' && item.data && 'color' in item.data
-                  ? item.data.color
-                  : item.type === 'folder' ? '#3B82F6' : '#EF4444'
+                backgroundColor: item.type === 'folder'
+                  ? (((item.data && 'color' in item.data) ? ((item.data as any).color === '#3B82F6' ? '#EF4444' : (item.data as any).color) : '#EF4444') + '20')
+                  : (((item.data && 'color' in item.data) ? (item.data as any).color : '#3B82F6') + '20'),
+                color: item.type === 'folder'
+                  ? ((item.data && 'color' in item.data) ? (((item.data as any).color === '#3B82F6') ? '#EF4444' : (item.data as any).color) : '#EF4444')
+                  : ((item.data && 'color' in item.data) ? (item.data as any).color : '#3B82F6')
               }}
             >
               <FolderIcon item={item} />
@@ -861,7 +857,7 @@ useEffect(() => {
 
       
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 p-4">
+      <div className="bg-white border-t border-b border-gray-200 p-4">
         {/* Barra di ricerca e filtri */}
         <div className="mb-4">
           <div className="flex items-center justify-center space-x-4">
@@ -1208,7 +1204,7 @@ interface CreateItemModalProps {
 const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, type, onTypeChange }) => {
   const [name, setName] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('Folder');
-  const [selectedColor, setSelectedColor] = useState(type === 'folder' ? '#3B82F6' : '#10B981');
+  const [selectedColor, setSelectedColor] = useState(type === 'folder' ? '#EF4444' : '#3B82F6');
   const [workoutVariants, setWorkoutVariants] = useState<WorkoutVariant[]>([]);
   const [showCustomizer, setShowCustomizer] = useState(false);
 
@@ -1226,7 +1222,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
     );
     setName('');
     setSelectedIcon('Folder');
-    setSelectedColor(type === 'folder' ? '#3B82F6' : '#10B981');
+    setSelectedColor(type === 'folder' ? '#EF4444' : '#3B82F6');
     setWorkoutVariants([]);
     setShowCustomizer(false);
   };
