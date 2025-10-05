@@ -114,7 +114,7 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
         <label className="block text-sm font-medium text-gray-700 mb-3">
           Colore scheda
         </label>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto no-scrollbar">
           {AVAILABLE_COLORS.map((color) => (
             <button
               key={color}

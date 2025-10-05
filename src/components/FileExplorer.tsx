@@ -27,7 +27,7 @@ import Portal from './Portal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
 import { useWorkoutPlans } from '../hooks/useFirestore';
 import DB, { WorkoutPlan, WorkoutFolder, WorkoutVariant } from '../utils/database';
-import FolderCustomizer, { AVAILABLE_ICONS } from './FolderCustomizer';
+import FolderCustomizer, { AVAILABLE_ICONS, AVAILABLE_COLORS } from './FolderCustomizer';
 import WorkoutCustomizer from './WorkoutCustomizer';
 import WorkoutDetailPage from './WorkoutDetailPage';
 
@@ -117,12 +117,14 @@ useEffect(() => {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createType, setCreateType] = useState<'folder' | 'workout'>('folder');
-  const [showRenameModal, setShowRenameModal] = useState(false);
-  const [itemToRename, setItemToRename] = useState<FolderTreeItem | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<FolderTreeItem | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<FolderTreeItem | null>(null);
   const [showToolbarDropdown, setShowToolbarDropdown] = useState(false);
-  const [showFiltersSubmenu, setShowFiltersSubmenu] = useState(false);
+const [showFiltersSubmenu, setShowFiltersSubmenu] = useState(false);
+const [showSortSubmenu, setShowSortSubmenu] = useState(false);
+const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'date', workouts: 'name' as 'name' | 'date' });
   
   // Hook Firestore per gestire i piani di allenamento
   const { workoutPlans, loading, error, createWorkoutPlan, updateWorkoutPlan, deleteWorkoutPlan, refetch } = useWorkoutPlans();
@@ -400,22 +402,29 @@ useEffect(() => {
       return true;
     });
 
-    // Ordinamento
-    filtered.sort((a, b) => {
-      switch (filters.sortBy) {
-        case 'name':
+    // Ordinamento: applica criteri separati per Cartelle e Schede
+    const sortByCriterion = (arr: FolderTreeItem[], criterion: 'name' | 'date') => {
+      return arr.slice().sort((a, b) => {
+        if (criterion === 'name') {
           const aName = a.name || '';
           const bName = b.name || '';
           return aName.localeCompare(bName);
-        case 'date':
-          const aDate = a.data && 'createdAt' in a.data ? a.data.createdAt : '';
-          const bDate = b.data && 'createdAt' in b.data ? b.data.createdAt : '';
-          return new Date(bDate).getTime() - new Date(aDate).getTime();
+        }
+        // 'date' => ordina per data di creazione, più recente prima
+        const aDate = a.data && 'createdAt' in a.data ? a.data.createdAt : '';
+        const bDate = b.data && 'createdAt' in b.data ? b.data.createdAt : '';
+        return new Date(bDate).getTime() - new Date(aDate).getTime();
+      });
+    };
 
-        default:
-          return 0;
-      }
-    });
+    const folders = filtered.filter(item => item.type === 'folder');
+    const workoutsItems = filtered.filter(item => item.type === 'file');
+
+    const sortedFolders = sortByCriterion(folders, sortOptions.folders);
+    const sortedWorkouts = sortByCriterion(workoutsItems, sortOptions.workouts);
+
+    // Combina mantenendo le categorie separate: Cartelle prima, poi Schede
+    filtered = [...sortedFolders, ...sortedWorkouts];
 
     return filtered;
   };
@@ -546,21 +555,33 @@ useEffect(() => {
     }
   };
 
-  const handleRename = async (item: FolderTreeItem, newName: string) => {
+  const handleEdit = async (
+    item: FolderTreeItem,
+    updates: { name: string; icon?: string; color?: string }
+  ) => {
     try {
       if (item.type === 'folder' && item.data && 'icon' in item.data) {
-        const updatedFolder = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
+        const now = new Date().toISOString();
+        const updatedFolder: WorkoutFolder = {
+          ...(item.data as WorkoutFolder),
+          name: updates.name ?? item.name,
+          icon: updates.icon ?? (item.data as any).icon ?? 'Folder',
+          color: updates.color ?? (item.data as any).color ?? '#EF4444',
+          updatedAt: now
+        };
         await DB.saveWorkoutFolder(updatedFolder);
         await loadFolderContent(); // Ricarica per le cartelle
       } else if (item.type === 'file' && item.data && 'name' in item.data) {
-        const updatedWorkout = { ...item.data, name: newName, updatedAt: new Date().toISOString() };
-        await updateWorkoutPlan(item.id, { name: newName });
+        const newName = updates.name ?? item.name;
+        const newColor = updates.color ?? (item.data as any).color ?? '#3B82F6';
+        await updateWorkoutPlan(item.id, { name: newName, color: newColor });
         // Non serve chiamare loadFolderContent() perché updateWorkoutPlan già ricarica i dati
       }
       
-
+      setShowEditModal(false);
+      setItemToEdit(null);
     } catch (error) {
-      console.error('Error renaming item:', error);
+      console.error('Error editing item:', error);
     }
   };
 
@@ -797,14 +818,14 @@ useEffect(() => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setItemToRename(item);
-                    setShowRenameModal(true);
+                    setItemToEdit(item);
+                    setShowEditModal(true);
                     toggleItemMenu();
                   }}
                   className="dropdown-item"
                 >
                   <Edit3 size={14} />
-                  <span>Rinomina</span>
+                  <span>Modifica</span>
                 </button>
                 
                 <button
@@ -898,8 +919,6 @@ useEffect(() => {
                        visibility: toolbarPosition ? 'visible' : 'hidden',
                      }}
                    >
-                     <hr className="my-2" />
-                     
                      {/* Modalità vista */}
                      <div className="px-4 py-2">
                        <p className="text-sm font-medium text-gray-700 mb-2">Modalità vista</p>
@@ -932,6 +951,42 @@ useEffect(() => {
                      </div>
                      
                      <hr className="my-2" />
+
+                     {/* Ordina - Menu a tendina interno */}
+                     <div className="relative">
+                       <button
+                         onClick={() => setShowSortSubmenu(!showSortSubmenu)}
+                         className="dropdown-item justify-between w-full"
+                       >
+                         <div className="flex items-center space-x-3">
+                           <SlidersHorizontal size={16} />
+                           <span>Ordina</span>
+                         </div>
+                         <ChevronRight size={14} className={`transition-transform duration-200 ${showSortSubmenu ? 'rotate-90' : ''}`} />
+                       </button>
+
+                       {showSortSubmenu && (
+                         <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200 pl-4 pr-4">
+                           <div>
+                             <label className="block text-xs font-medium text-gray-600 mb-1">Cartelle</label>
+                             <div className="grid grid-cols-2 gap-2">
+                               <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'name' }))} className={`px-2 py-1 text-xs rounded ${sortOptions.folders === 'name' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'}`}>Nome</button>
+                               <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'date' }))} className={`px-2 py-1 text-xs rounded ${sortOptions.folders === 'date' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'}`}>Data creazione</button>
+                             </div>
+                           </div>
+
+                           <div>
+                             <label className="block text-xs font-medium text-gray-600 mb-1">Schede</label>
+                             <div className="grid grid-cols-2 gap-2">
+                               <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'name' }))} className={`px-2 py-1 text-xs rounded ${sortOptions.workouts === 'name' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'}`}>Nome</button>
+                               <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'date' }))} className={`px-2 py-1 text-xs rounded ${sortOptions.workouts === 'date' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'}`}>Data creazione</button>
+                             </div>
+                           </div>
+                         </div>
+                       )}
+                     </div>
+
+                     <hr className="my-2" />
                      
                      {/* Filtri - Menu a tendina interno */}
                      <div className="relative">
@@ -948,7 +1003,7 @@ useEffect(() => {
                        
                        {/* Submenu Filtri */}
                        {showFiltersSubmenu && (
-                         <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200 pl-4">
+                         <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200 pl-4 pr-4">
                            {/* Filtri tipo */}
                            <div>
                              <label className="block text-xs font-medium text-gray-600 mb-1">Mostra</label>
@@ -974,19 +1029,6 @@ useEffect(() => {
                                  Schede
                                </label>
                              </div>
-                           </div>
-                           
-                           {/* Ordinamento */}
-                           <div>
-                             <label className="block text-xs font-medium text-gray-600 mb-1">Ordina per</label>
-                             <select
-                               value={filters.sortBy}
-                               onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value as 'name' | 'date' }))}
-                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-transparent"
-                             >
-                               <option value="name">Nome</option>
-                               <option value="date">Data creazione</option>
-                             </select>
                            </div>
                            
                            {/* Azioni filtri */}
@@ -1166,15 +1208,15 @@ useEffect(() => {
         />
       )}
 
-      {/* Modal rinomina */}
-      {showRenameModal && itemToRename && (
-        <RenameModal
-          item={itemToRename}
+      {/* Modal modifica */}
+      {showEditModal && itemToEdit && (
+        <EditModal
+          item={itemToEdit}
           onClose={() => {
-            setShowRenameModal(false);
-            setItemToRename(null);
+            setShowEditModal(false);
+            setItemToEdit(null);
           }}
-          onRename={handleRename}
+          onEdit={handleEdit}
         />
       )}
 
@@ -1233,8 +1275,8 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto no-scrollbar">
         <h2 className="text-xl font-bold text-gray-900 mb-4">
           Crea {type === 'folder' ? 'Cartella' : 'Scheda'}
         </h2>
@@ -1289,7 +1331,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
               <button
                 type="button"
                 onClick={() => setShowCustomizer(!showCustomizer)}
-                className="flex items-center space-x-1 text_sm text-red-600 hover:text-red-700"
+                className="flex items-center space-x-1 text-sm text-red-600 hover:text-red-700"
               >
                 <Palette size={14} />
                 <span>{showCustomizer ? 'Nascondi' : 'Personalizza'}</span>
@@ -1297,7 +1339,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
             </div>
             
             {showCustomizer && (
-              <div className="border border-gray-200 rounded-lg p-4 max-h-96 overflow-y-auto">
+              <div className="border border-gray-200 rounded-lg p-4 overflow-visible">
                 {type === 'folder' ? (
                   <FolderCustomizer
                     selectedIcon={selectedIcon}
@@ -1340,60 +1382,70 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
 };
 
 // Modal per rinominare elementi
-interface RenameModalProps {
+// RenameModal rimosso: la funzionalità è stata sostituita da EditModal.
+
+interface EditModalProps {
   item: FolderTreeItem;
   onClose: () => void;
-  onRename: (item: FolderTreeItem, newName: string) => void;
+  onEdit: (item: FolderTreeItem, updates: { name: string; icon?: string; color?: string }) => void;
 }
 
-const RenameModal: React.FC<RenameModalProps> = ({ item, onClose, onRename }) => {
+const EditModal: React.FC<EditModalProps> = ({ item, onClose, onEdit }) => {
   const [name, setName] = useState(item.name);
+  const initialIcon = item.type === 'folder' && item.data && 'icon' in item.data ? ((item.data as any).icon || 'Folder') : undefined;
+  const initialColor = item.data && 'color' in item.data
+    ? ((item.data as any).color || (item.type === 'folder' ? '#EF4444' : '#3B82F6'))
+    : (item.type === 'folder' ? '#EF4444' : '#3B82F6');
+  const [icon, setIcon] = useState<string | undefined>(initialIcon);
+  const [color, setColor] = useState<string>(initialColor);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && name.trim() !== item.name) {
-      onRename(item, name.trim());
-    } else {
-      onClose();
-    }
+    const trimmed = name.trim();
+    if (!trimmed) { onClose(); return; }
+    const updates: { name: string; icon?: string; color?: string } = { name: trimmed };
+    if (item.type === 'folder') { updates.icon = icon; updates.color = color; }
+    else { updates.color = color; }
+    onEdit(item, updates);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify_center z-50">
-      <div className="bg-white rounded-lg p-6 w_full max-w-md mx-4">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Rinomina {item.type === 'folder' ? 'Cartella' : 'Scheda'}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm mx-auto max-h-[90vh] overflow-y-auto no-scrollbar">
+        <h2 className="text-lg font-semibold text-gray-900 mb-3">
+          Modifica {item.type === 'folder' ? 'Cartella' : 'Scheda'}
         </h2>
         
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nuovo nome
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              autoFocus
-            />
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent" autoFocus />
           </div>
+
+          {item.type === 'folder' ? (
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Aspetto cartella</label>
+              <FolderCustomizer selectedIcon={icon || 'Folder'} selectedColor={color} onIconChange={(val) => setIcon(val)} onColorChange={(val) => setColor(val)} />
+            </div>
+          ) : (
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Colore scheda</label>
+              <div className="grid grid-cols-6 gap-1 max-h-40 overflow-y-auto no-scrollbar">
+                {AVAILABLE_COLORS.map((c) => {
+                  const isSelected = color === c.value;
+                  return (
+                    <button key={c.value} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setColor(c.value); }} className={`p-2 rounded-md border transition-all hover:scale-105 ${isSelected ? 'border-gray-800 ring-1 ring-gray-300' : 'border-gray-200 hover:border-gray-300'}`} title={c.name}>
+                      <div className={`w-5 h-5 rounded-full ${c.bg} mx-auto`} style={{ backgroundColor: c.value }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           
-          <div className="flex space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Annulla
-            </button>
-            <button
-              type="submit"
-              disabled={!name.trim()}
-              className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Rinomina
-            </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2 px-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Annulla</button>
+            <button type="submit" className="flex-1 py-2 px-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Salva</button>
           </div>
         </form>
       </div>

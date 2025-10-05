@@ -1189,7 +1189,7 @@ useEffect(() => {
     <div>
       {/* Workout Variants Tabs */}
       {variants.length > 0 && (
-        <div className="mb-6 bg-gray-50 p-6">
+        <div className="mb-0 bg-gray-50 px-6 pt-6 pb-0">
           <div
             ref={variantTabsRef}
             onPointerDown={handleVariantTabsPointerDown}
@@ -1224,15 +1224,15 @@ useEffect(() => {
                   console.log('📥 Loading original exercises:', originalExercises?.length || 0);
                   setExercises(originalExercises ? [...originalExercises] : []); // Crea una copia indipendente
                 }}
-                className={`${activeVariantId === 'original' ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} inline-flex items-center justify-center leading-none font-medium rounded-t-lg transition-colors whitespace-nowrap ${
-                  activeVariantId === 'original'
-                    ? 'bg-blue-500 text-white border-b-2 border-blue-500 -mb-px'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
-                title={workoutTitle}
-                aria-label={`Scheda originale: ${workoutTitle}`}
-              >
-                <Star size={16} />
+                className={`${activeVariantId === 'original' ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} inline-flex items-center justify-center leading-none font-medium rounded-t-lg border border-gray-200 transition-colors whitespace-nowrap ${
+                 activeVariantId === 'original'
+                   ? 'bg-white text-red-600 border-blue-400 border-b-2 border-red-600 -mb-px'
+                   : 'bg-white text-red-600 hover:text-red-700 border-b-0'
+                 }`}
+                 title={`Scheda originale: ${workoutTitle}`}
+                 aria-label={`Scheda originale: ${workoutTitle}`}
+               >
+                <Star size={16} color="#2563eb" />
               </button>
             </div>
             
@@ -1244,28 +1244,30 @@ useEffect(() => {
                     if (isDragging) { e.preventDefault(); return; }
                     handleSwitchVariant(variant.id);
                   }}
-                  className={`inline-flex items-center gap-2 ${variant.isActive ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} pr-8 font-medium rounded-t-lg transition-colors whitespace-nowrap ${
+                  className={`inline-flex items-center gap-2 ${variant.isActive ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} pr-8 font-medium rounded-t-lg border border-gray-200 transition-colors whitespace-nowrap ${
                     variant.isActive
-                      ? 'bg-red-500 text-white border-b-2 border-red-700'
-                      : 'bg-red-500 text-white hover:bg-red-600'
+                      ? 'bg-white text-red-600 border-b-2 border-red-600 -mb-px'
+                      : 'bg-white text-red-600 hover:text-red-700 border-b-0'
                   }`}
                   title={variant.name}
                   aria-label={`Variante: ${variant.name}`}
                 >
-                  <span className="inline-block shrink-0">{index + 1}</span>
-                  <Copy size={16} />
+                  <Copy size={16} color="#dc2626" />
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (isDragging) return;
-                    handleRemoveVariant(variant.id);
-                  }}
-                  className="absolute top-1 right-1 p-1 text-gray-500 hover:text-black transition-colors"
-                >
-                  <X size={14} />
-                </button>
+                <div className="absolute top-1 right-1 flex flex-col items-center">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (isDragging) return;
+                      handleRemoveVariant(variant.id);
+                    }}
+                    className="p-1 text-gray-500 hover:text-black transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                  <span className="mt-0.5 text-red-600 font-bold text-[10px] leading-none pointer-events-none">{index + 1}</span>
+                </div>
               </div>
             ))}
           </div>

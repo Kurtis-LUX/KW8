@@ -342,27 +342,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
               </div>
             </div>
 
-            {/* Seconda riga: Ordinamento */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Ordinamento */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                <option value="name">Ordina per Nome</option>
-                <option value="joinDate">Ordina per Data Iscrizione</option>
-                <option value="lastActivity">Ordina per Ultima Attività</option>
-              </select>
 
-              {/* Direzione ordinamento */}
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                {sortOrder === 'asc' ? '↑ Crescente' : '↓ Decrescente'}
-              </button>
-            </div>
           </div>
 
 

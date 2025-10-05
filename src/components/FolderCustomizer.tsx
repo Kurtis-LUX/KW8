@@ -130,7 +130,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
 
       {/* Selezione Icone */}
       {activeTab === 'icon' && (
-        <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
+        <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto no-scrollbar">
           {AVAILABLE_ICONS.map((icon) => {
             const IconComponent = icon.component;
             const isSelected = selectedIcon === icon.name;
@@ -143,7 +143,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
                   e.stopPropagation();
                   onIconChange(icon.name);
                 }}
-                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 ${
+                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 flex items-center justify-center ${
                   isSelected
                     ? 'border-red-500 bg-red-50'
                     : 'border-gray-200 hover:border-gray-300'
@@ -162,7 +162,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
 
       {/* Selezione Colori */}
       {activeTab === 'color' && (
-        <div className="grid grid-cols-6 gap-2">
+        <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto no-scrollbar">
           {AVAILABLE_COLORS.map((color) => {
             const isSelected = selectedColor === color.value;
             
