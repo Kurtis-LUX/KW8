@@ -21,7 +21,8 @@ import {
   Filter,
   SlidersHorizontal,
   ArrowLeft,
-  Menu
+  Menu,
+  CheckCircle
 } from 'lucide-react';
 import Portal from './Portal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
@@ -145,8 +146,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
 
   const [draggedItem, setDraggedItem] = useState<FolderTreeItem | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
+  const dropInProgressRef = useRef(false);
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
   const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   // Stati per ricerca e filtraggio
   const [searchTerm, setSearchTerm] = useState('');
@@ -303,8 +306,11 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
 
   const handleDragOver = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
-    setDragOverItem(targetId);
+    if (dragOverItem !== targetId) {
+      setDragOverItem(targetId);
+    }
   };
 
   const handleDragLeave = () => {
@@ -313,9 +319,12 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
 
   const handleDrop = async (e: React.DragEvent, targetFolderId: string | null) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (dropInProgressRef.current) return;
+    dropInProgressRef.current = true;
     setDragOverItem(null);
     
-    if (!draggedItem) return;
+    if (!draggedItem) { dropInProgressRef.current = false; return; }
     
     try {
       if (draggedItem.type === 'folder') {
@@ -339,18 +348,40 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         }
         // Sposta cartella
         const folder = draggedItem.data as WorkoutFolder;
+        const prevParentId = folder.parentId ?? null;
+        const newParentId = targetFolderId ?? null;
         await DB.saveWorkoutFolder({ ...folder, parentId: targetFolderId });
+        // Aggiornamento ottimistico: rimuovi la cartella dalla vista corrente se cambia directory
+        if (prevParentId === (currentFolderId ?? null) && newParentId !== (currentFolderId ?? null)) {
+          setFolderTree(prev => prev.filter(i => i.id !== folder.id));
+        }
+        // Notifica successo
+        setToastMessage && setToastMessage('Cartella spostata con successo');
+        setTimeout(() => setToastMessage && setToastMessage(null), 2500);
         await loadFolderContent();
       } else {
         // Sposta scheda
         const workout = draggedItem.data as WorkoutPlan;
+        const prevFolderId = (workout.folderId ?? null);
+        const newFolderId = (targetFolderId ?? null);
         await updateWorkoutPlan(workout.id, { folderId: targetFolderId ?? null });
+        // Aggiornamento ottimistico: rimuovi la scheda dalla vista corrente se cambia directory
+        if (prevFolderId === (currentFolderId ?? null) && newFolderId !== (currentFolderId ?? null)) {
+          setFolderTree(prev => prev.filter(i => i.id !== workout.id));
+        }
+        // Notifica successo
+        setToastMessage && setToastMessage('Scheda spostata con successo');
+        setTimeout(() => setToastMessage && setToastMessage(null), 2500);
+        // Assicura che la vista usi i piani aggiornati
+        await refetch();
         await loadFolderContent();
       }
       
       setDraggedItem(null);
     } catch (error) {
       console.error('Errore durante lo spostamento:', error);
+    } finally {
+      dropInProgressRef.current = false;
     }
   };
 
@@ -689,17 +720,19 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     
     return (
       <div 
-          className={`group relative rounded-xl border border-gray-200 transition-all duration-300 ease-in-out cursor-pointer transform 
-            ${isDragOver ? 'ring-2 ring-red-300 bg-red-50/70 shadow-lg scale-[1.02]' : 'ring-1 ring-gray-300 hover:ring-gray-400 hover:shadow-lg hover:scale-[1.02]'} 
-            ${isDragging ? 'scale-95' : ''} 
+          className={`group relative rounded-xl border border-gray-200 transition-colors duration-200 ease-in-out cursor-pointer 
+            ${isDragOver ? 'ring-2 ring-red-300 bg-red-50/70 shadow-lg' : 'ring-1 ring-gray-300 hover:ring-gray-400 hover:shadow-lg'} 
             ${item.type === 'folder' ? 'bg-white/70' : 'bg-white/80'} backdrop-blur-sm`}
+          data-item-type={item.type}
+          data-folder-id={item.type === 'folder' ? item.id : undefined}
           onClick={handleCardClick}
           draggable
           onDragStart={(e) => handleDragStart(e, item)}
           onDragEnd={() => { setDragOverItem(null); }}
-          onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : e.preventDefault()}
-          onDragLeave={handleDragLeave}
-          onDrop={(e) => item.type === 'folder' ? handleDrop(e, item.id) : e.preventDefault()}
+          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (item.type === 'folder' && dragOverItem !== item.id) { setDragOverItem(item.id); } }}
+          onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : (e.preventDefault(), e.stopPropagation())}
+          onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
+          onDrop={(e) => item.type === 'folder' ? (e.preventDefault(), e.stopPropagation(), handleDrop(e, item.id)) : (e.preventDefault(), e.stopPropagation())}
         >
         <div className="p-4">
           {/* Header con icona e nome */}
@@ -873,14 +906,20 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   return (
     <div className="min-h-[calc(100vh-200px)] flex flex-col bg-gray-50">
 
+      {toastMessage && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-md flex items-center space-x-2 text-gray-800">
+          <CheckCircle className="text-green-600" size={18} />
+          <span className="text-sm font-medium">{toastMessage}</span>
+        </div>
+      )}
       
       {/* Toolbar */}
       <div className="bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4">
         {/* Barra di ricerca e filtri */}
         <div className="mb-4">
-          <div className="relative flex items-center justify-end gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Barra di ricerca */}
-            <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-md">
+            <div className="relative flex-1 min-w-0">
               <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
@@ -896,7 +935,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               <button
                 ref={toolbarTriggerRef}
                 onClick={toggleToolbarDropdown}
-                className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 px-4 py-2 rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] sm:px-4 px-2"
+                className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 px-4 py-2 rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0 sm:px-4 px-2"
               >
                 <Menu size={16} />
                 <span className="hidden sm:inline">Menu</span>
@@ -1057,7 +1096,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
              {/* Pulsante Aggiungi */}
              <button
                onClick={() => setShowCreateModal(true)}
-               className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] sm:px-4 px-2"
+               className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0 sm:px-4 px-2"
              >
                <Plus size={16} />
                <span className="hidden sm:inline">Aggiungi</span>
@@ -1103,11 +1142,15 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                       <React.Fragment key={index}>
                         <button
                           onClick={() => navigateToBreadcrumb(index)}
+                          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); }}
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); }}
+                          onDragLeave={() => { const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (dragOverItem === targetKey) setDragOverItem(null); }}
+                          onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const targetFolderId = index === 0 ? null : (crumb.id ?? null); handleDrop(e, targetFolderId); }}
                           className={`font-medium whitespace-nowrap transition-colors duration-200 ${
                             isCurrentFolder 
                               ? 'text-red-600 hover:text-red-700' 
                               : 'text-gray-700 hover:text-gray-900'
-                          }`}
+                          } ${dragOverItem === (index === 0 ? 'root' : crumb.id) ? 'bg-blue-50 ring-1 ring-blue-300 rounded-md' : ''}`}
                         >
                           {crumb.name}
                         </button>
@@ -1132,14 +1175,28 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           {/* Contenuto principale */}
           <div 
             className={`flex-1 transition-all duration-300 ease-in-out ${
-              dragOverItem === 'root' ? 'bg-red-50 border-2 border-dashed border-red-300 rounded-lg transform scale-[1.01]' : ''
+              dragOverItem === 'root' ? 'bg-red-50 border-2 border-dashed border-red-300 rounded-lg' : ''
             }`}
             onDragOver={(e) => {
               e.preventDefault();
-              setDragOverItem('root');
+              e.stopPropagation();
+              const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+              const folderEl = el?.closest('[data-folder-id]') as HTMLElement | null;
+              if (folderEl) {
+                const fid = folderEl.getAttribute('data-folder-id');
+                if (fid && dragOverItem !== fid) setDragOverItem(fid);
+              } else {
+                if (dragOverItem !== 'root') setDragOverItem('root');
+              }
             }}
-            onDragLeave={() => setDragOverItem(null)}
-            onDrop={(e) => handleDrop(e, currentFolderId)}
+            onDragLeave={() => { if (dragOverItem === 'root') setDragOverItem(null); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const targetKey = dragOverItem;
+              const targetFolderId = targetKey === 'root' ? currentFolderId : (targetKey ?? currentFolderId);
+              handleDrop(e, targetFolderId);
+            }}
           >
             {(() => {
               const filteredItems = getFilteredAndSortedItems();
