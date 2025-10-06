@@ -1224,10 +1224,10 @@ useEffect(() => {
                   console.log('📥 Loading original exercises:', originalExercises?.length || 0);
                   setExercises(originalExercises ? [...originalExercises] : []); // Crea una copia indipendente
                 }}
-                className={`${activeVariantId === 'original' ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} inline-flex items-center justify-center leading-none font-medium rounded-t-lg border border-gray-200 transition-colors whitespace-nowrap ${
+                className={`${activeVariantId === 'original' ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} inline-flex items-center justify-center leading-none font-medium rounded-t-lg border border-gray-200 transition-all whitespace-nowrap ${
                  activeVariantId === 'original'
-                   ? 'bg-white text-red-600 border-blue-400 border-b-2 border-red-600 -mb-px'
-                   : 'bg-white text-red-600 hover:text-red-700 border-b-0'
+                   ? 'bg-white/90 text-red-600 ring-1 ring-gray-300 shadow-sm backdrop-blur-sm'
+                   : 'bg-white text-red-600 hover:text-red-700 hover:bg-gray-50 border-b-0'
                  }`}
                  title={`Scheda originale: ${workoutTitle}`}
                  aria-label={`Scheda originale: ${workoutTitle}`}
@@ -1244,14 +1244,14 @@ useEffect(() => {
                     if (isDragging) { e.preventDefault(); return; }
                     handleSwitchVariant(variant.id);
                   }}
-                  className={`inline-flex items-center gap-2 ${variant.isActive ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} pr-8 font-medium rounded-t-lg border border-gray-200 transition-colors whitespace-nowrap ${
-                    variant.isActive
-                      ? 'bg-white text-red-600 border-b-2 border-red-600 -mb-px'
-                      : 'bg-white text-red-600 hover:text-red-700 border-b-0'
-                  }`}
-                  title={variant.name}
-                  aria-label={`Variante: ${variant.name}`}
-                >
+                  className={`inline-flex items-center gap-2 ${variant.isActive ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} pr-8 font-medium rounded-t-lg border border-gray-200 transition-all whitespace-nowrap ${
+                     variant.isActive
+                       ? 'bg-white/90 text-red-600 ring-1 ring-gray-300 shadow-sm backdrop-blur-sm'
+                       : 'bg-white text-red-600 hover:text-red-700 hover:bg-gray-50 border-b-0'
+                   }`}
+                   title={variant.name}
+                   aria-label={`Variante: ${variant.name}`}
+                 >
                   <Copy size={16} color="#dc2626" />
                 </button>
                 <div className="absolute top-1 right-1 flex flex-col items-center">
@@ -1274,7 +1274,7 @@ useEffect(() => {
         </div>
       )}
       
-      <div className="w-full max-w-none mx-auto bg-white rounded-lg shadow-none px-6 pt-2 pb-6 relative min-h-[calc(100vh-300px)]">
+      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border transition-shadow backdrop-blur-sm ${activeVariantId === 'original' ? 'bg-white/95 ring-1 ring-blue-300 border-blue-200 shadow-md' : 'bg-white/95 ring-1 ring-red-300 border-red-200 shadow-md'}`}>
 
         
         {/* Header Row: Back button + centered Title within card container */}
@@ -1317,14 +1317,10 @@ useEffect(() => {
             )}
           </div>
           <div className="flex justify-end">
-            {!isEditingTitle && (
-              <button
-                onClick={() => setIsEditingTitle(true)}
-                className="p-2 text-gray-500 hover:text-blue-500 transition-colors shrink-0"
-              >
-                <Edit3 size={18} />
-              </button>
-            )}
+            {/* Placeholder invisibile per mantenere il titolo perfettamente centrato rispetto al contenitore */}
+            <div className="p-2 opacity-0 pointer-events-none">
+              <ArrowLeft size={20} />
+            </div>
           </div>
         </div>
 
@@ -1348,15 +1344,7 @@ useEffect(() => {
               ) : (
                 <p className="text-gray-400 italic text-center transition-colors group-hover:text-blue-600">Clicca per aggiungere una descrizione</p>
               )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditingDescription(true);
-                }}
-                className="p-1 text-gray-400 hover:text-blue-500 transition-colors shrink-0"
-              >
-                <Edit3 size={14} />
-              </button>
+              {/* Icona modifica descrizione rimossa: il testo è già cliccabile per modificare */}
             </div>
           )}
         </div>
@@ -1364,23 +1352,45 @@ useEffect(() => {
         {/* Toolbar - Moved below title */}
         <div className="flex justify-center mb-8">
           <div ref={toolbarRef} className="relative w-full flex justify-center px-0 -mx-6 sm:mx-0">
-            <div className="flex flex-nowrap justify-center gap-2 p-2.5 bg-white rounded-xl shadow-md border border-gray-200 w-full">
+            <div className="flex flex-nowrap justify-center gap-2 p-2.5 bg-white/90 rounded-xl shadow-sm border border-gray-200 backdrop-blur-sm w-full">
               {/* Create Exercise */}
               <button
-                onClick={() => setShowExerciseForm(true)}
-                title="Crea"
-                aria-label="Crea"
-                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
-              >
-                <Plus size={18} className="text-green-600" />
-              </button>
+                  onClick={() => {
+                    if (showExerciseForm) {
+                      setShowExerciseForm(false);
+                      setEditingExerciseId(null);
+                      setEditingExercise(null);
+                      setCurrentExercise({
+                        id: '',
+                        name: '',
+                        notes: '',
+                        sets: '',
+                        intensity: '',
+                        tut: '',
+                        recovery: '',
+                        videoLink: ''
+                      });
+                      setCurrentSets('');
+                      setCurrentReps('');
+                      setEditingSets('');
+                      setEditingReps('');
+                    } else {
+                      setShowExerciseForm(true);
+                    }
+                  }}
+                  title="Crea"
+                  aria-label="Crea"
+                  className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                >
+                  <Plus size={18} className="text-green-600" />
+                </button>
               
               {/* Duration Selector */}
               <button
                 onClick={() => setIsEditingDates(!isEditingDates)}
                 title="Durata"
                 aria-label="Durata"
-                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Calendar size={18} className="text-blue-600" />
               </button>
@@ -1390,7 +1400,7 @@ useEffect(() => {
                 onClick={handleCloneWorkout}
                 title="Clona"
                 aria-label="Clona"
-                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Copy size={18} className="text-purple-600" />
               </button>
@@ -1408,7 +1418,7 @@ useEffect(() => {
                 }}
                 title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <div className={`w-3 h-3 rounded-full ${
                   workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
@@ -1420,7 +1430,7 @@ useEffect(() => {
                 onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
                 title="Associa"
                 aria-label="Associa"
-                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Users size={18} className="text-purple-600" />
               </button>
@@ -1430,7 +1440,7 @@ useEffect(() => {
                 onClick={() => setShowAthletesList(!showAthletesList)}
                 title="Visualizza"
                 aria-label="Visualizza"
-                className="bg-white rounded-md shadow w-9 h-9 flex items-center justify-center cursor-pointer transition hover:shadow-md shrink-0"
+                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Eye size={18} className="text-indigo-600" />
               </button>
@@ -1445,7 +1455,7 @@ useEffect(() => {
             onClick={() => setIsEditingDates(false)}
           >
             <div 
-              className="w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4"
+              className="w-80 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md p-4 backdrop-blur-sm"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-3">
@@ -1483,14 +1493,14 @@ useEffect(() => {
             onClick={() => setShowAthleteDropdown(false)}
           >
             <div 
-              className="w-64 bg-white border border-gray-200 rounded-lg shadow-lg"
+              className="w-64 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md backdrop-blur-sm"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-2">
                 <input
                   type="text"
                   placeholder="Cerca atleta..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
               <div className="max-h-40 overflow-y-auto">
@@ -1524,7 +1534,7 @@ useEffect(() => {
             onClick={() => setShowAthletesList(false)}
           >
             <div 
-              className="w-64 bg-white border border-gray-200 rounded-lg shadow-lg"
+              className="w-64 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md backdrop-blur-sm"
               onClick={(e) => e.stopPropagation()}
             >
               {associatedAthletes.length === 0 ? (
@@ -1552,8 +1562,8 @@ useEffect(() => {
         
         {/* Exercise Form */}
         {showExerciseForm && (
-          <div className="mb-8 p-6 bg-gray-50 rounded-lg">
-            <h3 className="text-xl font-semibold mb-4">{editingExerciseId ? 'Modifica Esercizio' : 'Aggiungi Esercizio'}</h3>
+          <div className="mb-8 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition-all">
+            <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight">{editingExerciseId ? 'Modifica Esercizio' : 'Aggiungi Esercizio'}</h3>
             
             {/* Exercise Name with Smart Search */}
             <div className="mb-4">
@@ -1624,12 +1634,12 @@ useEffect(() => {
                       }, 200);
                     }}
                     placeholder="Cerca o digita nome esercizio..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   />
                   
                   {/* Search Suggestions */}
                   {showSearchSuggestions && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md z-10 max-h-48 overflow-y-auto backdrop-blur-sm">
                       {getFilteredExercises().length > 0 ? (
                         getFilteredExercises().map((exercise, index) => {
                           const isCustomExercise = customExercises.includes(exercise);
@@ -1701,7 +1711,7 @@ useEffect(() => {
                         setSaveMessage(`Esercizio \"${exerciseName}\" salvato nella libreria personale`);
                       }
                     }}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center"
+                    className="px-4 py-2 bg-green-500 text-white rounded-full ring-1 ring-black/10 shadow-sm hover:bg-green-600 transition-all flex items-center"
                     title="Salva nuovo esercizio"
                   >
                     <Save size={16} />
@@ -1731,14 +1741,14 @@ useEffect(() => {
                         console.log('Clearing search query');
                       }
                     }}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+                    className="px-4 py-2 bg-white/70 text-gray-700 rounded-full ring-1 ring-gray-300 shadow-sm hover:bg-white/90 transition-all"
                     title="Mostra tutti gli esercizi"
                   >
                     ▼
                   </button>
                   {showExerciseDropdown && (
                     <div 
-                      className="absolute top-full right-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                      className="absolute top-full right-0 mt-1 w-64 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md z-50 backdrop-blur-sm"
                       ref={exerciseDropdownRef}
                       onMouseDown={(e) => {
                         console.log('🖱️ Mouse down on dropdown container');
@@ -1846,7 +1856,7 @@ useEffect(() => {
                     }
                   }}
                   placeholder="Note sull'esercizio"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                   rows={3}
                 />
               </div>
@@ -1878,7 +1888,7 @@ useEffect(() => {
                       }
                     }}
                     placeholder="es. 3"
-                    className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-20 px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     min="1"
                   />
                   <span className="text-gray-500 font-medium">x</span>
@@ -1906,7 +1916,7 @@ useEffect(() => {
                       }
                     }}
                     placeholder="es. 8"
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-24 px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     min="1"
                   />
                 </div>
@@ -1927,7 +1937,7 @@ useEffect(() => {
                         }
                       }}
                       placeholder="es. RPE 8 o RIR 2 o 70% 1RM"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
                   </div>
                   <div className="flex-1">
@@ -1943,7 +1953,7 @@ useEffect(() => {
                         }
                       }}
                       placeholder="es. 3-1-2-1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
                   </div>
                   <div className="flex-1">
@@ -1959,7 +1969,7 @@ useEffect(() => {
                         }
                       }}
                       placeholder="es. 90 secondi"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     />
                   </div>
                 </div>
@@ -1978,7 +1988,7 @@ useEffect(() => {
                     }
                   }}
                   placeholder="https://..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                 />
               </div>
             </div>
@@ -1987,7 +1997,7 @@ useEffect(() => {
             <div className="flex space-x-4">
               <button
                 onClick={handleAddExercise}
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-6 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white ring-1 ring-black/10 shadow-sm hover:shadow-md transition-all active:scale-[0.99]"
               >
                 {(() => {
                   console.log('🔍 Button render - editingExerciseId:', editingExerciseId);
@@ -2016,7 +2026,7 @@ useEffect(() => {
                   setEditingSets('');
                   setEditingReps('');
                 }}
-                className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                className="px-6 py-2 rounded-full bg-white/70 text-gray-700 ring-1 ring-gray-300 shadow-sm hover:bg-white/90 transition-all"
               >
                 Annulla
               </button>
@@ -2026,11 +2036,11 @@ useEffect(() => {
         
         {/* Exercises List */}
         <div className="mb-8">
-          <h3 className="text-xl font-semibold mb-4">Esercizi</h3>
+          <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight">Esercizi</h3>
           {exercises.length > 0 ? (
             <div className="space-y-4">
               {exercises.map((exercise, index) => (
-                <div key={exercise.id || `exercise-${index}`} className="p-4 bg-gray-50 rounded-lg">
+                <div key={exercise.id || `exercise-${index}`} className="p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px">
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-semibold text-lg">{exercise.name}</h4>
                     <div className="flex space-x-2">
@@ -2118,25 +2128,25 @@ useEffect(() => {
       {/* Confirmation Dialog */}
       {showConfirmDialog && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
           onClick={() => setShowConfirmDialog(false)}
         >
           <div 
-            className="bg-white p-6 rounded-lg max-w-md w-full mx-4"
+            className="bg-white/90 p-6 rounded-2xl max-w-md w-full mx-4 border border-gray-200 ring-1 ring-black/10 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold mb-4">Conferma Azione</h3>
-            <p className="text-gray-600 mb-6">{confirmMessage}</p>
-            <div className="flex space-x-4">
+            <h3 className="text-xl font-semibold mb-3 text-gray-900 font-sfpro">Conferma Azione</h3>
+            <p className="text-gray-700 mb-6 font-sfpro">{confirmMessage}</p>
+            <div className="flex items-center gap-3">
               <button
                 onClick={handleConfirmAction}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="px-4 py-2 rounded-full bg-red-500 text-white ring-1 ring-black/10 shadow-sm hover:bg-red-600 transition-all"
               >
                 Conferma
               </button>
               <button
                 onClick={() => setShowConfirmDialog(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                className="px-4 py-2 rounded-full bg-white text-gray-800 ring-1 ring-black/10 shadow-sm hover:bg-gray-100 transition-all"
               >
                 Annulla
               </button>

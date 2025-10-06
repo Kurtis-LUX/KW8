@@ -689,13 +689,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     
     return (
       <div 
-          className={`group relative rounded-lg border-2 transition-all duration-300 ease-in-out hover:shadow-lg hover:scale-[1.02] cursor-pointer transform border-gray-200 hover:border-gray-300 ${
-            isDragOver ? 'border-red-300 bg-red-50 shadow-lg scale-[1.02]' : ''
-          } ${
-            isDragging ? 'scale-95' : ''
-          } ${
-            item.type === 'folder' ? 'bg-gray-100' : 'bg-white'
-          }`}
+          className={`group relative rounded-xl border border-gray-200 transition-all duration-300 ease-in-out cursor-pointer transform 
+            ${isDragOver ? 'ring-2 ring-red-300 bg-red-50/70 shadow-lg scale-[1.02]' : 'ring-1 ring-gray-300 hover:ring-gray-400 hover:shadow-lg hover:scale-[1.02]'} 
+            ${isDragging ? 'scale-95' : ''} 
+            ${item.type === 'folder' ? 'bg-white/70' : 'bg-white/80'} backdrop-blur-sm`}
           onClick={handleCardClick}
           draggable
           onDragStart={(e) => handleDragStart(e, item)}
@@ -708,7 +705,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           {/* Header con icona e nome */}
           <div className="flex items-center space-x-3 mb-2">
             <div 
-              className="p-2 rounded-lg"
+              className="p-2.5 rounded-xl ring-1 ring-gray-200 backdrop-blur-sm"
               style={{
                 backgroundColor: item.type === 'folder'
                   ? (((item.data && 'color' in item.data) ? ((item.data as any).color === '#3B82F6' ? '#EF4444' : (item.data as any).color) : '#EF4444') + '20')
@@ -721,7 +718,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               <FolderIcon item={item} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-gray-900 truncate">
+              <h3 className="font-semibold text-gray-900/90 tracking-tight truncate">
                 {item.name}
               </h3>
               {item.type === 'folder' && (
@@ -796,7 +793,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
             ref={itemMenuTriggerRef}
-            className="menu-button p-1 rounded hover:bg-gray-100"
+            className="menu-button p-2 rounded-lg bg-white/60 hover:bg-white border border-gray-200 ring-1 ring-gray-200 backdrop-blur-sm transition-shadow hover:shadow-sm"
             onClick={handleItemMenuClick}
           >
             <MoreVertical size={16} />
@@ -878,19 +875,19 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
 
       
       {/* Toolbar */}
-      <div className="bg-white border-t border-b border-gray-200 p-4">
+      <div className="bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4">
         {/* Barra di ricerca e filtri */}
         <div className="mb-4">
-          <div className="flex items-center justify-center space-x-4">
+          <div className="relative flex items-center justify-end gap-3">
             {/* Barra di ricerca */}
-            <div className="relative flex-1 max-w-md">
-              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <div className="absolute left-1/2 -translate-x-1/2 w-full max-w-md">
+              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 placeholder="Cerca cartelle e schede..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500 hover:bg-white/70"
               />
             </div>
             
@@ -899,7 +896,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               <button
                 ref={toolbarTriggerRef}
                 onClick={toggleToolbarDropdown}
-                className="flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105 sm:px-4 px-2"
+                className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 px-4 py-2 rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] sm:px-4 px-2"
               >
                 <Menu size={16} />
                 <span className="hidden sm:inline">Menu</span>
@@ -911,7 +908,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                  <Portal>
                    <div 
                      ref={toolbarDropdownRef}
-                     className="dropdown-menu w-64 max-h-96 overflow-y-auto"
+                     className="dropdown-menu w-72 max-h-96 overflow-y-auto bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-xl rounded-xl p-2"
                      style={{
                        position: 'fixed',
                        left: toolbarPosition?.left ?? -9999,
@@ -928,8 +925,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                              setViewMode('list');
                              closeToolbarDropdown();
                            }}
-                           className={`flex-1 p-2 rounded-md transition-all duration-200 flex items-center justify-center space-x-2 ${
-                             viewMode === 'list' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
+                           className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+                             viewMode === 'list' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
                            }`}
                          >
                            <List size={16} />
@@ -940,8 +937,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                              setViewMode('grid');
                              closeToolbarDropdown();
                            }}
-                           className={`flex-1 p-2 rounded-md transition-all duration-200 flex items-center justify-center space-x-2 ${
-                             viewMode === 'grid' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'
+                           className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+                             viewMode === 'grid' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
                            }`}
                          >
                            <Grid3X3 size={16} />
@@ -966,20 +963,20 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                        </button>
 
                        {showSortSubmenu && (
-                         <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200 pl-4 pr-4">
+                         <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200/60 pl-4 pr-4">
                            <div>
                              <label className="block text-xs font-medium text-gray-600 mb-1">Cartelle</label>
                              <div className="grid grid-cols-2 gap-2">
-                               <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'name' }))} className={`px-2 py-1 text-xs rounded ${sortOptions.folders === 'name' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'}`}>Nome</button>
-                               <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'date' }))} className={`px-2 py-1 text-xs rounded ${sortOptions.folders === 'date' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'}`}>Data creazione</button>
+                               <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Nome</button>
+                               <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Data creazione</button>
                              </div>
                            </div>
 
                            <div>
                              <label className="block text-xs font-medium text-gray-600 mb-1">Schede</label>
                              <div className="grid grid-cols-2 gap-2">
-                               <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'name' }))} className={`px-2 py-1 text-xs rounded ${sortOptions.workouts === 'name' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'}`}>Nome</button>
-                               <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'date' }))} className={`px-2 py-1 text-xs rounded ${sortOptions.workouts === 'date' ? 'bg-red-100 text-red-600' : 'bg-gray-100 hover:bg-gray-200'}`}>Data creazione</button>
+                               <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Nome</button>
+                               <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Data creazione</button>
                              </div>
                            </div>
                          </div>
@@ -1060,7 +1057,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
              {/* Pulsante Aggiungi */}
              <button
                onClick={() => setShowCreateModal(true)}
-               className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 ease-in-out hover:scale-105 sm:px-4 px-2"
+               className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] sm:px-4 px-2"
              >
                <Plus size={16} />
                <span className="hidden sm:inline">Aggiungi</span>
@@ -1078,7 +1075,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                   const parentIndex = breadcrumb.length - 2;
                   navigateToBreadcrumb(parentIndex);
                 }}
-                className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 transition-all duration-200 ease-in-out hover:scale-105 flex-shrink-0"
+                className="p-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 transition-all duration-300 ease-in-out hover:shadow-sm active:scale-[0.98] flex-shrink-0"
                 title="Torna indietro"
               >
                 <ArrowLeft size={16} />
@@ -1089,7 +1086,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
             <div className="min-w-0 flex-1">
               <nav
                 ref={breadcrumbNavRef}
-                className="flex items-center space-x-2 text-sm overflow-x-auto no-scrollbar pb-1 cursor-grab active:cursor-grabbing select-none"
+                className="flex items-center space-x-2 text-sm overflow-x-auto overflow-y-visible no-scrollbar py-1 px-2 cursor-grab active:cursor-grabbing select-none"
                 style={{ touchAction: 'pan-x' }}
                 onMouseDown={onBreadcrumbMouseDown}
                 onMouseMove={onBreadcrumbMouseMove}
@@ -1099,17 +1096,17 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                 onTouchMove={onBreadcrumbTouchMove}
                 onTouchEnd={onBreadcrumbTouchEnd}
               >
-                <div className="flex items-center space-x-2 whitespace-nowrap">
+                <div className="flex items-center space-x-2 whitespace-nowrap bg-white/60 backdrop-blur-sm ring-inset ring-1 ring-black/10 rounded-2xl px-3 py-1.5">
                   {breadcrumb.map((crumb, index) => {
                     const isCurrentFolder = index === breadcrumb.length - 1;
                     return (
                       <React.Fragment key={index}>
                         <button
                           onClick={() => navigateToBreadcrumb(index)}
-                          className={`font-medium whitespace-nowrap ${
+                          className={`font-medium whitespace-nowrap transition-colors duration-200 ${
                             isCurrentFolder 
                               ? 'text-red-600 hover:text-red-700' 
-                              : 'text-gray-600 hover:text-gray-900'
+                              : 'text-gray-700 hover:text-gray-900'
                           }`}
                         >
                           {crumb.name}

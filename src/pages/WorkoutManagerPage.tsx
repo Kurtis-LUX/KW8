@@ -20,29 +20,24 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
       />
       
       <div className="pt-20">
-        <div className="w-full px-0 py-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            {/* Header con tasto indietro e titolo centralizzato */}
-            <div className="flex items-center justify-between">
+            {/* Header con tasto indietro e titolo centralizzato (stile Apple) */}
+            <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3">
               <button
               onClick={() => onNavigate('coach-dashboard')}
-              className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
-              style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
-                background: 'transparent',
-                border: 'none'
-              }}
+              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
               title="Torna alla Dashboard Coach"
             >
-              <ChevronLeft size={32} />
+              <ChevronLeft size={24} className="block" />
             </button>
               
               <div className="text-center flex-1">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent mb-2">Gestione Schede</h1>
-                <p className="text-gray-600">Crea e gestisci le schede di allenamento</p>
+                <h1 className="font-sfpro text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-1">Gestione schede</h1>
+                <p className="font-sfpro text-[#001f3f]/90 font-medium text-sm sm:text-base">Crea e gestisci le schede di allenamento</p>
               </div>
               
-              <div className="w-12"></div> {/* Spacer per bilanciare il layout */}
+              <div className="w-10"></div> {/* Spacer per bilanciare il layout */}
             </div>
           </div>
           
