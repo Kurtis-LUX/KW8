@@ -149,26 +149,28 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
   const currentRule = rules[currentIndex];
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black bg-opacity-75 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-xl ring-1 ring-black/10 bg-white/70 backdrop-blur-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-b from-white to-gray-50">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-white/20 bg-white/30 backdrop-blur-md">
           <div className="flex items-center space-x-3">
-            <BookOpen className="text-navy-900" size={28} />
-            <h2 className="text-2xl font-bold text-navy-900">Regole della Palestra</h2>
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/40 backdrop-blur-md shadow-sm">
+              <BookOpen className="text-navy-900" size={22} />
+            </span>
+            <h2 className="text-xl md:text-2xl font-semibold text-navy-900">Regole della Palestra</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-600 hover:text-gray-800 transition-colors duration-300 p-2 rounded-full hover:bg-gray-100"
+            className="inline-flex items-center justify-center h-10 w-10 rounded-full border border-white/30 bg-white/40 backdrop-blur-md text-navy-900 hover:shadow-md hover:bg-white/50 transition-all"
           >
-            <X size={24} />
+            <X size={20} />
           </button>
         </div>
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
           {/* Carousel Container */}
-          <div className="relative overflow-hidden rounded-xl shadow-2xl mb-6">
+          <div className="relative overflow-hidden rounded-2xl ring-1 ring-black/10 bg-white/10 backdrop-blur-md shadow-lg mb-6">
             <div 
               className="flex transition-transform duration-700 ease-in-out cursor-grab active:cursor-grabbing select-none"
               style={{ transform: `translateX(-${currentIndex * 100}%)` }}
@@ -188,7 +190,7 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
                       alt={rule.title}
                       className="w-full h-full object-cover transition-transform duration-700"
                     />
-                    <div className="absolute inset-0 bg-navy-900 bg-opacity-60 flex items-center justify-center transition-opacity duration-500">
+                    <div className="absolute inset-0 bg-black/35 backdrop-blur-[2px] flex items-center justify-center transition-opacity duration-500">
                       <div className="text-center text-white p-8">
                         <div className="text-6xl mb-6 animate-bounce-subtle">{rule.icon}</div>
                         <h3 className="text-3xl font-bold mb-6 tracking-wide">{rule.title}</h3>
@@ -203,22 +205,16 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
             {/* Navigation Arrows */}
             <button
               onClick={prevRule}
-              className="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 text-white p-3 md:p-4 transition-all duration-300 hover:scale-110 z-10"
-              style={{ 
-                filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8))'
-              }}
+              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-white/30 bg-white/40 backdrop-blur-md text-white hover:bg-white/60 hover:shadow-md transition-all z-10"
             >
-              <ChevronLeft size={32} strokeWidth={3} className="md:w-9 md:h-9" />
+              <ChevronLeft size={24} className="md:w-6 md:h-6" />
             </button>
 
             <button
               onClick={nextRule}
-              className="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 text-white p-3 md:p-4 transition-all duration-300 hover:scale-110 z-10"
-              style={{ 
-                filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8))'
-              }}
+              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-white/30 bg-white/40 backdrop-blur-md text-white hover:bg-white/60 hover:shadow-md transition-all z-10"
             >
-              <ChevronRight size={32} strokeWidth={3} className="md:w-9 md:h-9" />
+              <ChevronRight size={24} className="md:w-6 md:h-6" />
             </button>
           </div>
 
@@ -228,8 +224,8 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
               <button
                 key={index}
                 onClick={() => goToRule(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 transform hover:scale-125 ${
-                  currentIndex === index ? 'bg-red-600 scale-125' : 'bg-gray-300'
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 transform hover:scale-125 ${
+                  currentIndex === index ? 'bg-red-600 scale-125 shadow-[0_0_0_3px_rgba(255,255,255,0.4)]' : 'bg-white/50 ring-1 ring-white/40'
                 }`}
               />
             ))}
@@ -239,12 +235,12 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 bg-gray-50">
+        <div className="p-4 md:p-6 border-t border-white/20 bg-white/30 backdrop-blur-md">
           <div className="text-center">
-            <p className="text-gray-600 text-sm">
+            <p className="text-navy-900/80 text-sm">
               Regola {currentIndex + 1} di {rules.length}
             </p>
-            <p className="text-gray-500 text-xs mt-1">
+            <p className="text-navy-900/70 text-xs mt-1">
               Rispettare queste regole garantisce un ambiente sicuro e piacevole per tutti
             </p>
           </div>
