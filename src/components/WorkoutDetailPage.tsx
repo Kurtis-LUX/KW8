@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit3, Plus, Save, Copy, Users, ArrowLeft, Eye, X, Trash2, Calendar, Star } from 'lucide-react';
+import { Edit3, Plus, Save, Copy, Users, ArrowLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText } from 'lucide-react';
+import { AVAILABLE_ICONS } from './FolderCustomizer';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
 
@@ -67,6 +68,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [variants, setVariants] = useState<WorkoutVariant[]>([]);
   const [activeVariantId, setActiveVariantId] = useState('original');
   const [originalWorkoutTitle, setOriginalWorkoutTitle] = useState('');
+  const [folderIconName, setFolderIconName] = useState<string>('Folder');
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
   const variantTabsRef = useRef<HTMLDivElement>(null);
@@ -106,6 +108,24 @@ useEffect(() => {
     setDurationWeeksTemp(String(durationWeeks));
   }
 }, [isEditingDates, durationWeeks]);
+
+// Recupera icona della cartella per la scheda corrente
+useEffect(() => {
+  let mounted = true;
+  (async () => {
+    try {
+      const plan = await DB.getWorkoutPlanById(workoutId);
+      const folderId = plan?.folderId;
+      if (folderId) {
+        const folder = await DB.getWorkoutFolderById(folderId);
+        if (mounted) setFolderIconName(folder?.icon || 'Folder');
+      }
+    } catch (e) {
+      console.error('Errore recuperando icona folder:', e);
+    }
+  })();
+  return () => { mounted = false; };
+}, [workoutId]);
   
   // Athletes management
   const [associatedAthletes, setAssociatedAthletes] = useState<string[]>([]);
@@ -697,7 +717,7 @@ useEffect(() => {
         if (addedName && !predefinedExercises.includes(addedName) && !customExercises.includes(addedName)) {
           console.log('📚 Adding to custom exercise library:', addedName);
           setCustomExercises([...customExercises, addedName]);
-          setSaveMessage(`Esercizio "${addedName}" salvato nella libreria personale`);
+          setSaveMessage('Nuovo esercizio aggiunto correttamente');
         }
 
         setCurrentExercise({
@@ -841,6 +861,9 @@ useEffect(() => {
     // Carica gli esercizi della nuova variante
     setExercises(deepCloneExercises(originalExercises));
     
+    // Notifica creazione variante
+    setSaveMessage(`Nuova variante creata: ${newVariant.name}`);
+    
     // NON modificare il titolo della scheda - mantieni quello originale
     // La variante avrà il suo nome ma la scheda mantiene il titolo originale
     
@@ -895,6 +918,9 @@ useEffect(() => {
     // Aggiorna lo stato delle varianti
     setVariants(variants.map(v => ({ ...v, isActive: v.id === variantId })));
     setActiveVariantId(variantId);
+    
+    // Notifica cambio variante
+    setSaveMessage(variantId === 'original' ? 'Scheda originale attiva' : `Variante attiva: ${variants.find(v => v.id === variantId)?.name || ''}`);
     
     // Aggiorna la descrizione mostrata in base alla variante
     if (variantId === 'original') {
@@ -968,6 +994,7 @@ useEffect(() => {
 
         // Aggiorna stato UI in modo atomico e coerente
         setVariants(finalVariants);
+        setSaveMessage('Variante rimossa');
         if (nextActiveVariantId) {
           setActiveVariantId(nextActiveVariantId);
           const nextActiveVariant = finalVariants.find(v => v.id === nextActiveVariantId);
@@ -1088,7 +1115,10 @@ useEffect(() => {
       if (updatedName && !predefinedExercises.includes(updatedName) && !customExercises.includes(updatedName)) {
         console.log('📚 Adding updated name to custom exercise library:', updatedName);
         setCustomExercises([...customExercises, updatedName]);
-        setSaveMessage(`Esercizio "${updatedName}" salvato nella libreria personale`);
+        setSaveMessage('Nuovo esercizio aggiunto correttamente');
+      } else {
+        // Notifica distinta per salvataggio/modifica dell'esercizio
+        setSaveMessage('Esercizio aggiornato');
       }
       
       // Reset current exercise form
@@ -1149,6 +1179,7 @@ useEffect(() => {
         }
         
         // Trigger auto-save immediately for exercise removal
+        setSaveMessage('Esercizio rimosso');
         triggerAutoSave();
       }
     );
@@ -1187,15 +1218,24 @@ useEffect(() => {
   
   return (
     <div>
+      {/* Notifica stile Apple (pill) */}
+      {saveMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 backdrop-blur-sm shadow-md ring-1 ring-gray-200">
+            <CheckCircle size={18} className="text-green-600" />
+            <span className="text-gray-700 text-sm font-medium">{saveMessage}</span>
+          </div>
+        </div>
+      )}
       {/* Workout Variants Tabs */}
       {variants.length > 0 && (
-        <div className="mb-0 bg-gray-50 px-6 pt-6 pb-0">
+        <div className="mb-0 bg-gray-50 px-6 pt-0 pb-0">
           <div
             ref={variantTabsRef}
             onPointerDown={handleVariantTabsPointerDown}
             onPointerMove={handleVariantTabsPointerMove}
             onPointerUp={handleVariantTabsPointerUp}
-            className={`flex flex-nowrap space-x-1 border-b border-gray-200 overflow-x-auto no-scrollbar select-none relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`flex flex-nowrap items-end space-x-1 overflow-x-auto no-scrollbar select-none relative -mb-px ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{ touchAction: 'pan-x' }}
           >
             {/* Tab per la scheda originale */}
@@ -1224,15 +1264,15 @@ useEffect(() => {
                   console.log('📥 Loading original exercises:', originalExercises?.length || 0);
                   setExercises(originalExercises ? [...originalExercises] : []); // Crea una copia indipendente
                 }}
-                className={`${activeVariantId === 'original' ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} inline-flex items-center justify-center leading-none font-medium rounded-t-lg border border-gray-200 transition-all whitespace-nowrap ${
+                className={`${activeVariantId === 'original' ? 'h-12 px-5 text-base scale-105 border-b-0 -mb-px' : 'h-8 px-3 text-xs scale-95 -mb-px'} inline-flex items-center justify-center leading-none font-medium rounded-t-lg border border-gray-200 transition-all whitespace-nowrap ${
                  activeVariantId === 'original'
-                   ? 'bg-white/90 text-red-600 ring-1 ring-gray-300 shadow-sm backdrop-blur-sm'
-                   : 'bg-white text-red-600 hover:text-red-700 hover:bg-gray-50 border-b-0'
+                   ? 'bg-white/90 text-red-600 shadow-sm backdrop-blur-sm'
+                   : 'bg-white text-red-600 hover:text-red-700 hover:bg-gray-50'
                  }`}
                  title={`Scheda originale: ${workoutTitle}`}
                  aria-label={`Scheda originale: ${workoutTitle}`}
                >
-                <Star size={16} color="#2563eb" />
+                {React.createElement(FileText, { size: 16, className: 'text-blue-600' })}
               </button>
             </div>
             
@@ -1244,10 +1284,10 @@ useEffect(() => {
                     if (isDragging) { e.preventDefault(); return; }
                     handleSwitchVariant(variant.id);
                   }}
-                  className={`inline-flex items-center gap-2 ${variant.isActive ? 'h-12 px-5 text-base' : 'h-10 px-4 text-sm'} pr-8 font-medium rounded-t-lg border border-gray-200 transition-all whitespace-nowrap ${
+                  className={`inline-flex items-center gap-2 ${variant.isActive ? 'h-12 px-5 text-base scale-105 border-b-0 -mb-px' : 'h-8 px-3 text-xs scale-95 -mb-px'} pr-8 font-medium rounded-t-lg border border-gray-200 transition-all whitespace-nowrap ${
                      variant.isActive
-                       ? 'bg-white/90 text-red-600 ring-1 ring-gray-300 shadow-sm backdrop-blur-sm'
-                       : 'bg-white text-red-600 hover:text-red-700 hover:bg-gray-50 border-b-0'
+                       ? 'bg-white/90 text-red-600 shadow-sm backdrop-blur-sm'
+                       : 'bg-white text-red-600 hover:text-red-700 hover:bg-gray-50'
                    }`}
                    title={variant.name}
                    aria-label={`Variante: ${variant.name}`}
@@ -1274,7 +1314,7 @@ useEffect(() => {
         </div>
       )}
       
-      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border transition-shadow backdrop-blur-sm ${activeVariantId === 'original' ? 'bg-white/95 ring-1 ring-blue-300 border-blue-200 shadow-md' : 'bg-white/95 ring-1 ring-red-300 border-red-200 shadow-md'}`}>
+      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border ${variants.length > 0 ? '' : '-mt-px'} transition-shadow backdrop-blur-sm ${activeVariantId === 'original' ? 'bg-white/95 ring-1 ring-blue-300 border-blue-200 shadow-md' : 'bg-white/95 ring-1 ring-red-300 border-red-200 shadow-md'}`}>
 
         
         {/* Header Row: Back button + centered Title within card container */}
@@ -1411,10 +1451,14 @@ useEffect(() => {
                   const prev = workoutStatus;
                   const next = prev === 'published' ? 'draft' : 'published';
                   setWorkoutStatus(next);
-                  updateWorkoutPlan(workoutId, { status: next }).catch((err) => {
-                    console.error('Errore aggiornando lo status:', err);
-                    setWorkoutStatus(prev);
-                  });
+                  updateWorkoutPlan(workoutId, { status: next })
+                    .then(() => {
+                      setSaveMessage(next === 'published' ? 'Scheda pubblicata' : 'Scheda impostata in bozza');
+                    })
+                    .catch((err) => {
+                      console.error('Errore aggiornando lo status:', err);
+                      setWorkoutStatus(prev);
+                    });
                 }}
                 title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
@@ -1477,6 +1521,7 @@ useEffect(() => {
                   const n = Number.isFinite(parsed) ? Math.min(52, Math.max(1, parsed)) : 1;
                   setDurationWeeks(n);
                   setIsEditingDates(false);
+                  setSaveMessage(`Durata aggiornata a ${n} settimana${n > 1 ? 'e' : ''}`);
                 }}
                 className="w-full px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
               >
@@ -1708,7 +1753,7 @@ useEffect(() => {
                       const exerciseName = editingExercise ? editingExercise.name : currentExercise.name;
                       if (exerciseName.trim() && !predefinedExercises.includes(exerciseName) && !customExercises.includes(exerciseName)) {
                         handleSaveCustomExercise(exerciseName);
-                        setSaveMessage(`Esercizio \"${exerciseName}\" salvato nella libreria personale`);
+                        setSaveMessage('Nuovo esercizio aggiunto correttamente');
                       }
                     }}
                     className="px-4 py-2 bg-green-500 text-white rounded-full ring-1 ring-black/10 shadow-sm hover:bg-green-600 transition-all flex items-center"

@@ -22,7 +22,8 @@ import {
   SlidersHorizontal,
   ArrowLeft,
   Menu,
-  CheckCircle
+  CheckCircle,
+  Ban
 } from 'lucide-react';
 import Portal from './Portal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
@@ -151,6 +152,39 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
+  // Toast animato stile "Apple"
+  const [isToastVisible, setIsToastVisible] = useState(false);
+  const [isToastExiting, setIsToastExiting] = useState(false);
+  const toastExitTimeoutRef = useRef<number | null>(null);
+  const toastHideTimeoutRef = useRef<number | null>(null);
+
+  const showToast = (message: string, duration = 3000) => {
+    // Pulisci eventuali timeout precedenti
+    if (toastExitTimeoutRef.current) { clearTimeout(toastExitTimeoutRef.current); toastExitTimeoutRef.current = null; }
+    if (toastHideTimeoutRef.current) { clearTimeout(toastHideTimeoutRef.current); toastHideTimeoutRef.current = null; }
+    // Mostra toast con animazione di entrata
+    setToastMessage(message);
+    setIsToastVisible(true);
+    setIsToastExiting(false);
+    // Avvia animazione di uscita poco prima di nascondere
+    toastExitTimeoutRef.current = window.setTimeout(() => {
+      setIsToastExiting(true);
+    }, Math.max(200, duration - 250));
+    // Nascondi definitivamente dopo la durata
+    toastHideTimeoutRef.current = window.setTimeout(() => {
+      setIsToastVisible(false);
+      setIsToastExiting(false);
+      setToastMessage(null);
+    }, duration);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (toastExitTimeoutRef.current) { clearTimeout(toastExitTimeoutRef.current); }
+      if (toastHideTimeoutRef.current) { clearTimeout(toastHideTimeoutRef.current); }
+    };
+  }, []);
+  
   // Stati per ricerca e filtraggio
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -199,10 +233,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     };
   };
 
-  const loadFolderContent = async () => {
+  const loadFolderContent = async (forceFresh?: boolean) => {
     try {
       const folders = await DB.getWorkoutFolders();
-      const allWorkoutPlans = workoutPlans || await DB.getWorkoutPlans();
+      const allWorkoutPlans = forceFresh ? await DB.getWorkoutPlans() : (workoutPlans || await DB.getWorkoutPlans());
 
       console.log('🔍 FileExplorer Debug - loadFolderContent:');
       console.log('📁 Folders loaded:', folders);
@@ -356,25 +390,28 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           setFolderTree(prev => prev.filter(i => i.id !== folder.id));
         }
         // Notifica successo
-        setToastMessage && setToastMessage('Cartella spostata con successo');
-        setTimeout(() => setToastMessage && setToastMessage(null), 2500);
-        await loadFolderContent();
+        showToast('Cartella spostata con successo', 2500);
+        await loadFolderContent(true);
       } else {
         // Sposta scheda
         const workout = draggedItem.data as WorkoutPlan;
         const prevFolderId = (workout.folderId ?? null);
         const newFolderId = (targetFolderId ?? null);
+        // Impedisci trasferimento nella stessa cartella
+        if ((newFolderId ?? null) === (prevFolderId ?? null)) {
+          showToast('La scheda è già in questa cartella', 2000);
+          return;
+        }
         await updateWorkoutPlan(workout.id, { folderId: targetFolderId ?? null });
         // Aggiornamento ottimistico: rimuovi la scheda dalla vista corrente se cambia directory
         if (prevFolderId === (currentFolderId ?? null) && newFolderId !== (currentFolderId ?? null)) {
           setFolderTree(prev => prev.filter(i => i.id !== workout.id));
         }
         // Notifica successo
-        setToastMessage && setToastMessage('Scheda spostata con successo');
-        setTimeout(() => setToastMessage && setToastMessage(null), 2500);
+        showToast('Scheda spostata con successo', 2500);
         // Assicura che la vista usi i piani aggiornati
         await refetch();
-        await loadFolderContent();
+        await loadFolderContent(true);
       }
       
       setDraggedItem(null);
@@ -538,6 +575,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         await DB.saveWorkoutFolder(newFolder);
         // Ricarica immediatamente dopo la creazione della cartella
         await loadFolderContent();
+        // Toast creazione cartella
+        showToast('Cartella creata con successo', 2500);
       } else {
         const newWorkoutData = {
           id, // Usa l'ID generato qui
@@ -563,6 +602,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         await createWorkoutPlan(newWorkoutData);
         // Non serve chiamare loadFolderContent() qui perché createWorkoutPlan 
         // già ricarica i dati tramite fetchPlans() nel hook useWorkoutPlans
+        // Toast creazione scheda
+        showToast('Scheda creata con successo', 2500)
       }
 
 
@@ -602,11 +643,15 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         };
         await DB.saveWorkoutFolder(updatedFolder);
         await loadFolderContent(); // Ricarica per le cartelle
+        // Toast modifica cartella
+        showToast('Cartella aggiornata', 2500);
       } else if (item.type === 'file' && item.data && 'name' in item.data) {
         const newName = updates.name ?? item.name;
         const newColor = updates.color ?? (item.data as any).color ?? '#3B82F6';
         await updateWorkoutPlan(item.id, { name: newName, color: newColor });
         // Non serve chiamare loadFolderContent() perché updateWorkoutPlan già ricarica i dati
+        // Toast modifica scheda
+        showToast('Scheda aggiornata', 2500);
       }
       
       setShowEditModal(false);
@@ -642,9 +687,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         await deleteRecursive(item.id);
         await DB.deleteWorkoutFolder(item.id);
         await loadFolderContent(); // Ricarica solo per le cartelle
+        // Toast eliminazione cartella
+        showToast('Cartella eliminata con successo', 2500);
       } else if (item.type === 'file') {
         await deleteWorkoutPlan(item.id);
         // Non chiamare loadFolderContent() perché deleteWorkoutPlan già ricarica i dati
+        // Toast eliminazione scheda
+        showToast('Scheda eliminata con successo', 2500);
       }
       
       setShowDeleteModal(false);
@@ -715,6 +764,15 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           (e.target as HTMLElement).closest('.dropdown-menu')) {
         return;
       }
+      // Singolo click non apre più la scheda/cartella (richiesto doppio click)
+    };
+    
+    const handleCardDoubleClick = (e: React.MouseEvent) => {
+      // Previeni il doppio click se si sta cliccando sul menu o sui suoi elementi
+      if ((e.target as HTMLElement).closest('.menu-button') || 
+          (e.target as HTMLElement).closest('.dropdown-menu')) {
+        return;
+      }
       handleItemClick(item);
     };
     
@@ -725,12 +783,12 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
             ${item.type === 'folder' ? 'bg-white/70' : 'bg-white/80'} backdrop-blur-sm`}
           data-item-type={item.type}
           data-folder-id={item.type === 'folder' ? item.id : undefined}
-          onClick={handleCardClick}
+          onDoubleClick={handleCardDoubleClick}
           draggable
           onDragStart={(e) => handleDragStart(e, item)}
           onDragEnd={() => { setDragOverItem(null); }}
-          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (item.type === 'folder' && dragOverItem !== item.id) { setDragOverItem(item.id); } }}
-          onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : (e.preventDefault(), e.stopPropagation())}
+          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (dragOverItem !== item.id) { setDragOverItem(item.id); } }}
+          onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : (e.preventDefault(), e.stopPropagation(), (e.dataTransfer.dropEffect = 'none'))}
           onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
           onDrop={(e) => item.type === 'folder' ? (e.preventDefault(), e.stopPropagation(), handleDrop(e, item.id)) : (e.preventDefault(), e.stopPropagation())}
         >
@@ -889,6 +947,14 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
             </Portal>
           )}
         </div>
+
+        {item.type === 'file' && isDragOver && (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="bg-white/70 rounded-full p-2 ring-2 ring-red-400">
+              <Ban size={20} className="text-red-500" />
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -907,7 +973,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     <div className="min-h-[calc(100vh-200px)] flex flex-col bg-gray-50">
 
       {toastMessage && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-md flex items-center space-x-2 text-gray-800">
+        <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-md flex items-center space-x-2 text-gray-800 transform transition-all duration-300 ease-out ${isToastExiting ? 'opacity-0 -translate-y-2 scale-95' : 'opacity-100 translate-y-0 scale-100'}`} role="status" aria-live="polite">
           <CheckCircle className="text-green-600" size={18} />
           <span className="text-sm font-medium">{toastMessage}</span>
         </div>
@@ -1143,14 +1209,18 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                         <button
                           onClick={() => navigateToBreadcrumb(index)}
                           onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); }}
-                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); }}
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); const isForbidden = draggedItem?.type === 'file' && ((index === breadcrumb.length - 1) && (((draggedItem.data as WorkoutPlan).folderId ?? null) === (currentFolderId ?? null))); e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move'; }}
                           onDragLeave={() => { const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (dragOverItem === targetKey) setDragOverItem(null); }}
                           onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const targetFolderId = index === 0 ? null : (crumb.id ?? null); handleDrop(e, targetFolderId); }}
                           className={`font-medium whitespace-nowrap transition-colors duration-200 ${
                             isCurrentFolder 
                               ? 'text-red-600 hover:text-red-700' 
                               : 'text-gray-700 hover:text-gray-900'
-                          } ${dragOverItem === (index === 0 ? 'root' : crumb.id) ? 'bg-blue-50 ring-1 ring-blue-300 rounded-md' : ''}`}
+                          } ${dragOverItem === (index === 0 ? 'root' : crumb.id) 
+                                ? ((draggedItem?.type === 'file' && isCurrentFolder) 
+                                    ? 'bg-red-50 ring-1 ring-red-300 rounded-md cursor-not-allowed' 
+                                    : 'bg-blue-50 ring-1 ring-blue-300 rounded-md')
+                                : ''}`}
                         >
                           {crumb.name}
                         </button>
@@ -1175,7 +1245,11 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           {/* Contenuto principale */}
           <div 
             className={`flex-1 transition-all duration-300 ease-in-out ${
-              dragOverItem === 'root' ? 'bg-red-50 border-2 border-dashed border-red-300 rounded-lg' : ''
+              dragOverItem === 'root' 
+                ? ((draggedItem?.type === 'file' && (((draggedItem.data as WorkoutPlan).folderId ?? null) === (currentFolderId ?? null)))
+                    ? 'bg-red-50 border-2 border-dashed border-red-300 rounded-lg cursor-not-allowed'
+                    : 'bg-blue-50 ring-1 ring-blue-300 rounded-lg')
+                : ''
             }`}
             onDragOver={(e) => {
               e.preventDefault();
@@ -1188,6 +1262,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               } else {
                 if (dragOverItem !== 'root') setDragOverItem('root');
               }
+              const isForbidden = draggedItem?.type === 'file' && (((draggedItem.data as WorkoutPlan).folderId ?? null) === (currentFolderId ?? null));
+              e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move';
             }}
             onDragLeave={() => { if (dragOverItem === 'root') setDragOverItem(null); }}
             onDrop={(e) => {
@@ -1408,6 +1484,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
                     variants={workoutVariants}
                     onVariantsChange={setWorkoutVariants}
                     originalWorkoutTitle={name}
+                    showVariants={false}
                   />
                 )}
               </div>

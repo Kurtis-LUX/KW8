@@ -9,6 +9,7 @@ interface WorkoutCustomizerProps {
   onVariantsChange: (variants: WorkoutVariant[]) => void;
   workoutId?: string;
   originalWorkoutTitle?: string;
+  showVariants?: boolean;
 }
 
 const AVAILABLE_COLORS = [
@@ -30,7 +31,8 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
   variants,
   onVariantsChange,
   workoutId,
-  originalWorkoutTitle
+  originalWorkoutTitle,
+  showVariants = true
 }) => {
   const [showVariantForm, setShowVariantForm] = useState(false);
   const [editingVariant, setEditingVariant] = useState<WorkoutVariant | null>(null);
@@ -149,6 +151,7 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
       </div>
 
       {/* Gestione varianti */}
+      {showVariants && (
       <div>
         <div className="flex items-center justify-between mb-3">
           <label className="block text-sm font-medium text-gray-700">
@@ -261,6 +264,7 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 };
