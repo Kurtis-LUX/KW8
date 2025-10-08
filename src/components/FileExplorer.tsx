@@ -341,7 +341,16 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   const handleDragOver = (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
+    // Determina se il drop è proibito per cartelle: nella stessa cartella (parent) o su sé stessa
+    let dropEffect: 'none' | 'move' = 'move';
+    if (draggedItem?.type === 'folder') {
+      const draggedFolder = draggedItem.data as WorkoutFolder;
+      const prevParentId = draggedFolder.parentId ?? null;
+      if (targetId === draggedItem.id || targetId === prevParentId) {
+        dropEffect = 'none';
+      }
+    }
+    e.dataTransfer.dropEffect = dropEffect;
     if (dragOverItem !== targetId) {
       setDragOverItem(targetId);
     }
@@ -386,7 +395,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         const newParentId = targetFolderId ?? null;
         // Impedisci trasferimento nella stessa cartella
         if ((newParentId ?? null) === (prevParentId ?? null)) {
-          showToast('La cartella è già in questa cartella', 2000);
           return;
         }
         await DB.saveWorkoutFolder({ ...folder, parentId: targetFolderId });
@@ -404,7 +412,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         const newFolderId = (targetFolderId ?? null);
         // Impedisci trasferimento nella stessa cartella
         if ((newFolderId ?? null) === (prevFolderId ?? null)) {
-          showToast('La scheda è già in questa cartella', 2000);
           return;
         }
         await updateWorkoutPlan(workout.id, { folderId: targetFolderId ?? null });
@@ -743,6 +750,19 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   const ItemCard = ({ item }: { item: FolderTreeItem }) => {
     const isDragOver = dragOverItem === item.id;
     const isDragging = draggedItem?.id === item.id;
+    const isForbidden = ((): boolean => {
+      if (item.type !== 'folder') return false;
+      if (!draggedItem) return false;
+      if (draggedItem.type === 'file') {
+        const plan: any = draggedItem.data as any;
+        return ((plan?.folderId ?? null) === (item.id ?? null));
+      }
+      if (draggedItem.type === 'folder') {
+        const folder: any = draggedItem.data as any;
+        return ((draggedItem.id === item.id) || ((folder?.parentId ?? null) === (item.id ?? null)));
+      }
+      return false;
+    })();
     
     // Hook separato per il posizionamento del menu di ogni elemento
     const {
@@ -784,7 +804,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     return (
       <div 
           className={`group relative rounded-xl border border-gray-200 transition-colors duration-200 ease-in-out cursor-pointer 
-            ${isDragOver ? 'ring-2 ring-red-300 bg-red-50/70 shadow-lg' : 'ring-1 ring-gray-300 hover:ring-gray-400 hover:shadow-lg'} 
+            ${isDragOver ? (isForbidden ? 'ring-2 ring-red-500 bg-red-100/80 shadow-lg' : 'ring-2 ring-red-300 bg-red-50/70 shadow-lg') : 'ring-1 ring-gray-300 hover:ring-gray-400 hover:shadow-lg'} 
             ${item.type === 'folder' ? 'bg-white/70' : 'bg-white/80'} backdrop-blur-sm`}
           data-item-type={item.type}
           data-folder-id={item.type === 'folder' ? item.id : undefined}
@@ -797,6 +817,15 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
           onDrop={(e) => item.type === 'folder' ? (e.preventDefault(), e.stopPropagation(), handleDrop(e, item.id)) : (e.preventDefault(), e.stopPropagation())}
         >
+        {/* Overlay divieto quando il drop è proibito sulla cartella */}
+        {item.type === 'folder' && isDragOver && isForbidden && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-start justify-end p-3">
+            <div className="flex items-center gap-2 bg-red-600 text-white rounded-full px-3 py-1 shadow-lg ring-1 ring-red-700/50">
+              <Ban size={16} />
+              <span className="text-xs font-semibold">Divieto</span>
+            </div>
+          </div>
+        )}
         <div className="p-4">
           {/* Header con icona e nome */}
           <div className="flex items-center space-x-3 mb-2">
@@ -1214,20 +1243,14 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                         <button
                           onClick={() => navigateToBreadcrumb(index)}
                           onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); }}
-                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); const isForbidden = draggedItem?.type === 'file' && ((index === breadcrumb.length - 1) && (((draggedItem.data as WorkoutPlan).folderId ?? null) === (currentFolderId ?? null))); e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move'; }}
+                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); const isCurrent = index === breadcrumb.length - 1; let isForbidden = false; if (isCurrent && draggedItem) { if (draggedItem.type === 'file') { const plan: any = draggedItem.data as any; isForbidden = ((plan?.folderId ?? null) === (currentFolderId ?? null)); } else if (draggedItem.type === 'folder') { const folder: any = draggedItem.data as any; isForbidden = ((draggedItem.id === (crumb.id ?? null)) || ((folder?.parentId ?? null) === (currentFolderId ?? null))); } } e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move'; }}
                           onDragLeave={() => { const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (dragOverItem === targetKey) setDragOverItem(null); }}
                           onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const targetFolderId = index === 0 ? null : (crumb.id ?? null); handleDrop(e, targetFolderId); }}
-                          className={`font-medium whitespace-nowrap transition-colors duration-200 ${
-                            isCurrentFolder 
-                              ? 'text-red-600 hover:text-red-700' 
-                              : 'text-gray-700 hover:text-gray-900'
-                          } ${dragOverItem === (index === 0 ? 'root' : crumb.id) 
-                                ? ((draggedItem?.type === 'file' && isCurrentFolder) 
-                                    ? 'bg-red-50 ring-1 ring-red-300 rounded-md cursor-not-allowed' 
-                                    : 'bg-blue-50 ring-1 ring-blue-300 rounded-md')
-                                : ''}`}
+                          data-breadcrumb-index={index}
+                          className={`font-medium whitespace-nowrap transition-colors duration-200 ${isCurrentFolder ? 'text-red-600 hover:text-red-700' : 'text-gray-700 hover:text-gray-900'}`}
                         >
                           {crumb.name}
+                          
                         </button>
                         {index < breadcrumb.length - 1 && (
                           <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
@@ -1249,13 +1272,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           
           {/* Contenuto principale */}
           <div 
-            className={`flex-1 transition-all duration-300 ease-in-out ${
-              dragOverItem === 'root' 
-                ? ((draggedItem?.type === 'file' && (((draggedItem.data as WorkoutPlan).folderId ?? null) === (currentFolderId ?? null)))
-                    ? 'bg-red-50 border-2 border-dashed border-red-300 rounded-lg cursor-not-allowed'
-                    : 'bg-blue-50 ring-1 ring-blue-300 rounded-lg')
-                : ''
-            }`}
+            className={`flex-1 transition-all duration-300 ease-in-out ${dragOverItem === 'root' ? 'ring-1 ring-blue-300 rounded-lg' : ''}`}
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -1267,7 +1284,16 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               } else {
                 if (dragOverItem !== 'root') setDragOverItem('root');
               }
-              const isForbidden = draggedItem?.type === 'file' && (((draggedItem.data as WorkoutPlan).folderId ?? null) === (currentFolderId ?? null));
+              let isForbidden = false;
+              if (draggedItem) {
+                if (draggedItem.type === 'file') {
+                  const plan: any = draggedItem.data as any;
+                  isForbidden = ((plan?.folderId ?? null) === (currentFolderId ?? null));
+                } else if (draggedItem.type === 'folder') {
+                  const folder: any = draggedItem.data as any;
+                  isForbidden = ((folder?.parentId ?? null) === (currentFolderId ?? null));
+                }
+              }
               e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move';
             }}
             onDragLeave={() => { if (dragOverItem === 'root') setDragOverItem(null); }}

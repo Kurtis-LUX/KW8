@@ -194,6 +194,8 @@ useEffect(() => {
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('');
   // Notifica salvataggio e debug libreria
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isToastExiting, setIsToastExiting] = useState(false);
+  const [isToastEntering, setIsToastEntering] = useState(false);
   const [showLibraryDebug, setShowLibraryDebug] = useState(true);
   const [debugLocalCustomExercisesRaw, setDebugLocalCustomExercisesRaw] = useState<string>('null');
   const [debugLocalAvailable, setDebugLocalAvailable] = useState<boolean>(false);
@@ -217,11 +219,15 @@ useEffect(() => {
     }
   }, [customExercises]);
 
-  // Auto-hide save notification after a short delay
+  // Auto-hide save notification after a short delay con animazione
   useEffect(() => {
     if (!saveMessage) return;
-    const t = setTimeout(() => setSaveMessage(null), 3000);
-    return () => clearTimeout(t);
+    setIsToastExiting(false);
+    setIsToastEntering(true);
+    const enterTimer = setTimeout(() => setIsToastEntering(false), 10);
+    const exitTimer = setTimeout(() => setIsToastExiting(true), 2700);
+    const hideTimer = setTimeout(() => setSaveMessage(null), 3000);
+    return () => { clearTimeout(enterTimer); clearTimeout(exitTimer); clearTimeout(hideTimer); };
   }, [saveMessage]);
 
   // Predefined exercises list - Comprehensive list organized by muscle groups
@@ -855,10 +861,16 @@ useEffect(() => {
       updatedAt: new Date().toISOString()
     };
     
-    // Disattiva tutte le altre varianti e attiva la nuova
-    const updatedVariants = [...variants.map(v => ({ ...v, isActive: false })), newVariant];
+    // Disattiva tutte le altre varianti e inserisci la nuova in TESTA
+    const updatedVariants = [newVariant, ...variants.map(v => ({ ...v, isActive: false }))];
     setVariants(updatedVariants);
     setActiveVariantId(newVariant.id);
+
+    // Porta lo scroll all'inizio per mostrare la testa del percorso
+    if (variantTabsRef.current) {
+      try { variantTabsRef.current.scrollTo({ left: 0, behavior: 'smooth' }); }
+      catch { variantTabsRef.current.scrollLeft = 0; }
+    }
     
     // Carica gli esercizi della nuova variante
     setExercises(deepCloneExercises(originalExercises));
@@ -1222,99 +1234,81 @@ useEffect(() => {
     <div>
       {/* Notifica stile Apple (pill) */}
       {saveMessage && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 backdrop-blur-sm shadow-md ring-1 ring-gray-200">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50" role="status" aria-live="polite">
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 backdrop-blur-sm shadow-md ring-1 ring-gray-200 transform transition-all duration-300 ease-out ${isToastExiting ? 'opacity-0 -translate-y-2 scale-95' : isToastEntering ? 'opacity-0 translate-y-2 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}>
             <CheckCircle size={18} className="text-green-600" />
             <span className="text-gray-700 text-sm font-medium">{saveMessage}</span>
           </div>
         </div>
       )}
-      {/* Workout Variants Tabs */}
-      {variants.length > 0 && (
-        <div className="mb-0 bg-gray-50 px-6 pt-0 pb-0">
+      {/* Barra di navigazione varianti stile iPhone */}
+      <div className="mb-4 px-6">
+        <div className="flex justify-center">
           <div
             ref={variantTabsRef}
             onPointerDown={handleVariantTabsPointerDown}
             onPointerMove={handleVariantTabsPointerMove}
             onPointerUp={handleVariantTabsPointerUp}
-            className={`flex flex-nowrap items-end space-x-1 overflow-x-auto no-scrollbar select-none relative -mb-px ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`inline-flex items-center gap-4 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-4 py-3 overflow-x-auto overflow-y-visible no-scrollbar select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{ touchAction: 'pan-x' }}
           >
-            {/* Tab per la scheda originale */}
-            <div className="relative flex-shrink-0" ref={originalTabRef}>
+            {/* Bottone scheda originale - solo icona */}
+            <div className="relative h-10 w-10 flex-shrink-0">
               <button
                 onClick={(e) => {
-                  if (isDragging) { e.preventDefault(); return; }
                   // Prima di tornare all'originale, salva gli esercizi correnti nella variante attiva
                   if (activeVariantId !== 'original') {
-                    console.log('💾 Saving current exercises to variant before switching to original');
                     const currentVariantIndex = variants.findIndex(v => v.id === activeVariantId);
                     if (currentVariantIndex !== -1) {
                       const updatedVariants = [...variants];
                       updatedVariants[currentVariantIndex] = {
                         ...updatedVariants[currentVariantIndex],
-                        exercises: [...exercises], // Crea una copia indipendente
+                        exercises: [...exercises],
                         updatedAt: new Date().toISOString()
                       };
                       setVariants(updatedVariants.map(v => ({ ...v, isActive: false })));
                     }
                   }
-                  
                   setActiveVariantId('original');
-                  
-                  // Carica gli esercizi originali
-                  console.log('📥 Loading original exercises:', originalExercises?.length || 0);
-                  setExercises(originalExercises ? [...originalExercises] : []); // Crea una copia indipendente
+                  setExercises(originalExercises ? [...originalExercises] : []);
                 }}
-                className={`${activeVariantId === 'original' ? 'h-12 px-5 text-base scale-105 border-b-0 -mb-px' : 'h-8 px-3 text-xs scale-95 -mb-px'} inline-flex items-center justify-center leading-none font-medium rounded-t-lg border border-gray-200 transition-all whitespace-nowrap ${
-                 activeVariantId === 'original'
-                   ? 'bg-white/90 text-red-600 shadow-sm backdrop-blur-sm'
-                   : 'bg-white text-red-600 hover:text-red-700 hover:bg-gray-50'
-                 }`}
-                 title={`Scheda originale: ${workoutTitle}`}
-                 aria-label={`Scheda originale: ${workoutTitle}`}
-               >
-                {React.createElement(FileText, { size: 16, className: 'text-blue-600' })}
+                className={`${activeVariantId === 'original' ? 'bg-gray-100 text-blue-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-10 w-10 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
+                title={`Scheda originale: ${workoutTitle}`}
+                aria-label={`Scheda originale: ${workoutTitle}`}
+              >
+                {React.createElement(FileText, { size: 18, className: activeVariantId === 'original' ? 'text-blue-600' : 'text-gray-500' })}
               </button>
             </div>
-            
-            {/* Tab per le varianti */}
+
+            {/* Bottoni varianti - solo icona con X e numero */}
             {variants.map((variant, index) => (
-              <div key={variant.id} className="relative flex-shrink-0" ref={(el) => { variantTabRefs.current[variant.id] = el; }}>
+              <div key={variant.id} className="relative h-10 w-10 flex-shrink-0 overflow-visible">
                 <button
-                  onClick={(e) => {
-                    if (isDragging) { e.preventDefault(); return; }
-                    handleSwitchVariant(variant.id);
-                  }}
-                  className={`inline-flex items-center gap-2 ${variant.isActive ? 'h-12 px-5 text-base scale-105 border-b-0 -mb-px' : 'h-8 px-3 text-xs scale-95 -mb-px'} pr-8 font-medium rounded-t-lg border border-gray-200 transition-all whitespace-nowrap ${
-                     variant.isActive
-                       ? 'bg-white/90 text-red-600 shadow-sm backdrop-blur-sm'
-                       : 'bg-white text-red-600 hover:text-red-700 hover:bg-gray-50'
-                   }`}
-                   title={variant.name}
-                   aria-label={`Variante: ${variant.name}`}
-                 >
-                  <Copy size={16} color="#dc2626" />
+                  onClick={() => handleSwitchVariant(variant.id)}
+                  className={`${variant.isActive ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-10 w-10 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
+                  title={variant.name}
+                  aria-label={`Variante: ${variant.name}`}
+                >
+                  <Copy size={18} className={variant.isActive ? 'text-red-600' : 'text-gray-500'} />
                 </button>
-                <div className="absolute top-1 right-1 flex flex-col items-center">
+                {/* X in alto a destra visibile quando la variante è attiva */}
+                {variant.isActive && (
                   <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (isDragging) return;
-                      handleRemoveVariant(variant.id);
-                    }}
-                    className="p-1 text-gray-500 hover:text-black transition-colors"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveVariant(variant.id); }}
+                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20"
+                    title={`Chiudi variante: ${variant.name}`}
+                    aria-label={`Chiudi variante: ${variant.name}`}
                   >
-                    <X size={14} />
+                    <X size={12} />
                   </button>
-                  <span className="mt-0.5 text-red-600 font-bold text-[10px] leading-none pointer-events-none">{index + 1}</span>
-                </div>
+                )}
+                {/* Numero sotto l'icona posizionato internamente */}
+                <span className="absolute bottom-[2px] left-1/2 -translate-x-1/2 text-[10px] leading-none font-bold text-red-600 pointer-events-none">{index + 1}</span>
               </div>
             ))}
           </div>
         </div>
-      )}
+      </div>
       
       <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border ${variants.length > 0 ? '' : '-mt-px'} transition-shadow backdrop-blur-sm ${activeVariantId === 'original' ? 'bg-white/95 ring-1 ring-blue-300 border-blue-200 shadow-md' : 'bg-white/95 ring-1 ring-red-300 border-red-200 shadow-md'}`}>
 
@@ -1442,9 +1436,9 @@ useEffect(() => {
                 onClick={handleCloneWorkout}
                 title="Clona"
                 aria-label="Clona"
-                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white/95 rounded-md shadow-sm ring-1 ring-red-300 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-red-50 hover:shadow-md shrink-0"
               >
-                <Copy size={18} className="text-purple-600" />
+                <Copy size={18} className="text-red-600" />
               </button>
               
               {/* Workout Status */}
