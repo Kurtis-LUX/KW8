@@ -384,6 +384,11 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         const folder = draggedItem.data as WorkoutFolder;
         const prevParentId = folder.parentId ?? null;
         const newParentId = targetFolderId ?? null;
+        // Impedisci trasferimento nella stessa cartella
+        if ((newParentId ?? null) === (prevParentId ?? null)) {
+          showToast('La cartella è già in questa cartella', 2000);
+          return;
+        }
         await DB.saveWorkoutFolder({ ...folder, parentId: targetFolderId });
         // Aggiornamento ottimistico: rimuovi la cartella dalla vista corrente se cambia directory
         if (prevParentId === (currentFolderId ?? null) && newParentId !== (currentFolderId ?? null)) {
@@ -794,9 +799,9 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         >
         <div className="p-4">
           {/* Header con icona e nome */}
-          <div className="flex items-center space-x-3 mb-2">
+          <div className={`${viewMode === 'grid' ? 'flex flex-col items-center space-y-2 mb-2 text-center' : 'flex items-center space-x-3 mb-2'}`}>
             <div 
-              className="p-2.5 rounded-xl ring-1 ring-gray-200 backdrop-blur-sm"
+              className={`p-2.5 rounded-xl ring-1 ring-gray-200 backdrop-blur-sm ${viewMode === 'grid' ? 'mx-auto' : ''}`}
               style={{
                 backgroundColor: item.type === 'folder'
                   ? (((item.data && 'color' in item.data) ? ((item.data as any).color === '#3B82F6' ? '#EF4444' : (item.data as any).color) : '#EF4444') + '20')
@@ -808,16 +813,16 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
             >
               <FolderIcon item={item} />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className={`${viewMode === 'grid' ? 'flex flex-col items-center min-w-0' : 'flex-1 min-w-0'}`}>
               <h3 className="font-semibold text-gray-900/90 tracking-tight truncate">
                 {item.name}
               </h3>
-              {item.type === 'folder' && (
+              {viewMode === 'list' && item.type === 'folder' && (
                 <p className="text-sm text-gray-500">
                   {item.workoutCount || 0} schede, {item.subfolderCount || 0} sottocartelle
                 </p>
               )}
-              {item.type === 'file' && item.data && 'coach' in item.data && (
+              {viewMode === 'list' && item.type === 'file' && item.data && 'coach' in item.data && (
                 <div className="flex items-center space-x-2">
                   <p className="text-sm text-gray-500">
                     Coach: {item.data.coach}
@@ -848,7 +853,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           </div>
 
           {/* Metadata per schede */}
-          {item.type === 'file' && item.data && 'exercises' in item.data && (
+          {viewMode === 'list' && item.type === 'file' && item.data && 'exercises' in item.data && (
             <div className="flex items-center space-x-4 text-xs text-gray-500">
               <div className="flex items-center space-x-1">
                 <Target size={12} />

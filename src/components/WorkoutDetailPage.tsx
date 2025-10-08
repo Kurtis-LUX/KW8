@@ -69,6 +69,8 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [activeVariantId, setActiveVariantId] = useState('original');
   const [originalWorkoutTitle, setOriginalWorkoutTitle] = useState('');
   const [folderIconName, setFolderIconName] = useState<string>('Folder');
+const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null);
+const [dragOverExerciseIndex, setDragOverExerciseIndex] = useState<number | null>(null);
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
   const variantTabsRef = useRef<HTMLDivElement>(null);
@@ -2085,7 +2087,32 @@ useEffect(() => {
           {exercises.length > 0 ? (
             <div className="space-y-4">
               {exercises.map((exercise, index) => (
-                <div key={exercise.id || `exercise-${index}`} className="p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px">
+                <div
+                  key={exercise.id || `exercise-${index}`}
+                  className={`p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === index ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === index ? 'opacity-80' : ''}`}
+                  draggable
+                  onDragStart={() => setDraggedExerciseIndex(index)}
+                  onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
+                  onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== index) setDragOverExerciseIndex(index); }}
+                  onDrop={() => {
+                    if (draggedExerciseIndex === null || draggedExerciseIndex === index) { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); return; }
+                    const updatedExercises = [...exercises];
+                    const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
+                    updatedExercises.splice(index, 0, moved);
+                    setExercises(updatedExercises);
+                    if (activeVariantId !== 'original') {
+                      const updatedVariants = variants.map(v =>
+                        v.id === activeVariantId ? { ...v, exercises: updatedExercises, updatedAt: new Date().toISOString() } : v
+                      );
+                      setVariants(updatedVariants);
+                    } else {
+                      setOriginalExercises(updatedExercises);
+                    }
+                    triggerAutoSave();
+                    setDraggedExerciseIndex(null);
+                    setDragOverExerciseIndex(null);
+                  }}
+                >
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-semibold text-lg">{exercise.name}</h4>
                     <div className="flex space-x-2">
