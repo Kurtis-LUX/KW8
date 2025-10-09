@@ -74,26 +74,23 @@ export const useDropdownPosition = ({
           break;
       }
     } else {
-      // Desktop: usa scroll normale
-      const scrollX = window.scrollX;
-      const scrollY = window.scrollY;
-      
+      // Desktop: usa coordinate viewport (position: fixed)
       switch (preferredPosition) {
         case 'bottom-right':
-          top = triggerRect.bottom + scrollY + offset;
-          left = triggerRect.right + scrollX - dropdownRect.width;
+          top = triggerRect.bottom + offset;
+          left = triggerRect.right - dropdownRect.width;
           break;
         case 'bottom-left':
-          top = triggerRect.bottom + scrollY + offset;
-          left = triggerRect.left + scrollX;
+          top = triggerRect.bottom + offset;
+          left = triggerRect.left;
           break;
         case 'top-right':
-          top = triggerRect.top + scrollY - dropdownRect.height - offset;
-          left = triggerRect.right + scrollX - dropdownRect.width;
+          top = triggerRect.top - dropdownRect.height - offset;
+          left = triggerRect.right - dropdownRect.width;
           break;
         case 'top-left':
-          top = triggerRect.top + scrollY - dropdownRect.height - offset;
-          left = triggerRect.left + scrollX;
+          top = triggerRect.top - dropdownRect.height - offset;
+          left = triggerRect.left;
           break;
       }
     }
@@ -104,9 +101,9 @@ export const useDropdownPosition = ({
       const horizontalMargin = isMobile ? 16 : 8;
       const verticalMargin = isMobile ? 16 : 8;
       
-      // Su mobile, usa coordinate viewport-relative per i controlli
-      const checkScrollX = isMobile ? 0 : (window.scrollX || 0);
-      const checkScrollY = isMobile ? 0 : (window.scrollY || 0);
+      // Con position: fixed, usa coordinate viewport-relative per i controlli
+      const checkScrollX = 0;
+      const checkScrollY = 0;
       
       // Controlla se il dropdown esce dal viewport orizzontalmente
       if (left < checkScrollX) {
@@ -118,10 +115,10 @@ export const useDropdownPosition = ({
       // Controlla se il dropdown esce dal viewport verticalmente
       if (top < checkScrollY) {
         // Se non c'è spazio sopra, posiziona sotto
-        top = (isMobile ? triggerRect.bottom : triggerRect.bottom + (window.scrollY || 0)) + offset;
+        top = triggerRect.bottom + offset;
       } else if (top + dropdownRect.height > checkScrollY + viewportHeight) {
         // Se non c'è spazio sotto, posiziona sopra
-        top = (isMobile ? triggerRect.top : triggerRect.top + (window.scrollY || 0)) - dropdownRect.height - offset;
+        top = triggerRect.top - dropdownRect.height - offset;
         
         // Se ancora non c'è spazio, posiziona al centro del viewport con margini
         if (top < checkScrollY) {

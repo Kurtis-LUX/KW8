@@ -23,7 +23,10 @@ import {
   ArrowLeft,
   Menu,
   CheckCircle,
-  Ban
+  Ban,
+  Copy,
+  X,
+  Tag
 } from 'lucide-react';
 import Portal from './Portal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
@@ -187,6 +190,14 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   
   // Stati per ricerca e filtraggio
   const [searchTerm, setSearchTerm] = useState('');
+  // Suggerimenti ricerca intelligente (come nella ricerca esercizi)
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const searchDropdownRef = useRef<HTMLDivElement | null>(null);
+  // Variante da attivare all'apertura (se la selezione viene da un suggerimento di variante)
+  const [initialActiveVariantId, setInitialActiveVariantId] = useState<string | undefined>(undefined);
+  // Stati globali per ricerca annidata su tutte le cartelle e schede
+  const [allFolders, setAllFolders] = useState<WorkoutFolder[]>([]);
+  const [allWorkouts, setAllWorkouts] = useState<WorkoutPlan[]>([]);
   const [filters, setFilters] = useState({
     showFolders: false,
     showWorkouts: false,
@@ -237,6 +248,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     try {
       const folders = await DB.getWorkoutFolders();
       const allWorkoutPlans = forceFresh ? await DB.getWorkoutPlans() : (workoutPlans || await DB.getWorkoutPlans());
+
+      // Aggiorna stati globali per la ricerca annidata
+      setAllFolders(folders);
+      setAllWorkouts(allWorkoutPlans);
 
       console.log('🔍 FileExplorer Debug - loadFolderContent:');
       console.log('📁 Folders loaded:', folders);
@@ -474,9 +489,18 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         if (!filters.showWorkouts && item.type === 'file') return false;
       }
       
-      // Filtro per ricerca
+      // Filtro per ricerca (intelligente: include nome variante delle schede)
       if (searchTerm) {
-        return item.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const q = searchTerm.toLowerCase();
+        const nameMatch = item.name.toLowerCase().includes(q);
+        if (nameMatch) return true;
+        if (item.type === 'file' && item.data && 'variants' in item.data) {
+          const workout = item.data as WorkoutPlan;
+          const variants = workout.variants || [];
+          const variantMatch = variants.some(v => (v.name || '').toLowerCase().includes(q));
+          if (variantMatch) return true;
+        }
+        return false;
       }
       
       return true;
@@ -491,8 +515,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           return aName.localeCompare(bName);
         }
         // 'date' => ordina per data di creazione, più recente prima
-        const aDate = a.data && 'createdAt' in a.data ? a.data.createdAt : '';
-        const bDate = b.data && 'createdAt' in b.data ? b.data.createdAt : '';
+        const aDate = a.data && 'createdAt' in a.data ? (a.data as any).createdAt : '';
+        const bDate = b.data && 'createdAt' in b.data ? (b.data as any).createdAt : '';
         return new Date(bDate).getTime() - new Date(aDate).getTime();
       });
     };
@@ -509,6 +533,39 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     return filtered;
   };
 
+  // Ricerca intelligente: suggerimenti dinamici per cartelle, schede e varianti (globale, annidata)
+  const getSmartSearchSuggestions = () => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return [] as Array<{ type: 'folder' | 'workout' | 'variant'; id: string; workoutId?: string; label: string; parentLabel?: string }>;
+
+    const suggestions: Array<{ type: 'folder' | 'workout' | 'variant'; id: string; workoutId?: string; label: string; parentLabel?: string }> = [];
+
+    // Cerca tra tutte le cartelle
+    allFolders.forEach(folder => {
+      if ((folder.name || '').toLowerCase().includes(query)) {
+        suggestions.push({ type: 'folder', id: folder.id, label: folder.name });
+      }
+    });
+
+    // Cerca tra tutte le schede e le loro varianti
+    allWorkouts.forEach(workout => {
+      const workoutName = (workout.name || '').toLowerCase();
+      if (workoutName.includes(query)) {
+        suggestions.push({ type: 'workout', id: workout.id, label: workout.name });
+      }
+      const variants = workout.variants || [];
+      variants.forEach(v => {
+        const vName = (v.name || '').toLowerCase();
+        if (vName.includes(query)) {
+          suggestions.push({ type: 'variant', id: v.id, workoutId: workout.id, label: v.name || '', parentLabel: workout.name || '' });
+        }
+      });
+    });
+
+    // Limita il numero di suggerimenti per evitare liste troppo lunghe
+    return suggestions.slice(0, 12);
+  };
+
   const handleItemClick = (item: FolderTreeItem) => {
     if (item.type === 'folder') {
       navigateToFolder(item.id, item.name);
@@ -522,6 +579,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   const handleCloseWorkoutDetail = async () => {
     setShowWorkoutDetail(false);
     setSelectedWorkoutId(null);
+    setInitialActiveVariantId(undefined);
     
     // Ricarica i dati per mostrare le modifiche aggiornate
     console.log('🔄 FileExplorer: Reloading data after workout detail close...');
@@ -909,6 +967,15 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                     return weeks > 0 ? `${weeks} ${weeks === 1 ? 'settimana' : 'settimane'}` : '—';
                   })()}
                 </span>
+                {/* Primo tag accanto alle settimane */}
+                {Array.isArray((item.data as any).tags) && (item.data as any).tags.length > 0 && (
+                  <div className="flex items-center space-x-1 ml-2">
+                    <Tag size={12} className="text-purple-600" />
+                    <span className="px-2 py-[2px] rounded-full border border-gray-200 bg-gray-50 text-gray-700 text-[10px]">
+                      {(item.data as any).tags[0]}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -998,7 +1065,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     return (
       <WorkoutDetailPage 
         workoutId={selectedWorkoutId}
-        onClose={handleCloseWorkoutDetail} 
+        onClose={handleCloseWorkoutDetail}
+        initialActiveVariantId={initialActiveVariantId}
       />
     );
   }
@@ -1019,15 +1087,110 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         <div className="mb-4">
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Barra di ricerca */}
-            <div className="relative flex-1 min-w-0">
+            <div className="relative flex-1 min-w-0" ref={searchDropdownRef}>
               <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
-                placeholder="Cerca cartelle e schede..."
+                placeholder="Cerca cartelle, schede e varianti..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500 hover:bg-white/70"
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchTerm(value);
+                  setShowSearchSuggestions(!!value);
+                }}
+                onFocus={() => {
+                  if (searchTerm.trim().length > 0) {
+                    setShowSearchSuggestions(true);
+                  }
+                }}
+                onBlur={(e) => {
+                  const container = searchDropdownRef.current;
+                  // Ritarda la chiusura per consentire il click sui suggerimenti
+                  setTimeout(() => {
+                    if (!container) { setShowSearchSuggestions(false); return; }
+                    if (!document.activeElement || !container.contains(document.activeElement)) {
+                      setShowSearchSuggestions(false);
+                    }
+                  }, 150);
+                }}
+                className="w-full pl-10 pr-10 py-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500 hover:bg-white/70"
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600 transition-colors"
+                  aria-label="Pulisci ricerca"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSearchTerm('');
+                    setShowSearchSuggestions(false);
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+
+              {/* Suggerimenti ricerca intelligente */}
+              {showSearchSuggestions && searchTerm.trim().length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md z-10 max-h-64 overflow-y-auto backdrop-blur-sm">
+                  {getSmartSearchSuggestions().length > 0 ? (
+                    getSmartSearchSuggestions().map((s, idx) => {
+                      const lower = s.label.toLowerCase();
+                      const q = searchTerm.toLowerCase();
+                      const mi = lower.indexOf(q);
+                      const before = mi >= 0 ? s.label.slice(0, mi) : s.label;
+                      const match = mi >= 0 ? s.label.slice(mi, mi + q.length) : '';
+                      const after = mi >= 0 ? s.label.slice(mi + q.length) : '';
+                      return (
+                        <button
+                          key={`${s.type}-${s.id}-${idx}`}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center gap-2"
+                          onMouseDown={() => {
+                            if (s.type === 'folder') {
+                              navigateToFolder(s.id, s.label);
+                            } else if (s.type === 'workout') {
+                              setInitialActiveVariantId(undefined);
+                              setSelectedWorkoutId(s.id);
+                              setShowWorkoutDetail(true);
+                            } else {
+                              // variant
+                              setInitialActiveVariantId(s.id);
+                              setSelectedWorkoutId(s.workoutId!);
+                              setShowWorkoutDetail(true);
+                            }
+                            setShowSearchSuggestions(false);
+                          }}
+                        >
+                          {s.type === 'folder' ? (
+                            <Folder size={16} className="text-gray-500" />
+                          ) : s.type === 'workout' ? (
+                            <FileText size={16} className="text-gray-500" />
+                          ) : (
+                            <Copy size={16} className="text-red-500" />
+                          )}
+                          <span className="flex-1 text-sm">
+                            {mi >= 0 ? (
+                              <>
+                                {before}
+                                <mark className="bg-yellow-100 text-gray-900 rounded px-0.5">{match}</mark>
+                                {after}
+                              </>
+                            ) : (
+                              s.label
+                            )}
+                          </span>
+                          {s.type === 'variant' && s.parentLabel && (
+                            <span className="text-xs text-gray-500">({s.parentLabel})</span>
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-gray-500">Nessun risultato per "{searchTerm}"</div>
+                  )}
+                </div>
+              )}
             </div>
             
             {/* Menu unificato */}

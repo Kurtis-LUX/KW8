@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit3, Plus, Save, Copy, Users, ArrowLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText } from 'lucide-react';
+import { Edit3, Plus, Save, Copy, Users, ArrowLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText, ChevronUp, ChevronDown, Tag, Search, Link2 } from 'lucide-react';
 import { AVAILABLE_ICONS } from './FolderCustomizer';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
+import Portal from './Portal';
+import { useDropdownPosition } from '../hooks/useDropdownPosition';
 
 interface Exercise {
   id: string;
@@ -13,6 +15,8 @@ interface Exercise {
   tut: string;
   recovery: string;
   videoLink: string;
+  supersetGroupId?: string; // ID del gruppo superset (ancora)
+  isSupersetLeader?: boolean; // true se è l'esercizio principale del gruppo
 }
 
 interface WorkoutVariant {
@@ -31,9 +35,10 @@ interface WorkoutDetailPageProps {
   workoutId: string;
   onClose: () => void;
   folderPath?: string;
+  initialActiveVariantId?: string;
 }
 
-const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClose, folderPath }) => {
+const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClose, folderPath, initialActiveVariantId }) => {
   const [workoutTitle, setWorkoutTitle] = useState('Nuova scheda');
   const [workoutDescription, setWorkoutDescription] = useState('');
   const [originalWorkoutDescription, setOriginalWorkoutDescription] = useState('');
@@ -60,6 +65,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [showExerciseForm, setShowExerciseForm] = useState(false);
   const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [isSupersetMode, setIsSupersetMode] = useState(false);
+  const [supersetAnchorExerciseId, setSupersetAnchorExerciseId] = useState<string | null>(null);
+  const [supersetSelection, setSupersetSelection] = useState<string[]>([]);
   const [showAthleteDropdown, setShowAthleteDropdown] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState('');
   const [workoutStatus, setWorkoutStatus] = useState<'published' | 'draft'>('draft');
@@ -67,6 +75,79 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [variants, setVariants] = useState<WorkoutVariant[]>([]);
   const [activeVariantId, setActiveVariantId] = useState('original');
+
+  // Tags
+  const [tags, setTags] = useState<string[]>([]);
+  const [showTagsDropdown, setShowTagsDropdown] = useState(false);
+  const [newTag, setNewTag] = useState('');
+  const [showGymTagsList, setShowGymTagsList] = useState(false);
+  const [selectedTagUnderDesc, setSelectedTagUnderDesc] = useState<string | null>(null);
+  const gymTagsGroupRef = useRef<HTMLDivElement>(null);
+  const tagsUnderDescContainerRef = useRef<HTMLDivElement>(null);
+
+  // Lista di tag predefiniti per suggerimenti nella palestra
+  const PREDEFINED_GYM_TAGS: string[] = [
+    'forza','massa','powerlifting','tonificazione','principianti','fitness','cardio','hiit','intenso',
+    'resistenza','mobilità','stretching','funzionale','core','equilibrio','braccia','gambe','petto','spalle','schiena','glutei','addominali',
+    'warm-up','defaticamento','tecnica','circuito','superset','ipertrofia','dimagrimento','riabilitazione'
+  ];
+
+  const handleAddTag = async (tagToAdd?: string) => {
+    const trimmed = (tagToAdd ?? newTag).trim();
+    if (!trimmed) return;
+    if (tags.includes(trimmed)) { if (!tagToAdd) setNewTag(''); return; }
+    if (tags.length >= 10) return;
+    const updated = [...tags, trimmed];
+    setTags(updated);
+    if (!tagToAdd) setNewTag('');
+    // Notifica aggiunta tag
+    setSaveMessage('Tag aggiunto alla scheda');
+    if (workoutId) {
+      try {
+        await updateWorkoutPlan(workoutId, { tags: updated, updatedAt: new Date().toISOString() });
+      } catch (e) {
+        console.error('Errore nel salvataggio dei tag:', e);
+      }
+    }
+  };
+
+  const handleRemoveTag = async (tagToRemove: string) => {
+    const updated = tags.filter(t => t !== tagToRemove);
+    setTags(updated);
+    if (workoutId) {
+      try {
+        await updateWorkoutPlan(workoutId, { tags: updated, updatedAt: new Date().toISOString() });
+      } catch (e) {
+        console.error('Errore nel salvataggio dei tag:', e);
+      }
+    }
+  };
+
+  // Flag per applicare l'attivazione iniziale una sola volta
+  const initialVariantAppliedRef = useRef(false);
+
+  // Attiva la variante iniziale se fornita (apertura da ricerca intelligente) una sola volta
+  useEffect(() => {
+    if (!initialActiveVariantId || initialActiveVariantId === 'original') return;
+    if (initialVariantAppliedRef.current) return;
+    if (variants.length === 0) return;
+
+    const selectedVariant = variants.find(v => v.id === initialActiveVariantId);
+    if (selectedVariant) {
+      // Evidenzia correttamente la variante attiva nei bottoni di navigazione
+      setVariants(variants.map(v => ({ ...v, isActive: v.id === initialActiveVariantId })));
+      setActiveVariantId(initialActiveVariantId);
+      // Carica gli esercizi e la descrizione della variante (se presenti)
+      if (selectedVariant.exercises && selectedVariant.exercises.length > 0) {
+        setExercises([ ...(selectedVariant.exercises as Exercise[]) ]);
+      } else {
+        // Variante senza esercizi: lista vuota finché l’utente non aggiunge
+        setExercises([]);
+      }
+      setWorkoutDescription(selectedVariant.description || '');
+      initialVariantAppliedRef.current = true;
+    }
+  }, [initialActiveVariantId, variants.length]);
   const [originalWorkoutTitle, setOriginalWorkoutTitle] = useState('');
   const [folderIconName, setFolderIconName] = useState<string>('Folder');
 const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null);
@@ -82,6 +163,26 @@ const dragInitiatedRef = useRef(false);
 // Ref per i tab per auto-scroll verso la variante attiva
 const originalTabRef = useRef<HTMLDivElement | null>(null);
 const variantTabRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+// Utility per riordinare esercizi su mobile (sposta su/giù)
+const moveExercise = (index: number, direction: number) => {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= exercises.length) return;
+  const updatedExercises = [...exercises];
+  const [moved] = updatedExercises.splice(index, 1);
+  updatedExercises.splice(newIndex, 0, moved);
+  const normalized = normalizeSupersets(updatedExercises);
+  setExercises(normalized);
+  if (activeVariantId !== 'original') {
+    const updatedVariants = variants.map(v =>
+      v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
+    );
+    setVariants(updatedVariants);
+  } else {
+    setOriginalExercises(normalized);
+  }
+  triggerAutoSave();
+};
 
 // Effetto: quando cambia la variante attiva, porta il relativo tab in vista
 useEffect(() => {
@@ -200,6 +301,17 @@ useEffect(() => {
   const [debugLocalCustomExercisesRaw, setDebugLocalCustomExercisesRaw] = useState<string>('null');
   const [debugLocalAvailable, setDebugLocalAvailable] = useState<boolean>(false);
 
+  // Posizionamento e stato del menù tag (Apple-style) con chiusura on outside click
+  const { 
+    position: tagsMenuPosition, 
+    isOpen: isTagsMenuOpen, 
+    triggerRef: tagsMenuTriggerRef, 
+    dropdownRef: tagsMenuDropdownRef, 
+    openDropdown: openTagsMenu, 
+    closeDropdown: closeTagsMenu, 
+    toggleDropdown: toggleTagsMenu 
+  } = useDropdownPosition({ offset: 0, preferredPosition: 'bottom-left', autoAdjust: true });
+
   // Persistenza libreria esercizi personalizzati - salvataggio su storage quando la libreria cambia
   useEffect(() => {
     try {
@@ -219,7 +331,6 @@ useEffect(() => {
     }
   }, [customExercises]);
 
-  // Auto-hide save notification after a short delay con animazione
   useEffect(() => {
     if (!saveMessage) return;
     setIsToastExiting(false);
@@ -229,6 +340,38 @@ useEffect(() => {
     const hideTimer = setTimeout(() => setSaveMessage(null), 3000);
     return () => { clearTimeout(enterTimer); clearTimeout(exitTimer); clearTimeout(hideTimer); };
   }, [saveMessage]);
+
+  // Chiudi sempre la sottolista dei tag palestra quando il menu tag si apre/chiude e pulisci input
+  useEffect(() => {
+    setShowGymTagsList(false);
+    if (!isTagsMenuOpen) {
+      setNewTag('');
+    }
+  }, [isTagsMenuOpen]);
+
+  // Chiudi lista palestra su click esterno
+  useEffect(() => {
+    if (!showGymTagsList) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (gymTagsGroupRef.current && !gymTagsGroupRef.current.contains(e.target as Node)) {
+        setShowGymTagsList(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [showGymTagsList]);
+
+  // Deseleziona tag sotto descrizione su click esterno
+  useEffect(() => {
+    if (!selectedTagUnderDesc) return;
+    const handleOutsideSelect = (e: MouseEvent) => {
+      if (tagsUnderDescContainerRef.current && !tagsUnderDescContainerRef.current.contains(e.target as Node)) {
+        setSelectedTagUnderDesc(null);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideSelect);
+    return () => document.removeEventListener('mousedown', handleOutsideSelect);
+  }, [selectedTagUnderDesc]);
 
   // Predefined exercises list - Comprehensive list organized by muscle groups
   const predefinedExercises = [
@@ -430,6 +573,7 @@ useEffect(() => {
           status: workoutStatus,
           variants: updatedVariants,
           activeVariantId,
+          tags,
           originalWorkoutTitle: originalWorkoutTitle || workoutData.originalWorkoutTitle || workoutData.name,
           updatedAt: new Date().toISOString() 
         };
@@ -448,7 +592,7 @@ useEffect(() => {
         console.error('Error saving workout:', error);
       }
     }
-  }, [workoutId, workoutTitle, workoutDescription, durationWeeks, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, originalWorkoutTitle, updateWorkoutPlan]);
+  }, [workoutId, workoutTitle, workoutDescription, durationWeeks, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, originalWorkoutTitle, tags, updateWorkoutPlan]);
   
   // Trigger auto-save immediately
   const triggerAutoSave = useCallback(() => {
@@ -555,6 +699,7 @@ useEffect(() => {
             setOriginalWorkoutTitle(workoutData.originalWorkoutTitle || workoutData.name);
             setWorkoutDescription(workoutData.description || '');
             setOriginalWorkoutDescription(workoutData.description || '');
+            setTags(workoutData.tags || []);
             
             // Carica sempre gli esercizi della scheda corrente, resettando lo stato precedente
             console.log('💪 Loading exercises for workout:', workoutId, workoutData.exercises);
@@ -630,7 +775,9 @@ useEffect(() => {
                   });
                   return { ...v, isActive: false, exercises: fixedExercises };
                 });
-                setVariants(normalizedVariants);
+                const getNum = (name: string) => { const m = name.match(/Variante (\d+)/); return m ? parseInt(m[1]) : Number.MAX_SAFE_INTEGER; };
+                const sortedVariants = normalizedVariants.slice().sort((a, b) => getNum(a.name) - getNum(b.name));
+                setVariants(sortedVariants);
                 setActiveVariantId('original');
                 setWorkoutDescription(workoutData.description || '');
               } else {
@@ -682,7 +829,8 @@ useEffect(() => {
         const newExercise: Exercise = {
           ...currentExercise,
           id: Date.now().toString(),
-          sets: setsValue
+          sets: setsValue,
+          ...(currentExercise.supersetGroupId ? { supersetGroupId: currentExercise.supersetGroupId, isSupersetLeader: false } : {})
         };
         console.log('🆕 New exercise created:', {
           exerciseId: newExercise.id,
@@ -696,7 +844,12 @@ useEffect(() => {
           activeVariant: activeVariantId
         });
         
-        setExercises(updatedExercises);
+        let finalExercises = updatedExercises;
+        if (newExercise.supersetGroupId) {
+          finalExercises = reorderSupersetGroup(updatedExercises, newExercise.supersetGroupId);
+        }
+        
+        setExercises(finalExercises);
         
         // IMPORTANTE: Gestione corretta dell'isolamento tra variante e originale
         if (activeVariantId !== 'original') {
@@ -704,20 +857,20 @@ useEffect(() => {
           // NON toccare MAI gli originalExercises quando si è in una variante
           const updatedVariants = variants.map(v => 
             v.id === activeVariantId 
-              ? { ...v, exercises: updatedExercises, updatedAt: new Date().toISOString() }
+              ? { ...v, exercises: finalExercises, updatedAt: new Date().toISOString() }
               : v
           );
           setVariants(updatedVariants);
           console.log('🔄 Updated ONLY variant with new exercise:', {
             variantId: activeVariantId,
-            exerciseCount: updatedExercises.length
+            exerciseCount: finalExercises.length
           });
           console.log('🔒 OriginalExercises PROTECTED and unchanged:', originalExercises?.length || 0, 'exercises');
         } else {
           // Se siamo nell'originale, aggiorna SOLO gli originalExercises
-          setOriginalExercises(updatedExercises);
-          console.log('🔄 Updated ONLY original exercises:', updatedExercises.length);
-          console.log('🔍 Original exercises content:', updatedExercises.map(ex => ex.name));
+          setOriginalExercises(finalExercises);
+          console.log('🔄 Updated ONLY original exercises:', finalExercises.length);
+          console.log('🔍 Original exercises content:', finalExercises.map(ex => ex.name));
         }
 
         // ➕ Aggiunge automaticamente il nome alla libreria personalizzata se non presente
@@ -837,6 +990,105 @@ useEffect(() => {
     alert('Link copiato negli appunti!');
   };
   
+  // Superset handlers
+  const handleStartSuperset = (anchorId: string) => {
+    setIsSupersetMode(true);
+    setSupersetAnchorExerciseId(anchorId);
+    setSupersetSelection([]);
+  };
+  
+  const handleToggleSupersetSelection = (exerciseId: string) => {
+    if (!isSupersetMode || exerciseId === supersetAnchorExerciseId) return;
+    setSupersetSelection(prev => prev.includes(exerciseId) ? prev.filter(id => id !== exerciseId) : [...prev, exerciseId]);
+  };
+
+  // Helper: riordina i follower del superset immediatamente sotto al capo, mantenendo l'ordine originale
+  const reorderSupersetGroup = (list: Exercise[], leaderId: string): Exercise[] => {
+    const leaderIndex = list.findIndex(ex => ex.id === leaderId);
+    if (leaderIndex === -1) return list;
+    const followersIds = new Set(list.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader).map(ex => ex.id));
+    if (followersIds.size === 0) return list;
+    const before = list.slice(0, leaderIndex).filter(ex => !followersIds.has(ex.id));
+    const leader = list[leaderIndex];
+    const followers = list.filter(ex => followersIds.has(ex.id));
+    const after = list.slice(leaderIndex + 1).filter(ex => !followersIds.has(ex.id));
+    return [...before, leader, ...followers, ...after];
+  };
+  
+  // Helper: normalizza tutti i gruppi superset mantenendo i follower contigui e nell'ordine corrente
+  const normalizeSupersets = (list: Exercise[]): Exercise[] => {
+    let result = [...list];
+    const leaders = result.filter(ex => ex.isSupersetLeader);
+    leaders.forEach(leader => {
+      const leaderId = leader.id;
+      // Ordine dei follower come appaiono attualmente nella lista
+      const followers = result.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader);
+      if (followers.length === 0) return;
+      // Rimuovi follower dalle loro posizioni attuali
+      const followerIds = new Set(followers.map(f => f.id));
+      result = result.filter(ex => !followerIds.has(ex.id));
+      // Trova indice aggiornato del leader dopo rimozione
+      const leaderIndex = result.findIndex(ex => ex.id === leaderId);
+      // Inserisci subito dopo il leader, mantenendo l'ordine
+      result.splice(leaderIndex + 1, 0, ...followers);
+    });
+    return result;
+  };
+
+  // Helper: riordina i follower di un gruppo in base all'ordine desiderato
+  const reorderSupersetGroupWithOrder = (list: Exercise[], leaderId: string, desiredOrder: string[]): Exercise[] => {
+    const mapById = new Map(list.map(ex => [ex.id, ex]));
+    const followersSet = new Set(list.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader).map(ex => ex.id));
+    const orderedFollowers = desiredOrder.filter(id => followersSet.has(id));
+    const remainingFollowers = list
+      .filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader && !orderedFollowers.includes(ex.id))
+      .map(ex => ex.id);
+    const finalOrder = [...orderedFollowers, ...remainingFollowers];
+    let result = list.filter(ex => !(ex.supersetGroupId === leaderId && !ex.isSupersetLeader));
+    const leaderIndex = result.findIndex(ex => ex.id === leaderId);
+    const followersObjs = finalOrder.map(id => mapById.get(id)!).filter(Boolean);
+    result.splice(leaderIndex + 1, 0, ...followersObjs);
+    return result;
+  };
+  
+  const handleConfirmSuperset = () => {
+    if (!supersetAnchorExerciseId) return;
+    const groupId = supersetAnchorExerciseId;
+    const updatedExercises = exercises.map(ex => {
+      if (ex.id === supersetAnchorExerciseId) {
+        return { ...ex, supersetGroupId: groupId, isSupersetLeader: true };
+      }
+      if (supersetSelection.includes(ex.id)) {
+        return { ...ex, supersetGroupId: groupId, isSupersetLeader: false };
+      }
+      // Comportamento additivo: mantieni i follower già esistenti
+      return ex;
+    });
+    // Ordine desiderato: prima i follower già presenti, poi i nuovi selezionati
+    const existingFollowersOrder = exercises.filter(ex => ex.supersetGroupId === groupId && !ex.isSupersetLeader).map(ex => ex.id);
+    const newFollowersOrder = supersetSelection.filter(id => !existingFollowersOrder.includes(id));
+    const desiredOrder = [...existingFollowersOrder, ...newFollowersOrder];
+
+    const reordered = reorderSupersetGroupWithOrder(updatedExercises, groupId, desiredOrder);
+    setExercises(reordered);
+    if (activeVariantId !== 'original') {
+      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: reordered, updatedAt: new Date().toISOString() } : v);
+      setVariants(updatedVariants);
+    } else {
+      setOriginalExercises(reordered);
+    }
+    triggerAutoSave();
+    setIsSupersetMode(false);
+    setSupersetAnchorExerciseId(null);
+    setSupersetSelection([]);
+  };
+  
+  const handleCancelSuperset = () => {
+    setIsSupersetMode(false);
+    setSupersetAnchorExerciseId(null);
+    setSupersetSelection([]);
+  };
+  
   const handleCloneWorkout = async () => {
     // Calcola il numero della prossima variante
     const existingVariantNumbers = variants
@@ -861,8 +1113,14 @@ useEffect(() => {
       updatedAt: new Date().toISOString()
     };
     
-    // Disattiva tutte le altre varianti e inserisci la nuova in TESTA
-    const updatedVariants = [newVariant, ...variants.map(v => ({ ...v, isActive: false }))];
+    // Disattiva tutte le altre varianti e inserisci la nuova mantenendo ordine crescente
+    const updatedVariants = [...variants.map(v => ({ ...v, isActive: false })), newVariant].sort((a, b) => {
+      const ma = (a.name || '').match(/Variante\s+(\d+)/i);
+      const mb = (b.name || '').match(/Variante\s+(\d+)/i);
+      const na = ma ? parseInt(ma[1], 10) : Number.MAX_SAFE_INTEGER;
+      const nb = mb ? parseInt(mb[1], 10) : Number.MAX_SAFE_INTEGER;
+      return na - nb;
+    });
     setVariants(updatedVariants);
     setActiveVariantId(newVariant.id);
 
@@ -1110,15 +1368,41 @@ useEffect(() => {
         ...editingExercise,
         id: editingExerciseId
       };
+
+      // Se il superset è stato rimosso, pulisci i metadati
+      if (!updatedExercise.supersetGroupId) {
+        delete (updatedExercise as any).isSupersetLeader;
+      } else if (updatedExercise.supersetGroupId && updatedExercise.isSupersetLeader) {
+        // Se è capo, assicurati di marcare gli altri come follower
+        const groupId = updatedExercise.supersetGroupId;
+        // verrà gestito nel riordino sotto
+      }
       
-      const updatedExercises = exercises.map(ex => 
+      let updatedExercises = exercises.map(ex => 
         ex.id === editingExerciseId ? updatedExercise : ex
       );
+
+      // Riordina se è follower di un superset
+      if (updatedExercise.supersetGroupId && !updatedExercise.isSupersetLeader) {
+        updatedExercises = reorderSupersetGroup(updatedExercises, updatedExercise.supersetGroupId);
+      }
       
       console.log('🔄 Updating exercise:', updatedExercise);
       console.log('📊 Updated exercises list:', updatedExercises);
       
       setExercises(updatedExercises);
+
+      if (activeVariantId !== 'original') {
+        const updatedVariants = variants.map(v => 
+          v.id === activeVariantId 
+            ? { ...v, exercises: updatedExercises, updatedAt: new Date().toISOString() }
+            : v
+        );
+        setVariants(updatedVariants);
+      } else {
+        setOriginalExercises(updatedExercises);
+      }
+
       setEditingExerciseId(null);
       setEditingExercise(null);
       setShowExerciseForm(false);
@@ -1303,7 +1587,13 @@ useEffect(() => {
                   </button>
                 )}
                 {/* Numero sotto l'icona posizionato internamente */}
-                <span className="absolute bottom-[2px] left-1/2 -translate-x-1/2 text-[10px] leading-none font-bold text-red-600 pointer-events-none">{index + 1}</span>
+                {(() => {
+                  const match = (variant.name || '').match(/Variante\s+(\d+)/i);
+                  const num = match ? parseInt(match[1], 10) : index + 1;
+                  return (
+                    <span className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 text-[10px] leading-none font-bold text-red-600 pointer-events-none">{num}</span>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -1384,6 +1674,37 @@ useEffect(() => {
             </div>
           )}
         </div>
+
+        {/* Tags sotto la descrizione */}
+        {tags && tags.length > 0 && (
+          <div className="flex justify-center mb-4">
+            <div ref={tagsUnderDescContainerRef as React.RefObject<HTMLDivElement>} className="flex flex-wrap items-center gap-2 max-w-2xl justify-center">
+              {tags.map((tag, idx) => (
+                <div key={idx} className="relative inline-flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTagUnderDesc(tag)}
+                    className="px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-700 text-xs shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition"
+                    title="Seleziona tag"
+                  >
+                    {tag}
+                  </button>
+                  {selectedTagUnderDesc === tag && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); setSelectedTagUnderDesc(null); }}
+                      className="absolute -top-1 -right-1 p-1 rounded-full bg-white border border-gray-200 text-red-500 hover:text-red-700 shadow-sm"
+                      aria-label="Rimuovi"
+                      title="Rimuovi"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         
         {/* Toolbar - Moved below title */}
         <div className="flex justify-center mb-8">
@@ -1430,13 +1751,132 @@ useEffect(() => {
               >
                 <Calendar size={18} className="text-blue-600" />
               </button>
+
+              {/* Tags button */}
+              <div className="relative">
+                <button
+                  ref={tagsMenuTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleTagsMenu(e)}
+                  title="Tag"
+                  aria-label="Tag"
+                  className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                >
+                  <Tag size={18} className="text-purple-600" />
+                </button>
+                {isTagsMenuOpen && (
+                  <Portal>
+                    <div
+                      ref={tagsMenuDropdownRef as React.RefObject<HTMLDivElement>}
+                      className="z-[10000] w-[320px]"
+                      style={{ position: 'fixed', left: tagsMenuPosition?.left ?? -9999, top: tagsMenuPosition?.top ?? -9999, visibility: tagsMenuPosition ? 'visible' : 'hidden' }}
+                    >
+                      <div className={"bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl ring-1 ring-gray-200 p-3 flex flex-col h-auto max-h-[280px] overflow-y-auto"}>
+                        <div className="mb-2">
+                          <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
+                          <div className="relative flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type="text"
+                                value={newTag}
+                                onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
+                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
+                                className="w-full pl-8 pr-7 py-2 border border-gray-300 rounded-xl text-sm bg-white/70 focus:ring-2 focus:ring-purple-300 focus:border-purple-300"
+                                placeholder="Es. forza, mobilità"
+                                maxLength={20}
+                                onFocus={() => setShowTagsDropdown(false)}
+                              />
+                              {newTag.trim() && tags.includes(newTag.trim()) && (
+                                <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
+                              )}
+                              <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                              {newTag && (
+                                <button
+                                  type="button"
+                                  aria-label="Pulisci"
+                                  onClick={() => setNewTag('')}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                            <div className="relative" ref={gymTagsGroupRef}>
+                              <button
+                                type="button"
+                                onClick={() => setShowGymTagsList(!showGymTagsList)}
+                                className="flex items-center justify-between text-xs text-gray-700 bg-white/70 border border-gray-200 rounded-xl px-3 py-2 hover:border-purple-300 hover:text-purple-700 transition"
+                              >
+                                {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              </button>
+                              {showGymTagsList && (
+                                <div className="absolute z-10 mt-1 right-0 bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl shadow-xl ring-1 ring-gray-200 w-48 max-h-40 overflow-auto">
+                                  {PREDEFINED_GYM_TAGS.map((t) => (
+                                    <button
+                                      key={t}
+                                      type="button"
+                                      onClick={() => handleAddTag(t)}
+                                      className="w-full text-left px-3 py-1 rounded-xl hover:bg-purple-50 hover:text-purple-700 transition text-xs"
+                                      disabled={tags.includes(t) || tags.length >= 10}
+                                    >
+                                      <span>{t}</span>
+                                      {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {/* Suggerimenti in base alla ricerca dai tag */}
+                          {(() => {
+                            const ALL_TAGS = Array.from(new Set([...PREDEFINED_GYM_TAGS, ...tags]));
+                            const queryActive = newTag.trim().length > 0;
+                            if (!queryActive) return null;
+                            const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
+                            return (
+                              <div className="mt-2 bg-white/70 border border-gray-200 rounded-xl h-[140px] overflow-auto">
+                                {filtered.length > 0 ? (
+                                  filtered.map(t => (
+                                    <button
+                                      key={t}
+                                      type="button"
+                                      onClick={() => handleAddTag(t)}
+                                      className={`w-full text-left px-3 py-1 text-xs hover:bg-purple-50 hover:text-purple-700 transition ${tags.includes(t) ? 'opacity-60 cursor-not-allowed flex justify-between' : ''}`}
+                                      disabled={tags.includes(t) || tags.length >= 10}
+                                    >
+                                      <span>{t}</span>
+                                      {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="px-3 py-2 text-xs text-gray-400">Nessun risultato</div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                          <button
+                            onClick={() => handleAddTag()}
+                            className="mt-2 w-full bg-purple-600 text-white text-xs px-2 py-2 rounded-xl hover:bg-purple-700 transition"
+                            disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
+                          >
+                            Aggiungi tag
+                          </button>
+                        </div>
+
+                        {/* Sezione tag palestra a destra rimossa: ora il bottone è accanto alla casella di ricerca */}
+
+                        {/* Lista 'I miei tag' rimossa come richiesto */}
+                      </div>
+                    </div>
+                  </Portal>
+                )}
+              </div>
               
               {/* Clone Workout */}
               <button
                 onClick={handleCloneWorkout}
                 title="Clona"
                 aria-label="Clona"
-                className="bg-white/95 rounded-md shadow-sm ring-1 ring-red-300 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-red-50 hover:shadow-md shrink-0"
+                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-300 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Copy size={18} className="text-red-600" />
               </button>
@@ -2016,6 +2456,33 @@ useEffect(() => {
                 </div>
               </div>
               
+              {/* Campo Superset: lista degli esercizi presenti nella scheda */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Superset (collega a)</label>
+                <select
+                  value={editingExercise ? (editingExercise.supersetGroupId || '') : (currentExercise.supersetGroupId || '')}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (editingExercise && value === editingExercise.id) return; // evita superset con se stesso
+                    if (editingExercise) {
+                      setEditingExercise({ ...editingExercise, supersetGroupId: value || undefined, isSupersetLeader: value ? false : editingExercise.isSupersetLeader });
+                    } else {
+                      setCurrentExercise({ ...currentExercise, supersetGroupId: value || undefined, isSupersetLeader: value ? false : currentExercise.isSupersetLeader });
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                >
+                  <option value="">Nessun superset</option>
+                  {exercises
+                    .filter(ex => !(editingExercise ? ex.id === editingExercise.id : false))
+                    .map(ex => (
+                      <option key={ex.id} value={ex.id}>
+                        {ex.name} {ex.isSupersetLeader ? '(capo)' : ''}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Link Video o Foto</label>
                 <input
@@ -2080,11 +2547,22 @@ useEffect(() => {
           <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight">Esercizi</h3>
           {exercises.length > 0 ? (
             <div className="space-y-4">
+              {isSupersetMode && supersetAnchorExerciseId && (
+                <div className="sticky top-2 z-[9999] flex justify-center">
+                  <div className="inline-flex items-center gap-3 bg-white/90 backdrop-blur-md border border-purple-300 shadow-lg rounded-full px-4 py-2">
+                    <span className="text-sm text-gray-700">Seleziona esercizi da collegare al superset</span>
+                    <button onClick={handleConfirmSuperset} className="px-3 py-1 rounded-full bg-purple-600 text-white text-sm shadow hover:bg-purple-700">Conferma</button>
+                    <button onClick={handleCancelSuperset} className="px-3 py-1 rounded-full bg-white text-gray-700 ring-1 ring-gray-300 text-sm shadow hover:bg-gray-50">Annulla</button>
+                  </div>
+                </div>
+              )}
               {exercises.map((exercise, index) => (
                 <div
                   key={exercise.id || `exercise-${index}`}
-                  className={`p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === index ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === index ? 'opacity-80' : ''}`}
+                  className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === index ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === index ? 'opacity-80' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${exercise.supersetGroupId && !exercise.isSupersetLeader ? 'ml-4 md:ml-6 pl-4 border-l-2 border-purple-200' : ''}`}
                   draggable
+                  onClick={() => handleToggleSupersetSelection(exercise.id)}
+                  onDoubleClick={() => handleEditExercise(exercise)}
                   onDragStart={() => setDraggedExerciseIndex(index)}
                   onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
                   onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== index) setDragOverExerciseIndex(index); }}
@@ -2093,14 +2571,15 @@ useEffect(() => {
                     const updatedExercises = [...exercises];
                     const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
                     updatedExercises.splice(index, 0, moved);
-                    setExercises(updatedExercises);
+                    const normalized = normalizeSupersets(updatedExercises);
+                    setExercises(normalized);
                     if (activeVariantId !== 'original') {
                       const updatedVariants = variants.map(v =>
-                        v.id === activeVariantId ? { ...v, exercises: updatedExercises, updatedAt: new Date().toISOString() } : v
+                        v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
                       );
                       setVariants(updatedVariants);
                     } else {
-                      setOriginalExercises(updatedExercises);
+                      setOriginalExercises(normalized);
                     }
                     triggerAutoSave();
                     setDraggedExerciseIndex(null);
@@ -2108,24 +2587,44 @@ useEffect(() => {
                   }}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold text-lg">{exercise.name}</h4>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEditExercise(exercise)}
-                        className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
-                        title="Modifica esercizio"
-                      >
-                        <Edit3 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleRemoveExercise(exercise.id)}
-                        className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                        title="Rimuovi esercizio"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:hidden">
+                        <button onClick={() => moveExercise(index, -1)} className="p-1 rounded-full bg-white text-gray-600 ring-1 ring-gray-300 shadow-sm active:scale-[0.98]" title="Sposta su" aria-label="Sposta su">
+                          <ChevronUp size={14} />
+                        </button>
+                        <button onClick={() => moveExercise(index, 1)} className="p-1 rounded-full bg-white text-gray-600 ring-1 ring-gray-300 shadow-sm active:scale-[0.98]" title="Sposta giù" aria-label="Sposta giù">
+                          <ChevronDown size={14} />
+                        </button>
+                      </div>
+                      <h4 className="font-semibold text-lg">{exercise.name}</h4>
                     </div>
                   </div>
+
+                  {/* Action buttons spostati sul lato destro del contenitore */}
+                  <div className="absolute right-3 top-3 flex items-center gap-2">
+                    <button
+                      onClick={() => handleEditExercise(exercise)}
+                      className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
+                      title="Modifica esercizio"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleStartSuperset(exercise.id)}
+                      className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === exercise.id ? 'text-purple-700' : 'text-purple-500'} hover:text-purple-700 transition-colors`}
+                      title="Superset"
+                    >
+                      <Link2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleRemoveExercise(exercise.id)}
+                      className="p-1 text-red-500 hover:text-red-700 transition-colors"
+                      title="Rimuovi esercizio"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
                     {exercise.notes && <p><strong>Note:</strong> {exercise.notes}</p>}
                     {exercise.sets && <p><strong>Serie x Ripetizioni:</strong> {exercise.sets}</p>}
@@ -2139,6 +2638,14 @@ useEffect(() => {
                           Visualizza
                         </a>
                       </p>
+                    )}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {exercise.supersetGroupId && (
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 ${exercise.isSupersetLeader ? 'font-bold' : ''}`}>
+                        Superset
+                        {exercise.isSupersetLeader ? ' (capo)' : ''}
+                      </span>
                     )}
                   </div>
                 </div>
