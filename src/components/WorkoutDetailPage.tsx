@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit3, Plus, Save, Copy, Users, ArrowLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText, ChevronUp, ChevronDown, Tag, Search, Link2 } from 'lucide-react';
+import { Edit3, Plus, Save, Copy, Users, ArrowLeft, ChevronLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText, ChevronUp, ChevronDown, Tag, Search, Link2 } from 'lucide-react';
 import { AVAILABLE_ICONS } from './FolderCustomizer';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
@@ -1553,11 +1553,11 @@ useEffect(() => {
             onPointerDown={handleVariantTabsPointerDown}
             onPointerMove={handleVariantTabsPointerMove}
             onPointerUp={handleVariantTabsPointerUp}
-            className={`inline-flex items-center gap-4 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-4 py-3 overflow-x-auto overflow-y-visible no-scrollbar select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+            className={`inline-flex items-center gap-5 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-3.5 overflow-x-auto overflow-y-visible no-scrollbar select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
             style={{ touchAction: 'pan-x' }}
           >
             {/* Bottone scheda originale - solo icona */}
-            <div className="relative h-10 w-10 flex-shrink-0">
+            <div className="relative h-12 w-12 flex-shrink-0">
               <button
                 onClick={(e) => {
                   // Prima di tornare all'originale, salva gli esercizi correnti nella variante attiva
@@ -1576,24 +1576,24 @@ useEffect(() => {
                   setActiveVariantId('original');
                   setExercises(originalExercises ? [...originalExercises] : []);
                 }}
-                className={`${activeVariantId === 'original' ? 'bg-gray-100 text-blue-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-10 w-10 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
+                className={`${activeVariantId === 'original' ? 'bg-gray-100 text-blue-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
                 title={`Scheda originale: ${workoutTitle}`}
                 aria-label={`Scheda originale: ${workoutTitle}`}
               >
-                {React.createElement(FileText, { size: 18, className: activeVariantId === 'original' ? 'text-blue-600' : 'text-gray-500' })}
+                {React.createElement(FileText, { size: 20, className: activeVariantId === 'original' ? 'text-blue-600' : 'text-gray-500' })}
               </button>
             </div>
 
             {/* Bottoni varianti - solo icona con X e numero */}
             {variants.map((variant, index) => (
-              <div key={variant.id} className="relative h-10 w-10 flex-shrink-0 overflow-visible">
+              <div key={variant.id} className="relative h-12 w-12 flex-shrink-0 overflow-visible">
                 <button
                   onClick={() => handleSwitchVariant(variant.id)}
-                  className={`${variant.isActive ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-10 w-10 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
+                  className={`${variant.isActive ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
                   title={variant.name}
                   aria-label={`Variante: ${variant.name}`}
                 >
-                  <Copy size={18} className={variant.isActive ? 'text-red-600' : 'text-gray-500'} />
+                  <Copy size={20} className={variant.isActive ? 'text-red-600' : 'text-gray-500'} />
                 </button>
                 {/* X in alto a destra visibile quando la variante è attiva */}
                 {variant.isActive && (
@@ -1611,7 +1611,7 @@ useEffect(() => {
                   const match = (variant.name || '').match(/Variante\s+(\d+)/i);
                   const num = match ? parseInt(match[1], 10) : index + 1;
                   return (
-                    <span className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 text-[10px] leading-none font-bold text-red-600 pointer-events-none">{num}</span>
+                    <span className="absolute bottom-[2px] left-1/2 -translate-x-1/2 text-[11px] leading-none font-bold text-red-600 pointer-events-none">{num}</span>
                   );
                 })()}
               </div>
@@ -1628,10 +1628,10 @@ useEffect(() => {
           <div className="flex justify-start">
             <button
               onClick={onClose}
-              className="flex items-center justify-center p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
+              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98] shrink-0"
               title="Torna alla Cartella"
             >
-              <ArrowLeft size={20} />
+              <ChevronLeft size={24} />
             </button>
           </div>
           <div className="min-w-0 flex justify-center">
@@ -1665,7 +1665,7 @@ useEffect(() => {
           <div className="flex justify-end">
             {/* Placeholder invisibile per mantenere il titolo perfettamente centrato rispetto al contenitore */}
             <div className="p-2 opacity-0 pointer-events-none">
-              <ArrowLeft size={20} />
+              <ChevronLeft size={20} />
             </div>
           </div>
         </div>
@@ -1787,8 +1787,8 @@ useEffect(() => {
                   onClose={() => { closeTagsMenu(); setShowGymTagsList(false); setShowTagsDropdown(false); }}
                   title="Gestisci Tag"
                 >
-                  <div className="w-[360px] max-w-[90vw]">
-                    <div className={"bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl ring-1 ring-gray-200 p-3 flex flex-col h-auto max-h-[280px] overflow-y-auto"}>
+                  <div className="w-full">
+                    <div className={"w-full bg-white/60 backdrop-blur-xl border border-white/30 rounded-3xl shadow-2xl ring-1 ring-white/20 p-3 flex flex-col h-auto max-h-[280px] overflow-y-auto transition-all duration-300 ease-out"}>
                       <div className="mb-2">
                         <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
                         <div className="relative flex items-center gap-2">
@@ -1798,7 +1798,7 @@ useEffect(() => {
                               value={newTag}
                               onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
                               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
-                              className="w-full pl-8 pr-7 py-2 border border-gray-300 rounded-xl text-sm bg-white/70 focus:ring-2 focus:ring-purple-300 focus:border-purple-300"
+                              className="w-full pl-8 pr-7 py-1.5 border border-white/30 rounded-full text-xs bg-white/60 backdrop-blur-sm shadow-inner focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-200"
                               placeholder="Es. forza, mobilità"
                               maxLength={20}
                               onFocus={() => setShowTagsDropdown(false)}
@@ -1822,18 +1822,18 @@ useEffect(() => {
                             <button
                               type="button"
                               onClick={() => setShowGymTagsList(!showGymTagsList)}
-                              className="flex items-center justify-between text-xs text-gray-700 bg-white/70 border border-gray-200 rounded-xl px-3 py-2 hover:border-purple-300 hover:text-purple-700 transition"
+                              className="flex items-center justify-between text-xs text-gray-700 bg-white/50 backdrop-blur-sm ring-1 ring-white/30 rounded-full px-2.5 py-1.5 shadow-sm hover:bg-white/60 hover:shadow-md hover:text-purple-700 transition-all duration-200"
                             >
                               {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                             </button>
                             {showGymTagsList && (
-                              <div className="absolute z-10 mt-1 right-0 bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl shadow-xl ring-1 ring-gray-200 w-48 max-h-40 overflow-auto">
+                              <div className="absolute z-20 mt-1 right-0 bg-white/60 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl ring-1 ring-white/20 w-44 max-h-40 overflow-auto transition-all duration-200">
                                 {PREDEFINED_GYM_TAGS.map((t) => (
                                   <button
                                     key={t}
                                     type="button"
                                     onClick={() => handleAddTag(t)}
-                                    className="w-full text-left px-3 py-1 rounded-xl hover:bg-purple-50 hover:text-purple-700 transition text-xs"
+                                    className="w-full text-left px-3 py-1.5 rounded-full hover:bg-white/70 hover:text-purple-700 transition-all duration-150 text-xs"
                                     disabled={tags.includes(t) || tags.length >= 10}
                                   >
                                     <span>{t}</span>
@@ -1850,14 +1850,14 @@ useEffect(() => {
                           if (!queryActive) return null;
                           const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
                           return (
-                            <div className="mt-2 bg-white/70 border border-gray-200 rounded-xl h-[140px] overflow-auto">
+                            <div className="mt-2 bg-white/60 backdrop-blur-sm border border-white/30 ring-1 ring-white/20 rounded-2xl h-[120px] overflow-auto transition-all duration-200">
                               {filtered.length > 0 ? (
                                 filtered.map(t => (
                                   <button
                                     key={t}
                                     type="button"
                                     onClick={() => handleAddTag(t)}
-                                    className={`w-full text-left px-3 py-1 text-xs hover:bg-purple-50 hover:text-purple-700 transition ${tags.includes(t) ? 'opacity-60 cursor-not-allowed flex justify-between' : ''}`}
+                                    className={`w-full text-left px-3 py-1.5 text-xs rounded-full hover:bg-white/70 hover:text-purple-700 transition-all duration-150 ${tags.includes(t) ? 'opacity-60 cursor-not-allowed flex justify-between' : ''}`}
                                     disabled={tags.includes(t) || tags.length >= 10}
                                   >
                                     <span>{t}</span>
@@ -1872,7 +1872,7 @@ useEffect(() => {
                         })()}
                         <button
                           onClick={() => handleAddTag()}
-                          className="mt-2 w-full bg-purple-600 text-white text-xs px-2 py-2 rounded-xl hover:bg-purple-700 transition"
+                          className="mt-2 w-full bg-gradient-to-b from-purple-600 to-purple-700 text-white text-[12px] px-2.5 py-2 rounded-full shadow-md hover:from-purple-600 hover:to-purple-800 transition-all duration-200"
                           disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
                         >
                           Aggiungi tag
@@ -2519,16 +2519,12 @@ useEffect(() => {
             </div>
             
             {/* Form Actions */}
-            <div className="flex space-x-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={handleAddExercise}
-                className="px-6 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white ring-1 ring-black/10 shadow-sm hover:shadow-md transition-all active:scale-[0.99]"
+                className="px-4 py-2 rounded-full bg-blue-500 text-white ring-1 ring-black/10 shadow-sm hover:bg-blue-600 transition-all"
               >
-                {(() => {
-                  console.log('🔍 Button render - editingExerciseId:', editingExerciseId);
-                  console.log('🔍 Button render - editingExercise:', editingExercise);
-                  return editingExerciseId ? 'Salva Modifiche' : 'Aggiungi Esercizio';
-                })()}
+                {editingExerciseId ? 'Salva Modifiche' : 'Aggiungi Esercizio'}
               </button>
               <button
                 onClick={() => {
@@ -2551,7 +2547,7 @@ useEffect(() => {
                   setEditingSets('');
                   setEditingReps('');
                 }}
-                className="px-6 py-2 rounded-full bg-white/70 text-gray-700 ring-1 ring-gray-300 shadow-sm hover:bg-white/90 transition-all"
+                className="px-4 py-2 rounded-full bg-white text-gray-800 ring-1 ring-black/10 shadow-sm hover:bg-gray-100 transition-all"
               >
                 Annulla
               </button>

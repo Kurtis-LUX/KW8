@@ -369,7 +369,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={toggleUserMenu}
-                  className="inline-flex items-center space-x-2 rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
+                  className="inline-flex items-center space-x-2 rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-3.5 py-2 text-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
                 >
                   <User size={24} className="text-gray-700" />
                   <span className="hidden md:inline font-medium">{currentUser.name}</span>
@@ -377,8 +377,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 
                 {/* User Dropdown Menu */}
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-2 border-b border-gray-100">
+                  <div className="absolute right-0 mt-2 w-64 bg-white/80 backdrop-blur-md rounded-2xl shadow-[0_16px_32px_rgba(0,0,0,0.12)] ring-1 ring-black/10 p-2 z-50">
+                    <div className="px-4 py-3 border-b border-black/5">
                       <p className="font-semibold text-gray-800">{currentUser.name}</p>
                       <p className="text-sm text-gray-600">{currentUser.email}</p>
                       <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
@@ -389,7 +389,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                         handleNavigation('home');
                         setShowUserMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
                     >
                       <Home size={16} />
                       <span>Home</span>
@@ -401,7 +401,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                           handleNavigation('coach-dashboard');
                           setShowUserMenu(false);
                         }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center space-x-2 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200"
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
                       >
                         <Settings size={16} />
                         <span>Dashboard Coach</span>
@@ -414,7 +414,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                           handleNavigation('workouts');
                           setShowUserMenu(false);
                         }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center space-x-2"
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
                       >
                         <FileText size={16} />
                         <span>{t.header.workouts}</span>
@@ -426,7 +426,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                         handleLogout();
                         setShowUserMenu(false);
                       }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-red-600 flex items-center space-x-2 transition-colors"
                     >
                       <UserIcon size={16} />
                       <span>{t.header.logout}</span>
@@ -437,7 +437,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             ) : (
               <button
                 onClick={() => handleNavigation('login')}
-                className="inline-flex items-center space-x-2 rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
+                className="inline-flex items-center space-x-2 rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-3.5 py-2 text-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
               >
                 <User size={24} className="text-gray-700" />
                 <span className="hidden md:inline font-medium">Coach</span>
