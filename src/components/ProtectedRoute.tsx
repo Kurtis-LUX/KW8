@@ -48,6 +48,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         const hasToken = authService.getToken();
         
         if (!currentUser || !hasToken) {
+          authService.logout();
           setAuthState({
             isLoading: false,
             isAuthenticated: false,
@@ -61,6 +62,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         const verifyResult = await authService.verifyToken();
         
         if (!verifyResult || !verifyResult.valid) {
+          authService.logout();
           setAuthState({
             isLoading: false,
             isAuthenticated: false,
@@ -91,6 +93,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         
       } catch (error) {
         console.error('Auth check failed:', error);
+        authService.logout();
         setAuthState({
           isLoading: false,
           isAuthenticated: false,
@@ -150,7 +153,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           <button
             onClick={() => {
               authService.logout();
-              window.location.reload();
+              if (onUnauthorized) {
+                onUnauthorized();
+              } else {
+                window.location.reload();
+              }
             }}
             className="w-full bg-navy-900 text-white py-2 px-4 rounded-lg hover:bg-navy-800 transition-colors"
           >

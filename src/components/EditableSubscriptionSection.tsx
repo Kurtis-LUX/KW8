@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Edit3, Save, X, Plus, Trash2, Upload } from 
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { saveTransformationCases, loadTransformationCases } from '../utils/database';
 import { uploadImage } from '../utils/storage';
+import Modal from './Modal';
 
 interface TransformationCase {
   id: string;
@@ -492,102 +493,93 @@ const EditableSubscriptionSection: React.FC<EditableSubscriptionSectionProps> = 
 
       {/* Modal di editing */}
       {isEditing && editingCase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-navy-900">
-                  {cases.find(c => c.id === editingCase.id) ? 'Modifica Caso' : 'Nuovo Caso'}
-                </h3>
-                <button
-                  onClick={handleCancelEdit}
-                  className="text-gray-500 hover:text-gray-700 p-2"
-                >
-                  <X size={24} />
-                </button>
+        <Modal
+          isOpen={isEditing && !!editingCase}
+          onClose={handleCancelEdit}
+          title={cases.find(c => c.id === editingCase.id) ? 'Modifica Caso' : 'Nuovo Caso'}
+        >
+          <div className="p-6">
+            {/* Contenuto del form (senza header duplicato e bottone close, gestiti da Modal) */}
+            <div className="space-y-6">
+              {/* Nome */}
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">
+                  Nome Cliente
+                </label>
+                <input
+                  type="text"
+                  value={editingCase.name}
+                  onChange={(e) => setEditingCase({ ...editingCase, name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="Nome del cliente"
+                />
               </div>
 
-              <div className="space-y-6">
-                {/* Nome */}
+              {/* Titolo */}
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">
+                  Titolo
+                </label>
+                <input
+                  type="text"
+                  value={editingCase.title}
+                  onChange={(e) => setEditingCase({ ...editingCase, title: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="Titolo della trasformazione"
+                />
+              </div>
+
+              {/* Descrizione */}
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">
+                  Descrizione
+                </label>
+                <textarea
+                  value={editingCase.description}
+                  onChange={(e) => setEditingCase({ ...editingCase, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent h-24 resize-none"
+                  placeholder="Descrizione del miglioramento ottenuto"
+                />
+              </div>
+
+              {/* Durata */}
+              <div>
+                <label className="block text-sm font-medium text-navy-700 mb-2">
+                  Durata
+                </label>
+                <input
+                  type="text"
+                  value={editingCase.duration || ''}
+                  onChange={(e) => setEditingCase({ ...editingCase, duration: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  placeholder="es. 6 mesi"
+                />
+              </div>
+
+              {/* Immagini */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Immagine Prima */}
                 <div>
                   <label className="block text-sm font-medium text-navy-700 mb-2">
-                    Nome Cliente
+                    Immagine Prima
                   </label>
-                  <input
-                    type="text"
-                    value={editingCase.name}
-                    onChange={(e) => setEditingCase({ ...editingCase, name: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    placeholder="Nome del cliente"
-                  />
-                </div>
-
-                {/* Titolo */}
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">
-                    Titolo
-                  </label>
-                  <input
-                    type="text"
-                    value={editingCase.title}
-                    onChange={(e) => setEditingCase({ ...editingCase, title: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    placeholder="Titolo della trasformazione"
-                  />
-                </div>
-
-                {/* Descrizione */}
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">
-                    Descrizione
-                  </label>
-                  <textarea
-                    value={editingCase.description}
-                    onChange={(e) => setEditingCase({ ...editingCase, description: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent h-24 resize-none"
-                    placeholder="Descrizione del miglioramento ottenuto"
-                  />
-                </div>
-
-                {/* Durata */}
-                <div>
-                  <label className="block text-sm font-medium text-navy-700 mb-2">
-                    Durata
-                  </label>
-                  <input
-                    type="text"
-                    value={editingCase.duration || ''}
-                    onChange={(e) => setEditingCase({ ...editingCase, duration: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    placeholder="es. 6 mesi"
-                  />
-                </div>
-
-                {/* Immagini */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Immagine Prima */}
-                  <div>
-                    <label className="block text-sm font-medium text-navy-700 mb-2">
-                      Immagine Prima
-                    </label>
-                    <div className="relative">
-                      <img
-                        src={editingCase.beforeImage}
-                        alt="Prima"
-                        className="w-full h-32 object-cover rounded-lg border border-gray-300"
-                      />
-                      <button
-                        onClick={() => triggerImageUpload('before')}
-                        disabled={uploadingImage === 'before'}
-                        className="absolute inset-0 bg-black bg-opacity-50 text-white rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200"
-                      >
-                        {uploadingImage === 'before' ? (
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                        ) : (
-                          <Upload size={24} />
-                        )}
-                      </button>
-                    </div>
+                  <div className="relative">
+                    <img
+                      src={editingCase.beforeImage}
+                      alt="Prima"
+                      className="w-full h-32 object-cover rounded-lg border border-gray-300"
+                    />
+                    <button
+                      onClick={() => triggerImageUpload('before')}
+                      disabled={uploadingImage === 'before'}
+                      className="absolute inset-0 bg-black bg-opacity-50 text-white rounded-lg flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity duration-200"
+                    >
+                      {uploadingImage === 'before' ? (
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      ) : (
+                        <Upload size={24} />
+                      )}
+                    </button>
                   </div>
 
                   {/* Immagine Dopo */}
@@ -640,7 +632,7 @@ const EditableSubscriptionSection: React.FC<EditableSubscriptionSectionProps> = 
               </div>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Input file nascosto */}

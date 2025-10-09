@@ -257,7 +257,7 @@ function App() {
   if (currentPage === 'coach-dashboard') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
           <div className="min-h-screen bg-gray-100">
             <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} currentPage={currentPage} />
             <div className="pt-20">
@@ -486,7 +486,7 @@ function App() {
   if (currentPage === 'workout-manager') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
           <WorkoutManagerPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
@@ -499,7 +499,7 @@ function App() {
   if (currentPage === 'athlete-statistics') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
           <AthleteStatisticsPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
@@ -513,7 +513,7 @@ function App() {
   if (currentPage === 'athlete-manager') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
           <AthleteManagerPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
@@ -527,7 +527,7 @@ function App() {
   if (currentPage === 'rankings') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
           <RankingsPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
@@ -543,7 +543,7 @@ function App() {
   if (currentPage === 'membership-cards') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
           <MembershipCardsPage 
             onNavigate={handleNavigation} 
             currentUser={currentUser} 
@@ -557,7 +557,7 @@ function App() {
   if (currentPage === 'workout-card') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
           <WorkoutCardPage />
         </ProtectedRoute>
       </LanguageProvider>

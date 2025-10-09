@@ -13,6 +13,7 @@ import {
 import { useLanguageContext } from '../contexts/LanguageContext';
 import DB, { GymArea as DBGymArea } from '../utils/database';
 import storageService from '../services/storageService';
+import Modal from './Modal';
 
 interface GymArea {
   id: string;
@@ -764,289 +765,276 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
       </div>
       
       {/* Edit Area Modal */}
-      {editingArea !== null && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold flex items-center">
-                  <Edit size={24} className="mr-3" />
-                  Modifica Area: {areas[editingArea]?.title}
-                </h3>
-                <button
-                  onClick={cancelEditModal}
-                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-full transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Left Column - Basic Info */}
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                      Informazioni Base
-                    </h4>
+      <Modal
+        isOpen={editingArea !== null}
+        onClose={cancelEditModal}
+        title={`Modifica Area: ${areas[editingArea]?.title || ''}`}
+        variant="centered"
+      >
+        <div className="p-0">
+          {/* Content */}
+          <div className="p-6 overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left Column - Basic Info */}
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                    Informazioni Base
+                  </h4>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Titolo</label>
+                      <input
+                        type="text"
+                        value={areas[editingArea]?.title || ''}
+                        onChange={(e) => updateArea(editingArea, { title: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        placeholder="Nome dell'area"
+                      />
+                    </div>
                     
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Titolo</label>
-                        <input
-                          type="text"
-                          value={areas[editingArea]?.title || ''}
-                          onChange={(e) => updateArea(editingArea, { title: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                          placeholder="Nome dell'area"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
-                        <textarea
-                          value={areas[editingArea]?.description || ''}
-                          onChange={(e) => updateArea(editingArea, { description: e.target.value })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-                          rows={3}
-                          placeholder="Descrizione dell'area"
-                        />
-                      </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Descrizione</label>
+                      <textarea
+                        value={areas[editingArea]?.description || ''}
+                        onChange={(e) => updateArea(editingArea, { description: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+                        rows={3}
+                        placeholder="Descrizione dell'area"
+                      />
                     </div>
                   </div>
+                </div>
 
-                  {/* Style Settings */}
-                   <div className="bg-gray-50 p-4 rounded-lg">
-                     <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                       <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                       Stile e Colori
-                     </h4>
+                {/* Style Settings */}
+                 <div className="bg-gray-50 p-4 rounded-lg">
+                   <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                     <div className="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
+                     Stile e Colori
+                   </h4>
+                   
+                   <div className="space-y-4">
+                     {/* Icon Selector */}
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Icona</label>
+                       <select
+                         value={areas[editingArea]?.iconName || 'Dumbbell'}
+                         onChange={(e) => {
+                           const iconName = e.target.value;
+                           const IconComponent = availableIcons[iconName as keyof typeof availableIcons];
+                           updateArea(editingArea, { 
+                             iconName,
+                             icon: IconComponent
+                           });
+                         }}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                       >
+                         {Object.keys(availableIcons).map(iconName => (
+                           <option key={iconName} value={iconName}>
+                             {iconName}
+                           </option>
+                         ))}
+                       </select>
+                     </div>
                      
-                     <div className="space-y-4">
-                       {/* Icon Selector */}
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">Icona</label>
-                         <select
-                           value={areas[editingArea]?.iconName || 'Dumbbell'}
-                           onChange={(e) => {
-                             const iconName = e.target.value;
-                             const IconComponent = availableIcons[iconName as keyof typeof availableIcons];
-                             updateArea(editingArea, { 
-                               iconName,
-                               icon: IconComponent
-                             });
-                           }}
-                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                         >
-                           {Object.keys(availableIcons).map(iconName => (
-                             <option key={iconName} value={iconName}>
-                               {iconName}
-                             </option>
-                           ))}
-                         </select>
-                       </div>
-                       
-                       {/* Icon Color Picker */}
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">Colore Icona</label>
-                         <select
-                           value={areas[editingArea]?.iconColor || 'text-red-600'}
-                           onChange={(e) => updateArea(editingArea, { iconColor: e.target.value })}
-                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                         >
-                           {textColorOptions.map(colorOption => (
-                             <option key={colorOption.value} value={colorOption.value}>
-                               {colorOption.name}
-                             </option>
-                           ))}
-                         </select>
-                       </div>
-                       
-                       {/* Text Color Picker */}
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">Colore Testo</label>
-                         <select
-                           value={areas[editingArea]?.textColor || 'text-white'}
-                           onChange={(e) => updateArea(editingArea, { textColor: e.target.value })}
-                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                         >
-                           {textColorOptions.map(colorOption => (
-                             <option key={colorOption.value} value={colorOption.value}>
-                               {colorOption.name}
-                             </option>
-                           ))}
-                         </select>
-                       </div>
-                       
-                       {/* Title Color Picker */}
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">Colore Titolo</label>
-                         <select
-                           value={areas[editingArea]?.titleColor || 'text-white'}
-                           onChange={(e) => updateArea(editingArea, { titleColor: e.target.value })}
-                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                         >
-                           {textColorOptions.map(colorOption => (
-                             <option key={colorOption.value} value={colorOption.value}>
-                               {colorOption.name}
-                             </option>
-                           ))}
-                         </select>
-                       </div>
-                       
-                       {/* Overlay Settings */}
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">Colore Overlay</label>
-                         <select
-                           value={areas[editingArea]?.overlayColor || 'bg-blue-900'}
-                           onChange={(e) => updateArea(editingArea, { overlayColor: e.target.value })}
-                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                         >
-                           {overlayColorOptions.map(colorOption => (
-                             <option key={colorOption.value} value={colorOption.value}>
-                               {colorOption.name}
-                             </option>
-                           ))}
-                         </select>
-                       </div>
-                       
-                       {/* Overlay Opacity */}
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                           Opacità Overlay: {areas[editingArea]?.overlayOpacity || 70}%
-                         </label>
-                         <input
-                           type="range"
-                           min="0"
-                           max="100"
-                           value={areas[editingArea]?.overlayOpacity || 70}
-                           onChange={(e) => updateArea(editingArea, { overlayOpacity: parseInt(e.target.value) })}
-                           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                         />
-                         <div className="flex justify-between text-xs text-gray-500 mt-1">
-                           <span>0%</span>
-                           <span>50%</span>
-                           <span>100%</span>
-                         </div>
+                     {/* Icon Color Picker */}
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Colore Icona</label>
+                       <select
+                         value={areas[editingArea]?.iconColor || 'text-red-600'}
+                         onChange={(e) => updateArea(editingArea, { iconColor: e.target.value })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                       >
+                         {textColorOptions.map(colorOption => (
+                           <option key={colorOption.value} value={colorOption.value}>
+                             {colorOption.name}
+                           </option>
+                         ))}
+                       </select>
+                     </div>
+                     
+                     {/* Text Color Picker */}
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Colore Testo</label>
+                       <select
+                         value={areas[editingArea]?.textColor || 'text-white'}
+                         onChange={(e) => updateArea(editingArea, { textColor: e.target.value })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                       >
+                         {textColorOptions.map(colorOption => (
+                           <option key={colorOption.value} value={colorOption.value}>
+                             {colorOption.name}
+                           </option>
+                         ))}
+                       </select>
+                     </div>
+                     
+                     {/* Title Color Picker */}
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Colore Titolo</label>
+                       <select
+                         value={areas[editingArea]?.titleColor || 'text-white'}
+                         onChange={(e) => updateArea(editingArea, { titleColor: e.target.value })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                       >
+                         {textColorOptions.map(colorOption => (
+                           <option key={colorOption.value} value={colorOption.value}>
+                             {colorOption.name}
+                           </option>
+                         ))}
+                       </select>
+                     </div>
+                     
+                     {/* Overlay Settings */}
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">Colore Overlay</label>
+                       <select
+                         value={areas[editingArea]?.overlayColor || 'bg-blue-900'}
+                         onChange={(e) => updateArea(editingArea, { overlayColor: e.target.value })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                       >
+                         {overlayColorOptions.map(colorOption => (
+                           <option key={colorOption.value} value={colorOption.value}>
+                             {colorOption.name}
+                           </option>
+                         ))}
+                       </select>
+                     </div>
+                     
+                     {/* Overlay Opacity */}
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                         Opacità Overlay: {areas[editingArea]?.overlayOpacity || 70}%
+                       </label>
+                       <input
+                         type="range"
+                         min="0"
+                         max="100"
+                         value={areas[editingArea]?.overlayOpacity || 70}
+                         onChange={(e) => updateArea(editingArea, { overlayOpacity: parseInt(e.target.value) })}
+                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                       />
+                       <div className="flex justify-between text-xs text-gray-500 mt-1">
+                         <span>0%</span>
+                         <span>50%</span>
+                         <span>100%</span>
                        </div>
                      </div>
                    </div>
-                </div>
-
-                {/* Right Column - Image */}
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                      Immagine
-                    </h4>
-                    
-                    {/* Current Image Preview */}
-                    <div className="mb-4">
-                      <div className="relative group">
-                        <img 
-                          src={areas[editingArea]?.image || '/images/default-gym.jpg'} 
-                          alt={areas[editingArea]?.title || 'Area'}
-                          className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
-                          <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium">
-                            Immagine corrente
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Upload New Image */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Carica nuova immagine</label>
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleImageUpload(editingArea, e)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Formati supportati: JPG, PNG, GIF (max 5MB)</p>
-                    </div>
-                  </div>
-
-                  {/* Preview Card */}
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-lg border">
-                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
-                      Anteprima Completa
-                    </h4>
-                    
-                    {/* Full Area Preview */}
-                    <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200 shadow-sm mb-3">
-                      {/* Background Image */}
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center"
-                        style={{
-                          backgroundImage: areas[editingArea]?.image 
-                            ? `url(${areas[editingArea].image})` 
-                            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                        }}
-                      />
-                      
-                      {/* Overlay */}
-                      <div 
-                        className={`absolute inset-0 ${areas[editingArea]?.overlayColor || 'bg-black'}`}
-                        style={{
-                          opacity: (areas[editingArea]?.overlayOpacity || 70) / 100
-                        }}
-                      />
-                      
-                      {/* Content */}
-                      <div className="relative z-10 h-full flex flex-col justify-center items-center text-center p-6">
-                        <div className={`mb-3 ${areas[editingArea]?.iconColor || 'text-white'}`}>
-                          {areas[editingArea] && React.createElement(areas[editingArea].icon, { size: 48 })}
-                        </div>
-                        <h3 className={`text-xl font-bold mb-2 ${areas[editingArea]?.titleColor || 'text-white'}`}>
-                              {areas[editingArea]?.title || 'Titolo Area'}
-                            </h3>
-                        <p className={`text-sm opacity-90 ${areas[editingArea]?.textColor || 'text-white'}`}>
-                          {areas[editingArea]?.description || 'Descrizione dell\'area della palestra...'}
-                        </p>
-                      </div>
-                      
-                      {/* Corner Label */}
-                      <div className="absolute top-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs font-medium text-gray-700">
-                        Anteprima Live
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
+                 </div>
               </div>
-            </div>
 
-            {/* Footer */}
-            <div className="bg-gray-50 px-6 py-4 border-t">
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={cancelEditModal}
-                  className="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                >
-                  Annulla
-                </button>
-                <button
-                  onClick={closeEditModal}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
-                >
-                  Salva Modifiche
-                </button>
+              {/* Right Column - Image */}
+              <div className="space-y-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    Immagine
+                  </h4>
+                  
+                  {/* Current Image Preview */}
+                  <div className="mb-4">
+                    <div className="relative group">
+                      <img 
+                        src={areas[editingArea]?.image || '/images/default-gym.jpg'} 
+                        alt={areas[editingArea]?.title || 'Area'}
+                        className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 rounded-lg flex items-center justify-center">
+                        <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-sm font-medium">
+                          Immagine corrente
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Upload New Image */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Carica nuova immagine</label>
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(editingArea, e)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">Formati supportati: JPG, PNG, GIF (max 5MB)</p>
+                  </div>
+                </div>
+
+                {/* Preview Card */}
+                <div className="bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-lg border">
+                  <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full mr-2"></div>
+                    Anteprima Completa
+                  </h4>
+                  
+                  {/* Full Area Preview */}
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200 shadow-sm mb-3">
+                    {/* Background Image */}
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: areas[editingArea]?.image 
+                          ? `url(${areas[editingArea].image})` 
+                          : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                      }}
+                    />
+                    
+                    {/* Overlay */}
+                    <div 
+                      className={`absolute inset-0 ${areas[editingArea]?.overlayColor || 'bg-black'}`}
+                      style={{
+                        opacity: (areas[editingArea]?.overlayOpacity || 70) / 100
+                      }}
+                    />
+                    
+                    {/* Content */}
+                    <div className="relative z-10 h-full flex flex-col justify-center items-center text-center p-6">
+                      <div className={`mb-3 ${areas[editingArea]?.iconColor || 'text-white'}`}>
+                        {areas[editingArea] && React.createElement(areas[editingArea].icon, { size: 48 })}
+                      </div>
+                      <h3 className={`text-xl font-bold mb-2 ${areas[editingArea]?.titleColor || 'text-white'}`}>
+                            {areas[editingArea]?.title || 'Titolo Area'}
+                          </h3>
+                      <p className={`text-sm opacity-90 ${areas[editingArea]?.textColor || 'text-white'}`}>
+                        {areas[editingArea]?.description || 'Descrizione dell\'area della palestra...'}
+                      </p>
+                    </div>
+                    
+                    {/* Corner Label */}
+                    <div className="absolute top-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs font-medium text-gray-700">
+                      Anteprima Live
+                    </div>
+                  </div>
+
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Footer */}
+          <div className="bg-gray-50 px-6 py-4 border-t">
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelEditModal}
+                className="px-4 py-2 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={closeEditModal}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm"
+              >
+                Salva Modifiche
+              </button>
+            </div>
+          </div>
         </div>
-      )}
+      </Modal>
       
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

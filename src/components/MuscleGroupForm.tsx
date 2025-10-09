@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Dumbbell, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import Modal from './Modal';
 
 interface MuscleGroup {
   id?: string;
@@ -101,161 +102,132 @@ const MuscleGroupForm: React.FC<MuscleGroupFormProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 flex items-center">
-              <Dumbbell className="mr-3 text-red-600" size={24} />
-              {title}
-            </h2>
+    <Modal isOpen={true} onClose={onCancel} title={title}>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Nome gruppo muscolare */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Nome Gruppo Muscolare *
+          </label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => {
+              setFormData(prev => ({ ...prev, name: e.target.value }));
+              if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
+            }}
+            className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
+              errors.name ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="es. Petto, Schiena, Gambe..."
+          />
+          {errors.name && (
+            <p className="text-red-500 text-sm mt-1">{errors.name}</p>
+          )}
+        </div>
+
+        {/* Colore */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Colore
+          </label>
+          <div className="grid grid-cols-4 gap-3">
+            {colorOptions.map((color) => (
+              <button
+                key={color.value}
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
+                className={`flex items-center space-x-2 p-2 rounded-lg border-2 transition-all ${
+                  formData.color === color.value
+                    ? 'border-red-500 bg-red-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full ${color.preview}`}></div>
+                <span className="text-sm">{color.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Descrizione */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Descrizione (opzionale)
+          </label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+            rows={3}
+            placeholder="Descrizione del gruppo muscolare..."
+          />
+        </div>
+
+        {/* Esercizi */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Esercizi *
+          </label>
+          
+          {/* Aggiungi nuovo esercizio */}
+          <div className="flex space-x-2 mb-3">
+            <input
+              type="text"
+              value={newExercise}
+              onChange={(e) => setNewExercise(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="Nome esercizio..."
+            />
             <button
-              onClick={onCancel}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              type="button"
+              onClick={addExercise}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center space-x-2"
             >
-              <X size={24} />
+              <Plus size={16} />
+              <span>Aggiungi</span>
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Nome gruppo muscolare */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nome Gruppo Muscolare *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, name: e.target.value }));
-                  if (errors.name) setErrors(prev => ({ ...prev, name: '' }));
-                }}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 ${
-                  errors.name ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="es. Petto, Schiena, Gambe..."
-              />
-              {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name}</p>
-              )}
-            </div>
-
-            {/* Colore */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Colore
-              </label>
-              <div className="grid grid-cols-4 gap-3">
-                {colorOptions.map((color) => (
-                  <button
-                    key={color.value}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
-                    className={`flex items-center space-x-2 p-2 rounded-lg border-2 transition-all ${
-                      formData.color === color.value
-                        ? 'border-red-500 bg-red-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded-full ${color.preview}`}></div>
-                    <span className="text-sm">{color.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Descrizione */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Descrizione (opzionale)
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                rows={3}
-                placeholder="Descrizione del gruppo muscolare..."
-              />
-            </div>
-
-            {/* Esercizi */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Esercizi *
-              </label>
-              
-              {/* Aggiungi nuovo esercizio */}
-              <div className="flex space-x-2 mb-3">
-                <input
-                  type="text"
-                  value={newExercise}
-                  onChange={(e) => setNewExercise(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                  placeholder="Nome esercizio..."
-                />
+          {/* Lista esercizi */}
+          <div className="space-y-2">
+            {formData.exercises.map((exercise, index) => (
+              <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                <span>{exercise}</span>
                 <button
                   type="button"
-                  onClick={addExercise}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center"
+                  onClick={() => removeExercise(index)}
+                  className="text-red-500 hover:text-red-600 transition-colors"
                 >
-                  <Plus size={16} />
+                  <Trash2 size={18} />
                 </button>
               </div>
-
-              {/* Lista esercizi */}
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {formData.exercises.map((exercise, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg"
-                  >
-                    <span className="text-sm text-gray-900">{exercise}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeExercise(index)}
-                      className="text-red-500 hover:text-red-700 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              
-              {errors.exercises && (
-                <p className="text-red-500 text-sm mt-1">{errors.exercises}</p>
-              )}
-            </div>
-
-            {/* Pulsanti */}
-            <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="px-6 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Annulla
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Salvando...
-                  </>
-                ) : (
-                  'Salva'
-                )}
-              </button>
-            </div>
-          </form>
+            ))}
+          </div>
+          {errors.exercises && (
+            <p className="text-red-500 text-sm mt-1">{errors.exercises}</p>
+          )}
         </div>
-      </div>
-    </div>
+
+        {/* Azioni */}
+        <div className="flex items-center justify-end space-x-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+          >
+            Annulla
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors"
+          >
+            Salva
+          </button>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

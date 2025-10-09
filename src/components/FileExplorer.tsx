@@ -35,6 +35,7 @@ import DB, { WorkoutPlan, WorkoutFolder, WorkoutVariant } from '../utils/databas
 import FolderCustomizer, { AVAILABLE_ICONS, AVAILABLE_COLORS } from './FolderCustomizer';
 import WorkoutCustomizer from './WorkoutCustomizer';
 import WorkoutDetailPage from './WorkoutDetailPage';
+import Modal from './Modal';
 
 interface FileExplorerProps {
   currentUser: any;
@@ -1599,11 +1600,13 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto no-scrollbar">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Crea {type === 'folder' ? 'Cartella' : 'Scheda'}
-        </h2>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={`Crea ${type === 'folder' ? 'Cartella' : 'Scheda'}`}
+      variant="centered"
+    >
+      <div className="w-full max-w-md mx-auto">>
         
         {/* Selezione tipo */}
         <div className="flex space-x-2 mb-4">
@@ -1702,7 +1705,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 };
 
@@ -1735,11 +1738,12 @@ const EditModal: React.FC<EditModalProps> = ({ item, onClose, onEdit }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm mx-auto max-h-[90vh] overflow-y-auto no-scrollbar">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">
-          Modifica {item.type === 'folder' ? 'Cartella' : 'Scheda'}
-        </h2>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={`Modifica ${item.type === 'folder' ? 'Cartella' : 'Scheda'}`}
+      variant="centered"
+    >>
         
         <form onSubmit={handleSubmit}>
           <div className="mb-3">
@@ -1773,8 +1777,7 @@ const EditModal: React.FC<EditModalProps> = ({ item, onClose, onEdit }) => {
             <button type="submit" className="flex-1 py-2 px-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">Salva</button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 };
 
@@ -1791,11 +1794,12 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ item, onClose, onDelete }) =>
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w_full max-w-md mx-4">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          Elimina {item.type === 'folder' ? 'Cartella' : 'Scheda'}
-        </h2>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={`Elimina ${item.type === 'folder' ? 'Cartella' : 'Scheda'}`}
+      variant="centered"
+     >
         
         <p className="text-gray-600 mb-6">
           Sei sicuro di voler eliminare "{item.name}"?
@@ -1820,8 +1824,7 @@ const DeleteModal: React.FC<DeleteModalProps> = ({ item, onClose, onDelete }) =>
             Elimina
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 

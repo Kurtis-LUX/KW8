@@ -4,6 +4,7 @@ import { AVAILABLE_ICONS } from './FolderCustomizer';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
 import Portal from './Portal';
+import Modal from './Modal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
 
 interface Exercise {
@@ -303,10 +304,7 @@ useEffect(() => {
 
   // Posizionamento e stato del menù tag (Apple-style) con chiusura on outside click
   const { 
-    position: tagsMenuPosition, 
     isOpen: isTagsMenuOpen, 
-    triggerRef: tagsMenuTriggerRef, 
-    dropdownRef: tagsMenuDropdownRef, 
     openDropdown: openTagsMenu, 
     closeDropdown: closeTagsMenu, 
     toggleDropdown: toggleTagsMenu 
@@ -1018,20 +1016,41 @@ useEffect(() => {
   // Helper: normalizza tutti i gruppi superset mantenendo i follower contigui e nell'ordine corrente
   const normalizeSupersets = (list: Exercise[]): Exercise[] => {
     let result = [...list];
+
+    // 1) Rimuovi follower orfani (leader mancante)
+    const leaderIds = new Set(result.filter(ex => ex.isSupersetLeader).map(ex => ex.id));
+    result = result.map(ex => {
+      if (ex.supersetGroupId && !leaderIds.has(ex.supersetGroupId)) {
+        return { ...ex, supersetGroupId: undefined, isSupersetLeader: false };
+      }
+      return ex;
+    });
+
+    // 2) Pulisci i capi senza follower
     const leaders = result.filter(ex => ex.isSupersetLeader);
     leaders.forEach(leader => {
       const leaderId = leader.id;
-      // Ordine dei follower come appaiono attualmente nella lista
+      const followers = result.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader);
+      if (followers.length === 0) {
+        const leaderIdx = result.findIndex(ex => ex.id === leaderId);
+        if (leaderIdx !== -1) {
+          result[leaderIdx] = { ...result[leaderIdx], supersetGroupId: undefined, isSupersetLeader: false };
+        }
+      }
+    });
+
+    // 3) Mantieni i follower contigui sotto al capo nell'ordine corrente
+    const leadersAfterCleanup = result.filter(ex => ex.isSupersetLeader);
+    leadersAfterCleanup.forEach(leader => {
+      const leaderId = leader.id;
       const followers = result.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader);
       if (followers.length === 0) return;
-      // Rimuovi follower dalle loro posizioni attuali
       const followerIds = new Set(followers.map(f => f.id));
       result = result.filter(ex => !followerIds.has(ex.id));
-      // Trova indice aggiornato del leader dopo rimozione
       const leaderIndex = result.findIndex(ex => ex.id === leaderId);
-      // Inserisci subito dopo il leader, mantenendo l'ordine
       result.splice(leaderIndex + 1, 0, ...followers);
     });
+
     return result;
   };
 
@@ -1453,7 +1472,8 @@ useEffect(() => {
         });
         
         const updatedExercises = exercises.filter(ex => ex.id !== exerciseId);
-        setExercises(updatedExercises);
+        const normalized = normalizeSupersets(updatedExercises);
+        setExercises(normalized);
         
         // IMPORTANTE: Gestione corretta dell'isolamento per la rimozione
         if (activeVariantId !== 'original') {
@@ -1461,19 +1481,19 @@ useEffect(() => {
           // NON toccare MAI gli originalExercises quando si è in una variante
           const updatedVariants = variants.map(v => 
             v.id === activeVariantId 
-              ? { ...v, exercises: updatedExercises, updatedAt: new Date().toISOString() }
+              ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() }
               : v
           );
           setVariants(updatedVariants);
           console.log('🔄 Updated ONLY variant after deletion:', {
             variantId: activeVariantId,
-            exerciseCount: updatedExercises.length
+            exerciseCount: normalized.length
           });
           console.log('🔒 OriginalExercises PROTECTED and unchanged:', originalExercises?.length || 0, 'exercises');
         } else {
           // Se siamo nell'originale, aggiorna SOLO gli originalExercises
-          setOriginalExercises(updatedExercises);
-          console.log('🔄 Updated ONLY original exercises after deletion:', updatedExercises.length);
+          setOriginalExercises(normalized);
+          console.log('🔄 Updated ONLY original exercises after deletion:', normalized.length);
         }
         
         // Trigger auto-save immediately for exercise removal
@@ -1755,7 +1775,6 @@ useEffect(() => {
               {/* Tags button */}
               <div className="relative">
                 <button
-                  ref={tagsMenuTriggerRef as React.RefObject<HTMLButtonElement>}
                   onClick={(e) => toggleTagsMenu(e)}
                   title="Tag"
                   aria-label="Tag"
@@ -1763,112 +1782,107 @@ useEffect(() => {
                 >
                   <Tag size={18} className="text-purple-600" />
                 </button>
-                {isTagsMenuOpen && (
-                  <Portal>
-                    <div
-                      ref={tagsMenuDropdownRef as React.RefObject<HTMLDivElement>}
-                      className="z-[10000] w-[320px]"
-                      style={{ position: 'fixed', left: tagsMenuPosition?.left ?? -9999, top: tagsMenuPosition?.top ?? -9999, visibility: tagsMenuPosition ? 'visible' : 'hidden' }}
-                    >
-                      <div className={"bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl ring-1 ring-gray-200 p-3 flex flex-col h-auto max-h-[280px] overflow-y-auto"}>
-                        <div className="mb-2">
-                          <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
-                          <div className="relative flex items-center gap-2">
-                            <div className="relative flex-1">
-                              <input
-                                type="text"
-                                value={newTag}
-                                onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
-                                className="w-full pl-8 pr-7 py-2 border border-gray-300 rounded-xl text-sm bg-white/70 focus:ring-2 focus:ring-purple-300 focus:border-purple-300"
-                                placeholder="Es. forza, mobilità"
-                                maxLength={20}
-                                onFocus={() => setShowTagsDropdown(false)}
-                              />
-                              {newTag.trim() && tags.includes(newTag.trim()) && (
-                                <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
-                              )}
-                              <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                              {newTag && (
-                                <button
-                                  type="button"
-                                  aria-label="Pulisci"
-                                  onClick={() => setNewTag('')}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                >
-                                  <X size={14} />
-                                </button>
-                              )}
-                            </div>
-                            <div className="relative" ref={gymTagsGroupRef}>
+                <Modal
+                  isOpen={isTagsMenuOpen}
+                  onClose={() => { closeTagsMenu(); setShowGymTagsList(false); setShowTagsDropdown(false); }}
+                  title="Gestisci Tag"
+                >
+                  <div className="w-[360px] max-w-[90vw]">
+                    <div className={"bg-white/80 backdrop-blur-md border border-gray-200 rounded-2xl shadow-2xl ring-1 ring-gray-200 p-3 flex flex-col h-auto max-h-[280px] overflow-y-auto"}>
+                      <div className="mb-2">
+                        <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
+                        <div className="relative flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              value={newTag}
+                              onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
+                              className="w-full pl-8 pr-7 py-2 border border-gray-300 rounded-xl text-sm bg-white/70 focus:ring-2 focus:ring-purple-300 focus:border-purple-300"
+                              placeholder="Es. forza, mobilità"
+                              maxLength={20}
+                              onFocus={() => setShowTagsDropdown(false)}
+                            />
+                            {newTag.trim() && tags.includes(newTag.trim()) && (
+                              <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
+                            )}
+                            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                            {newTag && (
                               <button
                                 type="button"
-                                onClick={() => setShowGymTagsList(!showGymTagsList)}
-                                className="flex items-center justify-between text-xs text-gray-700 bg-white/70 border border-gray-200 rounded-xl px-3 py-2 hover:border-purple-300 hover:text-purple-700 transition"
+                                aria-label="Pulisci"
+                                onClick={() => setNewTag('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                               >
-                                {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                <X size={14} />
                               </button>
-                              {showGymTagsList && (
-                                <div className="absolute z-10 mt-1 right-0 bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl shadow-xl ring-1 ring-gray-200 w-48 max-h-40 overflow-auto">
-                                  {PREDEFINED_GYM_TAGS.map((t) => (
-                                    <button
-                                      key={t}
-                                      type="button"
-                                      onClick={() => handleAddTag(t)}
-                                      className="w-full text-left px-3 py-1 rounded-xl hover:bg-purple-50 hover:text-purple-700 transition text-xs"
-                                      disabled={tags.includes(t) || tags.length >= 10}
-                                    >
-                                      <span>{t}</span>
-                                      {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
-                                    </button>
-                                  ))}
-                                </div>
+                            )}
+                          </div>
+                          <div className="relative" ref={gymTagsGroupRef}>
+                            <button
+                              type="button"
+                              onClick={() => setShowGymTagsList(!showGymTagsList)}
+                              className="flex items-center justify-between text-xs text-gray-700 bg-white/70 border border-gray-200 rounded-xl px-3 py-2 hover:border-purple-300 hover:text-purple-700 transition"
+                            >
+                              {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                            {showGymTagsList && (
+                              <div className="absolute z-10 mt-1 right-0 bg-white/90 backdrop-blur-md border border-gray-200 rounded-xl shadow-xl ring-1 ring-gray-200 w-48 max-h-40 overflow-auto">
+                                {PREDEFINED_GYM_TAGS.map((t) => (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => handleAddTag(t)}
+                                    className="w-full text-left px-3 py-1 rounded-xl hover:bg-purple-50 hover:text-purple-700 transition text-xs"
+                                    disabled={tags.includes(t) || tags.length >= 10}
+                                  >
+                                    <span>{t}</span>
+                                    {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {(() => {
+                          const ALL_TAGS = Array.from(new Set([...PREDEFINED_GYM_TAGS, ...tags]));
+                          const queryActive = newTag.trim().length > 0;
+                          if (!queryActive) return null;
+                          const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
+                          return (
+                            <div className="mt-2 bg-white/70 border border-gray-200 rounded-xl h-[140px] overflow-auto">
+                              {filtered.length > 0 ? (
+                                filtered.map(t => (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => handleAddTag(t)}
+                                    className={`w-full text-left px-3 py-1 text-xs hover:bg-purple-50 hover:text-purple-700 transition ${tags.includes(t) ? 'opacity-60 cursor-not-allowed flex justify-between' : ''}`}
+                                    disabled={tags.includes(t) || tags.length >= 10}
+                                  >
+                                    <span>{t}</span>
+                                    {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-xs text-gray-400">Nessun risultato</div>
                               )}
                             </div>
-                          </div>
-                          {/* Suggerimenti in base alla ricerca dai tag */}
-                          {(() => {
-                            const ALL_TAGS = Array.from(new Set([...PREDEFINED_GYM_TAGS, ...tags]));
-                            const queryActive = newTag.trim().length > 0;
-                            if (!queryActive) return null;
-                            const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
-                            return (
-                              <div className="mt-2 bg-white/70 border border-gray-200 rounded-xl h-[140px] overflow-auto">
-                                {filtered.length > 0 ? (
-                                  filtered.map(t => (
-                                    <button
-                                      key={t}
-                                      type="button"
-                                      onClick={() => handleAddTag(t)}
-                                      className={`w-full text-left px-3 py-1 text-xs hover:bg-purple-50 hover:text-purple-700 transition ${tags.includes(t) ? 'opacity-60 cursor-not-allowed flex justify-between' : ''}`}
-                                      disabled={tags.includes(t) || tags.length >= 10}
-                                    >
-                                      <span>{t}</span>
-                                      {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
-                                    </button>
-                                  ))
-                                ) : (
-                                  <div className="px-3 py-2 text-xs text-gray-400">Nessun risultato</div>
-                                )}
-                              </div>
-                            );
-                          })()}
-                          <button
-                            onClick={() => handleAddTag()}
-                            className="mt-2 w-full bg-purple-600 text-white text-xs px-2 py-2 rounded-xl hover:bg-purple-700 transition"
-                            disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
-                          >
-                            Aggiungi tag
-                          </button>
-                        </div>
-
-                        {/* Sezione tag palestra a destra rimossa: ora il bottone è accanto alla casella di ricerca */}
-
-                        {/* Lista 'I miei tag' rimossa come richiesto */}
+                          );
+                        })()}
+                        <button
+                          onClick={() => handleAddTag()}
+                          className="mt-2 w-full bg-purple-600 text-white text-xs px-2 py-2 rounded-xl hover:bg-purple-700 transition"
+                          disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
+                        >
+                          Aggiungi tag
+                        </button>
                       </div>
+                      {/* Sezione tag palestra a destra rimossa: ora il bottone è accanto alla casella di ricerca */}
+                      {/* Lista 'I miei tag' rimossa come richiesto */}
                     </div>
-                  </Portal>
-                )}
+                  </div>
+                </Modal>
               </div>
               
               {/* Clone Workout */}
@@ -1929,122 +1943,125 @@ useEffect(() => {
         </div>
         
         {/* Duration Modal */}
-        {isEditingDates && (
-          <div 
-            className="fixed inset-0 z-50 flex items-start justify-center pt-20"
-            onClick={() => setIsEditingDates(false)}
-          >
-            <div 
-              className="w-80 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md p-4 backdrop-blur-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Durata scheda (settimane)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="52"
-                  value={durationWeeksTemp}
-                  onChange={(e) => setDurationWeeksTemp(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <div className="text-xs text-gray-500 mt-1">Inserisci un numero da 1 a 52 settimane</div>
-              </div>
-
-              <button
-                onClick={() => {
-                  const parsed = parseInt(durationWeeksTemp, 10);
-                  const n = Number.isFinite(parsed) ? Math.min(52, Math.max(1, parsed)) : 1;
-                  setDurationWeeks(n);
-                  setIsEditingDates(false);
-                  setSaveMessage(`Durata aggiornata a ${n} settimana${n > 1 ? 'e' : ''}`);
-                }}
-                className="w-full px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
-              >
-                Salva
-              </button>
-            </div>
+        <Modal
+          isOpen={isEditingDates}
+          onClose={() => setIsEditingDates(false)}
+          title="Durata scheda"
+        >
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Durata scheda (settimane)</label>
+            <input
+              type="number"
+              min="1"
+              max="52"
+              value={durationWeeksTemp}
+              onChange={(e) => setDurationWeeksTemp(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <div className="text-xs text-gray-500 mt-1">Inserisci un numero da 1 a 52 settimane</div>
           </div>
-        )}
+
+          <button
+            onClick={() => {
+              const parsed = parseInt(durationWeeksTemp, 10);
+              const n = Number.isFinite(parsed) ? Math.min(52, Math.max(1, parsed)) : 1;
+              setDurationWeeks(n);
+              setIsEditingDates(false);
+              setSaveMessage(`Durata aggiornata a ${n} settimana${n > 1 ? 'e' : ''}`);
+            }}
+            className="w-full px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
+          >
+            Salva
+          </button>
+        </Modal>
         
         {/* Associate Athlete Modal */}
-        {showAthleteDropdown && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            onClick={() => setShowAthleteDropdown(false)}
-          >
-            <div 
-              className="w-64 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md backdrop-blur-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="p-2">
-                <input
-                  type="text"
-                  placeholder="Cerca atleta..."
-                  className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                />
-              </div>
-              <div className="max-h-40 overflow-y-auto">
-                {athletesLoading ? (
-                  <div className="p-4 text-gray-500 text-center">Caricamento atleti...</div>
-                ) : athletes.length === 0 ? (
-                  <div className="p-4 text-gray-500 text-center">Nessun atleta disponibile</div>
-                ) : (
-                  athletes.map((athlete) => (
-                    <button
-                      key={athlete.id}
-                      onClick={() => handleAssociateAthlete(athlete.name)}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
-                    >
-                      <div>
-                        <div className="font-medium">{athlete.name}</div>
-                        <div className="text-sm text-gray-500">{athlete.email}</div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
+        <Modal
+          isOpen={showAthleteDropdown}
+          onClose={() => setShowAthleteDropdown(false)}
+          title="Associa atleta"
+        >
+          <div className="p-2">
+            <input
+              type="text"
+              placeholder="Cerca atleta..."
+              className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            />
           </div>
-        )}
+          <div className="max-h-40 overflow-y-auto">
+            {athletesLoading ? (
+              <div className="p-4 text-gray-500 text-center">Caricamento atleti...</div>
+            ) : athletes.length === 0 ? (
+              <div className="p-4 text-gray-500 text-center">Nessun atleta disponibile</div>
+            ) : (
+              athletes.map((athlete) => (
+                <button
+                  key={athlete.id}
+                  onClick={() => handleAssociateAthlete(athlete.name)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
+                >
+                  <div>
+                    <div className="font-medium">{athlete.name}</div>
+                    <div className="text-sm text-gray-500">{athlete.email}</div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </Modal>
         
         {/* View Athletes Modal */}
-        {showAthletesList && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center"
-            onClick={() => setShowAthletesList(false)}
-          >
-            <div 
-              className="w-64 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md backdrop-blur-sm"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {associatedAthletes.length === 0 ? (
-                <div className="p-4 text-gray-500 text-center">
-                  Nessun atleta associato
-                </div>
-              ) : (
-                <div className="max-h-40 overflow-y-auto">
-                  {associatedAthletes.map((athlete) => (
-                    <div key={athlete} className="flex items-center justify-between px-4 py-2 hover:bg-gray-100">
-                      <span>{athlete}</span>
-                      <button
-                        onClick={() => handleRemoveAthlete(athlete)}
-                        className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+        <Modal
+          isOpen={showAthletesList}
+          onClose={() => setShowAthletesList(false)}
+          title="Atleti associati"
+        >
+          {associatedAthletes.length === 0 ? (
+            <div className="p-4 text-gray-500 text-center">
+              Nessun atleta associato
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="max-h-40 overflow-y-auto">
+              {associatedAthletes.map((athlete) => (
+                <div key={athlete} className="flex items-center justify-between px-4 py-2 hover:bg-gray-100">
+                  <span>{athlete}</span>
+                  <button
+                    onClick={() => handleRemoveAthlete(athlete)}
+                    className="p-1 text-red-500 hover:text-red-700 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
         
         {/* Exercise Form */}
-        {showExerciseForm && (
-          <div className="mb-8 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition-all">
-            <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight">{editingExerciseId ? 'Modifica Esercizio' : 'Aggiungi Esercizio'}</h3>
+        <Modal
+          isOpen={showExerciseForm}
+          onClose={() => {
+            setShowExerciseForm(false);
+            setEditingExerciseId(null);
+            setEditingExercise(null);
+            setCurrentExercise({
+              id: '',
+              name: '',
+              notes: '',
+              sets: '',
+              intensity: '',
+              tut: '',
+              recovery: '',
+              videoLink: ''
+            });
+            setCurrentSets('');
+            setCurrentReps('');
+            setEditingSets('');
+            setEditingReps('');
+          }}
+          title={editingExerciseId ? 'Modifica Esercizio' : 'Aggiungi Esercizio'}
+        >
+          <div className="mb-2">
             
             {/* Exercise Name with Smart Search */}
             <div className="mb-4">
@@ -2477,7 +2494,7 @@ useEffect(() => {
                     .filter(ex => !(editingExercise ? ex.id === editingExercise.id : false))
                     .map(ex => (
                       <option key={ex.id} value={ex.id}>
-                        {ex.name} {ex.isSupersetLeader ? '(capo)' : ''}
+                        {ex.name}
                       </option>
                     ))}
                 </select>
@@ -2540,7 +2557,7 @@ useEffect(() => {
               </button>
             </div>
           </div>
-        )}
+        </Modal>
         
         {/* Exercises List */}
         <div className="mb-8">
@@ -2633,7 +2650,7 @@ useEffect(() => {
                     {exercise.recovery && <p><strong>Recupero:</strong> {exercise.recovery}</p>}
                     {exercise.videoLink && (
                       <p>
-                        <strong>Link:</strong>{' '}
+                        <strong>Video:</strong>{' '}
                         <a href={exercise.videoLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
                           Visualizza
                         </a>
@@ -2644,7 +2661,6 @@ useEffect(() => {
                     {exercise.supersetGroupId && (
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 ${exercise.isSupersetLeader ? 'font-bold' : ''}`}>
                         Superset
-                        {exercise.isSupersetLeader ? ' (capo)' : ''}
                       </span>
                     )}
                   </div>
@@ -2661,111 +2677,91 @@ useEffect(() => {
       </div>
       
       {/* Link Generation Modal */}
-      {showLinkModal && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={() => setShowLinkModal(false)}
-        >
-          <div 
-            className="bg-white p-6 rounded-lg max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold mb-4">Link Scheda Generato</h3>
-            <div className="mb-4">
-              <input
-                type="text"
-                value={generatedLink}
-                readOnly
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
-              />
-            </div>
-            <div className="flex space-x-4">
-              <button
-                onClick={handleCopyLink}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                <Copy size={16} />
-                <span>Copia</span>
-              </button>
-              <button
-                onClick={() => setShowLinkModal(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Chiudi
-              </button>
-            </div>
-          </div>
+      <Modal
+        isOpen={showLinkModal}
+        onClose={() => setShowLinkModal(false)}
+        title="Link Scheda Generato"
+      >
+        <div className="mb-4">
+          <input
+            type="text"
+            value={generatedLink}
+            readOnly
+            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+          />
         </div>
-      )}
+        <div className="flex space-x-4">
+          <button
+            onClick={handleCopyLink}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            <Copy size={16} />
+            <span>Copia</span>
+          </button>
+          <button
+            onClick={() => setShowLinkModal(false)}
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Chiudi
+          </button>
+        </div>
+      </Modal>
       
       {/* Confirmation Dialog */}
-      {showConfirmDialog && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          onClick={() => setShowConfirmDialog(false)}
-        >
-          <div 
-            className="bg-white/90 p-6 rounded-2xl max-w-md w-full mx-4 border border-gray-200 ring-1 ring-black/10 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
+      <Modal
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        title="Conferma Azione"
+      >
+        <p className="text-gray-700 mb-6 font-sfpro">{confirmMessage}</p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleConfirmAction}
+            className="px-4 py-2 rounded-full bg-red-500 text-white ring-1 ring-black/10 shadow-sm hover:bg-red-600 transition-all"
           >
-            <h3 className="text-xl font-semibold mb-3 text-gray-900 font-sfpro">Conferma Azione</h3>
-            <p className="text-gray-700 mb-6 font-sfpro">{confirmMessage}</p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleConfirmAction}
-                className="px-4 py-2 rounded-full bg-red-500 text-white ring-1 ring-black/10 shadow-sm hover:bg-red-600 transition-all"
-              >
-                Conferma
-              </button>
-              <button
-                onClick={() => setShowConfirmDialog(false)}
-                className="px-4 py-2 rounded-full bg-white text-gray-800 ring-1 ring-black/10 shadow-sm hover:bg-gray-100 transition-all"
-              >
-                Annulla
-              </button>
-            </div>
-          </div>
+            Conferma
+          </button>
+          <button
+            onClick={() => setShowConfirmDialog(false)}
+            className="px-4 py-2 rounded-full bg-white text-gray-800 ring-1 ring-black/10 shadow-sm hover:bg-gray-100 transition-all"
+          >
+            Annulla
+          </button>
         </div>
-      )}
+      </Modal>
       
       {/* Delete Workout Confirmation Dialog */}
-      {showDeleteWorkoutDialog && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-          onClick={() => setShowDeleteWorkoutDialog(false)}
-        >
-          <div 
-            className="bg-white p-6 rounded-lg max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center mb-4">
-              <Trash2 className="text-red-500 mr-3" size={24} />
-              <h3 className="text-lg font-semibold text-gray-800">Elimina Scheda</h3>
-            </div>
-            <p className="text-gray-600 mb-2">
-              Sei sicuro di voler eliminare la scheda <strong>"{workoutTitle}"</strong>?
-            </p>
-            <p className="text-sm text-red-600 mb-6">
-              ⚠️ Questa azione non può essere annullata. Tutti gli esercizi e le configurazioni verranno persi definitivamente.
-            </p>
-            <div className="flex space-x-4">
-              <button
-                onClick={confirmDeleteWorkout}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center space-x-2"
-              >
-                <Trash2 size={16} />
-                <span>Elimina Definitivamente</span>
-              </button>
-              <button
-                onClick={() => setShowDeleteWorkoutDialog(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                Annulla
-              </button>
-            </div>
-          </div>
+      <Modal
+        isOpen={showDeleteWorkoutDialog}
+        onClose={() => setShowDeleteWorkoutDialog(false)}
+        title="Elimina Scheda"
+      >
+        <div className="flex items-center mb-4">
+          <Trash2 className="text-red-500 mr-3" size={24} />
+          <h3 className="text-lg font-semibold text-gray-800">Elimina Scheda</h3>
         </div>
-      )}
+        <p className="text-gray-600 mb-2">
+          Sei sicuro di voler eliminare la scheda <strong>"{workoutTitle}"</strong>?
+        </p>
+        <p className="text-sm text-red-600 mb-6">
+          ⚠️ Questa azione non può essere annullata. Tutti gli esercizi e le configurazioni verranno persi definitivamente.
+        </p>
+        <div className="flex space-x-4">
+          <button
+            onClick={confirmDeleteWorkout}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center space-x-2"
+          >
+            <Trash2 size={16} />
+            <span>Elimina Definitivamente</span>
+          </button>
+          <button
+            onClick={() => setShowDeleteWorkoutDialog(false)}
+            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            Annulla
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

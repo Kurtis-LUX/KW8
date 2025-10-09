@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dumbbell, Heart, Apple, Users, Zap, Shield, Edit, Plus, Trash2, X, Save, RotateCcw, Edit2, Trophy, Target, Star, Award, CheckCircle, Upload } from 'lucide-react';
+import Modal from './Modal';
 import { getStaffSection, saveStaffSection, subscribeToStaffSection } from '../utils/database';
 import { authService } from '../services/authService';
 
@@ -609,19 +610,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
 
       {/* Modal Modifica Sezione */}
       {showSectionEditModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-800">Modifica Sezione Team</h3>
-                <button
-                  onClick={handleSectionCancel}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X size={24} className="text-gray-600" />
-                </button>
-              </div>
-
+        <Modal isOpen={showSectionEditModal} onClose={handleSectionCancel} title="Modifica Sezione Team">
               <div className="space-y-6">
                 {/* Titolo */}
                 <div>
@@ -735,25 +724,12 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
                   Annulla
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal Certificazioni */}
       {showCertModal && selectedCoach && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-800">Certificazioni</h3>
-                <button
-                  onClick={() => setShowCertModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X size={24} className="text-gray-600" />
-                </button>
-              </div>
+        <Modal isOpen={showCertModal} onClose={() => setShowCertModal(false)} title="Certificazioni">
               
               <div className="mb-4">
                 <h4 className="text-lg font-semibold text-gray-800 mb-2">{selectedCoach.name}</h4>
@@ -835,25 +811,12 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
                   </button>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal Aggiungi Coach */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-800">Aggiungi Nuovo Coach</h3>
-                <button
-                  onClick={handleCancelAdd}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X size={24} className="text-gray-600" />
-                </button>
-              </div>
+        <Modal isOpen={showAddModal} onClose={handleCancelAdd} title="Aggiungi Nuovo Coach">
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Informazioni base */}
@@ -953,8 +916,6 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
                       ))}
                     </select>
                   </div>
-                  
-
                 </div>
               </div>
               
@@ -974,26 +935,12 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
                   Annulla
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal Modifica Coach */}
       {editingMember !== null && editingCoachData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-800">Modifica Coach</h3>
-                <button
-                  onClick={handleCancelEdit}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X size={24} className="text-gray-600" />
-                </button>
-              </div>
-              
+        <Modal isOpen={editingMember !== null} onClose={handleCancelEdit} title="Modifica Coach">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Informazioni base */}
                 <div className="space-y-4">
@@ -1122,9 +1069,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
                   Annulla
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </section>
   );

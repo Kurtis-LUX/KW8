@@ -5,9 +5,12 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  // Nuove opzioni per maggiore flessibilità
+  hideHeader?: boolean;
+  variant?: 'centered' | 'fullscreen';
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, hideHeader = false, variant = 'centered' }) => {
   const [scrollPosition, setScrollPosition] = useState(0);
 
   // Blocca lo scroll della pagina quando il modal è aperto
@@ -65,25 +68,50 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
       ></div>
       
       {/* Modal Content */}
-      <div className="relative bg-white rounded-lg shadow-xl max-w-4xl max-h-[90vh] w-full mx-4 overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+      {variant === 'centered' ? (
+        <div className="relative bg-white rounded-lg shadow-xl max-w-4xl max-h-[90vh] w-full mx-4 overflow-hidden">
+          {/* Header */}
+          {!hideHeader && (
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+          
+          {/* Content */}
+          <div className={`p-6 overflow-y-auto ${hideHeader ? 'max-h-[90vh]' : 'max-h-[calc(90vh-120px)]'}`}>
+            {children}
+          </div>
         </div>
-        
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-          {children}
+      ) : (
+        <div className="relative bg-white w-full h-full overflow-hidden">
+          {/* Header */}
+          {!hideHeader && (
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+          {/* Content */}
+          <div className={`p-6 overflow-y-auto ${hideHeader ? 'h-full' : 'max-h-[calc(100vh-120px)]'}`}>
+            {children}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
