@@ -82,15 +82,15 @@ const StatisticsSection: React.FC = () => {
     <section 
       ref={sectionRef}
       id="statistiche" 
-      className={`py-16 bg-gradient-to-b from-white to-gray-50 scroll-mt-[100px] transition-all duration-1000 transform ${
+      className={`py-20 bg-gradient-to-b from-white to-gray-50 scroll-mt-[100px] transition-all duration-1000 transform ${
         isVisible 
           ? 'opacity-100 translate-y-0' 
           : 'opacity-0 translate-y-8'
       }`}
     >
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-6 font-sfpro">
         {/* Statistics */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-20">
           <div className="flex justify-center space-x-12 mb-12">
             {statistics.map((stat, index) => {
               return (
@@ -98,10 +98,10 @@ const StatisticsSection: React.FC = () => {
                   key={index} 
                   className="text-center"
                 >
-                  <div className="text-5xl md:text-6xl font-bold text-navy-900 mb-2 transition-all duration-300">
+                  <div className="text-5xl md:text-6xl font-semibold text-navy-900 mb-2 transition-all duration-300">
                     {stat.number}
                   </div>
-                  <div className="text-xl text-navy-700 uppercase tracking-wide font-semibold">
+                  <div className="text-lg text-navy-700 tracking-tight font-medium">
                     {stat.label}
                   </div>
                 </div>
@@ -111,16 +111,16 @@ const StatisticsSection: React.FC = () => {
         </div>
 
         {/* Values */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {values.map((value, index) => {
             const Icon = value.icon;
             return (
               <div 
                 key={index} 
-                className={`text-center p-3 rounded-lg bg-white shadow-lg transition-all duration-150 border border-gray-100 ${
+                className={`text-center p-5 rounded-2xl bg-white/70 backdrop-blur-md shadow-sm hover:shadow-md transition-all duration-200 border border-white/60 ${
                   isVisible 
                     ? 'translate-y-0 opacity-100 scale-100' 
-                    : 'translate-y-8 opacity-0 scale-90'
+                    : 'translate-y-8 opacity-0 scale-95'
                 }`}
                 style={{ transitionDelay: `${600 + index * 100}ms` }}
               >
@@ -130,9 +130,9 @@ const StatisticsSection: React.FC = () => {
                     : 'rotate-180 scale-0'
                 }`}
                 style={{ transitionDelay: `${800 + index * 100}ms` }}>
-                  <Icon size={32} className="text-red-600 drop-shadow-sm" />
+                  <Icon size={28} className="text-red-600 drop-shadow-sm" />
                 </div>
-                <h3 className="text-base font-bold text-navy-900 mb-1">
+                <h3 className="text-sm font-semibold text-navy-900 mb-1">
                   {value.title}
                 </h3>
                 <p className="text-navy-700 text-xs leading-relaxed">

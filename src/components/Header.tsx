@@ -209,7 +209,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         onClick={handleHeaderClick}
       >
         <div 
-          className="container mx-auto px-4 py-4 flex items-center justify-between"
+          className="container mx-auto px-6 py-3 flex items-center justify-between"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Logo */}

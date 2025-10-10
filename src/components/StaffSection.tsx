@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Award, Dumbbell, Zap, Shield, Heart } from 'lucide-react';
+import { X, Award, Dumbbell, Zap, Shield, Heart, Users, UserCheck, Medal, Star, Trophy, Certificate } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { getStaffSection } from '../utils/database';
 import Modal from './Modal';
@@ -286,20 +286,21 @@ const StaffSection: React.FC = () => {
       <section 
         ref={sectionRef}
         id="staff" 
-        className={`py-16 bg-white transition-all duration-1000 transform ${
+        className={`py-16 bg-gradient-to-b from-white to-gray-50 transition-all duration-1000 transform ${
           isVisible 
             ? 'opacity-100 translate-y-0' 
             : 'opacity-0 translate-y-8'
         }`}
       >
         <div className="container mx-auto px-4">
-          <h2 className={`text-4xl md:text-5xl font-bold text-blue-900 text-center mb-12 transition-all duration-800 transform ${
+          <h2 className={`text-4xl md:text-5xl font-bold text-blue-900 text-center mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900 transition-all duration-800 transform ${
             isVisible 
               ? 'translate-y-0 opacity-100 scale-100' 
               : 'translate-y-8 opacity-0 scale-95'
           }`}>
             {t.ourTeam}
           </h2>
+          <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">I professionisti che ti guideranno nel tuo percorso</p>
 
           <div className="grid grid-cols-2 gap-4 md:gap-8 max-w-4xl mx-auto">
             {staffMembers.map((member, index) => {

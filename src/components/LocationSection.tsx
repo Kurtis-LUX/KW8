@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, MapPin, Phone, Mail, Clock, Map, Navigation, Globe, Smartphone } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
 const LocationSection: React.FC = () => {
@@ -35,20 +35,13 @@ const LocationSection: React.FC = () => {
 
   return (
     <section 
-      id="posizione"
       ref={sectionRef}
-      className={`py-20 bg-white transition-all duration-1000 transform ${
-        isVisible 
-          ? 'opacity-100 translate-y-0' 
-          : 'opacity-0 translate-y-8'
-      }`}
+      id="dove-siamo" 
+      className={`py-16 bg-gradient-to-b from-gray-50 to-gray-100 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
     >
-      <div className="container mx-auto px-4 text-center">
-        <h2 className={`text-4xl md:text-5xl font-bold text-red-600 mb-16 transition-all duration-800 transform ${
-          isVisible 
-            ? 'translate-y-0 opacity-100 scale-100' 
-            : 'translate-y-8 opacity-0 scale-95'
-        }`}>{t.whereAreWe}</h2>
+      <div className="container mx-auto px-4">
+        <h2 className="text-4xl font-bold text-center mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.whereAreWe}</h2>
+        <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">Vieni a trovarci nella nostra sede</p>
         
         <div className={`max-w-4xl mx-auto mb-12 transition-all duration-1000 transform ${
           isVisible 

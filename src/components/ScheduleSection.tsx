@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Calendar, MapPin, Edit3, Save, X } from 'lucide-react';
+import { Clock, Calendar, MapPin, Edit3, Save, X, Timer, AlarmClock, Watch, Hourglass } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import firestoreService, { type GymSchedule } from '../services/firestoreService';
 
@@ -243,19 +243,21 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
     <section 
       id="orari"
       ref={sectionRef}
-      className={`py-12 bg-white transition-all duration-1000 transform ${
+      className={`py-16 bg-gradient-to-b from-white to-gray-50 transition-all duration-1000 transform ${
         isVisible 
           ? 'opacity-100 translate-y-0' 
           : 'opacity-0 translate-y-8'
       }`}
     >
       <div className="container mx-auto px-4 text-center">
-        <div className={`flex items-center justify-center mb-8 transition-all duration-800 delay-100 transform ${
+        <div className={`flex items-center justify-center mb-4 transition-all duration-800 delay-100 transform ${
           isVisible 
             ? 'translate-y-0 opacity-100' 
             : '-translate-y-8 opacity-0'
         }`}>
-          <h2 className="text-3xl md:text-4xl font-bold text-navy-900">{t.schedules}</h2>
+          <h2 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.schedules}</h2>
+        </div>
+        <p className="text-center text-gray-500 mb-8 max-w-2xl mx-auto">Pianifica il tuo allenamento con i nostri orari</p>
           {currentUser && currentUser.role === 'coach' && (
             <div className="ml-4 flex items-center space-x-2">
               {!isEditing ? (
@@ -509,7 +511,6 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
             <span>{t.callNow}</span>
           </a>
         </div>
-      </div>
     </section>
   );
 };

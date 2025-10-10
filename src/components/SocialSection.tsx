@@ -29,63 +29,68 @@ const SocialSection: React.FC = () => {
     };
   }, []);
 
-  const socialLinks = [
+  const socials = [
     {
       name: 'Instagram',
-      icon: Instagram,
-      url: 'https://www.instagram.com/palestra_kw8',
-      color: 'text-pink-500 hover:text-pink-600'
+      href: 'https://www.instagram.com/palestra_kw8',
+      gradient: 'linear-gradient(135deg, #F58529 0%, #DD2A7B 50%, #8134AF 100%)',
+      icon: <Instagram size={24} />,
+      description: 'Seguici su Instagram'
     },
     {
       name: 'Facebook',
-      icon: Facebook,
-      url: 'https://www.facebook.com/palestraKW8sortino',
-      color: 'text-blue-500 hover:text-blue-600'
+      href: 'https://www.facebook.com/palestraKW8sortino',
+      gradient: 'linear-gradient(135deg, #4c6ef5 0%, #228be6 100%)',
+      icon: <Facebook size={24} />,
+      description: 'Seguici su Facebook'
     },
     {
       name: 'Google',
-      icon: Globe,
-      url: 'https://maps.app.goo.gl/TkgDHdRp58FS4XbF6',
-      color: 'text-green-500 hover:text-green-600'
+      href: 'https://maps.app.goo.gl/TkgDHdRp58FS4XbF6',
+      gradient: 'linear-gradient(135deg, #51cf66 0%, #20c997 100%)',
+      icon: <Globe size={24} />,
+      description: 'Trova la palestra su Google'
     }
   ];
 
   return (
-    <section 
-      ref={sectionRef}
-      className={`py-12 bg-white transition-all duration-1200 transform ${
-        isVisible 
-          ? 'opacity-100 translate-y-0' 
-          : 'opacity-0 translate-y-8'
-      }`}
-    >
-      <div className="container mx-auto px-4 text-center">
-        <h2 className={`text-4xl md:text-5xl font-bold text-navy-900 mb-8 transition-all duration-800 delay-200 transform ${
-          isVisible 
-            ? 'scale-100 opacity-100 rotate-0' 
-            : 'scale-75 opacity-0 rotate-12'
-        }`}>{t.followUs.toUpperCase()}</h2>
-        
-        <div className="flex justify-center space-x-12">
-          {socialLinks.map((social, index) => {
-            const Icon = social.icon;
-            return (
-              <a
-                key={index}
-                href={social.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${social.color} transition-all duration-700 transform hover:scale-125 hover:-translate-y-2 p-4 rounded-full hover:shadow-lg ${
-                  isVisible 
-                    ? 'translate-x-0 opacity-100' 
-                    : index === 0 ? '-translate-x-20 opacity-0' : index === 1 ? 'translate-y-20 opacity-0' : 'translate-x-20 opacity-0'
-                }`}
-                style={{ transitionDelay: `${400 + index * 200}ms` }}
+    <section ref={sectionRef} className={`py-16 bg-white/80 backdrop-blur-sm transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+      <div className="container mx-auto px-6 font-sfpro">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-semibold text-navy-900 mb-4 animate-fadeInUp tracking-tight">
+            {t.followUs}
+          </h2>
+          <p className="text-navy-700">
+            {t.socialSubtitle}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {socials.map((social, index) => (
+            <a
+              key={social.name}
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group bg-white/70 backdrop-blur-md rounded-2xl shadow-sm p-6 flex items-center space-x-4 transition-transform transform hover:scale-[1.02] hover:shadow-md border border-white/60"
+              style={{ transitionDelay: `${200 + index * 150}ms` }}
+            >
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center text-white group-hover:rotate-3 transition-transform duration-300"
+                style={{ background: social.gradient }}
               >
-                <Icon size={56} />
-              </a>
-            );
-          })}
+                {social.icon}
+              </div>
+              <div>
+                <h3 className="text-xl font-semibold text-navy-900">
+                  {social.name}
+                </h3>
+                <p className="text-navy-700">
+                  {social.description}
+                </p>
+              </div>
+            </a>
+          ))}
         </div>
       </div>
     </section>

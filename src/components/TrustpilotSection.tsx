@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Star, ChevronLeft, ChevronRight, Quote, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Star, ChevronLeft, ChevronRight, Quote, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownLeft, ThumbsUp, Award, Medal, Trophy, Heart } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
 const TrustpilotSection: React.FC = () => {
@@ -7,6 +7,8 @@ const TrustpilotSection: React.FC = () => {
   const [currentReview, setCurrentReview] = useState(0);
   const [showTransaction, setShowTransaction] = useState(false);
   const [transactionType, setTransactionType] = useState<'in' | 'out'>('in');
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
 
   const reviews = [
     {
@@ -22,7 +24,7 @@ const TrustpilotSection: React.FC = () => {
       rating: 5,
       date: '1 mese fa',
       title: 'Ambiente professionale',
-      content: 'Finalmente una palestra seria! I personal trainer sono preparati e l\'ambiente è sempre pulito. Consigliatissima per chi vuole risultati veri.',
+      content: "Finalmente una palestra seria! I personal trainer sono preparati e l'ambiente è sempre pulito. Consigliatissima per chi vuole risultati veri.",
       verified: true
     },
     {
@@ -69,6 +71,23 @@ const TrustpilotSection: React.FC = () => {
 
   useEffect(() => {
     triggerTransaction();
+    
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting);
+      },
+      { threshold: 0.1 }
+    );
+    
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+    
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
   }, []);
 
   const renderStars = (rating: number) => {
@@ -84,34 +103,40 @@ const TrustpilotSection: React.FC = () => {
   const averageRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
 
   return (
-    <section className="py-20 bg-white">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-navy-900 mb-8 animate-fadeInUp">
-            {t.whatOurClientsSay}
-          </h2>
+    <section 
+      id="recensioni" 
+      className={`py-16 bg-gradient-to-b from-gray-50 to-gray-100 transition-all duration-1000 transform ${
+        isVisible 
+          ? 'opacity-100 translate-y-0' 
+          : 'opacity-0 translate-y-8'
+      }`}
+      ref={sectionRef}
+    >
+      <div className="container mx-auto px-4 text-center">
+        <h2 className={`text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900 mb-4 transition-all duration-800 transform ${
+          isVisible 
+            ? 'translate-y-0 opacity-100 scale-100' 
+            : 'translate-y-8 opacity-0 scale-95'
+        }`}>{t.whatOurClientsSay}</h2>
+        <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">Scopri cosa dicono i nostri clienti soddisfatti</p>
           
-          {/* Trustpilot Logo e Rating */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="flex items-center mb-4">
-              <div className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-lg mr-4">
-                Trustpilot
-              </div>
-              <div className="flex items-center space-x-1">
-                {renderStars(Math.round(averageRating))}
-                <span className="ml-2 text-xl font-bold text-navy-900">
-                  {averageRating.toFixed(1)}
-                </span>
-              </div>
+        {/* Trustpilot Logo e Rating */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="flex items-center mb-4">
+            <div className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-lg mr-4">
+              Trustpilot
             </div>
-            <p className="text-navy-700 font-semibold">
-              {t.excellent} • {reviews.length} {t.reviews}
-            </p>
+            <div className="flex items-center space-x-1">
+              {renderStars(Math.round(averageRating))}
+              <span className="ml-2 text-xl font-bold text-navy-900">
+                {averageRating.toFixed(1)}
+              </span>
+            </div>
           </div>
+          <p className="text-navy-700 font-semibold">
+            {t.excellent} • {reviews.length} {t.reviews}
+          </p>
         </div>
-
-
 
         {/* Reviews Slider */}
         <div className="relative max-w-4xl mx-auto">
@@ -142,7 +167,7 @@ const TrustpilotSection: React.FC = () => {
             </div>
           )}
           
-          <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12 relative overflow-hidden">
+          <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-sm p-8 md:p-12 relative overflow-hidden border border-white/60">
             {/* Quote Icon */}
             <div className="absolute top-6 left-6 text-red-600 opacity-20">
               <Quote size={48} />
@@ -156,7 +181,7 @@ const TrustpilotSection: React.FC = () => {
                     {reviews[currentReview].name.charAt(0)}
                   </div>
                   <div>
-                    <h4 className="font-bold text-navy-900 text-lg">
+                    <h4 className="font-semibold text-navy-900 text-lg">
                       {reviews[currentReview].name}
                     </h4>
                     <div className="flex items-center space-x-2">
@@ -176,7 +201,7 @@ const TrustpilotSection: React.FC = () => {
                 </span>
               </div>
               
-              <h3 className="text-xl font-bold text-navy-900 mb-4">
+              <h3 className="text-xl font-semibold text-navy-900 mb-4">
                 {reviews[currentReview].title}
               </h3>
               
@@ -229,6 +254,7 @@ const TrustpilotSection: React.FC = () => {
             className="inline-flex items-center bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
           >
             <span>{t.seeAllReviews}</span>
+            <ThumbsUp className="ml-2" size={18} />
           </a>
         </div>
       </div>

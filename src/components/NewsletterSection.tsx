@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, CheckCircle, AlertCircle, Bell, Smartphone, Bookmark, Inbox } from 'lucide-react';
 import emailService from '../services/emailService';
 import { useLanguageContext } from '../contexts/LanguageContext';
 
@@ -101,27 +101,20 @@ const NewsletterSection: React.FC = () => {
   return (
     <section 
       ref={sectionRef}
-      className={`py-20 bg-blue-900 transition-all duration-1000 transform ${
-        isVisible 
-          ? 'translate-y-0 opacity-100' 
-          : 'translate-y-10 opacity-0'
-      }`}
+      id="newsletter" 
+      className={`py-16 bg-gradient-to-b from-white to-gray-50 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
     >
       <div className="container mx-auto px-4">
-        <h2 className={`text-4xl md:text-5xl font-bold text-white text-center mb-16 transition-all duration-1000 delay-300 transform ${
-          isVisible 
-            ? 'translate-y-0 opacity-100' 
-            : 'translate-y-10 opacity-0'
-        }`}>
-          RIMANI AGGIORNATO
-        </h2>
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.subscribeToNewsletter}</h2>
+          <p className="text-lg text-gray-500 mb-8">{t.newsletterDescription}</p>
 
-        {/* Newsletter Subscription */}
-        <div className={`max-w-2xl mx-auto transition-all duration-1000 delay-500 transform ${
-          isVisible 
-            ? 'translate-y-0 opacity-100' 
-            : 'translate-y-10 opacity-0'
-        }`}>
+          {/* Newsletter Subscription */}
+          <div className={`max-w-2xl mx-auto transition-all duration-1000 delay-500 transform ${
+            isVisible 
+              ? 'translate-y-0 opacity-100' 
+              : 'translate-y-10 opacity-0'
+          }`}>
           <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-100">
             <div className="text-center mb-8">
               <Mail className="mx-auto mb-4 text-red-600" size={48} />
@@ -189,6 +182,7 @@ const NewsletterSection: React.FC = () => {
             </p>
           </div>
         </div>
+      </div>
       </div>
     </section>
   );

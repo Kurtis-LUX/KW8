@@ -92,9 +92,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({ currentUser, onNavigate }) =>
           </button>
           
 
-        </div>
-      </div>
-    </section>
+         </div>
+       </div>
+     </section>
   );
 };
 

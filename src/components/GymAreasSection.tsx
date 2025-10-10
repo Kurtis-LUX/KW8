@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Dumbbell, Zap, Shield, Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, Zap, Shield, Heart, Laptop, Smartphone, Headphones, Watch, Cpu, Layers, Aperture, Compass } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import DB from '../utils/database';
 
@@ -15,11 +15,20 @@ const GymAreasSection: React.FC = () => {
 
   const [areas, setAreas] = useState<any[]>([]);
 
+  // Icone in stile Apple per le diverse aree della palestra
   const availableIcons = {
     Dumbbell,
     Zap,
     Shield,
-    Heart
+    Heart,
+    Laptop,
+    Smartphone,
+    Headphones,
+    Watch,
+    Cpu,
+    Layers,
+    Aperture,
+    Compass
   };
 
   // Carica le aree dal database e sottoscrive agli aggiornamenti
@@ -35,33 +44,33 @@ const GymAreasSection: React.FC = () => {
           }));
           setAreas(convertedAreas);
         } else {
-          // Usa le aree predefinite se non ci sono dati salvati
+          // Usa le aree predefinite se non ci sono dati salvati, con stile Apple
           const defaultAreas = [
             {
               id: 'sala-pesi',
               title: t.weightRoom,
-              icon: Dumbbell,
+              icon: Cpu, // Icona in stile Apple che rappresenta potenza e tecnologia
               description: t.weightRoomDesc,
               image: '/images/sala pesi.jpg'
             },
             {
               id: 'crosstraining',
               title: t.crossfit,
-              icon: Zap,
+              icon: Layers, // Icona in stile Apple che rappresenta multidimensionalità
               description: t.crossfitDesc,
               image: '/images/crossfit.jpg'
             },
             {
               id: 'karate',
               title: t.karate,
-              icon: Shield,
+              icon: Compass, // Icona in stile Apple che rappresenta precisione e direzione
               description: t.karateDesc,
               image: '/images/karate.jpg'
             },
             {
               id: 'yoga',
               title: t.yoga,
-              icon: Heart,
+              icon: Aperture, // Icona in stile Apple che rappresenta equilibrio e focus
               description: t.yogaDesc,
               image: '/images/yoga.jpg'
             }
@@ -206,20 +215,21 @@ const GymAreasSection: React.FC = () => {
     <section 
       id="aree"
       ref={sectionRef}
-      className={`py-20 bg-white transition-all duration-1000 transform ${
+      className={`py-16 bg-gradient-to-b from-gray-50 to-gray-100 overflow-hidden transition-all duration-1000 transform ${
         isVisible 
           ? 'opacity-100 translate-y-0' 
           : 'opacity-0 translate-y-8'
       }`}
     >
       <div className="container mx-auto px-4">
-        <h2 className={`text-4xl md:text-5xl font-bold text-navy-900 text-center mb-16 transition-all duration-800 transform ${
+        <h2 className={`text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900 text-center mb-4 transition-all duration-800 transform ${
           isVisible 
             ? 'translate-y-0 opacity-100 scale-100' 
             : 'translate-y-8 opacity-0 scale-95'
         }`}>
           {t.gymAreas}
         </h2>
+        <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">Scopri le nostre aree specializzate per ogni tipo di allenamento</p>
 
         <div className={`relative max-w-4xl mx-auto transition-all duration-1000 transform ${
           isVisible 
