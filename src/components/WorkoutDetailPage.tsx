@@ -1651,11 +1651,11 @@ useEffect(() => {
                 }}
                 onBlur={handleSaveTitle}
                 onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
-                className={`w-full text-2xl font-bold border-b-2 ${activeVariantId === 'original' ? 'border-blue-500 text-blue-700' : 'border-red-500 text-red-700'} bg-transparent outline-none text-center`}
+                className={`w-full text-2xl font-bold border-b-2 ${activeVariantId === 'original' ? 'border-blue-500 text-navy-900' : 'border-red-500 text-red-700'} bg-transparent outline-none text-center`}
               />
             ) : (
               <h1
-                className={`text-2xl font-bold cursor-pointer transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-blue-700 hover:text-blue-800' : 'text-red-700 hover:text-red-800'}`}
+                className={`text-2xl font-bold cursor-pointer transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-navy-900 hover:text-navy-800' : 'text-red-700 hover:text-red-800'}`}
                 onClick={() => setIsEditingTitle(true)}
                 title="Clicca per modificare il titolo"
               >
