@@ -63,6 +63,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Home' }]);
 
+  const { position, triggerRef, dropdownRef, openDropdown, closeDropdown, isOpen } = useDropdownPosition({ offset: 6, preferredPosition: 'bottom-left' });
+
 // Riferimenti e logica per auto-scroll e drag-to-scroll del breadcrumb
 const breadcrumbNavRef = useRef<HTMLElement | null>(null);
 const isDraggingBreadcrumbRef = useRef(false);
@@ -1083,7 +1085,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       )}
       
       {/* Toolbar */}
-      <div className="bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4">
+      <div className="relative z-30 bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4">
         {/* Barra di ricerca e filtri */}
         <div className="mb-4">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -1103,18 +1105,27 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                   if (searchTerm.trim().length > 0) {
                     setShowSearchSuggestions(true);
                   }
+                  openDropdown();
                 }}
                 onBlur={(e) => {
                   const container = searchDropdownRef.current;
                   // Ritarda la chiusura per consentire il click sui suggerimenti
                   setTimeout(() => {
-                    if (!container) { setShowSearchSuggestions(false); return; }
+                    if (!container) { setShowSearchSuggestions(false); closeDropdown(); return; }
                     if (!document.activeElement || !container.contains(document.activeElement)) {
                       setShowSearchSuggestions(false);
+                      closeDropdown();
                     }
                   }, 150);
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                }}
                 className="w-full pl-10 pr-10 py-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500 hover:bg-white/70"
+                ref={triggerRef as any}
               />
               {searchTerm && (
                 <button
@@ -1133,8 +1144,16 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               )}
 
               {/* Suggerimenti ricerca intelligente */}
-              {showSearchSuggestions && searchTerm.trim().length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md z-10 max-h-64 overflow-y-auto backdrop-blur-sm">
+              {showSearchSuggestions && searchTerm.trim().length > 0 && isOpen && (
+                <div
+                  ref={dropdownRef as any}
+                  className="fixed bg-white/95 border border-gray-200 rounded-xl ring-1 ring-black/10 shadow-md z-[1000] max-h-64 overflow-y-auto backdrop-blur-sm pointer-events-auto"
+                  style={{
+                    top: position?.top ?? 0,
+                    left: position?.left ?? 0,
+                    width: triggerRef.current ? triggerRef.current.getBoundingClientRect().width : undefined,
+                  }}
+                >
                   {getSmartSearchSuggestions().length > 0 ? (
                     getSmartSearchSuggestions().map((s, idx) => {
                       const lower = s.label.toLowerCase();
@@ -1145,9 +1164,12 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                       const after = mi >= 0 ? s.label.slice(mi + q.length) : '';
                       return (
                         <button
+                          type="button"
                           key={`${s.type}-${s.id}-${idx}`}
                           className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center gap-2"
-                          onMouseDown={() => {
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             if (s.type === 'folder') {
                               navigateToFolder(s.id, s.label);
                             } else if (s.type === 'workout') {
@@ -1161,6 +1183,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                               setShowWorkoutDetail(true);
                             }
                             setShowSearchSuggestions(false);
+                            closeDropdown();
                           }}
                         >
                           {s.type === 'folder' ? (

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit3, Plus, Save, Copy, Users, ArrowLeft, ChevronLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText, ChevronUp, ChevronDown, Tag, Search, Link2 } from 'lucide-react';
+import { Edit3, Plus, Save, Copy, Users, ArrowLeft, ChevronLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText, ChevronUp, ChevronDown, Tag, Search, Link2, Dumbbell, Zap, Timer, Clock, Video } from 'lucide-react';
 import { AVAILABLE_ICONS } from './FolderCustomizer';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
@@ -67,8 +67,9 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   const [isSupersetMode, setIsSupersetMode] = useState(false);
-  const [supersetAnchorExerciseId, setSupersetAnchorExerciseId] = useState<string | null>(null);
-  const [supersetSelection, setSupersetSelection] = useState<string[]>([]);
+const [supersetAnchorExerciseId, setSupersetAnchorExerciseId] = useState<string | null>(null);
+const [supersetSelection, setSupersetSelection] = useState<string[]>([]);
+const [openSupersetActionsId, setOpenSupersetActionsId] = useState<string | null>(null);
   const [showAthleteDropdown, setShowAthleteDropdown] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState('');
   const [workoutStatus, setWorkoutStatus] = useState<'published' | 'draft'>('draft');
@@ -1620,7 +1621,7 @@ useEffect(() => {
         </div>
       </div>
       
-      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border ${variants.length > 0 ? '' : '-mt-px'} transition-shadow backdrop-blur-sm ${activeVariantId === 'original' ? 'bg-white/95 ring-1 ring-blue-300 border-blue-200 shadow-md' : 'bg-white/95 ring-1 ring-red-300 border-red-200 shadow-md'}`}>
+      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border border-gray-200 ${variants.length > 0 ? '' : '-mt-px'} transition-shadow backdrop-blur-sm bg-white/95 ring-1 ring-black/10 shadow-md`}>
 
         
         {/* Header Row: Back button + centered Title within card container */}
@@ -1650,11 +1651,11 @@ useEffect(() => {
                 }}
                 onBlur={handleSaveTitle}
                 onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
-                className="w-full text-2xl font-bold border-b-2 border-blue-500 bg-transparent outline-none text-center"
+                className={`w-full text-2xl font-bold border-b-2 ${activeVariantId === 'original' ? 'border-blue-500 text-blue-700' : 'border-red-500 text-red-700'} bg-transparent outline-none text-center`}
               />
             ) : (
               <h1
-                className="text-2xl font-bold text-gray-800 cursor-pointer hover:text-blue-600 transition-colors truncate text-center"
+                className={`text-2xl font-bold cursor-pointer transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-blue-700 hover:text-blue-800' : 'text-red-700 hover:text-red-800'}`}
                 onClick={() => setIsEditingTitle(true)}
                 title="Clicca per modificare il titolo"
               >
@@ -1787,100 +1788,99 @@ useEffect(() => {
                   onClose={() => { closeTagsMenu(); setShowGymTagsList(false); setShowTagsDropdown(false); }}
                   title="Gestisci Tag"
                 >
-                  <div className="w-full">
-                    <div className={"w-full bg-white/60 backdrop-blur-xl border border-white/30 rounded-3xl shadow-2xl ring-1 ring-white/20 p-3 flex flex-col h-auto max-h-[280px] overflow-y-auto transition-all duration-300 ease-out"}>
-                      <div className="mb-2">
-                        <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
-                        <div className="relative flex items-center gap-2">
-                          <div className="relative flex-1">
-                            <input
-                              type="text"
-                              value={newTag}
-                              onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
-                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
-                              className="w-full pl-8 pr-7 py-1.5 border border-white/30 rounded-full text-xs bg-white/60 backdrop-blur-sm shadow-inner focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-200"
-                              placeholder="Es. forza, mobilità"
-                              maxLength={20}
-                              onFocus={() => setShowTagsDropdown(false)}
-                            />
-                            {newTag.trim() && tags.includes(newTag.trim()) && (
-                              <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
-                            )}
-                            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                            {newTag && (
-                              <button
-                                type="button"
-                                aria-label="Pulisci"
-                                onClick={() => setNewTag('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                              >
-                                <X size={14} />
-                              </button>
-                            )}
-                          </div>
-                          <div className="relative" ref={gymTagsGroupRef}>
-                            <button
-                              type="button"
-                              onClick={() => setShowGymTagsList(!showGymTagsList)}
-                              className="flex items-center justify-between text-xs text-gray-700 bg-white/50 backdrop-blur-sm ring-1 ring-white/30 rounded-full px-2.5 py-1.5 shadow-sm hover:bg-white/60 hover:shadow-md hover:text-purple-700 transition-all duration-200"
-                            >
-                              {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                            </button>
-                            {showGymTagsList && (
-                              <div className="absolute z-20 mt-1 right-0 bg-white/60 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl ring-1 ring-white/20 w-44 max-h-40 overflow-auto transition-all duration-200">
-                                {PREDEFINED_GYM_TAGS.map((t) => (
-                                  <button
-                                    key={t}
-                                    type="button"
-                                    onClick={() => handleAddTag(t)}
-                                    className="w-full text-left px-3 py-1.5 rounded-full hover:bg-white/70 hover:text-purple-700 transition-all duration-150 text-xs"
-                                    disabled={tags.includes(t) || tags.length >= 10}
-                                  >
-                                    <span>{t}</span>
-                                    {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        {(() => {
-                          const ALL_TAGS = Array.from(new Set([...PREDEFINED_GYM_TAGS, ...tags]));
-                          const queryActive = newTag.trim().length > 0;
-                          if (!queryActive) return null;
-                          const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
-                          return (
-                            <div className="mt-2 bg-white/60 backdrop-blur-sm border border-white/30 ring-1 ring-white/20 rounded-2xl h-[120px] overflow-auto transition-all duration-200">
-                              {filtered.length > 0 ? (
-                                filtered.map(t => (
-                                  <button
-                                    key={t}
-                                    type="button"
-                                    onClick={() => handleAddTag(t)}
-                                    className={`w-full text-left px-3 py-1.5 text-xs rounded-full hover:bg-white/70 hover:text-purple-700 transition-all duration-150 ${tags.includes(t) ? 'opacity-60 cursor-not-allowed flex justify-between' : ''}`}
-                                    disabled={tags.includes(t) || tags.length >= 10}
-                                  >
-                                    <span>{t}</span>
-                                    {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
-                                  </button>
-                                ))
-                              ) : (
-                                <div className="px-3 py-2 text-xs text-gray-400">Nessun risultato</div>
-                              )}
-                            </div>
-                          );
-                        })()}
-                        <button
-                          onClick={() => handleAddTag()}
-                          className="mt-2 w-full bg-gradient-to-b from-purple-600 to-purple-700 text-white text-[12px] px-2.5 py-2 rounded-full shadow-md hover:from-purple-600 hover:to-purple-800 transition-all duration-200"
-                          disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
-                        >
-                          Aggiungi tag
-                        </button>
+                  {/* Contenuto diretto del Modal senza contenitori aggiuntivi */}
+                  <div className="mb-2">
+                    <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
+                    <div className="relative flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="text"
+                          value={newTag}
+                          onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
+                          className="w-full pl-8 pr-7 py-1.5 border border-white/30 rounded-full text-xs bg-white/60 backdrop-blur-sm shadow-inner focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-200"
+                          placeholder="Es. forza, mobilità"
+                          maxLength={20}
+                          onFocus={() => setShowTagsDropdown(false)}
+                        />
+                        {newTag.trim() && tags.includes(newTag.trim()) && (
+                          <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
+                        )}
+                        <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                        {newTag && (
+                          <button
+                            type="button"
+                            aria-label="Pulisci"
+                            onClick={() => setNewTag('')}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
                       </div>
-                      {/* Sezione tag palestra a destra rimossa: ora il bottone è accanto alla casella di ricerca */}
-                      {/* Lista 'I miei tag' rimossa come richiesto */}
+                      <div className="relative" ref={gymTagsGroupRef}>
+                        <button
+                          type="button"
+                          onClick={() => setShowGymTagsList(!showGymTagsList)}
+                          className="flex items-center justify-between text-xs text-gray-700 bg-white/50 backdrop-blur-sm ring-1 ring-white/30 rounded-full px-2.5 py-1.5 shadow-sm hover:bg-white/60 hover:shadow-md hover:text-purple-700 transition-all duration-200"
+                        >
+                          {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+                        {showGymTagsList && (
+                          <div className="absolute top-full right-0 z-50 mt-1 bg-white/60 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl ring-1 ring-white/20 w-44 max-h-40 overflow-auto transition-all duration-200">
+                            {PREDEFINED_GYM_TAGS.map((t) => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => handleAddTag(t)}
+                                className="w-full text-left px-3 py-1.5 rounded-full hover:bg-white/70 hover:text-purple-700 transition-all duration-150 text-xs"
+                                disabled={tags.includes(t) || tags.length >= 10}
+                              >
+                                <span>{t}</span>
+                                {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAddTag()}
+                        className="text-xs bg-gradient-to-b from-purple-600 to-purple-700 text-white px-2.5 py-1.5 rounded-full shadow-md hover:from-purple-600 hover:to-purple-800 transition-all duration-200 disabled:opacity-50"
+                        disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
+                        title="Aggiungi tag"
+                        aria-label="Aggiungi tag"
+                      >
+                        +
+                      </button>
                     </div>
+                    {(() => {
+                      const ALL_TAGS = Array.from(new Set([...PREDEFINED_GYM_TAGS, ...tags]));
+                      const queryActive = newTag.trim().length > 0;
+                      if (!queryActive) return null;
+                      const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
+                      return (
+                        <div className="mt-2 bg-white/60 backdrop-blur-sm border border-white/30 ring-1 ring-white/20 rounded-2xl h-[120px] overflow-auto transition-all duration-200">
+                          {filtered.length > 0 ? (
+                            filtered.map(t => (
+                              <button
+                                key={t}
+                                type="button"
+                                onClick={() => handleAddTag(t)}
+                                className={`w-full text-left px-3 py-1.5 text-xs rounded-full hover:bg-white/70 hover:text-purple-700 transition-all duration-150 ${tags.includes(t) ? 'opacity-60 cursor-not-allowed flex justify-between' : ''}`}
+                                disabled={tags.includes(t) || tags.length >= 10}
+                              >
+                                <span>{t}</span>
+                                {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-xs text-gray-400">Nessun risultato</div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                   </div>
                 </Modal>
               </div>
@@ -1950,15 +1950,22 @@ useEffect(() => {
         >
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-700 mb-2">Durata scheda (settimane)</label>
-            <input
-              type="number"
-              min="1"
-              max="52"
-              value={durationWeeksTemp}
-              onChange={(e) => setDurationWeeksTemp(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <div className="text-xs text-gray-500 mt-1">Inserisci un numero da 1 a 52 settimane</div>
+            <div className="max-h-48 overflow-y-auto rounded-lg border border-gray-300 ring-1 ring-black/10 bg-white/90">
+              <ul className="divide-y divide-gray-100">
+                {Array.from({ length: 52 }, (_, i) => i + 1).map((n) => (
+                  <li key={n}>
+                    <button
+                      type="button"
+                      onClick={() => setDurationWeeksTemp(String(n))}
+                      className={`w-full text-left px-3 py-2 text-sm transition-colors ${String(n) === durationWeeksTemp || (!durationWeeksTemp && n === durationWeeks) ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50'}`}
+                    >
+                      {n}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">Seleziona da 1 a 52 settimane</div>
           </div>
 
           <button
@@ -2475,7 +2482,13 @@ useEffect(() => {
               
               {/* Campo Superset: lista degli esercizi presenti nella scheda */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Superset (collega a)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Superset (collega a){' '}
+                  {(editingExercise ? editingExercise.supersetGroupId : currentExercise.supersetGroupId) ? (
+                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700">
+                      In superset
+                    </span>
+                  ) : null}
+                </label>
                 <select
                   value={editingExercise ? (editingExercise.supersetGroupId || '') : (currentExercise.supersetGroupId || '')}
                   onChange={(e) => {
@@ -2599,66 +2612,120 @@ useEffect(() => {
                     setDragOverExerciseIndex(null);
                   }}
                 >
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 sm:hidden">
-                        <button onClick={() => moveExercise(index, -1)} className="p-1 rounded-full bg-white text-gray-600 ring-1 ring-gray-300 shadow-sm active:scale-[0.98]" title="Sposta su" aria-label="Sposta su">
-                          <ChevronUp size={14} />
-                        </button>
-                        <button onClick={() => moveExercise(index, 1)} className="p-1 rounded-full bg-white text-gray-600 ring-1 ring-gray-300 shadow-sm active:scale-[0.98]" title="Sposta giù" aria-label="Sposta giù">
-                          <ChevronDown size={14} />
-                        </button>
-                      </div>
-                      <h4 className="font-semibold text-lg">{exercise.name}</h4>
+                  <div className="flex justify-center items-center mb-1">
+                    <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-black/5">
+                      <span className={`font-semibold text-lg ${exercise.supersetGroupId ? 'text-purple-700' : ''}`}>{exercise.name}</span>
                     </div>
                   </div>
-
-                  {/* Action buttons spostati sul lato destro del contenitore */}
-                  <div className="absolute right-3 top-3 flex items-center gap-2">
-                    <button
-                      onClick={() => handleEditExercise(exercise)}
-                      className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
-                      title="Modifica esercizio"
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleStartSuperset(exercise.id)}
-                      className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === exercise.id ? 'text-purple-700' : 'text-purple-500'} hover:text-purple-700 transition-colors`}
-                      title="Superset"
-                    >
-                      <Link2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleRemoveExercise(exercise.id)}
-                      className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                      title="Rimuovi esercizio"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  {exercise.supersetGroupId && (
+                    <div className="flex justify-center items-center mb-3">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 ${exercise.isSupersetLeader ? 'font-bold' : ''}`}>
+                        Superset
+                      </span>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-                    {exercise.notes && <p><strong>Note:</strong> {exercise.notes}</p>}
-                    {exercise.sets && <p><strong>Serie x Ripetizioni:</strong> {exercise.sets}</p>}
-                    {exercise.intensity && <p><strong>Intensità:</strong> {exercise.intensity}</p>}
-                    {exercise.tut && <p><strong>TUT:</strong> {exercise.tut}</p>}
-                    {exercise.recovery && <p><strong>Recupero:</strong> {exercise.recovery}</p>}
+                    {exercise.notes && (
+                      <p className="flex items-center gap-2">
+                        <FileText size={14} className="text-gray-500" />
+                        <span className="font-semibold">Note:</span>
+                        <span>{exercise.notes}</span>
+                      </p>
+                    )}
+                    {exercise.sets && (
+                      <p className="flex items-center gap-2">
+                        <Dumbbell size={14} className="text-gray-500" />
+                        <span>{(() => { const m = (exercise.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/); return m ? `${m[1]} x ${m[2]}` : exercise.sets; })()}</span>
+                      </p>
+                    )}
+                    {exercise.intensity && (
+                      <p className="flex items-center gap-2">
+                        <Zap size={14} className="text-gray-500" />
+                        <span className="font-semibold">Intensità:</span>
+                        <span>{exercise.intensity}</span>
+                      </p>
+                    )}
+                    {exercise.tut && (
+                      <p className="flex items-center gap-2">
+                        <Timer size={14} className="text-gray-500" />
+                        <span className="font-semibold">TUT:</span>
+                        <span>{exercise.tut}</span>
+                      </p>
+                    )}
+                    {exercise.recovery && (
+                      <p className="flex items-center gap-2">
+                        <Clock size={14} className="text-gray-500" />
+                        <span className="font-semibold">Recupero:</span>
+                        <span>{exercise.recovery}</span>
+                      </p>
+                    )}
                     {exercise.videoLink && (
-                      <p>
-                        <strong>Video:</strong>{' '}
+                      <p className="flex items-center gap-2">
+                        <Video size={14} className="text-gray-500" />
+                        <span className="font-semibold">Video:</span>
                         <a href={exercise.videoLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
                           Visualizza
                         </a>
                       </p>
                     )}
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {exercise.supersetGroupId && (
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 ${exercise.isSupersetLeader ? 'font-bold' : ''}`}>
-                        Superset
-                      </span>
-                    )}
+
+                  <div className="mt-4 flex justify-center items-center gap-2">
+                    <button
+                      onClick={() => handleEditExercise(exercise)}
+                      className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
+                      title="Modifica"
+                      aria-label="Modifica"
+                    >
+                      <Edit3 size={14} />
+                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          if (exercise.supersetGroupId) {
+                            setOpenSupersetActionsId(openSupersetActionsId === exercise.id ? null : exercise.id);
+                          } else {
+                            handleStartSuperset(exercise.id);
+                          }
+                        }}
+                        className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === exercise.id ? 'text-purple-700' : 'text-purple-600'} hover:text-purple-700 transition-colors`}
+                        title="Superset"
+                        aria-label="Superset"
+                      >
+                        <Link2 size={14} />
+                      </button>
+                      {openSupersetActionsId === exercise.id && (
+                        <div className="absolute left-1/2 -translate-x-1/2 top-7 z-10 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40">
+                          <button
+                            onClick={() => {
+                              const updatedExercises = exercises.map(ex => ex.id === exercise.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                              const normalized = normalizeSupersets(updatedExercises);
+                              setExercises(normalized);
+                              if (activeVariantId !== 'original') {
+                                const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                setVariants(updatedVariants);
+                              } else {
+                                setOriginalExercises(normalized);
+                              }
+                              triggerAutoSave();
+                              setOpenSupersetActionsId(null);
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                          >
+                            Rimuovi dal superset
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRemoveExercise(exercise.id)}
+                      className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                      title="Elimina"
+                      aria-label="Elimina"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
               ))}
