@@ -998,9 +998,10 @@ useEffect(() => {
   
   const handleToggleSupersetSelection = (exerciseId: string) => {
     if (!isSupersetMode || exerciseId === supersetAnchorExerciseId) return;
+    const target = exercises.find(ex => ex.id === exerciseId);
+    if (!target || target.supersetGroupId || target.isSupersetLeader) return;
     setSupersetSelection(prev => prev.includes(exerciseId) ? prev.filter(id => id !== exerciseId) : [...prev, exerciseId]);
   };
-
   // Helper: riordina i follower del superset immediatamente sotto al capo, mantenendo l'ordine originale
   const reorderSupersetGroup = (list: Exercise[], leaderId: string): Exercise[] => {
     const leaderIndex = list.findIndex(ex => ex.id === leaderId);
@@ -2582,153 +2583,460 @@ useEffect(() => {
                   </div>
                 </div>
               )}
-              {exercises.map((exercise, index) => (
-                <div
-                  key={exercise.id || `exercise-${index}`}
-                  className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === index ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === index ? 'opacity-80' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${exercise.supersetGroupId && !exercise.isSupersetLeader ? 'ml-4 md:ml-6 pl-4 border-l-2 border-purple-200' : ''}`}
-                  draggable
-                  onClick={() => handleToggleSupersetSelection(exercise.id)}
-                  onDoubleClick={() => handleEditExercise(exercise)}
-                  onDragStart={() => setDraggedExerciseIndex(index)}
-                  onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
-                  onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== index) setDragOverExerciseIndex(index); }}
-                  onDrop={() => {
-                    if (draggedExerciseIndex === null || draggedExerciseIndex === index) { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); return; }
-                    const updatedExercises = [...exercises];
-                    const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
-                    updatedExercises.splice(index, 0, moved);
-                    const normalized = normalizeSupersets(updatedExercises);
-                    setExercises(normalized);
-                    if (activeVariantId !== 'original') {
-                      const updatedVariants = variants.map(v =>
-                        v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
-                      );
-                      setVariants(updatedVariants);
-                    } else {
-                      setOriginalExercises(normalized);
+              {(() => {
+                const rendered: JSX.Element[] = [];
+                for (let i = 0; i < exercises.length; i++) {
+                  const exercise = exercises[i];
+                  // Gruppo superset: un unico contenitore con separatori
+                  if (exercise.isSupersetLeader) {
+                    const leader = exercise;
+                    const followers: typeof exercises = [];
+                    let j = i + 1;
+                    while (j < exercises.length && exercises[j].supersetGroupId === leader.id && !exercises[j].isSupersetLeader) {
+                      followers.push(exercises[j]);
+                      j++;
                     }
-                    triggerAutoSave();
-                    setDraggedExerciseIndex(null);
-                    setDragOverExerciseIndex(null);
-                  }}
-                >
-                  <div className="flex justify-center items-center mb-1">
-                    <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-black/5">
-                      <span className={`font-semibold text-lg ${exercise.supersetGroupId ? 'text-purple-700' : ''}`}>{exercise.name}</span>
-                    </div>
-                  </div>
-                  {exercise.supersetGroupId && (
-                    <div className="flex justify-center items-center mb-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 ${exercise.isSupersetLeader ? 'font-bold' : ''}`}>
-                        Superset
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-                    {exercise.notes && (
-                      <p className="flex items-center gap-2">
-                        <FileText size={14} className="text-gray-500" />
-                        <span className="font-semibold">Note:</span>
-                        <span>{exercise.notes}</span>
-                      </p>
-                    )}
-                    {exercise.sets && (
-                      <p className="flex items-center gap-2">
-                        <Dumbbell size={14} className="text-gray-500" />
-                        <span>{(() => { const m = (exercise.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/); return m ? `${m[1]} x ${m[2]}` : exercise.sets; })()}</span>
-                      </p>
-                    )}
-                    {exercise.intensity && (
-                      <p className="flex items-center gap-2">
-                        <Zap size={14} className="text-gray-500" />
-                        <span className="font-semibold">Intensità:</span>
-                        <span>{exercise.intensity}</span>
-                      </p>
-                    )}
-                    {exercise.tut && (
-                      <p className="flex items-center gap-2">
-                        <Timer size={14} className="text-gray-500" />
-                        <span className="font-semibold">TUT:</span>
-                        <span>{exercise.tut}</span>
-                      </p>
-                    )}
-                    {exercise.recovery && (
-                      <p className="flex items-center gap-2">
-                        <Clock size={14} className="text-gray-500" />
-                        <span className="font-semibold">Recupero:</span>
-                        <span>{exercise.recovery}</span>
-                      </p>
-                    )}
-                    {exercise.videoLink && (
-                      <p className="flex items-center gap-2">
-                        <Video size={14} className="text-gray-500" />
-                        <span className="font-semibold">Video:</span>
-                        <a href={exercise.videoLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
-                          Visualizza
-                        </a>
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex justify-center items-center gap-2">
-                    <button
-                      onClick={() => handleEditExercise(exercise)}
-                      className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
-                      title="Modifica"
-                      aria-label="Modifica"
-                    >
-                      <Edit3 size={14} />
-                    </button>
-                    <div className="relative">
-                      <button
-                        onClick={() => {
-                          if (exercise.supersetGroupId) {
-                            setOpenSupersetActionsId(openSupersetActionsId === exercise.id ? null : exercise.id);
-                          } else {
-                            handleStartSuperset(exercise.id);
-                          }
-                        }}
-                        className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === exercise.id ? 'text-purple-700' : 'text-purple-600'} hover:text-purple-700 transition-colors`}
-                        title="Superset"
-                        aria-label="Superset"
+                    rendered.push(
+                      <div
+                        key={`superset-${leader.id}`}
+                        className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-purple-300 shadow-sm hover:shadow-md transition hover:translate-y-px`}
                       >
-                        <Link2 size={14} />
-                      </button>
-                      {openSupersetActionsId === exercise.id && (
-                        <div className="absolute left-1/2 -translate-x-1/2 top-7 z-10 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40">
+                        <div className="flex justify-center items-center mb-1">
+                          <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-black/5">
+                            <span className="font-semibold text-lg text-purple-700">{leader.name}</span>
+                          </div>
+                        </div>
+                        <div className="flex justify-center items-center mb-3">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 font-bold">
+                            Superset
+                          </span>
+                        </div>
+                        <div
+                            className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader ? (supersetSelection.includes(leader.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === leader.id ? 'z-50' : ''}`}
+                            draggable
+                          onClick={() => { const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectable) handleToggleSupersetSelection(leader.id); }}
+                          onDoubleClick={() => handleEditExercise(leader)}
+                          onDragStart={() => setDraggedExerciseIndex(i)}
+                          onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
+                          onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== i) setDragOverExerciseIndex(i); }}
+                          onDrop={() => {
+                            if (draggedExerciseIndex === null || draggedExerciseIndex === i) { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); return; }
+                            const updatedExercises = [...exercises];
+                            const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
+                            updatedExercises.splice(i, 0, moved);
+                            const normalized = normalizeSupersets(updatedExercises);
+                            setExercises(normalized);
+                            if (activeVariantId !== 'original') {
+                              const updatedVariants = variants.map(v =>
+                                v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
+                              );
+                              setVariants(updatedVariants);
+                            } else {
+                              setOriginalExercises(normalized);
+                            }
+                            triggerAutoSave();
+                            setDraggedExerciseIndex(null);
+                            setDragOverExerciseIndex(null);
+                          }}
+                        >
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                            {leader.notes && (
+                              <p className="flex items-center gap-2">
+                                <FileText size={14} className="text-gray-500" />
+                                <span className="font-semibold">Note:</span>
+                                <span>{leader.notes}</span>
+                              </p>
+                            )}
+                            {leader.sets && (
+                              <p className="flex items-center gap-2">
+                                <Dumbbell size={14} className="text-gray-500" />
+                                <span className="font-semibold">S x R:</span>
+                                <span>{(() => { const m = (leader.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/); return m ? `${m[1]} x ${m[2]}` : leader.sets; })()}</span>
+                              </p>
+                            )}
+                            {leader.intensity && (
+                              <p className="flex items-center gap-2">
+                                <Zap size={14} className="text-gray-500" />
+                                <span className="font-semibold">Intensità:</span>
+                                <span>{leader.intensity}</span>
+                              </p>
+                            )}
+                            {leader.tut && (
+                              <p className="flex items-center gap-2">
+                                <Timer size={14} className="text-gray-500" />
+                                <span className="font-semibold">TUT:</span>
+                                <span>{leader.tut}</span>
+                              </p>
+                            )}
+                            {leader.recovery && (
+                              <p className="flex items-center gap-2">
+                                <Clock size={14} className="text-gray-500" />
+                                <span className="font-semibold">Recupero:</span>
+                                <span>{leader.recovery}</span>
+                              </p>
+                            )}
+                            {leader.videoLink && (
+                              <p className="flex items-center gap-2">
+                                <Video size={14} className="text-gray-500" />
+                                <span className="font-semibold">Video:</span>
+                                <a href={leader.videoLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                  Visualizza
+                                </a>
+                              </p>
+                            )}
+                          </div>
+                          <div className="mt-4 flex justify-center items-center gap-2">
+                            <button
+                              onClick={() => handleEditExercise(leader)}
+                              className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
+                              title="Modifica"
+                              aria-label="Modifica"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <div className="relative">
+                              <button
+                                onClick={() => {
+                                  if (leader.supersetGroupId) {
+                                    setOpenSupersetActionsId(openSupersetActionsId === leader.id ? null : leader.id);
+                                  } else {
+                                    handleStartSuperset(leader.id);
+                                  }
+                                }}
+                                className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === leader.id ? 'text-purple-700' : 'text-purple-600'} hover:text-purple-700 transition-colors`}
+                                title="Superset"
+                                aria-label="Superset"
+                              >
+                                <Link2 size={14} />
+                              </button>
+                              {openSupersetActionsId === leader.id && (
+                                <div className="absolute left-1/2 -translate-x-1/2 top-7 z-50 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40">
+                                  <button
+                                    onClick={() => {
+                                      const updatedExercises = exercises.map(ex => ex.id === leader.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                      const normalized = normalizeSupersets(updatedExercises);
+                                      setExercises(normalized);
+                                      if (activeVariantId !== 'original') {
+                                        const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                        setVariants(updatedVariants);
+                                      } else {
+                                        setOriginalExercises(normalized);
+                                      }
+                                      triggerAutoSave();
+                                      setOpenSupersetActionsId(null);
+                                    }}
+                                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                  >
+                                    Rimuovi dal superset
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => handleRemoveExercise(leader.id)}
+                              className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                              title="Elimina"
+                              aria-label="Elimina"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {followers.map((follower, fi) => (
+                          <div key={follower.id || `follower-${fi}`}>
+                            <div className="my-3 h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent" />
+                            <div
+                                className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === (i + 1 + fi) ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === (i + 1 + fi) ? 'opacity-80' : ''} ${isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader ? (supersetSelection.includes(follower.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === follower.id ? 'z-50' : ''}`}
+                                draggable
+                              onClick={() => { const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; if (selectable) handleToggleSupersetSelection(follower.id); }}
+                              onDoubleClick={() => handleEditExercise(follower)}
+                              onDragStart={() => setDraggedExerciseIndex(i + 1 + fi)}
+                              onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
+                              onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== (i + 1 + fi)) setDragOverExerciseIndex(i + 1 + fi); }}
+                              onDrop={() => {
+                                const dropIndex = i + 1 + fi;
+                                if (draggedExerciseIndex === null || draggedExerciseIndex === dropIndex) { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); return; }
+                                const updatedExercises = [...exercises];
+                                const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
+                                updatedExercises.splice(dropIndex, 0, moved);
+                                const normalized = normalizeSupersets(updatedExercises);
+                                setExercises(normalized);
+                                if (activeVariantId !== 'original') {
+                                  const updatedVariants = variants.map(v =>
+                                    v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
+                                  );
+                                  setVariants(updatedVariants);
+                                } else {
+                                  setOriginalExercises(normalized);
+                                }
+                                triggerAutoSave();
+                                setDraggedExerciseIndex(null);
+                                setDragOverExerciseIndex(null);
+                              }}
+                            >
+                              <div className="flex justify-center items-center mb-1">
+                                <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-black/5">
+                                  <span className="font-semibold text-lg text-purple-700">{follower.name}</span>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                                {follower.notes && (
+                                  <p className="flex items-center gap-2">
+                                    <FileText size={14} className="text-gray-500" />
+                                    <span className="font-semibold">Note:</span>
+                                    <span>{follower.notes}</span>
+                                  </p>
+                                )}
+                                {follower.sets && (
+                                  <p className="flex items-center gap-2">
+                                    <Dumbbell size={14} className="text-gray-500" />
+                                    <span className="font-semibold">S x R:</span>
+                                    <span>{(() => { const m = (follower.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/); return m ? `${m[1]} x ${m[2]}` : follower.sets; })()}</span>
+                                  </p>
+                                )}
+                                {follower.intensity && (
+                                  <p className="flex items-center gap-2">
+                                    <Zap size={14} className="text-gray-500" />
+                                    <span className="font-semibold">Intensità:</span>
+                                    <span>{follower.intensity}</span>
+                                  </p>
+                                )}
+                                {follower.tut && (
+                                  <p className="flex items-center gap-2">
+                                    <Timer size={14} className="text-gray-500" />
+                                    <span className="font-semibold">TUT:</span>
+                                    <span>{follower.tut}</span>
+                                  </p>
+                                )}
+                                {follower.recovery && (
+                                  <p className="flex items-center gap-2">
+                                    <Clock size={14} className="text-gray-500" />
+                                    <span className="font-semibold">Recupero:</span>
+                                    <span>{follower.recovery}</span>
+                                  </p>
+                                )}
+                                {follower.videoLink && (
+                                  <p className="flex items-center gap-2">
+                                    <Video size={14} className="text-gray-500" />
+                                    <span className="font-semibold">Video:</span>
+                                    <a href={follower.videoLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                      Visualizza
+                                    </a>
+                                  </p>
+                                )}
+                              </div>
+                              <div className="mt-4 flex justify-center items-center gap-2">
+                                <button
+                                  onClick={() => handleEditExercise(follower)}
+                                  className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
+                                  title="Modifica"
+                                  aria-label="Modifica"
+                                >
+                                  <Edit3 size={14} />
+                                </button>
+                                <div className="relative">
+                                  <button
+                                    onClick={() => {
+                                      if (follower.supersetGroupId) {
+                                        setOpenSupersetActionsId(openSupersetActionsId === follower.id ? null : follower.id);
+                                      } else {
+                                        handleStartSuperset(follower.id);
+                                      }
+                                    }}
+                                    className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === follower.id ? 'text-purple-700' : 'text-purple-600'} hover:text-purple-700 transition-colors`}
+                                    title="Superset"
+                                    aria-label="Superset"
+                                  >
+                                    <Link2 size={14} />
+                                  </button>
+                                  {openSupersetActionsId === follower.id && (
+                                    <div className="absolute left-1/2 -translate-x-1/2 top-7 z-50 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40">
+                                      <button
+                                        onClick={() => {
+                                          const updatedExercises = exercises.map(ex => ex.id === follower.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                          const normalized = normalizeSupersets(updatedExercises);
+                                          setExercises(normalized);
+                                          if (activeVariantId !== 'original') {
+                                            const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                            setVariants(updatedVariants);
+                                          } else {
+                                            setOriginalExercises(normalized);
+                                          }
+                                          triggerAutoSave();
+                                          setOpenSupersetActionsId(null);
+                                        }}
+                                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                      >
+                                        Rimuovi dal superset
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => handleRemoveExercise(follower.id)}
+                                  className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                                  title="Elimina"
+                                  aria-label="Elimina"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                    i = j - 1;
+                    continue;
+                  }
+
+                  // Esercizio singolo
+                  if (!exercise.supersetGroupId) {
+                    rendered.push(
+                      <div
+                        key={exercise.id || `exercise-${i}`}
+                        className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === exercise.id ? 'z-50' : ''}`}
+                        draggable
+                        onClick={() => { const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectable) handleToggleSupersetSelection(exercise.id); }}
+                        onDoubleClick={() => handleEditExercise(exercise)}
+                        onDragStart={() => setDraggedExerciseIndex(i)}
+                        onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
+                        onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== i) setDragOverExerciseIndex(i); }}
+                        onDrop={() => {
+                          if (draggedExerciseIndex === null || draggedExerciseIndex === i) { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); return; }
+                          const updatedExercises = [...exercises];
+                          const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
+                          updatedExercises.splice(i, 0, moved);
+                          const normalized = normalizeSupersets(updatedExercises);
+                          setExercises(normalized);
+                          if (activeVariantId !== 'original') {
+                            const updatedVariants = variants.map(v =>
+                              v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
+                            );
+                            setVariants(updatedVariants);
+                          } else {
+                            setOriginalExercises(normalized);
+                          }
+                          triggerAutoSave();
+                          setDraggedExerciseIndex(null);
+                          setDragOverExerciseIndex(null);
+                        }}
+                      >
+                        <div className="flex justify-center items-center mb-1">
+                          <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-black/5">
+                            <span className={`font-semibold text-lg ${isSupersetMode && supersetSelection.includes(exercise.id) ? 'text-purple-700' : ''}`}>{exercise.name}</span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
+                          {exercise.notes && (
+                            <p className="flex items-center gap-2">
+                              <FileText size={14} className="text-gray-500" />
+                              <span className="font-semibold">Note:</span>
+                              <span>{exercise.notes}</span>
+                            </p>
+                          )}
+                          {exercise.sets && (
+                            <p className="flex items-center gap-2">
+                              <Dumbbell size={14} className="text-gray-500" />
+                              <span className="font-semibold">S x R:</span>
+                              <span>{(() => { const m = (exercise.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/); return m ? `${m[1]} x ${m[2]}` : exercise.sets; })()}</span>
+                            </p>
+                          )}
+                          {exercise.intensity && (
+                            <p className="flex items-center gap-2">
+                              <Zap size={14} className="text-gray-500" />
+                              <span className="font-semibold">Intensità:</span>
+                              <span>{exercise.intensity}</span>
+                            </p>
+                          )}
+                          {exercise.tut && (
+                            <p className="flex items-center gap-2">
+                              <Timer size={14} className="text-gray-500" />
+                              <span className="font-semibold">TUT:</span>
+                              <span>{exercise.tut}</span>
+                            </p>
+                          )}
+                          {exercise.recovery && (
+                            <p className="flex items-center gap-2">
+                              <Clock size={14} className="text-gray-500" />
+                              <span className="font-semibold">Recupero:</span>
+                              <span>{exercise.recovery}</span>
+                            </p>
+                          )}
+                          {exercise.videoLink && (
+                            <p className="flex items-center gap-2">
+                              <Video size={14} className="text-gray-500" />
+                              <span className="font-semibold">Video:</span>
+                              <a href={exercise.videoLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                                Visualizza
+                              </a>
+                            </p>
+                          )}
+                        </div>
+                        <div className="mt-4 flex justify-center items-center gap-2">
                           <button
-                            onClick={() => {
-                              const updatedExercises = exercises.map(ex => ex.id === exercise.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
-                              const normalized = normalizeSupersets(updatedExercises);
-                              setExercises(normalized);
-                              if (activeVariantId !== 'original') {
-                                const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
-                                setVariants(updatedVariants);
-                              } else {
-                                setOriginalExercises(normalized);
-                              }
-                              triggerAutoSave();
-                              setOpenSupersetActionsId(null);
-                            }}
-                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                            onClick={() => handleEditExercise(exercise)}
+                            className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
+                            title="Modifica"
+                            aria-label="Modifica"
                           >
-                            Rimuovi dal superset
+                            <Edit3 size={14} />
+                          </button>
+                          <div className="relative">
+                            <button
+                              onClick={() => {
+                                if (exercise.supersetGroupId) {
+                                  setOpenSupersetActionsId(openSupersetActionsId === exercise.id ? null : exercise.id);
+                                } else {
+                                  handleStartSuperset(exercise.id);
+                                }
+                              }}
+                              className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === exercise.id ? 'text-purple-700' : 'text-purple-600'} hover:text-purple-700 transition-colors`}
+                              title="Superset"
+                              aria-label="Superset"
+                            >
+                              <Link2 size={14} />
+                            </button>
+                            {openSupersetActionsId === exercise.id && (
+                              <div className="absolute left-1/2 -translate-x-1/2 top-7 z-50 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40">
+                                <button
+                                  onClick={() => {
+                                    const updatedExercises = exercises.map(ex => ex.id === exercise.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                    const normalized = normalizeSupersets(updatedExercises);
+                                    setExercises(normalized);
+                                    if (activeVariantId !== 'original') {
+                                      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                      setVariants(updatedVariants);
+                                    } else {
+                                      setOriginalExercises(normalized);
+                                    }
+                                    triggerAutoSave();
+                                    setOpenSupersetActionsId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                >
+                                  Rimuovi dal superset
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleRemoveExercise(exercise.id)}
+                            className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                            title="Elimina"
+                            aria-label="Elimina"
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleRemoveExercise(exercise.id)}
-                      className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                      title="Elimina"
-                      aria-label="Elimina"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      </div>
+                    );
+                    continue;
+                  }
+                }
+                return rendered;
+              })()}
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
