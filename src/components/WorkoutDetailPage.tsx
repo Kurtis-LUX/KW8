@@ -70,6 +70,73 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 const [supersetAnchorExerciseId, setSupersetAnchorExerciseId] = useState<string | null>(null);
 const [supersetSelection, setSupersetSelection] = useState<string[]>([]);
 const [openSupersetActionsId, setOpenSupersetActionsId] = useState<string | null>(null);
+const [openCloneActionsId, setOpenCloneActionsId] = useState<string | null>(null);
+const [actionsMenuPosition, setActionsMenuPosition] = useState<{ top: number; left: number } | null>(null);
+const [actionsMenuType, setActionsMenuType] = useState<'clone' | 'superset' | null>(null);
+// Riferimenti e configurazioni per posizionamento dinamico e rifiniture UI
+const actionsMenuAnchorElRef = useRef<HTMLElement | null>(null);
+const actionsMenuRef = useRef<HTMLDivElement | null>(null);
+const [actionsMenuPlacement, setActionsMenuPlacement] = useState<'bottom' | 'top'>('bottom');
+const MENU_OFFSET_Y = 8;
+const MENU_MARGIN = 8;
+const CLONE_MENU_WIDTH = 176; // w-44
+const SUPERSET_MENU_WIDTH = 160; // w-40
+
+const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
+
+const closeActionsMenu = () => {
+  setOpenCloneActionsId(null);
+  setOpenSupersetActionsId(null);
+  setActionsMenuPosition(null);
+  setActionsMenuType(null);
+  actionsMenuAnchorElRef.current = null;
+};
+
+const computeAndSetMenuPosition = (anchor: HTMLElement, type: 'clone' | 'superset') => {
+  actionsMenuAnchorElRef.current = anchor;
+  const rect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const menuWidth = type === 'clone' ? CLONE_MENU_WIDTH : SUPERSET_MENU_WIDTH;
+  const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + menuWidth / 2, vw - MENU_MARGIN - menuWidth / 2);
+  const top = rect.bottom + MENU_OFFSET_Y;
+  setActionsMenuPlacement('bottom');
+  setActionsMenuPosition({ top, left });
+  setActionsMenuType(type);
+};
+
+const updateMenuPosition = useCallback(() => {
+  const anchor = actionsMenuAnchorElRef.current;
+  if (!anchor || !actionsMenuType) return;
+  const rect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const menuWidth = actionsMenuType === 'clone' ? CLONE_MENU_WIDTH : SUPERSET_MENU_WIDTH;
+  const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + menuWidth / 2, vw - MENU_MARGIN - menuWidth / 2);
+  let top = rect.bottom + MENU_OFFSET_Y;
+  let placement: 'bottom' | 'top' = 'bottom';
+  const menuEl = actionsMenuRef.current;
+  if (menuEl) {
+    const mh = menuEl.offsetHeight || 0;
+    if (top + mh + MENU_MARGIN > window.innerHeight) {
+      top = rect.top - MENU_OFFSET_Y - mh;
+      placement = 'top';
+    }
+  }
+  setActionsMenuPlacement(placement);
+  setActionsMenuPosition({ top, left });
+}, [actionsMenuType]);
+
+useEffect(() => {
+  if (!actionsMenuType) return;
+  const handler = () => updateMenuPosition();
+  window.addEventListener('scroll', handler, true);
+  window.addEventListener('resize', handler);
+  // aggiornamento iniziale
+  setTimeout(handler, 0);
+  return () => {
+    window.removeEventListener('scroll', handler, true);
+    window.removeEventListener('resize', handler);
+  };
+}, [actionsMenuType, updateMenuPosition]);
   const [showAthleteDropdown, setShowAthleteDropdown] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState('');
   const [workoutStatus, setWorkoutStatus] = useState<'published' | 'draft'>('draft');
@@ -154,6 +221,8 @@ const [openSupersetActionsId, setOpenSupersetActionsId] = useState<string | null
   const [folderIconName, setFolderIconName] = useState<string>('Folder');
 const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null);
 const [dragOverExerciseIndex, setDragOverExerciseIndex] = useState<number | null>(null);
+const [selectedSwapIndex, setSelectedSwapIndex] = useState<number | null>(null);
+const longPressTimerRef = useRef<number | null>(null);
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
   const variantTabsRef = useRef<HTMLDivElement>(null);
@@ -184,6 +253,105 @@ const moveExercise = (index: number, direction: number) => {
     setOriginalExercises(normalized);
   }
   triggerAutoSave();
+};
+
+// Long-press per selezione su touch: primo tap (lungo) seleziona A, secondo tap su B esegue lo swap
+const handleTouchStartForSwap = (index: number) => {
+  if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+  longPressTimerRef.current = window.setTimeout(() => {
+    setSelectedSwapIndex(index);
+  }, 300);
+};
+const handleTouchEndForSwap = () => {
+  if (longPressTimerRef.current) {
+    window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  }
+};
+
+// Scambio tra due indici con rispetto dei vincoli dei superset
+const handleSwapIndices = (aIndex: number | null, bIndex: number | null) => {
+  if (aIndex === null || bIndex === null || aIndex === bIndex) {
+    setDraggedExerciseIndex(null);
+    setDragOverExerciseIndex(null);
+    return;
+  }
+  let result = [...exercises];
+  const a = result[aIndex];
+  const b = result[bIndex];
+  const isAFollower = !!a.supersetGroupId && !a.isSupersetLeader;
+  const isBFollower = !!b.supersetGroupId && !b.isSupersetLeader;
+  const isALeader = !!a.isSupersetLeader;
+  const isBLeader = !!b.isSupersetLeader;
+  const isAExternal = !a.supersetGroupId;
+  const isBExternal = !b.supersetGroupId;
+
+  // Vietato scambiare leader con elementi esterni o follower
+  if ((isALeader && (isBExternal || isBFollower)) || (isBLeader && (isAExternal || isAFollower))) {
+    setDraggedExerciseIndex(null);
+    setDragOverExerciseIndex(null);
+    return;
+  }
+
+  // Vietato scambiare follower con elementi esterni al superset
+  if ((isAFollower && (isBExternal || isBLeader)) || (isBFollower && (isAExternal || isALeader))) {
+    setDraggedExerciseIndex(null);
+    setDragOverExerciseIndex(null);
+    return;
+  }
+  // Vietato scambiare follower di superset diversi
+  if (isAFollower && isBFollower && a.supersetGroupId !== b.supersetGroupId) {
+    setDraggedExerciseIndex(null);
+    setDragOverExerciseIndex(null);
+    return;
+  }
+
+  const getRange = (start: number) => {
+    const item = result[start];
+    if (item.isSupersetLeader) {
+      let end = start;
+      while (end + 1 < result.length && result[end + 1].supersetGroupId === item.id && !result[end + 1].isSupersetLeader) end++;
+      return { start, end };
+    }
+    return { start, end: start };
+  };
+
+  if (isALeader || isBLeader) {
+    const rangeA = getRange(aIndex);
+    const rangeB = getRange(bIndex);
+    const aLen = rangeA.end - rangeA.start + 1;
+    const bLen = rangeB.end - rangeB.start + 1;
+    if (rangeA.start < rangeB.start) {
+      const aItems = result.splice(rangeA.start, aLen);
+      const bItems = result.splice(rangeB.start - aLen, bLen);
+      result.splice(rangeA.start, 0, ...bItems);
+      result.splice(rangeB.start - aLen + bLen, 0, ...aItems);
+    } else {
+      const bItems = result.splice(rangeB.start, bLen);
+      const aItems = result.splice(rangeA.start - bLen, aLen);
+      result.splice(rangeB.start, 0, ...aItems);
+      result.splice(rangeA.start - bLen + aLen, 0, ...bItems);
+    }
+  } else {
+    // Scambia elementi semplici (singoli o follower dello stesso superset)
+    const temp = result[aIndex];
+    result[aIndex] = result[bIndex];
+    result[bIndex] = temp;
+  }
+
+  const normalized = normalizeSupersets(result);
+  setExercises(normalized);
+  if (activeVariantId !== 'original') {
+    const updatedVariants = variants.map(v =>
+      v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
+    );
+    setVariants(updatedVariants);
+  } else {
+    setOriginalExercises(normalized);
+  }
+  triggerAutoSave();
+  setDraggedExerciseIndex(null);
+  setDragOverExerciseIndex(null);
 };
 
 // Effetto: quando cambia la variante attiva, porta il relativo tab in vista
@@ -1108,6 +1276,72 @@ useEffect(() => {
     setIsSupersetMode(false);
     setSupersetAnchorExerciseId(null);
     setSupersetSelection([]);
+  };
+  
+  // Cloning helpers
+  const generateExerciseId = () => Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+
+  const handleCloneExercise = (exerciseId: string) => {
+    const idx = exercises.findIndex(ex => ex.id === exerciseId);
+    if (idx === -1) return;
+    const source = exercises[idx];
+    const cloned: Exercise = {
+      ...source,
+      id: generateExerciseId(),
+      supersetGroupId: undefined,
+      isSupersetLeader: false,
+    };
+    const updatedExercises = [...exercises.slice(0, idx + 1), cloned, ...exercises.slice(idx + 1)];
+    const normalized = normalizeSupersets(updatedExercises);
+    setExercises(normalized);
+    if (activeVariantId !== 'original') {
+      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+      setVariants(updatedVariants);
+    } else {
+      setOriginalExercises(normalized);
+    }
+    triggerAutoSave();
+    setOpenCloneActionsId(null);
+  };
+
+  const handleCloneSuperset = (anyMemberId: string) => {
+    const member = exercises.find(ex => ex.id === anyMemberId);
+    if (!member) return;
+    const leaderId = member.isSupersetLeader ? member.id : member.supersetGroupId;
+    if (!leaderId) return;
+    const leaderIdx = exercises.findIndex(ex => ex.id === leaderId);
+    if (leaderIdx === -1) return;
+    let lastIdx = leaderIdx;
+    const followers: Exercise[] = [];
+    for (let k = leaderIdx + 1; k < exercises.length; k++) {
+      const ex = exercises[k];
+      if (ex.supersetGroupId === leaderId && !ex.isSupersetLeader) {
+        followers.push(ex);
+        lastIdx = k;
+      } else {
+        break;
+      }
+    }
+    const originalLeader = exercises[leaderIdx];
+    const newLeaderId = generateExerciseId();
+    const clonedLeader: Exercise = { ...originalLeader, id: newLeaderId, supersetGroupId: newLeaderId, isSupersetLeader: true };
+    const clonedFollowers: Exercise[] = followers.map(f => ({ ...f, id: generateExerciseId(), supersetGroupId: newLeaderId, isSupersetLeader: false }));
+    const updated = [
+      ...exercises.slice(0, lastIdx + 1),
+      clonedLeader,
+      ...clonedFollowers,
+      ...exercises.slice(lastIdx + 1)
+    ];
+    const normalized = normalizeSupersets(updated);
+    setExercises(normalized);
+    if (activeVariantId !== 'original') {
+      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+      setVariants(updatedVariants);
+    } else {
+      setOriginalExercises(normalized);
+    }
+    triggerAutoSave();
+    setOpenCloneActionsId(null);
   };
   
   const handleCloneWorkout = async () => {
@@ -2481,38 +2715,7 @@ useEffect(() => {
                 </div>
               </div>
               
-              {/* Campo Superset: lista degli esercizi presenti nella scheda */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Superset (collega a){' '}
-                  {(editingExercise ? editingExercise.supersetGroupId : currentExercise.supersetGroupId) ? (
-                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700">
-                      In superset
-                    </span>
-                  ) : null}
-                </label>
-                <select
-                  value={editingExercise ? (editingExercise.supersetGroupId || '') : (currentExercise.supersetGroupId || '')}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (editingExercise && value === editingExercise.id) return; // evita superset con se stesso
-                    if (editingExercise) {
-                      setEditingExercise({ ...editingExercise, supersetGroupId: value || undefined, isSupersetLeader: value ? false : editingExercise.isSupersetLeader });
-                    } else {
-                      setCurrentExercise({ ...currentExercise, supersetGroupId: value || undefined, isSupersetLeader: value ? false : currentExercise.isSupersetLeader });
-                    }
-                  }}
-                  className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                >
-                  <option value="">Nessun superset</option>
-                  {exercises
-                    .filter(ex => !(editingExercise ? ex.id === editingExercise.id : false))
-                    .map(ex => (
-                      <option key={ex.id} value={ex.id}>
-                        {ex.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Link Video o Foto</label>
@@ -2601,44 +2804,25 @@ useEffect(() => {
                         key={`superset-${leader.id}`}
                         className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-purple-300 shadow-sm hover:shadow-md transition hover:translate-y-px`}
                       >
-                        <div className="flex justify-center items-center mb-1">
-                          <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-black/5">
-                            <span className="font-semibold text-lg text-purple-700">{leader.name}</span>
-                          </div>
-                        </div>
-                        <div className="flex justify-center items-center mb-3">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 font-bold">
-                            Superset
-                          </span>
+                        <div className="flex justify-center items-center mb-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 font-bold">Superset</span>
                         </div>
                         <div
-                            className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader ? (supersetSelection.includes(leader.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === leader.id ? 'z-50' : ''}`}
+                            className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader ? (supersetSelection.includes(leader.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === leader.id || openCloneActionsId === leader.id ? 'z-50' : ''}`}
                             draggable
-                          onClick={() => { const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectable) handleToggleSupersetSelection(leader.id); }}
+                          onTouchStart={() => handleTouchStartForSwap(i)}
+                          onTouchEnd={handleTouchEndForSwap}
+                          onClick={() => { const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectedSwapIndex !== null) { handleSwapIndices(selectedSwapIndex, i); setSelectedSwapIndex(null); } else if (selectable) handleToggleSupersetSelection(leader.id); }}
                           onDoubleClick={() => handleEditExercise(leader)}
                           onDragStart={() => setDraggedExerciseIndex(i)}
                           onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
                           onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== i) setDragOverExerciseIndex(i); }}
-                          onDrop={() => {
-                            if (draggedExerciseIndex === null || draggedExerciseIndex === i) { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); return; }
-                            const updatedExercises = [...exercises];
-                            const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
-                            updatedExercises.splice(i, 0, moved);
-                            const normalized = normalizeSupersets(updatedExercises);
-                            setExercises(normalized);
-                            if (activeVariantId !== 'original') {
-                              const updatedVariants = variants.map(v =>
-                                v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
-                              );
-                              setVariants(updatedVariants);
-                            } else {
-                              setOriginalExercises(normalized);
-                            }
-                            triggerAutoSave();
-                            setDraggedExerciseIndex(null);
-                            setDragOverExerciseIndex(null);
-                          }}
+                          onDrop={() => { handleSwapIndices(draggedExerciseIndex, i); setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
                         >
+                          <div className="flex justify-center items-center mb-1">
+                            <span className="font-semibold text-lg text-purple-700">{leader.name}</span>
+                          </div>
+
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
                             {leader.notes && (
                               <p className="flex items-center gap-2">
@@ -2696,9 +2880,57 @@ useEffect(() => {
                             </button>
                             <div className="relative">
                               <button
-                                onClick={() => {
+                                onClick={(e) => {
+                                const newId = openCloneActionsId === leader.id ? null : leader.id;
+                                setOpenCloneActionsId(newId);
+                                if (newId) {
+                                  computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'clone');
+                                } else {
+                                  closeActionsMenu();
+                                }
+                              }}
+                                className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                                title="Clona"
+                                aria-label="Clona"
+                              >
+                                <Copy size={14} />
+                              </button>
+                              {openCloneActionsId === leader.id && actionsMenuType === 'clone' && actionsMenuPosition && (
+                                <Portal>
+                                  <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                                  <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative" onClick={(e) => e.stopPropagation()}>
+                                    {actionsMenuPlacement === 'bottom' ? (
+                                      <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                                    ) : (
+                                      <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                                    )}
+                                    <button
+                                      onClick={() => { handleCloneExercise(leader.id); closeActionsMenu(); }}
+                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                    >
+                                      Clona esercizio
+                                    </button>
+                                    <button
+                                      onClick={() => { handleCloneSuperset(leader.id); closeActionsMenu(); }}
+                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                    >
+                                      Clona superset
+                                    </button>
+                                  </div>
+                                </Portal>
+                              )}
+                            </div>
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
                                   if (leader.supersetGroupId) {
-                                    setOpenSupersetActionsId(openSupersetActionsId === leader.id ? null : leader.id);
+                                    const newId = openSupersetActionsId === leader.id ? null : leader.id;
+                                    setOpenSupersetActionsId(newId);
+                                    if (newId) {
+                                      computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'superset');
+                                    } else {
+                                      closeActionsMenu();
+                                    }
                                   } else {
                                     handleStartSuperset(leader.id);
                                   }
@@ -2709,27 +2941,43 @@ useEffect(() => {
                               >
                                 <Link2 size={14} />
                               </button>
-                              {openSupersetActionsId === leader.id && (
-                                <div className="absolute left-1/2 -translate-x-1/2 top-7 z-50 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40">
-                                  <button
-                                    onClick={() => {
-                                      const updatedExercises = exercises.map(ex => ex.id === leader.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
-                                      const normalized = normalizeSupersets(updatedExercises);
-                                      setExercises(normalized);
-                                      if (activeVariantId !== 'original') {
-                                        const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
-                                        setVariants(updatedVariants);
-                                      } else {
-                                        setOriginalExercises(normalized);
-                                      }
-                                      triggerAutoSave();
-                                      setOpenSupersetActionsId(null);
-                                    }}
-                                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                  >
-                                    Rimuovi dal superset
-                                  </button>
-                                </div>
+                              {openSupersetActionsId === leader.id && actionsMenuType === 'superset' && actionsMenuPosition && (
+                                <Portal>
+                                  <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                                  <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40 relative" onClick={(e) => e.stopPropagation()}>
+                                    {actionsMenuPlacement === 'bottom' ? (
+                                      <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                                    ) : (
+                                      <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                                    )}
+                                    <button
+                                      onClick={() => { setIsSupersetMode(true); setSupersetAnchorExerciseId(leader.id); setSupersetSelection([]); closeActionsMenu(); }}
+                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                    >
+                                      Collega un esercizio al superset
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        const updatedExercises = exercises.map(ex => ex.id === leader.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                        const normalized = normalizeSupersets(updatedExercises);
+                                        setExercises(normalized);
+                                        if (activeVariantId !== 'original') {
+                                          const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                          setVariants(updatedVariants);
+                                        } else {
+                                          setOriginalExercises(normalized);
+                                        }
+                                        triggerAutoSave();
+                                        setOpenSupersetActionsId(null);
+                                        setActionsMenuPosition(null);
+                                        setActionsMenuType(null);
+                                      }}
+                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                    >
+                                      Rimuovi dal superset
+                                    </button>
+                                  </div>
+                                </Portal>
                               )}
                             </div>
                             <button
@@ -2747,38 +2995,19 @@ useEffect(() => {
                           <div key={follower.id || `follower-${fi}`}>
                             <div className="my-3 h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent" />
                             <div
-                                className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === (i + 1 + fi) ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === (i + 1 + fi) ? 'opacity-80' : ''} ${isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader ? (supersetSelection.includes(follower.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === follower.id ? 'z-50' : ''}`}
+                                className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === (i + 1 + fi) ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === (i + 1 + fi) ? 'opacity-80' : ''} ${selectedSwapIndex === (i + 1 + fi) ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader ? (supersetSelection.includes(follower.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === follower.id || openCloneActionsId === follower.id ? 'z-50' : ''}`}
                                 draggable
-                              onClick={() => { const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; if (selectable) handleToggleSupersetSelection(follower.id); }}
+                              onTouchStart={() => handleTouchStartForSwap(i + 1 + fi)}
+                              onTouchEnd={handleTouchEndForSwap}
+                              onClick={() => { const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; const dropIndex = i + 1 + fi; if (selectedSwapIndex !== null) { handleSwapIndices(selectedSwapIndex, dropIndex); setSelectedSwapIndex(null); } else if (selectable) handleToggleSupersetSelection(follower.id); }}
                               onDoubleClick={() => handleEditExercise(follower)}
                               onDragStart={() => setDraggedExerciseIndex(i + 1 + fi)}
                               onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
                               onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== (i + 1 + fi)) setDragOverExerciseIndex(i + 1 + fi); }}
-                              onDrop={() => {
-                                const dropIndex = i + 1 + fi;
-                                if (draggedExerciseIndex === null || draggedExerciseIndex === dropIndex) { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); return; }
-                                const updatedExercises = [...exercises];
-                                const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
-                                updatedExercises.splice(dropIndex, 0, moved);
-                                const normalized = normalizeSupersets(updatedExercises);
-                                setExercises(normalized);
-                                if (activeVariantId !== 'original') {
-                                  const updatedVariants = variants.map(v =>
-                                    v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
-                                  );
-                                  setVariants(updatedVariants);
-                                } else {
-                                  setOriginalExercises(normalized);
-                                }
-                                triggerAutoSave();
-                                setDraggedExerciseIndex(null);
-                                setDragOverExerciseIndex(null);
-                              }}
+                              onDrop={() => { const dropIndex = i + 1 + fi; handleSwapIndices(draggedExerciseIndex, dropIndex); setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
                             >
                               <div className="flex justify-center items-center mb-1">
-                                <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-black/5">
-                                  <span className="font-semibold text-lg text-purple-700">{follower.name}</span>
-                                </div>
+                                <span className="font-semibold text-lg text-purple-700">{follower.name}</span>
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
                                 {follower.notes && (
@@ -2837,9 +3066,62 @@ useEffect(() => {
                                 </button>
                                 <div className="relative">
                                   <button
-                                    onClick={() => {
+                                    onClick={(e) => {
+                                      if (!follower.supersetGroupId && !follower.isSupersetLeader) {
+                                        handleCloneExercise(follower.id);
+                                        closeActionsMenu();
+                                        return;
+                                      }
+                                      const newId = openCloneActionsId === follower.id ? null : follower.id;
+                                      setOpenCloneActionsId(newId);
+                                      if (newId) {
+                                        computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'clone');
+                                      } else {
+                                        closeActionsMenu();
+                                      }
+                                    }}
+                                    className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                                    title="Clona"
+                                    aria-label="Clona"
+                                  >
+                                    <Copy size={14} />
+                                  </button>
+                                  {openCloneActionsId === follower.id && actionsMenuType === 'clone' && actionsMenuPosition && (
+                                    <Portal>
+                                      <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                                      <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative" onClick={(e) => e.stopPropagation()}>
+                                        {actionsMenuPlacement === 'bottom' ? (
+                                          <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                                        ) : (
+                                          <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                                        )}
+                                        <button
+                                          onClick={() => { handleCloneExercise(follower.id); closeActionsMenu(); }}
+                                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                        >
+                                          Clona esercizio
+                                        </button>
+                                        <button
+                                          onClick={() => { handleCloneSuperset(follower.id); closeActionsMenu(); }}
+                                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                        >
+                                          Clona superset
+                                        </button>
+                                      </div>
+                                    </Portal>
+                                  )}
+                                </div>
+                                <div className="relative">
+                                  <button
+                                    onClick={(e) => {
                                       if (follower.supersetGroupId) {
-                                        setOpenSupersetActionsId(openSupersetActionsId === follower.id ? null : follower.id);
+                                        const newId = openSupersetActionsId === follower.id ? null : follower.id;
+                                        setOpenSupersetActionsId(newId);
+                                        if (newId) {
+                                          computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'superset');
+                                        } else {
+                                          closeActionsMenu();
+                                        }
                                       } else {
                                         handleStartSuperset(follower.id);
                                       }
@@ -2850,27 +3132,43 @@ useEffect(() => {
                                   >
                                     <Link2 size={14} />
                                   </button>
-                                  {openSupersetActionsId === follower.id && (
-                                    <div className="absolute left-1/2 -translate-x-1/2 top-7 z-50 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40">
-                                      <button
-                                        onClick={() => {
-                                          const updatedExercises = exercises.map(ex => ex.id === follower.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
-                                          const normalized = normalizeSupersets(updatedExercises);
-                                          setExercises(normalized);
-                                          if (activeVariantId !== 'original') {
-                                            const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
-                                            setVariants(updatedVariants);
-                                          } else {
-                                            setOriginalExercises(normalized);
-                                          }
-                                          triggerAutoSave();
-                                          setOpenSupersetActionsId(null);
-                                        }}
-                                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                      >
-                                        Rimuovi dal superset
-                                      </button>
-                                    </div>
+                                  {openSupersetActionsId === follower.id && actionsMenuType === 'superset' && actionsMenuPosition && (
+                                    <Portal>
+                                      <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                                      <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40 relative" onClick={(e) => e.stopPropagation()}>
+                                        {actionsMenuPlacement === 'bottom' ? (
+                                          <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                                        ) : (
+                                          <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                                        )}
+                                        <button
+                                          onClick={() => { if (follower.supersetGroupId) { setIsSupersetMode(true); setSupersetAnchorExerciseId(follower.supersetGroupId); setSupersetSelection([]); closeActionsMenu(); } }}
+                                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                        >
+                                          Collega un esercizio al superset
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            const updatedExercises = exercises.map(ex => ex.id === follower.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                            const normalized = normalizeSupersets(updatedExercises);
+                                            setExercises(normalized);
+                                            if (activeVariantId !== 'original') {
+                                              const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                              setVariants(updatedVariants);
+                                            } else {
+                                              setOriginalExercises(normalized);
+                                            }
+                                            triggerAutoSave();
+                                            setOpenSupersetActionsId(null);
+                                            setActionsMenuPosition(null);
+                                            setActionsMenuType(null);
+                                          }}
+                                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                        >
+                                          Rimuovi dal superset
+                                        </button>
+                                      </div>
+                                    </Portal>
                                   )}
                                 </div>
                                 <button
@@ -2896,37 +3194,19 @@ useEffect(() => {
                     rendered.push(
                       <div
                         key={exercise.id || `exercise-${i}`}
-                        className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === exercise.id ? 'z-50' : ''}`}
+                        className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === exercise.id || openCloneActionsId === exercise.id ? 'z-50' : ''}`}
                         draggable
-                        onClick={() => { const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectable) handleToggleSupersetSelection(exercise.id); }}
+                        onTouchStart={() => handleTouchStartForSwap(i)}
+                        onTouchEnd={handleTouchEndForSwap}
+                        onClick={() => { const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectedSwapIndex !== null) { handleSwapIndices(selectedSwapIndex, i); setSelectedSwapIndex(null); } else if (selectable) handleToggleSupersetSelection(exercise.id); }}
                         onDoubleClick={() => handleEditExercise(exercise)}
                         onDragStart={() => setDraggedExerciseIndex(i)}
                         onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
                         onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== i) setDragOverExerciseIndex(i); }}
-                        onDrop={() => {
-                          if (draggedExerciseIndex === null || draggedExerciseIndex === i) { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); return; }
-                          const updatedExercises = [...exercises];
-                          const [moved] = updatedExercises.splice(draggedExerciseIndex, 1);
-                          updatedExercises.splice(i, 0, moved);
-                          const normalized = normalizeSupersets(updatedExercises);
-                          setExercises(normalized);
-                          if (activeVariantId !== 'original') {
-                            const updatedVariants = variants.map(v =>
-                              v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
-                            );
-                            setVariants(updatedVariants);
-                          } else {
-                            setOriginalExercises(normalized);
-                          }
-                          triggerAutoSave();
-                          setDraggedExerciseIndex(null);
-                          setDragOverExerciseIndex(null);
-                        }}
+                        onDrop={() => { handleSwapIndices(draggedExerciseIndex, i); setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
                       >
                         <div className="flex justify-center items-center mb-1">
-                          <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-md shadow-sm ring-1 ring-black/5">
-                            <span className={`font-semibold text-lg ${isSupersetMode && supersetSelection.includes(exercise.id) ? 'text-purple-700' : ''}`}>{exercise.name}</span>
-                          </div>
+                          <span className={`font-semibold text-lg ${isSupersetMode && supersetSelection.includes(exercise.id) ? 'text-purple-700' : ''}`}>{exercise.name}</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
                           {exercise.notes && (
@@ -2985,9 +3265,64 @@ useEffect(() => {
                           </button>
                           <div className="relative">
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                              if (!exercise.supersetGroupId && !exercise.isSupersetLeader) {
+                                handleCloneExercise(exercise.id);
+                                closeActionsMenu();
+                                return;
+                              }
+                              const newId = openCloneActionsId === exercise.id ? null : exercise.id;
+                              setOpenCloneActionsId(newId);
+                              if (newId) {
+                                computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'clone');
+                              } else {
+                                closeActionsMenu();
+                              }
+                            }}
+                              className="p-1 text-red-600 hover:text-red-700 transition-colors"
+                              title="Clona"
+                              aria-label="Clona"
+                            >
+                              <Copy size={14} />
+                            </button>
+                            {openCloneActionsId === exercise.id && actionsMenuType === 'clone' && actionsMenuPosition && (
+                              <Portal>
+                                <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                                <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative" onClick={(e) => e.stopPropagation()}>
+                                  {actionsMenuPlacement === 'bottom' ? (
+                                    <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                                  ) : (
+                                    <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                                  )}
+                                  <button
+                                    onClick={() => { handleCloneExercise(exercise.id); closeActionsMenu(); }}
+                                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                  >
+                                    Clona esercizio
+                                  </button>
+                                  {exercise.isSupersetLeader && (
+                                    <button
+                                      onClick={() => { handleCloneSuperset(exercise.id); closeActionsMenu(); }}
+                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                    >
+                                      Clona superset
+                                    </button>
+                                  )}
+                                </div>
+                              </Portal>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <button
+                              onClick={(e) => {
                                 if (exercise.supersetGroupId) {
-                                  setOpenSupersetActionsId(openSupersetActionsId === exercise.id ? null : exercise.id);
+                                  const newId = openSupersetActionsId === exercise.id ? null : exercise.id;
+                                  setOpenSupersetActionsId(newId);
+                                  if (newId) {
+                                    computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'superset');
+                                  } else {
+                                    closeActionsMenu();
+                                  }
                                 } else {
                                   handleStartSuperset(exercise.id);
                                 }
@@ -2998,27 +3333,37 @@ useEffect(() => {
                             >
                               <Link2 size={14} />
                             </button>
-                            {openSupersetActionsId === exercise.id && (
-                              <div className="absolute left-1/2 -translate-x-1/2 top-7 z-50 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40">
-                                <button
-                                  onClick={() => {
-                                    const updatedExercises = exercises.map(ex => ex.id === exercise.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
-                                    const normalized = normalizeSupersets(updatedExercises);
-                                    setExercises(normalized);
-                                    if (activeVariantId !== 'original') {
-                                      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
-                                      setVariants(updatedVariants);
-                                    } else {
-                                      setOriginalExercises(normalized);
-                                    }
-                                    triggerAutoSave();
-                                    setOpenSupersetActionsId(null);
-                                  }}
-                                  className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                >
-                                  Rimuovi dal superset
-                                </button>
-                              </div>
+                            {openSupersetActionsId === exercise.id && actionsMenuType === 'superset' && actionsMenuPosition && (
+                              <Portal>
+                                <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                                <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40 relative" onClick={(e) => e.stopPropagation()}>
+                                  {actionsMenuPlacement === 'bottom' ? (
+                                    <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                                  ) : (
+                                    <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      const updatedExercises = exercises.map(ex => ex.id === exercise.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                      const normalized = normalizeSupersets(updatedExercises);
+                                      setExercises(normalized);
+                                      if (activeVariantId !== 'original') {
+                                        const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                        setVariants(updatedVariants);
+                                      } else {
+                                        setOriginalExercises(normalized);
+                                      }
+                                      triggerAutoSave();
+                                      setOpenSupersetActionsId(null);
+                                      setActionsMenuPosition(null);
+                                      setActionsMenuType(null);
+                                    }}
+                                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
+                                  >
+                                    Rimuovi dal superset
+                                  </button>
+                                </div>
+                              </Portal>
                             )}
                           </div>
                           <button
