@@ -152,21 +152,19 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               <img src="/images/coni.svg.png" alt="CONI Logo" className="h-8 sm:h-10 w-auto mx-auto" />
               <img src="/images/fiam.png" alt="FIAM Logo" className="h-8 sm:h-10 w-auto mx-auto" />
               <img src="/images/acsi.png" alt="ACSI Logo" className="h-8 sm:h-10 w-auto mx-auto" />
-              <img src="/images/karatelogo.JPG" alt="Karate Logo" className="h-8 sm:h-10 w-auto mx-auto" />
+              {/* Karate logo rimosso */}
               <img src="/images/opes.png" alt="OPES Logo" className="h-8 sm:h-10 w-auto mx-auto" />
               <img src="/images/nonsolofitness.webp" alt="Non Solo Fitness Logo" className="h-8 sm:h-10 w-auto mx-auto" />
             </div>
             <div className="mt-4">{t.copyright}</div>
-            <div className="mt-2 text-white/60 text-xs">
-              <div>Powered by: Simeone Luca</div>
-              <div>Info: simeoneluca13@gmail.com</div>
-              <div className="text-white/70 mt-1">v1.0.1</div>
-            </div>
           </div>
         </div>
 
         <div className="mt-12 pt-8 border-t border-white/10 text-center text-white/70">
-          <p>&copy; {new Date().getFullYear()} KW8. {t.allRightsReserved}</p>
+          <div className="mt-2 text-white/60 text-xs">
+            <div>Powered by: Simeone Luca</div>
+            <div>Info: simeoneluca13@gmail.com</div>
+          </div>
         </div>
       </div>
     </footer>

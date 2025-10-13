@@ -148,11 +148,9 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       onNavigate(page);
     }
     
-    // Aggiorna la pagina dopo un breve delay per renderlo più visibile
-    setTimeout(() => {
-      console.log('🔄 Header: Ricaricamento pagina in corso...');
-      window.location.reload();
-    }, 500);
+    // Rimuovi il reload della pagina
+    // Aggiorna immediatamente la UI
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     console.log(`✅ Navigazione con logout completata verso: ${page}`);
   };
@@ -169,16 +167,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       onLogout();
     }
     
-    // Reindirizza alla home e aggiorna la pagina
+    // Reindirizza alla home senza reload
     if (onNavigate) {
       onNavigate('home');
     }
-    
-    // Aggiorna la pagina dopo un breve delay per renderlo più visibile
-    setTimeout(() => {
-      console.log('🔄 Header: Ricaricamento pagina in corso...');
-      window.location.reload();
-    }, 500);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     console.log('✅ Header: Logout completato');
   };
@@ -198,8 +191,22 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     }
   };
 
+  const handleContactsClick = () => {
+    scrollToSection('contatti');
+    setTimeout(() => {
+      const contactsSection = document.getElementById('contatti');
+      if (contactsSection) {
+        const hasLinks = contactsSection.querySelector('a[href^="tel:"]') || contactsSection.querySelector('a[href^="mailto:"]');
+        if (!hasLinks) {
+          const toggleBtn = contactsSection.querySelector('button');
+          (toggleBtn as HTMLButtonElement | null)?.click();
+        }
+      }
+    }, 300);
+  };
+
   return (
-    <>
+    <React.Fragment>
       <header 
         className={`fixed top-0 left-0 right-0 z-40 bg-transparent backdrop-blur-sm transition-all duration-300 cursor-pointer`}
         style={{ 
@@ -209,7 +216,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         onClick={handleHeaderClick}
       >
         <div 
-          className="container mx-auto px-6 py-3 flex items-center justify-between"
+          className="container mx-auto px-6 py-3 flex items-center justify-between relative"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Logo */}
@@ -241,10 +248,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           </div>
 
           {/* Desktop Navigation - Hidden on mobile */}
-          <nav className="hidden lg:flex items-center space-x-8">
+          <nav className="hidden lg:flex items-center justify-center absolute left-1/2 -translate-x-1/2">
             {isDashboard ? (
               // Menu completo per Dashboard
-              <>
+              <React.Fragment>
                 <button
                   onClick={() => handleNavigation('coach-dashboard')}
                   className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-200 shadow-sm ${
@@ -301,61 +308,69 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 >
                   Aree
                 </button>
-              </>
+              </React.Fragment>
             ) : (
               // Menu normale per le altre pagine
-               <>
-                 <button
-                   onClick={() => scrollToSection('orari')}
-                   className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200"
-                 >
-                   Orari
-                 </button>
-                <button
-                  onClick={handleShowRules}
-                  className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200"
-                >
-                  {t.header.rules}
-                </button>
-                <button
-                  onClick={() => handleNavigation('workouts')}
-                  className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200"
-                >
-                  {t.header.workouts}
-                </button>
-                <button
-                  onClick={() => scrollToSection('aree')}
-                  className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200"
-                >
-                  Aree
-                </button>
-                <button
-                  onClick={() => scrollToSection('coach')}
-                  className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200"
-                >
-                  Coach
-                </button>
-                <button
-                  onClick={() => scrollToSection('posizione')}
-                  className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200"
-                >
-                  {t.header.location}
-                </button>
-                <button
-                  onClick={() => scrollToSection('contatti')}
-                  className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200"
-                >
-                  Contatti
-                </button>
-              </>
+              <React.Fragment>
+                <div className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-2 py-1 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+                  <button
+                    onClick={() => scrollToSection('orari')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Orari
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={handleShowRules}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    {t.header.rules}
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => handleNavigation('workouts')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    {t.header.workouts}
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => scrollToSection('aree')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Aree
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => scrollToSection('staff')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Coach
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => scrollToSection('dove-siamo')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    {t.header.location}
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={handleContactsClick}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Contatti
+                  </button>
+                </div>
+              </React.Fragment>
             )}
           </nav>
 
           {/* Right side buttons */}
           <div className="flex items-center space-x-4">
-            {/* Gestione Schede Button - Solo per coach */}
-            {currentUser && currentUser.role === 'coach' && (
-              <button
+            {/* Gestione Schede Button - Solo per coach (non visibile nella Dashboard) */}
+            {currentUser && currentUser.role === 'coach' && !isDashboard && (
+              <button aria-label="Gestione Schede (Coach)"
                 onClick={() => handleNavigation('workout-manager')}
                 className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
                 title="Gestione Schede"
@@ -447,7 +462,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {/* Hamburger Menu */}
             <button
               onClick={toggleMenu}
-              className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
+              className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
             >
               <AlignJustify size={24} className="text-gray-700" />
             </button>
@@ -455,129 +470,138 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
-      <div className={`fixed inset-0 z-[100] bg-white transition-all duration-500 transform ${isMenuOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-full'}`}>
-        <div className="flex justify-between p-4 items-center">
-          <div className="flex items-center">
-            <img 
-              src="/images/logo.png" 
-              alt="KW8 Logo" 
-              className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer"
-              onClick={() => {
-                if (onNavigate) {
-                  onNavigate('home');
-                }
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                setIsMenuOpen(false); // Chiude il menu mobile
-              }}
-            />
+      {/* Mobile Menu Overlay & Side Panel */}
+      <div className={`${isMenuOpen ? 'visible' : 'invisible'} fixed inset-0 z-[100] pointer-events-none`}>
+        {/* Backdrop */}
+        <div
+          onClick={toggleMenu}
+          className={`absolute inset-0 bg-black/10 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`}
+        />
+        {/* Side Panel */}
+        <div
+          className={`absolute top-0 right-0 h-full w-1/2 max-w-md bg-white ring-1 ring-black/10 shadow-2xl transition-transform duration-300 ease-out transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} pointer-events-auto`}
+        >
+          <div className="flex justify-between p-4 items-center border-b border-black/10">
+            <div className="flex items-center">
+              <img 
+                src="/images/logo.png" 
+                alt="KW8 Logo" 
+                className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer"
+                onClick={() => {
+                  if (onNavigate) {
+                    onNavigate('home');
+                  }
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setIsMenuOpen(false);
+                }}
+              />
+            </div>
+            <button
+              onClick={toggleMenu}
+              className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
+            >
+              <X size={20} className="text-gray-700" />
+            </button>
           </div>
-          <button
-            onClick={toggleMenu}
-            className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
-          >
-            <X size={20} className="text-gray-700" />
-          </button>
-        </div>
-        
-        <nav className="px-3 sm:px-8 py-4 sm:py-8 overflow-y-auto max-h-[calc(100vh-80px)]">
-          <ul className="space-y-1 sm:space-y-3">
-            {isDashboard ? (
-              // Menu Dashboard completo
-              <>
-                {/* 1. Dashboard */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('coach-dashboard')}
-                    className={`inline-flex items-center space-x-2 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-base sm:text-xl font-semibold w-full text-left py-2.5 px-4 ${
-                      currentPage === 'coach-dashboard' ? 'text-red-600 ring-1 ring-black/5' : 'hover:text-red-600'
-                    }`}
-                  >
-                    <Settings size={20} className="sm:w-6 sm:h-6" />
-                    <span>Dashboard</span>
-                  </button>
-                </li>
-                {/* 2. Schede */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('workout-manager')}
-                    className={`inline-flex items-center space-x-2 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-base sm:text-xl font-semibold w-full text-left py-2.5 px-4 ${
-                      currentPage === 'workout-manager' ? 'text-red-600 ring-1 ring-black/5' : 'hover:text-red-600'
-                    }`}
-                  >
-                    <FileText size={20} className="sm:w-6 sm:h-6" />
-                    <span>Schede</span>
-                  </button>
-                </li>
-                {/* 3. Atleti */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('athlete-manager')}
-                    className={`inline-flex items-center space-x-2 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-base sm:text-xl font-semibold w-full text-left py-2.5 px-4 ${
-                      currentPage === 'athlete-manager' ? 'text-red-600 ring-1 ring-black/5' : 'hover:text-red-600'
-                    }`}
-                  >
-                    <Users size={20} className="sm:w-6 sm:h-6" />
-                    <span>Atleti</span>
-                  </button>
-                </li>
-                {/* 4. Classifiche */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('rankings')}
-                    className={`inline-flex items-center space-x-2 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-base sm:text-xl font-semibold w-full text-left py-2.5 px-4 ${
-                      currentPage === 'rankings' ? 'text-red-600 ring-1 ring-black/5' : 'hover:text-red-600'
-                    }`}
-                  >
-                    <Trophy size={20} className="sm:w-6 sm:h-6" />
-                    <span>Classifiche</span>
-                  </button>
-                </li>
-                {/* 6. Statistiche */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('athlete-statistics')}
-                    className={`inline-flex items-center space-x-2 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-base sm:text-xl font-semibold w-full text-left py-2.5 px-4 ${
-                      currentPage === 'athlete-statistics' ? 'text-red-600 ring-1 ring-black/5' : 'hover:text-red-600'
-                    }`}
-                  >
-                    <BarChart3 size={20} className="sm:w-6 sm:h-6" />
-                    <span>Statistiche</span>
-                  </button>
-                </li>
-                {/* 7. Tessere */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('membership-cards')}
-                    className={`inline-flex items-center space-x-2 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-base sm:text-xl font-semibold w-full text-left py-2.5 px-4 ${
-                      currentPage === 'membership-cards' ? 'text-red-600 ring-1 ring-black/5' : 'hover:text-red-600'
-                    }`}
-                  >
-                    <CreditCard size={20} className="sm:w-6 sm:h-6" />
-                    <span>Tessere</span>
-                  </button>
-                </li>
-                {/* 8. Aree */}
-                <li>
-                  <button
-                    onClick={() => handleNavigation('areas-manager')}
-                    className={`inline-flex items-center space-x-2 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-base sm:text-xl font-semibold w-full text-left py-2.5 px-4 ${
-                      currentPage === 'areas-manager' ? 'text-red-600 ring-1 ring-black/5' : 'hover:text-red-600'
-                    }`}
-                  >
-                    <MapPin size={20} className="sm:w-6 sm:h-6" />
-                    <span>Aree</span>
-                  </button>
-                </li>
-               </>
-             ) : (
-               // Menu Standard
-                <>
+      
+          <nav className="px-2 sm:px-4 py-2 overflow-y-auto h-[calc(100vh-64px)]">
+            <ul className="divide-y divide-black/10">
+              {isDashboard ? (
+                // Menu Dashboard completo
+                <React.Fragment>
+                  {/* 1. Dashboard */}
+                  <li>
+                    <button
+                      onClick={() => handleNavigation('coach-dashboard')}
+                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
+                        currentPage === 'coach-dashboard' ? 'text-red-600' : 'text-gray-800'
+                      }`}
+                    >
+                      <Settings size={20} className="sm:w-6 sm:h-6" />
+                      <span>Dashboard</span>
+                    </button>
+                  </li>
+                  {/* 2. Schede */}
+                  <li>
+                    <button
+                      onClick={() => handleNavigation('workout-manager')}
+                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
+                        currentPage === 'workout-manager' ? 'text-red-600' : 'text-gray-800'
+                      }`}
+                    >
+                      <FileText size={20} className="sm:w-6 sm:h-6" />
+                      <span>Schede</span>
+                    </button>
+                  </li>
+                  {/* 3. Atleti */}
+                  <li>
+                    <button
+                      onClick={() => handleNavigation('athlete-manager')}
+                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
+                        currentPage === 'athlete-manager' ? 'text-red-600' : 'text-gray-800'
+                      }`}
+                    >
+                      <Users size={20} className="sm:w-6 sm:h-6" />
+                      <span>Atleti</span>
+                    </button>
+                  </li>
+                  {/* 4. Classifiche */}
+                  <li>
+                    <button
+                      onClick={() => handleNavigation('rankings')}
+                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
+                        currentPage === 'rankings' ? 'text-red-600' : 'text-gray-800'
+                      }`}
+                    >
+                      <Trophy size={20} className="sm:w-6 sm:h-6" />
+                      <span>Classifiche</span>
+                    </button>
+                  </li>
+                  {/* 6. Statistiche */}
+                  <li>
+                    <button
+                      onClick={() => handleNavigation('athlete-statistics')}
+                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
+                        currentPage === 'athlete-statistics' ? 'text-red-600' : 'text-gray-800'
+                      }`}
+                    >
+                      <BarChart3 size={20} className="sm:w-6 sm:h-6" />
+                      <span>Statistiche</span>
+                    </button>
+                  </li>
+                  {/* 7. Tessere */}
+                  <li>
+                    <button
+                      onClick={() => handleNavigation('membership-cards')}
+                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
+                        currentPage === 'membership-cards' ? 'text-red-600' : 'text-gray-800'
+                      }`}
+                    >
+                      <CreditCard size={20} className="sm:w-6 sm:h-6" />
+                      <span>Tessere</span>
+                    </button>
+                  </li>
+                  {/* 8. Aree */}
+                  <li>
+                    <button
+                      onClick={() => handleNavigation('areas-manager')}
+                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
+                        currentPage === 'areas-manager' ? 'text-red-600' : 'text-gray-800'
+                      }`}
+                    >
+                      <MapPin size={20} className="sm:w-6 sm:h-6" />
+                      <span>Aree</span>
+                    </button>
+                  </li>
+                </React.Fragment>
+              ) : (
+                // Menu Standard (Home)
+                <React.Fragment>
                   {/* 1. Informazioni */}
                   <li>
                     <button
-                      onClick={scrollToFooter}
-                      className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
+                      onClick={() => scrollToSection('informazioni')}
+                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                     >
                       <Mail size={20} className="sm:w-6 sm:h-6" />
                       <span>{t.header.information}</span>
@@ -587,7 +611,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => scrollToSection('orari')}
-                    className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
+                    className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                   >
                     <Clock size={20} className="sm:w-6 sm:h-6" />
                     <span>Orari</span>
@@ -597,7 +621,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={handleShowRules}
-                    className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
+                    className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                   >
                     <BookOpen size={20} className="sm:w-6 sm:h-6" />
                     <span>{t.header.rules}</span>
@@ -607,8 +631,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => handleNavigation('workouts')}
-                    className={`inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4 ${
-                      currentPage === 'workouts' ? 'text-red-600 ring-1 ring-black/5' : 'text-gray-800 hover:text-red-600 hover:border-gray-300 hover:shadow-md'
+                    className={`inline-flex items-center space-x-3 sm:space-x-4 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5 ${
+                      currentPage === 'workouts' ? 'text-red-600' : 'text-gray-800'
                     }`}
                   >
                     <FileText size={20} className="sm:w-6 sm:h-6" />
@@ -619,7 +643,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <li>
                   <button
                     onClick={() => scrollToSection('aree')}
-                    className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
+                    className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                   >
                     <Dumbbell size={20} className="sm:w-6 sm:h-6" />
                     <span>Aree</span>
@@ -628,8 +652,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 {/* 6. Coach */}
                 <li>
                   <button
-                    onClick={() => scrollToSection('coach')}
-                    className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
+                    onClick={() => scrollToSection('staff')}
+                    className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                   >
                     <Users size={20} className="sm:w-6 sm:h-6" />
                     <span>Coach</span>
@@ -638,8 +662,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 {/* 7. Posizione */}
                 <li>
                   <button
-                    onClick={() => scrollToSection('posizione')}
-                    className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
+                    onClick={() => scrollToSection('dove-siamo')}
+                    className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                   >
                     <MapPin size={20} className="sm:w-6 sm:h-6" />
                     <span>{t.header.location}</span>
@@ -648,19 +672,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 {/* 8. Contatti */}
                 <li>
                   <button
-                    onClick={() => scrollToSection('contatti')}
-                    className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
+                    onClick={handleContactsClick}
+                    className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                   >
                     <Phone size={20} className="sm:w-6 sm:h-6" />
                     <span>Contatti</span>
                   </button>
                 </li>
-              </>
+              </React.Fragment>
             )}
             
-
             
-
+            
             
             <li>
               <button
@@ -689,14 +712,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           </ul>
         </nav>
       </div>
+      </div>
 
       {/* Rules Modal */}
       <RulesSection 
         isOpen={showRulesModal} 
         onClose={() => setShowRulesModal(false)} 
       />
-    </>
-  );
-};
-
-export default Header;
+      </React.Fragment>
+    );
+    };
+    
+    export default Header;

@@ -107,7 +107,8 @@ const NewsletterSection: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.subscribeToNewsletter}</h2>
-          <p className="text-lg text-gray-500 mb-8">{t.newsletterDescription}</p>
+          {/* Descrizione rimossa su richiesta */}
+          {/* <p className="text-lg text-gray-500 mb-8">{t.newsletterDescription}</p> */}
 
           {/* Newsletter Subscription */}
           <div className={`max-w-2xl mx-auto transition-all duration-1000 delay-500 transform ${
@@ -121,9 +122,10 @@ const NewsletterSection: React.FC = () => {
               <h3 className="text-2xl font-bold text-navy-900 mb-4">
                 Newsletter KW8
               </h3>
-              <p className="text-navy-700 leading-relaxed">
+              {/* Descrizione rimossa su richiesta */}
+              {/* <p className="text-navy-700 leading-relaxed">
                 {t.newsletterDescription}
-              </p>
+              </p> */}
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-4">

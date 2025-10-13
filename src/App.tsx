@@ -213,14 +213,9 @@ function App() {
     // Pulisci database locale
     DB.clearAutoLogin();
     
-    // Reindirizza sempre alla home e refresha la pagina
+    // Reindirizza immediatamente alla home
     setCurrentPage('home');
-    
-    // Refresh della pagina dopo un breve delay per renderlo più visibile
-    setTimeout(() => {
-      console.log('🔄 Ricaricamento pagina in corso...');
-      window.location.reload();
-    }, 500);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     
     console.log('✅ Logout completato');
   };
@@ -536,11 +531,6 @@ function App() {
         <ScheduleSection currentUser={currentUser} />
         <LocationSection />
         <EditableStaffSection currentUser={currentUser} />
-        {currentUser && currentUser.role === 'coach' ? (
-          <EditableSubscriptionSection currentUser={currentUser} />
-        ) : (
-          <SubscriptionSection onNavigate={handleNavigation} />
-        )}
         <NewsletterSection />
         <TrustpilotSection />
         <SocialSection />

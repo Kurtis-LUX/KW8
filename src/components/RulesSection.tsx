@@ -206,12 +206,7 @@ const RulesSection: React.FC<RulesSectionProps> = ({ isOpen, onClose }) => {
         {/* Footer */}
         <div className="p-4 md:p-6 border-t border-white/20 bg-white/30 backdrop-blur-md">
           <div className="text-center">
-            <p className="text-navy-900/80 text-sm">
-              Regola {currentIndex + 1} di {rules.length}
-            </p>
-            <p className="text-navy-900/70 text-xs mt-1">
-              Rispettare queste regole garantisce un ambiente sicuro e piacevole per tutti
-            </p>
+            {/* Testo rimosso su richiesta */}
           </div>
         </div>
       </div>

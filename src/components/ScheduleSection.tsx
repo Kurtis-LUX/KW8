@@ -256,8 +256,6 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
             : '-translate-y-8 opacity-0'
         }`}>
           <h2 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.schedules}</h2>
-        </div>
-        <p className="text-center text-gray-500 mb-8 max-w-2xl mx-auto">Pianifica il tuo allenamento con i nostri orari</p>
           {currentUser && currentUser.role === 'coach' && (
             <div className="ml-4 flex items-center space-x-2">
               {!isEditing ? (
@@ -291,6 +289,8 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
               )}
             </div>
           )}
+        </div>
+        <p className="text-center text-gray-500 mb-8 max-w-2xl mx-auto">Pianifica il tuo allenamento con i nostri orari</p>
         </div>
         
         {/* Indicatore di caricamento */}

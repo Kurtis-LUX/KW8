@@ -78,18 +78,7 @@ const LocationSection: React.FC = () => {
           </div>
         </div>
 
-        <button 
-          onClick={openGoogleMaps}
-          className={`bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-8 rounded-lg transition-all duration-700 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center space-x-2 ${
-            isVisible 
-              ? 'translate-y-0 opacity-100 scale-100' 
-              : 'translate-y-8 opacity-0 scale-90'
-          }`}
-          style={{ transitionDelay: '800ms' }}
-        >
-          <span>{t.openOnGoogleMaps}</span>
-          <ExternalLink size={20} className="transition-transform duration-300 group-hover:translate-x-1" />
-        </button>
+
       </div>
     </section>
   );

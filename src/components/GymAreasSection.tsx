@@ -316,36 +316,30 @@ const GymAreasSection: React.FC = () => {
           {/* Navigation Arrows */}
           <button
             onClick={prevSlide}
-            className={`absolute left-4 top-1/2 transform -translate-y-1/2 text-white p-3 transition-all duration-500 hover:scale-110 ${
+            className={`absolute left-2 md:left-4 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-white/30 bg-white/40 backdrop-blur-md text-white hover:bg-white/60 hover:shadow-md transition-all z-10 ${
               isVisible 
                 ? 'translate-x-0 opacity-100' 
                 : '-translate-x-8 opacity-0'
             }`}
-            style={{ 
-              transitionDelay: '600ms',
-              filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8))'
-            }}
+            style={{ transitionDelay: '600ms' }}
           >
-            <ChevronLeft size={32} strokeWidth={3} />
+            <ChevronLeft size={24} className="md:w-6 md:h-6" />
           </button>
 
           <button
             onClick={nextSlide}
-            className={`absolute right-4 top-1/2 transform -translate-y-1/2 text-white p-3 transition-all duration-500 hover:scale-110 ${
+            className={`absolute right-2 md:right-4 top-1/2 -translate-y-1/2 inline-flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-white/30 bg-white/40 backdrop-blur-md text-white hover:bg-white/60 hover:shadow-md transition-all z-10 ${
               isVisible 
                 ? 'translate-x-0 opacity-100' 
                 : 'translate-x-8 opacity-0'
             }`}
-            style={{ 
-              transitionDelay: '600ms',
-              filter: 'drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.8))'
-            }}
+            style={{ transitionDelay: '600ms' }}
           >
-            <ChevronRight size={32} strokeWidth={3} />
+            <ChevronRight size={24} className="md:w-6 md:h-6" />
           </button>
 
           {/* Dots Indicator */}
-          <div className={`flex justify-center mt-8 space-x-3 transition-all duration-700 transform ${
+          <div className={`flex justify-center mb-6 mt-8 space-x-3 transition-all duration-700 transform ${
             isVisible 
               ? 'translate-y-0 opacity-100' 
               : 'translate-y-4 opacity-0'
@@ -355,8 +349,8 @@ const GymAreasSection: React.FC = () => {
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 transform hover:scale-125 ${
-                  currentSlide === index ? 'bg-red-600 scale-125' : 'bg-gray-300'
+                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 transform hover:scale-125 ${
+                  currentSlide === index ? 'bg-red-600 scale-125 shadow-[0_0_0_3px_rgba(255,255,255,0.4)]' : 'bg-white/50 ring-1 ring-white/40'
                 }`}
               />
             ))}

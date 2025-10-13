@@ -284,7 +284,7 @@ export const translations: Record<'it' | 'en', Translations> = {
     // Newsletter Section
     newsletter: 'Newsletter',
     newsletterDesc: 'Rimani aggiornato sulle nostre novità, eventi e offerte speciali.',
-    newsletterDescription: 'Inserisci la tua email per ricevere informazioni automatiche sulla palestra, aggiornamenti sui nostri servizi ed eventi speciali.',
+    newsletterDescription: '',
     enterEmail: 'Inserisci un indirizzo email',
     enterValidEmail: 'Inserisci un indirizzo email valido',
     emailAlreadySubscribed: 'Questa email è già iscritta alla newsletter.',
@@ -480,7 +480,7 @@ export const translations: Record<'it' | 'en', Translations> = {
     // Newsletter Section
     newsletter: 'Newsletter',
     newsletterDesc: 'Stay updated on our news, events and special offers.',
-    newsletterDescription: 'Enter your email to receive automatic information about the gym, updates on our services and special events.',
+    newsletterDescription: '',
     enterEmail: 'Enter an email address',
     enterValidEmail: 'Enter a valid email address',
     emailAlreadySubscribed: 'This email is already subscribed to the newsletter.',
