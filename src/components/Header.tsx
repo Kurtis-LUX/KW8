@@ -479,7 +479,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         />
         {/* Side Panel */}
         <div
-          className={`absolute top-0 right-0 h-full w-1/2 max-w-md bg-white ring-1 ring-black/10 shadow-2xl transition-transform duration-300 ease-out transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} pointer-events-auto`}
+          className={`absolute top-0 right-0 h-full w-1/2 max-w-md bg-white ring-1 ring-black/10 shadow-2xl rounded-l-lg transition-transform duration-300 ease-out transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} pointer-events-auto`}
         >
           <div className="flex justify-between p-4 items-center border-b border-black/10">
             <div className="flex items-center">
@@ -688,7 +688,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             <li>
               <button
                 onClick={toggleLanguage}
-                className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
+                className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
               >
                 <Globe size={20} className="sm:w-6 sm:h-6" />
                 <span className="flex items-center space-x-2">
@@ -702,11 +702,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               <li>
                 <button
                   onClick={handleLogout}
-                  className="inline-flex items-center space-x-3 sm:space-x-4 rounded-full border border-gray-200 bg-white/80 backdrop-blur-sm text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 text-lg sm:text-xl font-semibold w-full text-left py-2.5 px-4"
-                    >
-                      <LogOut size={20} className="sm:w-6 sm:h-6" />
-                      <span>Logout</span>
-                    </button>
+                  className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
+                   >
+                     <LogOut size={20} className="sm:w-6 sm:h-6" />
+                     <span>Logout</span>
+                   </button>
               </li>
             )}
           </ul>
