@@ -223,6 +223,7 @@ const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(
 const [dragOverExerciseIndex, setDragOverExerciseIndex] = useState<number | null>(null);
 const [selectedSwapIndex, setSelectedSwapIndex] = useState<number | null>(null);
 const longPressTimerRef = useRef<number | null>(null);
+const [draggedExerciseId, setDraggedExerciseId] = useState<string | null>(null);
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
   const variantTabsRef = useRef<HTMLDivElement>(null);
@@ -235,19 +236,13 @@ const dragInitiatedRef = useRef(false);
 const originalTabRef = useRef<HTMLDivElement | null>(null);
 const variantTabRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-// Utility per riordinare esercizi su mobile (sposta su/giù)
-const moveExercise = (index: number, direction: number) => {
-  const newIndex = index + direction;
-  if (newIndex < 0 || newIndex >= exercises.length) return;
-  const updatedExercises = [...exercises];
-  const [moved] = updatedExercises.splice(index, 1);
-  updatedExercises.splice(newIndex, 0, moved);
-  const normalized = normalizeSupersets(updatedExercises);
+// Drag & Drop intelligente per esercizi e superset
+// Applica aggiornamento uniforme e salvataggio
+const applyExercisesUpdate = (updated: Exercise[]) => {
+  const normalized = normalizeSupersets(updated);
   setExercises(normalized);
   if (activeVariantId !== 'original') {
-    const updatedVariants = variants.map(v =>
-      v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
-    );
+    const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
     setVariants(updatedVariants);
   } else {
     setOriginalExercises(normalized);
@@ -255,103 +250,177 @@ const moveExercise = (index: number, direction: number) => {
   triggerAutoSave();
 };
 
-// Long-press per selezione su touch: primo tap (lungo) seleziona A, secondo tap su B esegue lo swap
-const handleTouchStartForSwap = (index: number) => {
-  if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
-  longPressTimerRef.current = window.setTimeout(() => {
-    setSelectedSwapIndex(index);
-  }, 300);
+// Helpers: caratteristiche programmatiche degli esercizi e dei superset
+const isSupersetLeaderEx = (ex: Exercise): boolean => ex.isSupersetLeader === true;
+const isSupersetFollowerEx = (ex: Exercise): boolean => !!ex.supersetGroupId && ex.isSupersetLeader !== true;
+const getExerciseKind = (ex: Exercise): 'normal' | 'superset_leader' | 'superset_follower' => isSupersetLeaderEx(ex) ? 'superset_leader' : (isSupersetFollowerEx(ex) ? 'superset_follower' : 'normal');
+const getSupersetLeaderId = (ex: Exercise): string | null => isSupersetLeaderEx(ex) ? String(ex.id) : (ex.supersetGroupId != null ? String(ex.supersetGroupId) : null);
+const getSupersetGroup = (list: Exercise[], leaderId: string): { leader: Exercise | undefined; followers: Exercise[] } => {
+  const leader = list.find(e => String(e.id) === String(leaderId) && isSupersetLeaderEx(e));
+  const followers = leader ? list.filter(e => String(e.supersetGroupId) === String(leaderId) && !isSupersetLeaderEx(e)) : [];
+  return { leader, followers };
 };
-const handleTouchEndForSwap = () => {
-  if (longPressTimerRef.current) {
-    window.clearTimeout(longPressTimerRef.current);
-    longPressTimerRef.current = null;
+const isSameSuperset = (a: Exercise, b: Exercise): boolean => {
+  const la = getSupersetLeaderId(a);
+  const lb = getSupersetLeaderId(b);
+  return la != null && lb != null && String(la) === String(lb);
+};
+
+// Info su posizione e tipo rispetto ai superset
+type SupersetInfo = { type: 'normal' | 'leader' | 'follower'; start: number; end: number; leaderId?: string; leaderIndex?: number };
+
+const getSupersetInfoAtIndex = (list: Exercise[], index: number): SupersetInfo => {
+  const ex = list[index];
+  if (!ex) return { type: 'normal', start: index, end: index };
+  if (ex.isSupersetLeader) {
+    let end = index;
+    while (end + 1 < list.length && String(list[end + 1].supersetGroupId) === String(ex.id) && !list[end + 1].isSupersetLeader) end++;
+    return { type: 'leader', start: index, end, leaderId: String(ex.id), leaderIndex: index };
+  }
+  if (ex.supersetGroupId) {
+    const leaderIndex = list.findIndex(e => String(e.id) === String(ex.supersetGroupId) && e.isSupersetLeader);
+    if (leaderIndex === -1) {
+      // follower orfano: trattalo come normale
+      return { type: 'normal', start: index, end: index };
+    }
+    let end = leaderIndex;
+    while (end + 1 < list.length && String(list[end + 1].supersetGroupId) === String(ex.supersetGroupId) && !list[end + 1].isSupersetLeader) end++;
+    return { type: 'follower', start: leaderIndex + 1, end, leaderId: String(ex.supersetGroupId), leaderIndex };
+  }
+  return { type: 'normal', start: index, end: index };
+};
+
+// Scambia due follower nello stesso gruppo
+const swapFollowersWithinGroup = (list: Exercise[], leaderIndex: number, aFollowerGlobalIndex: number, bFollowerGlobalIndex: number): Exercise[] => {
+  if (leaderIndex < 0) return list;
+  const leaderId = String(list[leaderIndex].id);
+  const followerIndices: number[] = [];
+  let p = leaderIndex + 1;
+  while (p < list.length && String(list[p].supersetGroupId) === leaderId && !list[p].isSupersetLeader) { followerIndices.push(p); p++; }
+  const posA = followerIndices.indexOf(aFollowerGlobalIndex);
+  const posB = followerIndices.indexOf(bFollowerGlobalIndex);
+  if (posA === -1 || posB === -1) return list;
+  const followers = followerIndices.map(i => list[i]);
+  const newFollowers = [...followers];
+  [newFollowers[posA], newFollowers[posB]] = [newFollowers[posB], newFollowers[posA]];
+  const before = list.slice(0, leaderIndex + 1);
+  const after = list.slice(leaderIndex + 1 + followers.length);
+  return [...before, ...newFollowers, ...after];
+};
+
+// Scambia blocchi (normale 1 elemento, superset = leader+followers)
+const swapBlocks = (list: Exercise[], aIndex: number, bIndex: number): Exercise[] => {
+  const infoA = getSupersetInfoAtIndex(list, aIndex);
+  const infoB = getSupersetInfoAtIndex(list, bIndex);
+  const startA = infoA.start, endA = infoA.end;
+  const startB = infoB.start, endB = infoB.end;
+  if (startA === startB && endA === endB) return list;
+  if (startA < startB) {
+    return [
+      ...list.slice(0, startA),
+      ...list.slice(startB, endB + 1),
+      ...list.slice(endA + 1, startB),
+      ...list.slice(startA, endA + 1),
+      ...list.slice(endB + 1)
+    ];
+  } else {
+    return [
+      ...list.slice(0, startB),
+      ...list.slice(startA, endA + 1),
+      ...list.slice(endB + 1, startA),
+      ...list.slice(startB, endB + 1),
+      ...list.slice(endA + 1)
+    ];
   }
 };
 
-// Scambio tra due indici con rispetto dei vincoli dei superset
-const handleSwapIndices = (aIndex: number | null, bIndex: number | null) => {
-  if (aIndex === null || bIndex === null || aIndex === bIndex) {
-    setDraggedExerciseIndex(null);
-    setDragOverExerciseIndex(null);
-    return;
-  }
-  let result = [...exercises];
-  const a = result[aIndex];
-  const b = result[bIndex];
-  const isAFollower = !!a.supersetGroupId && !a.isSupersetLeader;
-  const isBFollower = !!b.supersetGroupId && !b.isSupersetLeader;
-  const isALeader = !!a.isSupersetLeader;
-  const isBLeader = !!b.isSupersetLeader;
-  const isAExternal = !a.supersetGroupId;
-  const isBExternal = !b.supersetGroupId;
+// Handlers drag & drop a livello di indice
+const handleDragStartIndex = (index: number) => {
+  setDraggedExerciseIndex(index);
+  setDraggedExerciseId(exercises[index]?.id || null);
+  setSelectedSwapIndex(null);
+};
 
-  // Vietato scambiare leader con elementi esterni o follower
-  if ((isALeader && (isBExternal || isBFollower)) || (isBLeader && (isAExternal || isAFollower))) {
-    setDraggedExerciseIndex(null);
-    setDragOverExerciseIndex(null);
-    return;
-  }
-
-  // Vietato scambiare follower con elementi esterni al superset
-  if ((isAFollower && (isBExternal || isBLeader)) || (isBFollower && (isAExternal || isALeader))) {
-    setDraggedExerciseIndex(null);
-    setDragOverExerciseIndex(null);
-    return;
-  }
-  // Vietato scambiare follower di superset diversi
-  if (isAFollower && isBFollower && a.supersetGroupId !== b.supersetGroupId) {
-    setDraggedExerciseIndex(null);
-    setDragOverExerciseIndex(null);
-    return;
-  }
-
-  const getRange = (start: number) => {
-    const item = result[start];
-    if (item.isSupersetLeader) {
-      let end = start;
-      while (end + 1 < result.length && result[end + 1].supersetGroupId === item.id && !result[end + 1].isSupersetLeader) end++;
-      return { start, end };
-    }
-    return { start, end: start };
-  };
-
-  if (isALeader || isBLeader) {
-    const rangeA = getRange(aIndex);
-    const rangeB = getRange(bIndex);
-    const aLen = rangeA.end - rangeA.start + 1;
-    const bLen = rangeB.end - rangeB.start + 1;
-    if (rangeA.start < rangeB.start) {
-      const aItems = result.splice(rangeA.start, aLen);
-      const bItems = result.splice(rangeB.start - aLen, bLen);
-      result.splice(rangeA.start, 0, ...bItems);
-      result.splice(rangeB.start - aLen + bLen, 0, ...aItems);
-    } else {
-      const bItems = result.splice(rangeB.start, bLen);
-      const aItems = result.splice(rangeA.start - bLen, aLen);
-      result.splice(rangeB.start, 0, ...aItems);
-      result.splice(rangeA.start - bLen + aLen, 0, ...bItems);
-    }
-  } else {
-    // Scambia elementi semplici (singoli o follower dello stesso superset)
-    const temp = result[aIndex];
-    result[aIndex] = result[bIndex];
-    result[bIndex] = temp;
-  }
-
-  const normalized = normalizeSupersets(result);
-  setExercises(normalized);
-  if (activeVariantId !== 'original') {
-    const updatedVariants = variants.map(v =>
-      v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v
-    );
-    setVariants(updatedVariants);
-  } else {
-    setOriginalExercises(normalized);
-  }
-  triggerAutoSave();
+const handleDragEndIndex = () => {
   setDraggedExerciseIndex(null);
   setDragOverExerciseIndex(null);
+  setSelectedSwapIndex(null);
+  setDraggedExerciseId(null);
+};
+
+const handleDragOverIndex = (e: React.DragEvent, index: number) => {
+  e.preventDefault();
+  setDragOverExerciseIndex(index);
+  if (draggedExerciseIndex != null) {
+    const infoA = getSupersetInfoAtIndex(exercises, draggedExerciseIndex);
+    const infoB = getSupersetInfoAtIndex(exercises, index);
+    if (infoA.type === 'follower' && infoB.type === 'follower' && infoA.leaderId && infoB.leaderId && String(infoA.leaderId) === String(infoB.leaderId)) {
+      e.dataTransfer.dropEffect = 'none';
+    } else {
+      e.dataTransfer.dropEffect = 'move';
+    }
+  }
+};
+
+const handleDropOnCard = (targetIndex: number) => {
+  const aIndex = draggedExerciseIndex;
+  if (aIndex == null) return;
+  if (aIndex === targetIndex) { handleDragEndIndex(); return; }
+  const infoA = getSupersetInfoAtIndex(exercises, aIndex);
+  const infoB = getSupersetInfoAtIndex(exercises, targetIndex);
+  let updated = exercises;
+  if (infoA.type === 'follower') {
+    if (infoB.type === 'follower' && infoA.leaderId && infoB.leaderId && String(infoA.leaderId) === String(infoB.leaderId)) {
+      // Riordino interno tra follower dello stesso gruppo DISABILITATO: annullo il drop
+      handleDragEndIndex();
+      return;
+    } else {
+      // Trascinato fuori: diventa esercizio normale e viene inserito vicino al target
+      const follower = exercises[aIndex];
+      const withoutFollower = exercises.filter((_, idx) => idx !== aIndex);
+      // Calcola posizione di inserimento considerando shift se l'elemento rimosso era prima del target
+      const adjustedTarget = targetIndex > aIndex ? targetIndex - 1 : targetIndex;
+      const targetInfo = getSupersetInfoAtIndex(withoutFollower, adjustedTarget);
+      const insertPos = targetInfo.start;
+      const detached: Exercise = { ...follower, supersetGroupId: undefined, isSupersetLeader: false };
+      updated = [...withoutFollower.slice(0, insertPos), detached, ...withoutFollower.slice(insertPos)];
+    }
+  } else {
+    if (infoB.type === 'leader' && infoA.type === 'normal') {
+      // Swap tra blocco superset e esercizio normale
+      updated = swapBlocks(exercises, aIndex, targetIndex);
+    } else if (infoB.type === 'follower') {
+      // Evita di spezzare un superset rilasciando su un follower di altro gruppo
+      handleDragEndIndex();
+      return;
+    } else {
+      // Swap tra blocchi (normale<->normale, leader<->normale, leader<->leader)
+      updated = swapBlocks(exercises, aIndex, targetIndex);
+    }
+  }
+  applyExercisesUpdate(updated);
+  handleDragEndIndex();
+};
+
+const handleDropOnSupersetContainer = (leaderId: string, leaderIndex: number) => {
+  const aIndex = draggedExerciseIndex; if (aIndex == null) return;
+  const infoA = getSupersetInfoAtIndex(exercises, aIndex);
+  if (aIndex === leaderIndex) { handleDragEndIndex(); return; }
+  let updated = exercises;
+  if (infoA.type === 'normal') {
+    // Swap tra blocco superset e esercizio normale (nessuna conversione di ruoli)
+    updated = swapBlocks(exercises, aIndex, leaderIndex);
+    applyExercisesUpdate(updated);
+    handleDragEndIndex();
+  } else if (infoA.type === 'leader') {
+    // Swap tra due contenitori di superset (blocchi interi)
+    updated = swapBlocks(exercises, aIndex, leaderIndex);
+    applyExercisesUpdate(updated);
+    handleDragEndIndex();
+  } else {
+    // Non consentito rilasciare un follower su un contenitore
+    handleDragEndIndex();
+  }
 };
 
 // Effetto: quando cambia la variante attiva, porta il relativo tab in vista
@@ -833,9 +902,25 @@ useEffect(() => {
   
   useEffect(() => {
     if (isEditingDescription && descriptionInputRef.current) {
-      descriptionInputRef.current.focus();
+      const ta = descriptionInputRef.current;
+      ta.focus();
+      try {
+        const len = ta.value.length;
+        ta.setSelectionRange(len, len);
+      } catch {}
     }
   }, [isEditingDescription]);
+
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      const input = titleInputRef.current;
+      input.focus();
+      try {
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
+      } catch {}
+    }
+  }, [isEditingTitle]);
 
   // Handle clicks outside exercise dropdown
   useEffect(() => {
@@ -942,8 +1027,8 @@ useEffect(() => {
                   });
                   return { ...v, isActive: false, exercises: fixedExercises };
                 });
-                const getNum = (name: string) => { const m = name.match(/Variante (\d+)/); return m ? parseInt(m[1]) : Number.MAX_SAFE_INTEGER; };
-                const sortedVariants = normalizedVariants.slice().sort((a, b) => getNum(a.name) - getNum(b.name));
+                const getNumAsc = (name: string) => { const m = name.match(/Variante (\d+)/); return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER; };
+                const sortedVariants = normalizedVariants.slice().sort((a, b) => getNumAsc(a.name) - getNumAsc(b.name));
                 setVariants(sortedVariants);
                 setActiveVariantId('original');
                 setWorkoutDescription(workoutData.description || '');
@@ -1174,7 +1259,7 @@ useEffect(() => {
   const reorderSupersetGroup = (list: Exercise[], leaderId: string): Exercise[] => {
     const leaderIndex = list.findIndex(ex => ex.id === leaderId);
     if (leaderIndex === -1) return list;
-    const followersIds = new Set(list.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader).map(ex => ex.id));
+    const followersIds = new Set(list.filter(ex => String(ex.supersetGroupId) === String(leaderId) && !ex.isSupersetLeader).map(ex => ex.id));
     if (followersIds.size === 0) return list;
     const before = list.slice(0, leaderIndex).filter(ex => !followersIds.has(ex.id));
     const leader = list[leaderIndex];
@@ -1187,37 +1272,38 @@ useEffect(() => {
   const normalizeSupersets = (list: Exercise[]): Exercise[] => {
     let result = [...list];
 
-    // 1) Rimuovi follower orfani (leader mancante)
-    const leaderIds = new Set(result.filter(ex => ex.isSupersetLeader).map(ex => ex.id));
+    // 1) Rimuovi follower orfani (leader mancante) con confronto robusto su string
+    const leaderIds = new Set(result.filter(ex => ex.isSupersetLeader).map(ex => String(ex.id)));
     result = result.map(ex => {
-      if (ex.supersetGroupId && !leaderIds.has(ex.supersetGroupId)) {
+      const groupId = ex.supersetGroupId != null ? String(ex.supersetGroupId) : null;
+      if (groupId && !leaderIds.has(groupId)) {
         return { ...ex, supersetGroupId: undefined, isSupersetLeader: false };
       }
       return ex;
     });
 
-    // 2) Pulisci i capi senza follower
+    // 2) Pulisci i capi senza follower con confronto robusto su string
     const leaders = result.filter(ex => ex.isSupersetLeader);
     leaders.forEach(leader => {
-      const leaderId = leader.id;
-      const followers = result.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader);
+      const leaderId = String(leader.id);
+      const followers = result.filter(ex => String(ex.supersetGroupId) === leaderId && !ex.isSupersetLeader);
       if (followers.length === 0) {
-        const leaderIdx = result.findIndex(ex => ex.id === leaderId);
+        const leaderIdx = result.findIndex(ex => String(ex.id) === leaderId);
         if (leaderIdx !== -1) {
           result[leaderIdx] = { ...result[leaderIdx], supersetGroupId: undefined, isSupersetLeader: false };
         }
       }
     });
 
-    // 3) Mantieni i follower contigui sotto al capo nell'ordine corrente
+    // 3) Mantieni i follower contigui sotto al capo nell'ordine corrente con confronto robusto su string
     const leadersAfterCleanup = result.filter(ex => ex.isSupersetLeader);
     leadersAfterCleanup.forEach(leader => {
-      const leaderId = leader.id;
-      const followers = result.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader);
+      const leaderId = String(leader.id);
+      const followers = result.filter(ex => String(ex.supersetGroupId) === leaderId && !ex.isSupersetLeader);
       if (followers.length === 0) return;
-      const followerIds = new Set(followers.map(f => f.id));
-      result = result.filter(ex => !followerIds.has(ex.id));
-      const leaderIndex = result.findIndex(ex => ex.id === leaderId);
+      const followerIds = new Set(followers.map(f => String(f.id)));
+      result = result.filter(ex => !followerIds.has(String(ex.id)));
+      const leaderIndex = result.findIndex(ex => String(ex.id) === leaderId);
       result.splice(leaderIndex + 1, 0, ...followers);
     });
 
@@ -1226,15 +1312,15 @@ useEffect(() => {
 
   // Helper: riordina i follower di un gruppo in base all'ordine desiderato
   const reorderSupersetGroupWithOrder = (list: Exercise[], leaderId: string, desiredOrder: string[]): Exercise[] => {
-    const mapById = new Map(list.map(ex => [ex.id, ex]));
-    const followersSet = new Set(list.filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader).map(ex => ex.id));
-    const orderedFollowers = desiredOrder.filter(id => followersSet.has(id));
+    const mapById = new Map<string, Exercise>(list.map(ex => [String(ex.id), ex]));
+    const followersSet = new Set<string>(list.filter(ex => String(ex.supersetGroupId) === leaderId && !ex.isSupersetLeader).map(ex => String(ex.id)));
+    const orderedFollowers = desiredOrder.filter(id => followersSet.has(String(id))).map(id => String(id));
     const remainingFollowers = list
-      .filter(ex => ex.supersetGroupId === leaderId && !ex.isSupersetLeader && !orderedFollowers.includes(ex.id))
-      .map(ex => ex.id);
-    const finalOrder = [...orderedFollowers, ...remainingFollowers];
-    let result = list.filter(ex => !(ex.supersetGroupId === leaderId && !ex.isSupersetLeader));
-    const leaderIndex = result.findIndex(ex => ex.id === leaderId);
+      .filter(ex => String(ex.supersetGroupId) === leaderId && !ex.isSupersetLeader && !orderedFollowers.includes(String(ex.id)))
+      .map(ex => String(ex.id));
+    const finalOrder: string[] = [...orderedFollowers, ...remainingFollowers];
+    let result = list.filter(ex => !(String(ex.supersetGroupId) === leaderId && !ex.isSupersetLeader));
+    const leaderIndex = result.findIndex(ex => String(ex.id) === leaderId);
     const followersObjs = finalOrder.map(id => mapById.get(id)!).filter(Boolean);
     result.splice(leaderIndex + 1, 0, ...followersObjs);
     return result;
@@ -1254,7 +1340,7 @@ useEffect(() => {
       return ex;
     });
     // Ordine desiderato: prima i follower già presenti, poi i nuovi selezionati
-    const existingFollowersOrder = exercises.filter(ex => ex.supersetGroupId === groupId && !ex.isSupersetLeader).map(ex => ex.id);
+    const existingFollowersOrder = exercises.filter(ex => String(ex.supersetGroupId) === String(groupId) && !ex.isSupersetLeader).map(ex => ex.id);
     const newFollowersOrder = supersetSelection.filter(id => !existingFollowersOrder.includes(id));
     const desiredOrder = [...existingFollowersOrder, ...newFollowersOrder];
 
@@ -1315,7 +1401,7 @@ useEffect(() => {
     const followers: Exercise[] = [];
     for (let k = leaderIdx + 1; k < exercises.length; k++) {
       const ex = exercises[k];
-      if (ex.supersetGroupId === leaderId && !ex.isSupersetLeader) {
+      if (String(ex.supersetGroupId) === String(leaderId) && !ex.isSupersetLeader) {
         followers.push(ex);
         lastIdx = k;
       } else {
@@ -1368,7 +1454,7 @@ useEffect(() => {
       updatedAt: new Date().toISOString()
     };
     
-    // Disattiva tutte le altre varianti e inserisci la nuova mantenendo ordine crescente
+    // Disattiva tutte le altre varianti e inserisci la nuova mantenendo ordine crescente (da sinistra a destra)
     const updatedVariants = [...variants.map(v => ({ ...v, isActive: false })), newVariant].sort((a, b) => {
       const ma = (a.name || '').match(/Variante\s+(\d+)/i);
       const mb = (b.name || '').match(/Variante\s+(\d+)/i);
@@ -1891,7 +1977,7 @@ useEffect(() => {
             ) : (
               <h1
                 className={`text-2xl font-bold cursor-pointer transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-navy-900 hover:text-navy-800' : 'text-red-700 hover:text-red-800'}`}
-                onClick={() => setIsEditingTitle(true)}
+                onClick={() => { setIsEditingTitle(true); setTimeout(() => { if (titleInputRef.current) { const input = titleInputRef.current; try { const len = input.value.length; input.setSelectionRange(len, len); } catch {} input.focus(); } }, 0); }}
                 title="Clicca per modificare il titolo"
               >
                 {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
@@ -1913,6 +1999,7 @@ useEffect(() => {
               ref={descriptionInputRef}
               value={workoutDescription}
               onChange={(e) => setWorkoutDescription(e.target.value)}
+              onFocus={() => { if (isEditingTitle) { handleSaveTitle(); } }}
               onBlur={handleSaveDescription}
               onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
               placeholder="Aggiungi una descrizione..."
@@ -1920,7 +2007,7 @@ useEffect(() => {
               rows={2}
             />
           ) : (
-            <div className="flex items-center gap-2 justify-center group" onClick={() => setIsEditingDescription(true)} title="Clicca per modificare la descrizione">
+            <div className="flex items-center gap-2 justify-center group" onClick={() => { if (isEditingTitle) { handleSaveTitle(); } setIsEditingDescription(true); setTimeout(() => { if (descriptionInputRef.current) { const ta = descriptionInputRef.current; try { const len = ta.value.length; ta.setSelectionRange(len, len); } catch {} ta.focus(); } }, 0); }} title="Clicca per modificare la descrizione">
               {workoutDescription ? (
                 <p className="text-gray-600 max-w-2xl text-center break-words transition-colors group-hover:text-blue-600">{workoutDescription}</p>
               ) : (
@@ -2778,7 +2865,7 @@ useEffect(() => {
           {exercises.length > 0 ? (
             <div className="space-y-4">
               {isSupersetMode && supersetAnchorExerciseId && (
-                <div className="sticky top-2 z-[9999] flex justify-center">
+                <div className="relative z-[9999] flex justify-center">
                   <div className="inline-flex items-center gap-3 bg-white/90 backdrop-blur-md border border-purple-300 shadow-lg rounded-full px-4 py-2">
                     <span className="text-sm text-gray-700">Seleziona esercizi da collegare al superset</span>
                     <button onClick={handleConfirmSuperset} className="px-3 py-1 rounded-full bg-purple-600 text-white text-sm shadow hover:bg-purple-700">Conferma</button>
@@ -2795,7 +2882,7 @@ useEffect(() => {
                     const leader = exercise;
                     const followers: typeof exercises = [];
                     let j = i + 1;
-                    while (j < exercises.length && exercises[j].supersetGroupId === leader.id && !exercises[j].isSupersetLeader) {
+                    while (j < exercises.length && String(exercises[j].supersetGroupId) === String(leader.id) && !exercises[j].isSupersetLeader) {
                       followers.push(exercises[j]);
                       j++;
                     }
@@ -2803,23 +2890,27 @@ useEffect(() => {
                       <div
                         key={`superset-${leader.id}`}
                         className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-purple-300 shadow-sm hover:shadow-md transition hover:translate-y-px`}
+                        data-leader-index={i}
+                        draggable
+                        onDragStart={() => handleDragStartIndex(i)}
+                        onDragOver={(e) => handleDragOverIndex(e, i)}
+                        onDrop={(e) => { e.stopPropagation(); handleDropOnSupersetContainer(String(leader.id), i); }}
+                        onDragEnd={handleDragEndIndex}
                       >
                         <div className="flex justify-center items-center mb-2">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 font-bold">Superset</span>
                         </div>
                         <div
                             className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader ? (supersetSelection.includes(leader.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === leader.id || openCloneActionsId === leader.id ? 'z-50' : ''}`}
-                            draggable
-                          onTouchStart={() => handleTouchStartForSwap(i)}
-                          onTouchEnd={handleTouchEndForSwap}
-                          onClick={() => { const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectedSwapIndex !== null) { handleSwapIndices(selectedSwapIndex, i); setSelectedSwapIndex(null); } else if (selectable) handleToggleSupersetSelection(leader.id); }}
+                          onClick={() => { const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectable) handleToggleSupersetSelection(leader.id); }}
                           onDoubleClick={() => handleEditExercise(leader)}
-                          onDragStart={() => setDraggedExerciseIndex(i)}
-                          onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
-                          onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== i) setDragOverExerciseIndex(i); }}
-                          onDrop={() => { handleSwapIndices(draggedExerciseIndex, i); setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
+                          draggable
+                          onDragStart={() => handleDragStartIndex(i)}
+                          onDragOver={(e) => handleDragOverIndex(e, i)}
+                          onDrop={(e) => { e.stopPropagation(); handleDropOnCard(i); }}
+                          onDragEnd={handleDragEndIndex}
                         >
-                          <div className="flex justify-center items-center mb-1">
+                          <div className="flex justify-center items-center gap-2 mb-1">
                             <span className="font-semibold text-lg text-purple-700">{leader.name}</span>
                           </div>
 
@@ -2996,17 +3087,10 @@ useEffect(() => {
                             <div className="my-3 h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent" />
                             <div
                                 className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === (i + 1 + fi) ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === (i + 1 + fi) ? 'opacity-80' : ''} ${selectedSwapIndex === (i + 1 + fi) ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader ? (supersetSelection.includes(follower.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === follower.id || openCloneActionsId === follower.id ? 'z-50' : ''}`}
-                                draggable
-                              onTouchStart={() => handleTouchStartForSwap(i + 1 + fi)}
-                              onTouchEnd={handleTouchEndForSwap}
-                              onClick={() => { const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; const dropIndex = i + 1 + fi; if (selectedSwapIndex !== null) { handleSwapIndices(selectedSwapIndex, dropIndex); setSelectedSwapIndex(null); } else if (selectable) handleToggleSupersetSelection(follower.id); }}
+                              onClick={() => { const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; if (selectable) handleToggleSupersetSelection(follower.id); }}
                               onDoubleClick={() => handleEditExercise(follower)}
-                              onDragStart={() => setDraggedExerciseIndex(i + 1 + fi)}
-                              onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
-                              onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== (i + 1 + fi)) setDragOverExerciseIndex(i + 1 + fi); }}
-                              onDrop={() => { const dropIndex = i + 1 + fi; handleSwapIndices(draggedExerciseIndex, dropIndex); setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
                             >
-                              <div className="flex justify-center items-center mb-1">
+                              <div className="flex justify-center items-center gap-2 mb-1">
                                 <span className="font-semibold text-lg text-purple-700">{follower.name}</span>
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
@@ -3195,17 +3279,15 @@ useEffect(() => {
                       <div
                         key={exercise.id || `exercise-${i}`}
                         className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === exercise.id || openCloneActionsId === exercise.id ? 'z-50' : ''}`}
-                        draggable
-                        onTouchStart={() => handleTouchStartForSwap(i)}
-                        onTouchEnd={handleTouchEndForSwap}
-                        onClick={() => { const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectedSwapIndex !== null) { handleSwapIndices(selectedSwapIndex, i); setSelectedSwapIndex(null); } else if (selectable) handleToggleSupersetSelection(exercise.id); }}
+                        onClick={() => { const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectable) handleToggleSupersetSelection(exercise.id); }}
                         onDoubleClick={() => handleEditExercise(exercise)}
-                        onDragStart={() => setDraggedExerciseIndex(i)}
-                        onDragEnd={() => { setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
-                        onDragOver={(e) => { e.preventDefault(); if (dragOverExerciseIndex !== i) setDragOverExerciseIndex(i); }}
-                        onDrop={() => { handleSwapIndices(draggedExerciseIndex, i); setDraggedExerciseIndex(null); setDragOverExerciseIndex(null); }}
+                        draggable
+                        onDragStart={() => handleDragStartIndex(i)}
+                        onDragOver={(e) => handleDragOverIndex(e, i)}
+                        onDrop={() => handleDropOnCard(i)}
+                        onDragEnd={handleDragEndIndex}
                       >
-                        <div className="flex justify-center items-center mb-1">
+                        <div className="flex justify-center items-center gap-2 mb-1">
                           <span className={`font-semibold text-lg ${isSupersetMode && supersetSelection.includes(exercise.id) ? 'text-purple-700' : ''}`}>{exercise.name}</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">

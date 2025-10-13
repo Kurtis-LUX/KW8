@@ -274,15 +274,10 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
       <Header onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} isDashboard={true} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Header compatto */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3 mb-6">
           <button
             onClick={() => onNavigate('coach-dashboard')}
-            className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
-            style={{
-              filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
-              background: 'transparent',
-              border: 'none'
-            }}
+            className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
             title="Torna alla Dashboard Coach"
           >
             <ChevronLeft size={32} />
@@ -299,7 +294,7 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
           
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-1 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
+            className="flex items-center space-x-1 bg-white/70 backdrop-blur-md ring-1 ring-black/10 text-gray-900 px-3 py-2 rounded-full hover:bg-white hover:shadow-md transition-all text-sm"
           >
             <Plus size={16} />
             <span>Nuovo</span>
@@ -307,65 +302,67 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
         </div>
 
         {/* Statistiche rapide compatte */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-          <div className="bg-white rounded-lg shadow p-3">
-            <div className="flex items-center">
-              <CreditCard className="text-blue-600 mr-2" size={16} />
-              <div>
-                <div className="text-xs text-gray-600">Totali</div>
-                <div className="text-lg font-bold text-blue-600">{totalCards}</div>
+        <div className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 rounded-xl shadow-sm p-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="flex items-center">
+                <CreditCard className="text-blue-600 mr-2" size={16} />
+                <div>
+                  <div className="text-xs text-gray-600">Totali</div>
+                  <div className="text-lg font-bold text-blue-600">{totalCards}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-3">
-            <div className="flex items-center">
-              <CheckCircle className="text-green-600 mr-2" size={16} />
-              <div>
-                <div className="text-xs text-gray-600">Attivi</div>
-                <div className="text-lg font-bold text-green-600">{activeCards}</div>
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="flex items-center">
+                <CheckCircle className="text-green-600 mr-2" size={16} />
+                <div>
+                  <div className="text-xs text-gray-600">Attivi</div>
+                  <div className="text-lg font-bold text-green-600">{activeCards}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-3">
-            <div className="flex items-center">
-              <CheckCircle className="text-emerald-600 mr-2" size={16} />
-              <div>
-                <div className="text-xs text-gray-600">Pagati</div>
-                <div className="text-lg font-bold text-emerald-600">{paidCards}</div>
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="flex items-center">
+                <CheckCircle className="text-emerald-600 mr-2" size={16} />
+                <div>
+                  <div className="text-xs text-gray-600">Pagati</div>
+                  <div className="text-lg font-bold text-emerald-600">{paidCards}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-3">
-            <div className="flex items-center">
-              <XCircle className="text-red-600 mr-2" size={16} />
-              <div>
-                <div className="text-xs text-gray-600">Scaduti</div>
-                <div className="text-lg font-bold text-red-600">{overdueCards}</div>
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="flex items-center">
+                <XCircle className="text-red-600 mr-2" size={16} />
+                <div>
+                  <div className="text-xs text-gray-600">Scaduti</div>
+                  <div className="text-lg font-bold text-red-600">{overdueCards}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-3">
-            <div className="flex items-center">
-              <AlertCircle className="text-orange-600 mr-2" size={16} />
-              <div>
-                <div className="text-xs text-gray-600">In Scadenza</div>
-                <div className="text-lg font-bold text-orange-600">{expiringSoon}</div>
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="flex items-center">
+                <AlertCircle className="text-orange-600 mr-2" size={16} />
+                <div>
+                  <div className="text-xs text-gray-600">In Scadenza</div>
+                  <div className="text-lg font-bold text-orange-600">{expiringSoon}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="bg-white rounded-lg shadow p-3">
-            <div className="flex items-center">
-              <Euro className="text-purple-600 mr-2" size={16} />
-              <div>
-                <div className="text-xs text-gray-600">Incasso</div>
-                <div className="text-lg font-bold text-purple-600">€{totalRevenue}</div>
+            <div className="bg-white rounded-lg shadow p-3">
+              <div className="flex items-center">
+                <Euro className="text-purple-600 mr-2" size={16} />
+                <div>
+                  <div className="text-xs text-gray-600">Incasso</div>
+                  <div className="text-lg font-bold text-purple-600">€{totalRevenue}</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Filtri e ricerca compatti */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 rounded-lg shadow-sm p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Barra di ricerca */}
             <div className="relative">
@@ -375,7 +372,7 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
                 placeholder="Cerca atleti o tesserini..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
 
@@ -383,7 +380,7 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
               <option value="all">Tutti i pagamenti</option>
               <option value="paid">Pagati</option>
@@ -395,7 +392,7 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
               <option value="all">Tutti i tipi</option>
               <option value="monthly">Mensile</option>
@@ -408,7 +405,7 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="name">Nome</option>
                 <option value="expiryDate">Scadenza</option>
@@ -427,7 +424,7 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
           {/* Lista tesserini */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredCards.map((card) => (
-            <div key={card.id} className="bg-white rounded-lg shadow overflow-hidden hover:shadow-md transition-shadow">
+            <div key={card.id} className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               {/* Header della card compatto */}
               <div className={`p-3 ${
                 card.paymentStatus === 'paid' ? 'bg-gradient-to-r from-green-500 to-green-600' :

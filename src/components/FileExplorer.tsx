@@ -831,7 +831,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       isOpen: isItemMenuOpen,
       triggerRef: itemMenuTriggerRef,
       dropdownRef: itemMenuDropdownRef,
-      toggleDropdown: toggleItemMenu
+      toggleDropdown: toggleItemMenu,
+      closeDropdown: closeItemMenu
     } = useDropdownPosition({
       preferredPosition: 'bottom-right',
       offset: 8,
@@ -864,9 +865,9 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     
     return (
       <div 
-          className={`group relative rounded-xl border border-gray-200 transition-colors duration-200 ease-in-out cursor-pointer 
-            ${isDragOver ? (isForbidden ? 'ring-2 ring-red-500 bg-red-100/80 shadow-lg' : 'ring-2 ring-red-300 bg-red-50/70 shadow-lg') : 'ring-1 ring-gray-300 hover:ring-gray-400 hover:shadow-lg'} 
-            ${item.type === 'folder' ? 'bg-white/70' : 'bg-white/80'} backdrop-blur-sm`}
+          className={`group relative w-full rounded-2xl sm:rounded-xl transition-colors duration-200 ease-in-out cursor-pointer 
+            ${isDragOver ? (isForbidden ? 'ring-2 ring-red-500 bg-red-100/80 shadow-lg' : 'ring-2 ring-red-300 bg-red-50/70 shadow-lg') : 'ring-inset ring-1 ring-black/10 sm:ring-gray-300 sm:hover:ring-gray-400 hover:shadow-lg'} 
+            bg-white/60 ${item.type === 'folder' ? 'sm:bg-white/70' : 'sm:bg-white/80'} backdrop-blur-md sm:backdrop-blur-sm`}
           data-item-type={item.type}
           data-folder-id={item.type === 'folder' ? item.id : undefined}
           onDoubleClick={handleCardDoubleClick}
@@ -997,16 +998,27 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           {/* Dropdown menu con Portal */}
           {isItemMenuOpen && (
             <Portal>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeItemMenu} />
               <div 
                 ref={itemMenuDropdownRef}
-                className="dropdown-menu min-w-[150px]"
+                className="dropdown-menu w-44 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 relative"
                 style={{
                    position: 'fixed',
                    left: itemMenuPosition?.left ?? -9999,
                    top: itemMenuPosition?.top ?? -9999,
                    visibility: itemMenuPosition ? 'visible' : 'hidden',
                  }}
+                 onClick={(e) => e.stopPropagation()}
               >
+                {(() => {
+                  const rect = itemMenuTriggerRef.current?.getBoundingClientRect();
+                  const placement = rect && itemMenuPosition ? (itemMenuPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
+                  return placement === 'bottom' ? (
+                    <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                  ) : (
+                    <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                  );
+                })()}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1232,16 +1244,28 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                {/* Dropdown Menu con Portal */}
                {isToolbarOpen && (
                  <Portal>
+                   <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeToolbarDropdown} />
                    <div 
                      ref={toolbarDropdownRef}
-                     className="dropdown-menu w-72 max-h-96 overflow-y-auto bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-xl rounded-xl p-2"
+                     className="dropdown-menu w-72 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 relative"
                      style={{
                        position: 'fixed',
                        left: toolbarPosition?.left ?? -9999,
                        top: toolbarPosition?.top ?? -9999,
                        visibility: toolbarPosition ? 'visible' : 'hidden',
+                       zIndex: 9999,
                      }}
+                     onClick={(e) => e.stopPropagation()}
                    >
+                     {(() => {
+                       const rect = toolbarTriggerRef.current?.getBoundingClientRect();
+                       const placement = rect && toolbarPosition ? (toolbarPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
+                       return placement === 'bottom' ? (
+                         <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                       ) : (
+                         <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                       );
+                     })()}
                      {/* Modalità vista */}
                      <div className="px-4 py-2">
                        <p className="text-sm font-medium text-gray-700 mb-2">Modalità vista</p>
@@ -1629,7 +1653,7 @@ const CreateItemModal: React.FC<CreateItemModalProps> = ({ onClose, onCreate, ty
       title={`Crea ${type === 'folder' ? 'Cartella' : 'Scheda'}`}
       variant="centered"
     >
-      <div className="w-full max-w-md mx-auto">>
+      <div className="w-full max-w-md mx-auto">
         
         {/* Selezione tipo */}
         <div className="flex space-x-2 mb-4">
@@ -1766,7 +1790,7 @@ const EditModal: React.FC<EditModalProps> = ({ item, onClose, onEdit }) => {
       onClose={onClose}
       title={`Modifica ${item.type === 'folder' ? 'Cartella' : 'Scheda'}`}
       variant="centered"
-    >>
+    >
         
         <form onSubmit={handleSubmit}>
           <div className="mb-3">

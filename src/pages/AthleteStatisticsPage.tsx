@@ -117,7 +117,7 @@ const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigat
     const range = maxWeight - minWeight || 1;
 
     return (
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
+      <div className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 p-6 rounded-lg shadow-sm mb-6">
         <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
           <BarChart3 className="mr-2" size={20} />
           {exerciseData.exercise}
@@ -163,15 +163,10 @@ const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigat
       <div className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header con tasto indietro */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3 mb-6">
             <button
               onClick={() => onNavigate('coach-dashboard')}
-              className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
-              style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
-                background: 'transparent',
-                border: 'none'
-              }}
+              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
               title="Torna alla Dashboard Coach"
             >
               <ChevronLeft size={32} />
@@ -192,7 +187,7 @@ const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigat
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Lista Atleti */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 rounded-lg shadow-sm p-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                   <Users className="mr-2" size={20} />
                   I Tuoi Atleti

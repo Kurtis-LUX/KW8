@@ -22,22 +22,24 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
       <div className="pt-20">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            {/* Header con tasto indietro e titolo centralizzato (stile Apple) */}
-            <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3">
+            {/* Header in stile Apple: ingloba il tasto Indietro dentro il contenitore del titolo e uniforma la larghezza al contenitore sottostante */}
+            <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 flex items-center justify-between">
               <button
-              onClick={() => onNavigate('coach-dashboard')}
-              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
-              title="Torna alla Dashboard Coach"
-            >
-              <ChevronLeft size={24} className="block" />
-            </button>
-              
-              <div className="text-center flex-1">
-                <h1 className="font-sfpro text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-1">Gestione schede</h1>
-                <p className="font-sfpro text-[#001f3f]/90 font-medium text-sm sm:text-base">Crea e gestisci le schede di allenamento</p>
+                onClick={() => onNavigate('coach-dashboard')}
+                className="inline-flex items-center justify-center p-2 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                title="Torna alla Dashboard Coach"
+              >
+                <ChevronLeft size={24} className="block" />
+              </button>
+
+              <div className="flex-1 flex justify-center">
+                <div className="text-center">
+                  <h1 className="font-sfpro text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm">Gestione schede</h1>
+                  <p className="font-sfpro text-[#001f3f]/90 font-medium text-sm sm:text-base mt-1">Crea e gestisci le schede di allenamento</p>
+                </div>
               </div>
-              
-              <div className="w-10"></div> {/* Spacer per bilanciare il layout */}
+
+              <div className="w-10"></div>
             </div>
           </div>
           

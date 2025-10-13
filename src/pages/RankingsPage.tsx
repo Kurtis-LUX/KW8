@@ -316,15 +316,10 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
       <div className="py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header compatto */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3 mb-6">
             <button
               onClick={() => onNavigate('coach-dashboard')}
-              className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
-              style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
-                background: 'transparent',
-                border: 'none'
-              }}
+              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
               title="Torna alla Dashboard Coach"
             >
               <ChevronLeft size={32} />
@@ -342,7 +337,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
             <div className="flex space-x-2">
               <button
                 onClick={() => setShowMuscleGroupModal(true)}
-                className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                className="flex items-center px-3 py-2 bg-white/70 backdrop-blur-md ring-1 ring-black/10 text-gray-900 rounded-full hover:bg-white hover:shadow-md transition-all text-sm"
                 title="Gestisci Gruppi Muscolari"
               >
                 <Dumbbell size={16} className="mr-1" />
@@ -350,7 +345,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
               </button>
               <button
                 onClick={() => setShowExerciseModal(true)}
-                className="flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                className="flex items-center px-3 py-2 bg-white/70 backdrop-blur-md ring-1 ring-black/10 text-gray-900 rounded-full hover:bg-white hover:shadow-md transition-all text-sm"
                 title="Gestisci Esercizi"
               >
                 <Target size={16} className="mr-1" />
@@ -358,7 +353,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
               </button>
               <button
                 onClick={() => setShowEditableRankings(!showEditableRankings)}
-                className="flex items-center px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                className="flex items-center px-3 py-2 bg-white/70 backdrop-blur-md ring-1 ring-black/10 text-gray-900 rounded-full hover:bg-white hover:shadow-md transition-all text-sm"
                 title="Modifica Classifiche"
               >
                 <Settings size={16} className="mr-1" />
@@ -370,7 +365,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
 
 
           {/* Filtri compatti */}
-          <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 rounded-lg shadow-sm p-4 mb-6">
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
@@ -379,13 +374,13 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
                   placeholder="Cerca..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
               </div>
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="all">Tutte categorie</option>
                 {exerciseCategories.map(category => (
@@ -395,7 +390,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
               <select
                 value={selectedExercise}
                 onChange={(e) => setSelectedExercise(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="all">Tutti esercizi</option>
                 {allExercises.map(exercise => (
@@ -405,7 +400,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
               <select
                 value={timeFilter}
                 onChange={(e) => setTimeFilter(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="all">Tutti periodi</option>
                 <option value="month">Ultimo mese</option>
@@ -415,7 +410,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
                 <option value="oneRepMax">Per 1RM</option>
                 <option value="weight">Per Peso</option>
@@ -440,7 +435,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
               {/* Categorie di esercizi compatte */}
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
                 {exerciseCategories.map(category => (
-                  <div key={category.name} className="bg-white rounded-lg shadow p-4">
+                  <div key={category.name} className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 rounded-lg shadow-sm p-4">
                     <div className="flex items-center mb-3">
                       <div className={`${category.color} text-white p-2 rounded-lg mr-2`}>
                         {React.cloneElement(category.icon as React.ReactElement, { size: 16 })}
@@ -473,7 +468,7 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
 
           {/* Classifica principale - solo se non in modalità editing */}
           {!showEditableRankings && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 rounded-lg shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Classifica ({filteredRecords.length} record)

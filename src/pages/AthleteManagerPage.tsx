@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Activity, TrendingUp, Mail, Phone, MapPin, Upload, Download, ChevronLeft } from 'lucide-react';
+import { ArrowLeft, Users, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Activity, TrendingUp, Mail, Phone, MapPin, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import Header from '../components/Header';
 import AthleteForm from '../components/AthleteForm';
 import AthleteImport from '../components/AthleteImport';
@@ -46,6 +46,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Converti utenti Firestore in atleti
   useEffect(() => {
@@ -269,49 +270,46 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
       <div className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <button
-              onClick={() => onNavigate('coach-dashboard')}
-              className="transition-all duration-300 transform hover:scale-110 p-2 text-red-600"
-              style={{
-                filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5))',
-                background: 'transparent',
-                border: 'none'
-              }}
-              title="Torna alla Dashboard Coach"
-            >
-              <ChevronLeft size={32} />
-            </button>
-            
-            <div className="text-center flex-1">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent mb-2">
-                Gestione Atleti
-              </h1>
-              <p className="text-gray-600">
-                Gestisci i profili e le informazioni dei tuoi atleti
-              </p>
-            </div>
-            
-            <div className="flex items-center space-x-3">
+          <div className="mb-8">
+            <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 flex items-center justify-between">
               <button
-                onClick={() => setShowImportModal(true)}
-                className="flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
-                title="Importa atleti da CSV/Excel"
+                onClick={() => onNavigate('coach-dashboard')}
+                className="inline-flex items-center justify-center p-2 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                title="Torna alla Dashboard Coach"
               >
-                <Upload size={20} />
+                <ChevronLeft size={24} className="block" />
               </button>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center justify-center w-12 h-12 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-lg"
-                title="Nuovo Atleta"
-              >
-                <Plus size={20} />
-              </button>
+
+              <div className="flex-1 flex justify-center">
+                <div className="text-center">
+                  <h1 className="font-sfpro text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm">Gestione atleti</h1>
+                  <p className="font-sfpro text-[#001f3f]/90 font-medium text-sm sm:text-base mt-1">Gestisci i profili e le informazioni dei tuoi atleti</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-white/70 hover:bg-white/80 rounded-2xl ring-1 ring-black/10 shadow-sm text-navy-900"
+                  title="Importa atleti"
+                >
+                  <Upload size={18} />
+                  <span className="hidden sm:block text-sm">Importa</span>
+                </button>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-white/70 hover:bg-white/80 rounded-2xl ring-1 ring-black/10 shadow-sm text-red-600"
+                  title="Nuovo atleta"
+                >
+                  <Plus size={18} />
+                  <span className="hidden sm:block text-sm">Nuovo</span>
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Filtri e ricerca */}
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+          <div className="bg-white/70 backdrop-blur rounded-2xl shadow-sm p-6 mb-8 border border-gray-200">
             {/* Prima riga: Ricerca e Filtro Stato nella stessa riga */}
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
               {/* Ricerca */}
@@ -322,128 +320,105 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                   placeholder="Cerca atleti..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  className="w-full pl-10 pr-4 py-2 rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none placeholder:text-gray-400"
                 />
               </div>
 
-              {/* Filtro Stato (Menu) */}
-              <div className="relative sm:w-64">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as any)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 appearance-none bg-white"
-                >
-                  <option value="all">Tutti gli Stati</option>
-                  <option value="active">Attivi</option>
-                  <option value="inactive">Inattivi</option>
-                  <option value="suspended">Sospesi</option>
-                </select>
+              {/* Filtro Stato (Segmented Control) */}
+              <div className="sm:w-auto">
+                <div className="inline-flex rounded-full bg-gray-100 p-1 shadow-inner">
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-full text-sm ${statusFilter === 'all' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+                    onClick={() => setStatusFilter('all' as any)}
+                  >
+                    Tutti
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-full text-sm ${statusFilter === 'active' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+                    onClick={() => setStatusFilter('active' as any)}
+                  >
+                    Attivi
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-full text-sm ${statusFilter === 'inactive' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+                    onClick={() => setStatusFilter('inactive' as any)}
+                  >
+                    Inattivi
+                  </button>
+                  <button
+                    type="button"
+                    className={`px-4 py-2 rounded-full text-sm ${statusFilter === 'suspended' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+                    onClick={() => setStatusFilter('suspended' as any)}
+                  >
+                    Sospesi
+                  </button>
+                </div>
               </div>
             </div>
-
-
           </div>
 
 
 
           {/* Lista atleti */}
-          <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-white/70 backdrop-blur rounded-2xl shadow-sm overflow-hidden border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
                 Atleti ({filteredAthletes.length})
               </h3>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Atleta
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contatti
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stato
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Attività
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Iscrizione
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Azioni
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredAthletes.map((athlete) => (
-                    <tr key={athlete.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-blue-900 rounded-full flex items-center justify-center text-white font-bold">
-                            {athlete.name.charAt(0).toUpperCase()}
+            <div>
+              <ul className="divide-y divide-gray-200">
+                {filteredAthletes.map((athlete) => (
+                  <li key={athlete.id} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-blue-900 rounded-full flex items-center justify-center text-white font-bold">
+                        {athlete.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{athlete.name}</div>
+                        {athlete.birthDate && (
+                          <div className="text-xs text-gray-500">
+                            {calculateAge(athlete.birthDate)} anni
                           </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{athlete.name}</div>
-                            {athlete.birthDate && (
-                              <div className="text-sm text-gray-500">
-                                {calculateAge(athlete.birthDate)} anni
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{athlete.email}</div>
-                        {athlete.phone && (
-                          <div className="text-sm text-gray-500">{athlete.phone}</div>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(athlete.status)}`}>
-                          {getStatusText(athlete.status)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <div>Schede: {athlete.activeWorkouts}</div>
-                        <div className="text-gray-500">Sessioni: {athlete.completedSessions}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(athlete.joinDate).toLocaleDateString('it-IT')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleViewDetails(athlete)}
-                            className="text-blue-600 hover:text-blue-900 transition-colors"
-                            title="Visualizza dettagli"
-                          >
-                            <Eye size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleEditAthlete(athlete)}
-                            className="text-green-600 hover:text-green-900 transition-colors"
-                            title="Modifica"
-                          >
-                            <Edit3 size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAthlete(athlete.id)}
-                            className="text-red-600 hover:text-red-900 transition-colors"
-                            title="Elimina"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                        <div className="mt-1 text-xs text-gray-600">
+                          {athlete.email}{athlete.phone ? ` • ${athlete.phone}` : ''}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(athlete.status)}`}>
+                        {getStatusText(athlete.status)}
+                      </span>
+                      <button
+                        onClick={() => handleEditAthlete(athlete)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Modifica"
+                      >
+                        <Edit3 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAthlete(athlete.id)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Elimina"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleViewDetails(athlete)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Dettagli"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
 
             {filteredAthletes.length === 0 && (
