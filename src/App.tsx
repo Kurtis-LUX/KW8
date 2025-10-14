@@ -3,8 +3,7 @@ import { Settings, ChevronLeft, Users } from 'lucide-react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import StatisticsSection from './components/StatisticsSection';
-import SubscriptionSection from './components/SubscriptionSection';
-import EditableSubscriptionSection from './components/EditableSubscriptionSection';
+
 import GymAreasSection from './components/GymAreasSection';
 import ScheduleSection from './components/ScheduleSection';
 import LocationSection from './components/LocationSection';
@@ -43,6 +42,7 @@ import { authService } from './services/authService';
 import { LanguageProvider } from './contexts/LanguageContext';
 import LoadingScreen from './components/LoadingScreen';
 import './styles/dropdown.css';
+import AthleteAuthPage from './components/auth/AthleteAuthPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -227,12 +227,11 @@ function App() {
       <LanguageProvider>
         <CoachAuthPage 
           onAuthSuccess={async () => {
-            // Verifica l'autenticazione e aggiorna lo stato dell'utente
             try {
               const user = await authService.autoLogin();
               if (user) {
                 setCurrentUser(user);
-                handleNavigation('home'); // Coach entrano nella home
+                handleNavigation('home');
               } else {
                 console.error('Login Google riuscito ma utente non trovato');
                 handleNavigation('home');
@@ -240,6 +239,31 @@ function App() {
             } catch (error) {
               console.error('Errore durante la verifica post-login:', error);
               handleNavigation('home');
+            }
+          }}
+          onNavigateHome={() => handleNavigation('home')}
+        />
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'athlete-auth') {
+    return (
+      <LanguageProvider>
+        <AthleteAuthPage 
+          onAuthSuccess={async () => {
+            try {
+              const user = await authService.autoLogin();
+              if (user) {
+                setCurrentUser(user);
+                handleNavigation('workouts');
+              } else {
+                console.error('Login riuscito ma utente non trovato');
+                handleNavigation('workouts');
+              }
+            } catch (error) {
+              console.error('Errore durante la verifica post-login:', error);
+              handleNavigation('workouts');
             }
           }}
           onNavigateHome={() => handleNavigation('home')}

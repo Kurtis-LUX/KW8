@@ -27,6 +27,7 @@ if (!JWT_SECRET) {
 // Origini consentite
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://palestra-kw8.web.app"
 ];
 
@@ -94,7 +95,7 @@ export const authVerify = onRequest({ cors: false }, async (req, res) => {
         email: decoded.email,
         name: decoded.name,
         picture: decoded.picture,
-        role: 'coach'
+        role: (decoded as any).role || 'user'
       },
       message: 'Token verified successfully'
     });

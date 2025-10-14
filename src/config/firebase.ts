@@ -2,9 +2,10 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { collection as fsCollection, doc as fsDoc, getDocs as fsGetDocs, getDoc as fsGetDoc, addDoc as fsAddDoc, updateDoc as fsUpdateDoc, deleteDoc as fsDeleteDoc, setDoc as fsSetDoc, query as fsQuery, where as fsWhere, orderBy as fsOrderBy, limit as fsLimit, startAfter as fsStartAfter, writeBatch as fsWriteBatch, serverTimestamp as fsServerTimestamp, onSnapshot as fsOnSnapshot } from 'firebase/firestore';
 
 // Disabilita Firebase per lo sviluppo locale per evitare errori di connessione
-const DISABLE_FIREBASE = true; // Disabilitato per evitare errori di connessione in sviluppo
+const DISABLE_FIREBASE = false; // Abilitato per usare Firebase Auth in login
 
 // Configurazione Firebase dalle variabili d'ambiente
 const firebaseConfig = {
@@ -110,7 +111,7 @@ if (DISABLE_FIREBASE) {
 // Mock delle funzioni Firebase per quando è disabilitato
 export const collection = DISABLE_FIREBASE 
   ? (db: any, path: string) => createMockCollection()
-  : require('firebase/firestore').collection;
+  : fsCollection;
 
 export const doc = DISABLE_FIREBASE
   ? (db: any, path: string, id?: string) => ({
@@ -124,11 +125,11 @@ export const doc = DISABLE_FIREBASE
       update: () => Promise.resolve(),
       delete: () => Promise.resolve()
     })
-  : require('firebase/firestore').doc;
+  : fsDoc;
 
 export const getDocs = DISABLE_FIREBASE
   ? (collection: any) => Promise.resolve({ docs: [], empty: true })
-  : require('firebase/firestore').getDocs;
+  : fsGetDocs;
 
 export const getDoc = DISABLE_FIREBASE
   ? (docRef: any) => Promise.resolve({ 
@@ -136,43 +137,43 @@ export const getDoc = DISABLE_FIREBASE
       data: () => ({}),
       id: 'mock-doc-id'
     })
-  : require('firebase/firestore').getDoc;
+  : fsGetDoc;
 
 export const addDoc = DISABLE_FIREBASE
   ? (collection: any, data: any) => Promise.resolve({ id: 'mock-doc-id' })
-  : require('firebase/firestore').addDoc;
+  : fsAddDoc;
 
 export const updateDoc = DISABLE_FIREBASE
   ? (docRef: any, data: any) => Promise.resolve()
-  : require('firebase/firestore').updateDoc;
+  : fsUpdateDoc;
 
 export const deleteDoc = DISABLE_FIREBASE
   ? (docRef: any) => Promise.resolve()
-  : require('firebase/firestore').deleteDoc;
+  : fsDeleteDoc;
 
 export const setDoc = DISABLE_FIREBASE
   ? (docRef: any, data: any) => Promise.resolve()
-  : require('firebase/firestore').setDoc;
+  : fsSetDoc;
 
 export const query = DISABLE_FIREBASE
   ? (...args: any[]) => ({ get: () => Promise.resolve({ docs: [], empty: true }) })
-  : require('firebase/firestore').query;
+  : fsQuery;
 
 export const where = DISABLE_FIREBASE
   ? (...args: any[]) => ({})
-  : require('firebase/firestore').where;
+  : fsWhere;
 
 export const orderBy = DISABLE_FIREBASE
   ? (...args: any[]) => ({})
-  : require('firebase/firestore').orderBy;
+  : fsOrderBy;
 
 export const limit = DISABLE_FIREBASE
   ? (limitCount: number) => ({})
-  : require('firebase/firestore').limit;
+  : fsLimit;
 
 export const startAfter = DISABLE_FIREBASE
   ? (snapshot: any) => ({})
-  : require('firebase/firestore').startAfter;
+  : fsStartAfter;
 
 export const writeBatch = DISABLE_FIREBASE
   ? (db: any) => ({
@@ -181,15 +182,15 @@ export const writeBatch = DISABLE_FIREBASE
       delete: () => {},
       commit: () => Promise.resolve()
     })
-  : require('firebase/firestore').writeBatch;
+  : fsWriteBatch;
 
 export const serverTimestamp = DISABLE_FIREBASE
   ? () => new Date().toISOString()
-  : require('firebase/firestore').serverTimestamp;
+  : fsServerTimestamp;
 
 export const onSnapshot = DISABLE_FIREBASE
   ? (query: any, callback: any) => () => {}
-  : require('firebase/firestore').onSnapshot;
+  : fsOnSnapshot;
 
 export { db, auth };
 

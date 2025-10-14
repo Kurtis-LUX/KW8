@@ -6,6 +6,9 @@ require('dotenv').config();
 // Importa le funzioni API
 import { apiAuthGoogleSignin } from "./api/auth/google-signin";
 import { authVerify } from "./api/auth/verify";
+import { apiAuthGoogleSignup } from "./api/auth/google-signup";
+import { apiAuthFirebaseExchange } from "./api/auth/firebase-exchange";
+import { apiAuthDevCreateUser } from "./api/auth/dev-create-user";
 
 // Imposta opzioni globali per Functions Gen2
 setGlobalOptions({ 
@@ -14,7 +17,7 @@ setGlobalOptions({
 });
 
 // Esporta le funzioni
-export { apiAuthGoogleSignin, authVerify };
+export { apiAuthGoogleSignin, authVerify, apiAuthGoogleSignup, apiAuthFirebaseExchange, apiAuthDevCreateUser };
 
 // Funzione di test usando v2 API
 import { onRequest } from "firebase-functions/v2/https";

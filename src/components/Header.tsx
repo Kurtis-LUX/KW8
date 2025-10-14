@@ -18,6 +18,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const roleMenuRef = useRef<HTMLDivElement>(null);
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
 
   const { t, language, setLanguage } = useLanguageContext();
   
@@ -61,6 +63,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showUserMenu]);
+
+  // Gestisce i click esterni per chiudere il menu ruolo (Coach/Atleta)
+  useEffect(() => {
+    const handleClickOutsideRole = (event: MouseEvent) => {
+      if (roleMenuRef.current && !roleMenuRef.current.contains(event.target as Node)) {
+        setShowRoleMenu(false);
+      }
+    };
+
+    if (showRoleMenu) {
+      document.addEventListener('mousedown', handleClickOutsideRole);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideRole);
+    };
+  }, [showRoleMenu]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -450,13 +469,39 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 )}
               </div>
             ) : (
-              <button
-                onClick={() => handleNavigation('login')}
-                className="inline-flex items-center space-x-2 rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-3.5 py-2 text-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
-              >
-                <User size={24} className="text-gray-700" />
-                <span className="hidden md:inline font-medium">Coach</span>
-              </button>
+              <div className="relative" ref={roleMenuRef}>
+                <button
+                  onClick={() => setShowRoleMenu(!showRoleMenu)}
+                  className="inline-flex items-center space-x-2 rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-3.5 py-2 text-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
+                >
+                  <User size={24} className="text-gray-700" />
+                  <span className="hidden md:inline font-medium">Accedi</span>
+                </button>
+                {showRoleMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white/80 backdrop-blur-md rounded-2xl shadow-[0_16px_32px_rgba(0,0,0,0.12)] ring-1 ring-black/10 p-2 z-50">
+                    <button
+                      onClick={() => {
+                        handleNavigation('login');
+                        setShowRoleMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
+                    >
+                      <UserIcon size={16} />
+                      <span>Accedi come Coach</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleNavigation('athlete-auth');
+                        setShowRoleMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
+                    >
+                      <UserIcon size={16} />
+                      <span>Accedi come Atleta</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
             
             {/* Hamburger Menu */}
@@ -721,6 +766,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       />
       </React.Fragment>
     );
-    };
     
+  };
     export default Header;

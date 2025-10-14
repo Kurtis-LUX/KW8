@@ -28,6 +28,8 @@ export default defineConfig({
     sourcemap: false
   },
   server: {
-    hmr: true
+    hmr: true,
+    port: 5173,
+    strictPort: true
   }
 });

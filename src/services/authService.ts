@@ -1,5 +1,7 @@
 // Servizio di autenticazione con JWT
 import { envConfig, checkCriticalEnvVars } from '../config/envConfig';
+import { auth } from '../config/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 interface AuthUser {
   id: string;
@@ -168,38 +170,121 @@ class AuthService {
     }
   }
 
-  // Login con credenziali (mantenuto per compatibilità)
-  async login(email: string, password: string): Promise<LoginResponse> {
+  // Registrazione con Google Identity Services (Atleta)
+  async googleSignup(credential: string): Promise<GoogleSignupResponse> {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/auth/login`, {
+      console.log('🔍 Inizio Google Sign-Up, URL:', `${this.API_BASE_URL}/apiAuthGoogleSignup`);
+
+      const response = await fetch(`${this.API_BASE_URL}/apiAuthGoogleSignup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ credential }),
       });
+
+      console.log('📡 Risposta ricevuta (signup) - Status:', response.status, 'StatusText:', response.statusText);
 
       // Verifica Content-Type della risposta
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.error('❌ Content-Type non valido per login:', contentType);
+        console.error('❌ Content-Type non valido (signup):', contentType);
         throw new Error('Il server non ha restituito una risposta JSON valida');
       }
 
       // Usa response.json() direttamente
-      let data: any;
+      let data: GoogleSignupResponse;
       try {
         data = await response.json();
+        console.log('✅ JSON parsato con successo (signup):', data);
       } catch (jsonError) {
-        console.error('Errore nel parsing JSON per login:', jsonError);
+        console.error('❌ Errore nel parsing JSON per Google Sign-Up:', jsonError);
         throw new Error('Risposta JSON non valida dal server');
       }
 
       // Validazione struttura risposta
       if (!data || typeof data !== 'object') {
-        console.error('❌ Struttura risposta login non valida:', data);
+        console.error('❌ Struttura risposta non valida (signup):', data as any);
         throw new Error('Struttura risposta non valida dal server');
+      }
+
+      if (!response.ok) {
+        console.log('❌ Risposta non OK (signup):', (data as any).message || 'Errore sconosciuto');
+        const errorMessage = (data as any).message || (data as any).error || 'Errore nella registrazione Google';
+        throw new Error(errorMessage);
+      }
+
+      // Validazione campi obbligatori
+      if (typeof data.success !== 'boolean') {
+        console.error('❌ Campo success mancante o non valido (signup)');
+        throw new Error('Risposta del server incompleta');
+      }
+
+      // Se la registrazione è riuscita, salva il token e i dati utente con ruolo atleta
+      if (data.success && data.data) {
+        if (!data.data.token || !data.data.user || !data.data.user.email) {
+          console.error('❌ Dati utente incompleti (signup):', data.data);
+          throw new Error('Dati di registrazione incompleti');
+        }
+
+        console.log('✅ Registrazione riuscita, salvando token e user (athlete)');
+        this.setToken(data.data.token);
+        this.setUser({
+          id: data.data.user.email,
+          email: data.data.user.email,
+          role: data.data.user.role || 'athlete',
+        });
+      } else {
+        console.log('❌ Registrazione fallita:', data.message || 'Registrazione non riuscita');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('❌ Errore Google Sign-Up:', error);
+      throw error;
+    }
+  }
+
+  // Login con credenziali (mantenuto per compatibilità)
+  async login(email: string, password: string): Promise<LoginResponse> {
+    try {
+      // 1) Login su Firebase Auth con email/password
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+
+      if (!firebaseUser) {
+        throw new Error('Autenticazione Firebase fallita');
+      }
+
+      // 2) Ottieni l'ID token di Firebase
+      const idToken = await firebaseUser.getIdToken();
+      if (!idToken) {
+        throw new Error('Impossibile ottenere ID token da Firebase');
+      }
+
+      // 3) Scambia l'ID token per un JWT applicativo
+      const response = await fetch(`${this.API_BASE_URL}/apiAuthFirebaseExchange`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ idToken }),
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('❌ Content-Type non valido per firebase-exchange:', contentType);
+        throw new Error('Il server non ha restituito una risposta JSON valida');
+      }
+
+      let data: any;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('Errore nel parsing JSON per firebase-exchange:', jsonError);
+        throw new Error('Risposta JSON non valida dal server');
       }
 
       if (!response.ok) {
@@ -207,20 +292,35 @@ class AuthService {
         throw new Error(errorMessage);
       }
 
-      // Validazione campi obbligatori per login
-      if (!data.token || !data.user || !data.user.email) {
-        console.error('❌ Dati login incompleti:', data);
+      if (!data || typeof data !== 'object' || !data.success || !data.data || !data.data.token || !data.data.user || !data.data.user.email) {
+        console.error('❌ Dati exchange incompleti:', data);
         throw new Error('Dati di login incompleti dal server');
       }
-      
-      // Salva il token e i dati utente
-      this.setToken(data.token);
-      this.setUser(data.user);
-      
-      return data as LoginResponse;
+
+      // 4) Salva il token e i dati utente
+      this.setToken(data.data.token);
+      this.setUser({
+        id: data.data.user.email,
+        email: data.data.user.email,
+        role: data.data.user.role || 'user',
+      });
+
+      // 5) Restituisci nel formato atteso da chiamanti esistenti
+      const result: LoginResponse = {
+        user: {
+          id: data.data.user.email,
+          email: data.data.user.email,
+          role: data.data.user.role || 'user',
+        },
+        token: data.data.token,
+        message: data.message || 'Login effettuato',
+        expiresIn: '7d',
+      };
+
+      return result;
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
+      throw error as Error;
     }
   }
 
@@ -492,4 +592,18 @@ export const authService = new AuthService();
 export default authService;
 
 // Tipi per l'export
-export type { LoginResponse, VerifyResponse, GoogleSignInResponse };
+interface GoogleSignupResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    token: string;
+    user: {
+      email: string;
+      role: string;
+      name?: string;
+      picture?: string;
+    };
+  };
+}
+
+export type { LoginResponse, VerifyResponse, GoogleSignInResponse, GoogleSignupResponse };

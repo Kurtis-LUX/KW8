@@ -41,27 +41,25 @@ function detectEnvironment() {
 // Funzione per ottenere l'URL base dell'API
 function getApiBaseUrl(): string {
   if (typeof window === 'undefined') {
-    // Server-side rendering
+    // Server-side rendering: prefer local emulator in development
+    if (process.env.NODE_ENV === 'development') {
+      return 'http://localhost:5001/palestra-kw8/us-central1';
+    }
     return process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api` : 'https://us-central1-palestra-kw8.cloudfunctions.net';
   }
   
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   
-  // Per ora usa sempre l'API di produzione per evitare problemi con l'emulatore locale
+  // Usa l'emulatore locale quando in sviluppo su localhost
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    console.log('🏠 Ambiente locale rilevato, usando Firebase Functions locale');
+    return 'http://localhost:5001/palestra-kw8/us-central1';
+  }
+  
+  // In produzione
   console.log('🔥 Usando Firebase Functions di produzione per stabilità');
   return 'https://us-central1-palestra-kw8.cloudfunctions.net';
-  
-  // COMMENTATO: Configurazione locale per debug futuro
-  // if (hostname === 'localhost' || hostname === '127.0.0.1') {
-  //   console.log('🏠 Ambiente locale rilevato, usando Firebase Functions locale');
-  //   return 'http://localhost:5001/palestra-kw8/us-central1';
-  // }
-  
-  // if (import.meta.env.DEV) {
-  //   console.log('🔧 Modalità development rilevata, usando Firebase Functions locale');
-  //   return 'http://localhost:5001/palestra-kw8/us-central1';
-  // }
 }
 
 // Funzione per ottenere il Google Client ID con fallback
