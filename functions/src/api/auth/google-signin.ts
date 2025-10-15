@@ -37,18 +37,28 @@ const ALLOWED_ORIGINS = [
   "https://palestra-kw8.web.app"
 ];
 
-// Middleware CORS personalizzato
-function setCorsHeaders(req: any, res: any) {
-  const origin = req.headers.origin;
-  if (ALLOWED_ORIGINS.includes(origin)) {
-    res.set("Access-Control-Allow-Origin", origin);
-    res.set("Access-Control-Allow-Credentials", "true");
-    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // Middleware CORS personalizzato
+  function setCorsHeaders(req: any, res: any) {
+    const origin = req.headers.origin;
+    logger.info(`CORS Debug - Origin ricevuta: ${origin}`);
+    
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      logger.info(`CORS Debug - Origin consentita: ${origin}`);
+      res.set("Access-Control-Allow-Origin", origin);
+      res.set("Access-Control-Allow-Credentials", "true");
+      res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+      res.set("Access-Control-Max-Age", "86400");
+    } else {
+      logger.warn(`CORS Debug - Origin NON consentita: ${origin}`);
+      logger.warn(`CORS Debug - Origini consentite: ${JSON.stringify(ALLOWED_ORIGINS)}`);
+    }
   }
-}
 
-export const apiAuthGoogleSignin = onRequest({ cors: false }, async (req, res) => {
+export const apiAuthGoogleSignin = onRequest({ 
+  cors: false,
+  invoker: "public" // Permette invocazioni pubbliche non autenticate
+}, async (req, res) => {
   // Imposta header CORS immediatamente per tutte le richieste
   const origin = req.headers.origin;
   

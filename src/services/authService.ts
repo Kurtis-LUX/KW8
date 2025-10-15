@@ -329,8 +329,12 @@ class AuthService {
     const token = this.getToken();
     
     if (!token) {
+      console.log('🔐 No token found for verification');
       return null;
     }
+
+    console.log('🔐 Starting token verification with URL:', `${this.API_BASE_URL}/authVerify`);
+    console.log('🔐 Token exists, length:', token.length);
 
     try {
       const response = await fetch(`${this.API_BASE_URL}/authVerify`, {
@@ -342,8 +346,12 @@ class AuthService {
         credentials: 'include',
       });
 
+      console.log('🔐 Response received - Status:', response.status, 'StatusText:', response.statusText);
+
       // Verifica Content-Type della risposta
       const contentType = response.headers.get('content-type');
+      console.log('🔐 Response Content-Type:', contentType);
+      
       if (!contentType || !contentType.includes('application/json')) {
         console.error('❌ Content-Type non valido per verify:', contentType);
         this.logout();
@@ -354,8 +362,9 @@ class AuthService {
       let data: any;
       try {
         data = await response.json();
+        console.log('🔐 Response data:', data);
       } catch (jsonError) {
-        console.error('Errore nel parsing JSON per verify:', jsonError);
+        console.error('❌ Errore nel parsing JSON per verify:', jsonError);
         this.logout();
         return null;
       }
@@ -369,7 +378,7 @@ class AuthService {
       
       // Controlla se il token è valido dal campo 'valid'
       if (typeof data.valid !== 'boolean' || !data.valid) {
-        console.log('Token non valido:', data.message || 'Token verification failed');
+        console.log('❌ Token non valido:', data.message || 'Token verification failed');
         this.logout();
         return null;
       }
@@ -381,6 +390,8 @@ class AuthService {
         return null;
       }
       
+      console.log('✅ Token verification successful, user:', data.user);
+      
       // Se il token è valido, restituisci i dati utente
       return {
         valid: true,
@@ -388,7 +399,7 @@ class AuthService {
         message: data.message || 'Token valido'
       } as VerifyResponse;
     } catch (error) {
-      console.error('Token verification error:', error);
+      console.error('❌ Token verification error:', error);
       this.logout();
       return null;
     }

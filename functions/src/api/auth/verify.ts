@@ -92,6 +92,7 @@ export const authVerify = onRequest({ cors: false }, async (req, res) => {
     res.status(200).json({
       valid: true,
       user: {
+        id: decoded.email, // Usa email come ID per consistenza con il frontend
         email: decoded.email,
         name: decoded.name,
         picture: decoded.picture,
