@@ -1,5 +1,5 @@
 // Server di sviluppo per servire le API routes localmente
-require('dotenv').config();
+require('dotenv').config({ path: '.env.local' });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -15,7 +15,7 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' })); // Limita la dimensione del payload
 
 // Middleware specifico per limitare payload su Google Sign-In
-app.use('/api/auth/google-signin', (req, res, next) => {
+app.use(['/api/auth/google-signin', '/apiAuthGoogleSignin'], (req, res, next) => {
   if (req.method === 'POST') {
     const contentLength = parseInt(req.headers['content-length'] || '0');
     if (contentLength > 5000) { // 5KB limit per Google Sign-In
@@ -35,6 +35,7 @@ app.use((req, res, next) => {
     '/api/auth/login': ['POST', 'OPTIONS'],
     '/api/auth/verify': ['POST', 'OPTIONS'],
     '/api/auth/google-signin': ['POST', 'OPTIONS'],
+    '/apiAuthGoogleSignin': ['POST', 'OPTIONS'],
     '/api/users': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     '/api/health': ['GET', 'OPTIONS']
   };
@@ -183,8 +184,13 @@ const googleRateLimitMap = new Map();
 const GOOGLE_RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minuti
 const GOOGLE_MAX_ATTEMPTS = 5;
 
-// Email autorizzata
-const AUTHORIZED_COACH_EMAIL = 'krossingweight@gmail.com';
+// Email autorizzate (supporta più email separate da virgola)
+const AUTHORIZED_COACH_EMAILS = process.env.AUTHORIZED_EMAIL || 'krossingweight@gmail.com,simeoneluca44@gmail.com';
+const authorizedEmailsList = AUTHORIZED_COACH_EMAILS.split(',').map(email => email.trim().toLowerCase());
+
+console.log('🔧 Configurazione email autorizzate:');
+console.log('📧 AUTHORIZED_EMAIL da env:', process.env.AUTHORIZED_EMAIL);
+console.log('📋 Lista email processate:', authorizedEmailsList);
 
 // Funzione per validare token Google (simulata per sviluppo)
 function validateGoogleToken(credential) {
@@ -265,13 +271,17 @@ function checkGoogleRateLimit(ip) {
   return true;
 }
 
-// Route per Google Sign-In
-app.post('/api/auth/google-signin', (req, res) => {
+// Route per Google Sign-In (compatibile con Firebase Functions)
+app.post('/apiAuthGoogleSignin', (req, res) => {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // Aggiungi header Cross-Origin-Opener-Policy per risolvere l'errore COOP
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
 
   try {
     console.log('🔍 Richiesta Google Sign-In ricevuta');
@@ -359,9 +369,10 @@ app.post('/api/auth/google-signin', (req, res) => {
         }
         
         console.log(`🔐 Tentativo di accesso Google: ${email}`);
+        console.log(`📋 Email autorizzate: ${authorizedEmailsList.join(', ')}`);
 
-        // Controlla autorizzazione
-        if (email.toLowerCase().trim() !== AUTHORIZED_COACH_EMAIL.toLowerCase()) {
+        // Controlla autorizzazione (supporta più email)
+        if (!authorizedEmailsList.includes(email.toLowerCase().trim())) {
           console.log(`❌ Email non autorizzata: ${email}`);
           return res.status(403).json({
             success: false,
@@ -434,6 +445,20 @@ app.options('/api/auth/google-signin', (req, res) => {
   res.status(200).end();
 });
 
+// CORS preflight per apiAuthGoogleSignin (compatibile con Firebase Functions)
+app.options('/apiAuthGoogleSignin', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // Aggiungi header Cross-Origin-Opener-Policy anche per preflight
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  
+  res.status(200).end();
+});
+
 // Users endpoints
 app.all('/api/users', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
@@ -478,6 +503,77 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0',
     environment: 'development'
   });
+});
+
+// Auth verify endpoint
+app.post('/authVerify', (req, res) => {
+  // Imposta header CORS
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Content-Type', 'application/json');
+  
+  try {
+    // Estrai il token dal cookie, dal body o dall'header Authorization
+    let token = req.cookies?.session || req.body?.token;
+    
+    // Se non trovato, controlla l'header Authorization
+    if (!token && req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+
+    if (!token) {
+      console.log('❌ No token provided for verification');
+      return res.status(401).json({ 
+        valid: false,
+        error: "No token provided" 
+      });
+    }
+
+    // Verifica il JWT
+    console.log('🔐 Verifying JWT token');
+    
+    if (!process.env.JWT_SECRET) {
+      console.log('❌ Token verification error: JWT_SECRET is not defined');
+      return res.status(500).json({ 
+        valid: false,
+        error: "JWT_SECRET not configured" 
+      });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (!decoded || !decoded.email) {
+      console.log('❌ Invalid token payload');
+      return res.status(401).json({ 
+        valid: false,
+        error: "Invalid token" 
+      });
+    }
+
+    console.log('✅ Token verified successfully for:', decoded.email);
+
+    res.status(200).json({
+      valid: true,
+      user: {
+        id: decoded.email,
+        email: decoded.email,
+        name: decoded.name,
+        role: decoded.role || 'user'
+      },
+      message: 'Token verified successfully'
+    });
+  } catch (error) {
+    console.error('❌ Token verification error:', error.message);
+    res.status(401).json({ 
+      valid: false,
+      error: "Invalid or expired token" 
+    });
+  }
 });
 
 // Catch all per altre API routes

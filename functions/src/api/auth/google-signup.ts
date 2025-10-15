@@ -4,6 +4,7 @@ import { OAuth2Client } from "google-auth-library";
 import * as jwt from "jsonwebtoken";
 import * as dotenv from "dotenv";
 import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 
 // Load environment variables
 dotenv.config();
@@ -99,8 +100,8 @@ export const apiAuthGoogleSignup = onRequest({ cors: false }, async (req, res) =
     }
 
     // Provisioning utente su Firebase Authentication (create se non esiste)
+    let userRecord: admin.auth.UserRecord | null = null;
     try {
-      let userRecord: admin.auth.UserRecord | null = null;
       try {
         userRecord = await admin.auth().getUserByEmail(email);
         logger.info("Utente già presente in Firebase Auth", { uid: userRecord.uid, email });
@@ -120,6 +121,42 @@ export const apiAuthGoogleSignup = onRequest({ cors: false }, async (req, res) =
           return;
         }
       }
+
+      // Salva l'utente nel database Firestore
+      const db = getFirestore();
+      const now = new Date().toISOString();
+      
+      // Controlla se l'utente esiste già nel database Firestore
+      const userDocRef = db.collection('users').doc(userRecord.uid);
+      const userDoc = await userDocRef.get();
+      
+      if (!userDoc.exists) {
+        // Crea nuovo utente nel database Firestore
+        await userDocRef.set({
+          name: name || email,
+          email,
+          phone: '',
+          birthDate: '',
+          address: '',
+          certificatoMedicoStato: 'non_presente',
+          dataCertificato: '',
+          emergencyContactName: '',
+          emergencyContactPhone: '',
+          emergencyContactRelationship: '',
+          notes: '',
+          role: 'athlete',
+          createdAt: now,
+          updatedAt: now
+        });
+        logger.info("Utente salvato nel database Firestore", { uid: userRecord.uid, email });
+      } else {
+        // Aggiorna la data di ultimo accesso
+        await userDocRef.update({
+          updatedAt: now
+        });
+        logger.info("Data ultimo accesso aggiornata per utente esistente", { uid: userRecord.uid, email });
+      }
+
     } catch (e) {
       logger.error("Errore creazione/verifica utente Firebase Auth", e);
       res.status(500).json({ error: "Errore nel provisioning utente" });

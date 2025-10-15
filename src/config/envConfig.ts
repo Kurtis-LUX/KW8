@@ -41,9 +41,9 @@ function detectEnvironment() {
 // Funzione per ottenere l'URL base dell'API
 function getApiBaseUrl(): string {
   if (typeof window === 'undefined') {
-    // Server-side rendering: prefer local emulator in development
+    // Server-side rendering: prefer local API server in development
     if (process.env.NODE_ENV === 'development') {
-      return 'http://localhost:5001/palestra-kw8/us-central1';
+      return 'http://localhost:3001';
     }
     return process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/api` : 'https://us-central1-palestra-kw8.cloudfunctions.net';
   }
@@ -51,10 +51,10 @@ function getApiBaseUrl(): string {
   const hostname = window.location.hostname;
   const protocol = window.location.protocol;
   
-  // Usa l'emulatore locale quando in sviluppo su localhost
+  // Usa il server API locale quando in sviluppo su localhost
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    console.log('🏠 Ambiente locale rilevato, usando Firebase Functions locale');
-    return 'http://localhost:5001/palestra-kw8/us-central1';
+    console.log('🏠 Ambiente locale rilevato, usando server API locale');
+    return 'http://localhost:3001';
   }
   
   // In produzione

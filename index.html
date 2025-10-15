@@ -21,6 +21,10 @@
     <meta name="apple-mobile-web-app-title" content="KW8" />
     <meta name="mobile-web-app-capable" content="yes" />
     
+    <!-- Cross-Origin Policy Headers for Google OAuth -->
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin-allow-popups" />
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="unsafe-none" />
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
@@ -69,6 +73,10 @@
       </style>
     >
     <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
     <script>
       // Nascondi il fallback quando React si carica
       window.addEventListener('load', function() {
