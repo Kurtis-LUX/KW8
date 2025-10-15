@@ -51,17 +51,29 @@ function setCorsHeaders(req: any, res: any) {
 export const apiAuthGoogleSignin = onRequest({ cors: false }, async (req, res) => {
   // Imposta header CORS immediatamente per tutte le richieste
   const origin = req.headers.origin;
+  
+  // Log per debug
+  logger.info("Request received", { 
+    method: req.method, 
+    origin: origin,
+    allowedOrigins: ALLOWED_ORIGINS 
+  });
+  
+  // Imposta sempre gli header CORS per le origini consentite
   if (ALLOWED_ORIGINS.includes(origin)) {
     res.set("Access-Control-Allow-Origin", origin);
     res.set("Access-Control-Allow-Credentials", "true");
     res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    res.set("Access-Control-Max-Age", "86400"); // Cache preflight per 24 ore
+  } else {
+    logger.warn("Origin not allowed", { origin, allowedOrigins: ALLOWED_ORIGINS });
   }
 
   // Gestione preflight esplicita
   if (req.method === "OPTIONS") {
-    logger.info("Handling CORS preflight manually");
-    res.status(204).end();
+    logger.info("Handling CORS preflight request", { origin });
+    res.status(200).end(); // Cambiato da 204 a 200
     return;
   }
 
