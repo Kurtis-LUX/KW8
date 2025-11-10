@@ -93,12 +93,17 @@ class AuthService {
     return envConfig.apiBaseUrl;
   }
 
+  // Usa sempre Firebase Functions per gli endpoint di autenticazione critici
+  private get FUNCTIONS_BASE_URL(): string {
+    return 'https://us-central1-palestra-kw8.cloudfunctions.net';
+  }
+
   // Autenticazione con Google Identity Services
   async googleSignIn(credential: string): Promise<GoogleSignInResponse> {
     try {
-      console.log('🔍 Inizio Google Sign-In, URL:', `${this.API_BASE_URL}/apiAuthGoogleSignin`);
+      console.log('🔍 Inizio Google Sign-In, URL:', `${this.FUNCTIONS_BASE_URL}/apiAuthGoogleSignin`);
       
-      const response = await fetch(`${this.API_BASE_URL}/apiAuthGoogleSignin`, {
+      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/apiAuthGoogleSignin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -173,9 +178,9 @@ class AuthService {
   // Registrazione con Google Identity Services (Atleta)
   async googleSignup(credential: string): Promise<GoogleSignupResponse> {
     try {
-      console.log('🔍 Inizio Google Sign-Up, URL:', `${this.API_BASE_URL}/apiAuthGoogleSignup`);
+      console.log('🔍 Inizio Google Sign-Up, URL:', `${this.FUNCTIONS_BASE_URL}/apiAuthGoogleSignup`);
 
-      const response = await fetch(`${this.API_BASE_URL}/apiAuthGoogleSignup`, {
+      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/apiAuthGoogleSignup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -264,7 +269,7 @@ class AuthService {
       }
 
       // 3) Scambia l'ID token per un JWT applicativo
-      const response = await fetch(`${this.API_BASE_URL}/apiAuthFirebaseExchange`, {
+      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/apiAuthFirebaseExchange`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -333,11 +338,11 @@ class AuthService {
       return null;
     }
 
-    console.log('🔐 Starting token verification with URL:', `${this.API_BASE_URL}/authVerify`);
+    console.log('🔐 Starting token verification with URL:', `${this.FUNCTIONS_BASE_URL}/authVerify`);
     console.log('🔐 Token exists, length:', token.length);
 
     try {
-      const response = await fetch(`${this.API_BASE_URL}/authVerify`, {
+      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/authVerify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

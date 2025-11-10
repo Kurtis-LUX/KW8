@@ -5,6 +5,12 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      { "source": "/privacy", "destination": "/index.html" },
+      { "source": "/terms", "destination": "/index.html" },
+      { "source": "/cookie-policy", "destination": "/index.html" },
+      { "source": "/cookie-settings", "destination": "/index.html" }
     ]
   },
   "functions": [

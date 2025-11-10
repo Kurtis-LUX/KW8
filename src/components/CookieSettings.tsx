@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DB from '../utils/database';
+import { User } from '../utils/database';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import Modal from './Modal';
 

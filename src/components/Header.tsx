@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const userMenuRef = useRef<HTMLDivElement>(null);
   const roleMenuRef = useRef<HTMLDivElement>(null);
   const [showRoleMenu, setShowRoleMenu] = useState(false);
-
+  const [isClosing, setIsClosing] = useState(false);
   const { t, language, setLanguage } = useLanguageContext();
   
   // Aggiungi event listener per lo scroll
@@ -81,16 +81,43 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     };
   }, [showRoleMenu]);
 
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+  const toggleMenu = () => {
+    if (!isMenuOpen) {
+      setIsMenuOpen(true);
+      setIsClosing(false);
+    } else {
+      // Avvia subito l'animazione di uscita
+      setIsClosing(true);
+      setIsMenuOpen(false);
+      // Nascondi overlay al termine della transizione
+      setTimeout(() => {
+        setIsClosing(false);
+      }, 300);
+    }
+  };
+
+  const closeMenuAnimated = () => {
+    if (isMenuOpen) {
+      // Avvia subito l'animazione di uscita
+      setIsClosing(true);
+      setIsMenuOpen(false);
+      // Nascondi overlay al termine della transizione
+      setTimeout(() => {
+        setIsClosing(false);
+      }, 300);
+    } else {
+      setIsMenuOpen(false);
+    }
+  };
 
   const handleShowRules = () => {
     setShowRulesModal(true);
-    setIsMenuOpen(false);
+    closeMenuAnimated();
   };
 
   const toggleLanguage = () => {
     setLanguage(language === 'it' ? 'en' : 'it');
-    setIsMenuOpen(false);
+    closeMenuAnimated();
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -100,7 +127,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     if (element) {
       // Se l'elemento esiste, fai scroll direttamente senza navigare
       element.scrollIntoView({ behavior: 'smooth' });
-      setIsMenuOpen(false);
+      closeMenuAnimated();
     } else if (onNavigate) {
       // Solo se l'elemento non esiste, naviga alla home e poi fai scroll
       onNavigate('home');
@@ -110,7 +137,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           element.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
-      setIsMenuOpen(false);
+      closeMenuAnimated();
     }
   };
 
@@ -121,7 +148,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     if (footer) {
       // Se il footer esiste, fai scroll direttamente senza navigare
       footer.scrollIntoView({ behavior: 'smooth' });
-      setIsMenuOpen(false);
+      closeMenuAnimated();
     } else if (onNavigate) {
       // Solo se il footer non esiste, naviga alla home e poi fai scroll
       onNavigate('home');
@@ -131,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           footer.scrollIntoView({ behavior: 'smooth' });
         }
       }, 100);
-      setIsMenuOpen(false);
+      closeMenuAnimated();
     }
   };
 
@@ -146,7 +173,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         onNavigate(page);
       }
     }
-    setIsMenuOpen(false);
+    closeMenuAnimated();
   };
 
   // Funzione per navigazione con logout (per Menu Home e Dashboard Coach)
@@ -154,7 +181,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     console.log(`🚪 Navigazione con logout verso: ${page}`);
     
     // Chiudi tutti i menu aperti
-    setIsMenuOpen(false);
+    closeMenuAnimated();
     setShowUserMenu(false);
     
     // Se l'utente è loggato, esegui il logout
@@ -178,7 +205,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     console.log('🚪 Header: Logout iniziato');
     
     // Chiudi tutti i menu aperti
-    setIsMenuOpen(false);
+    closeMenuAnimated();
     setShowUserMenu(false);
     
     // Esegui il logout tramite la funzione parent
@@ -271,62 +298,49 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {isDashboard ? (
               // Menu completo per Dashboard
               <React.Fragment>
-                <button
-                  onClick={() => handleNavigation('coach-dashboard')}
-                  className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-200 shadow-sm ${
-                    currentPage === 'coach-dashboard' ? 'bg-white border-gray-300 text-red-600 hover:shadow-md' : 'bg-white/60 border-gray-200 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => handleNavigation('workout-manager')}
-                  className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-200 shadow-sm ${
-                    currentPage === 'workout-manager' ? 'bg-white border-gray-300 text-red-600 hover:shadow-md' : 'bg-white/60 border-gray-200 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  Schede
-                </button>
-                <button
-                  onClick={() => handleNavigation('athlete-manager')}
-                  className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-200 shadow-sm ${
-                    currentPage === 'athlete-manager' ? 'bg-white border-gray-300 text-red-600 hover:shadow-md' : 'bg-white/60 border-gray-200 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  Atleti
-                </button>
-                <button
-                  onClick={() => handleNavigation('rankings')}
-                  className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-200 shadow-sm ${
-                    currentPage === 'rankings' ? 'bg-white border-gray-300 text-red-600 hover:shadow-md' : 'bg-white/60 border-gray-200 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  Classifiche
-                </button>
-                <button
-                  onClick={() => handleNavigation('membership-cards')}
-                  className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-200 shadow-sm ${
-                    currentPage === 'membership-cards' ? 'bg-white border-gray-300 text-red-600 hover:shadow-md' : 'bg-white/60 border-gray-200 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  Tesserini
-                </button>
-                <button
-                  onClick={() => handleNavigation('athlete-statistics')}
-                  className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-200 shadow-sm ${
-                    currentPage === 'athlete-statistics' ? 'bg-white border-gray-300 text-red-600 hover:shadow-md' : 'bg-white/60 border-gray-200 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  Statistiche
-                </button>
-                <button
-                  onClick={() => handleNavigation('areas-manager')}
-                  className={`inline-flex items-center rounded-full border px-4 py-2 text-sm font-medium backdrop-blur-sm transition-all duration-200 shadow-sm ${
-                    currentPage === 'areas-manager' ? 'bg-white border-gray-300 text-red-600 hover:shadow-md' : 'bg-white/60 border-gray-200 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  Aree
-                </button>
+                <div className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-2 py-1 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+                  <button
+                    onClick={() => handleNavigation('coach-dashboard')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Dashboard
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => handleNavigation('workout-manager')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Schede
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => handleNavigation('athlete-manager')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Atleti
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => handleNavigation('rankings')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Classifiche
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => handleNavigation('membership-cards')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Tesserini
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => handleNavigation('athlete-statistics')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Statistiche
+                  </button>
+                </div>
               </React.Fragment>
             ) : (
               // Menu normale per le altre pagine
@@ -507,7 +521,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {/* Hamburger Menu */}
             <button
               onClick={toggleMenu}
-              className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
+              className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-sm ring-1 ring-black/10 px-3 py-2 text-gray-800 hover:bg-white hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
             >
               <AlignJustify size={24} className="text-gray-700" />
             </button>
@@ -516,10 +530,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       </header>
 
       {/* Mobile Menu Overlay & Side Panel */}
-      <div className={`${isMenuOpen ? 'visible' : 'invisible'} fixed inset-0 z-[100] pointer-events-none`}>
+      <div className={`${(isMenuOpen || isClosing) ? 'visible' : 'invisible'} fixed inset-0 z-[100] pointer-events-none`}>
         {/* Backdrop */}
         <div
-          onClick={toggleMenu}
+          onClick={closeMenuAnimated}
           className={`absolute inset-0 bg-black/10 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto ${isMenuOpen ? 'opacity-100' : 'opacity-0'}`}
         />
         {/* Side Panel */}
@@ -558,9 +572,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <li>
                     <button
                       onClick={() => handleNavigation('coach-dashboard')}
-                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
-                        currentPage === 'coach-dashboard' ? 'text-red-600' : 'text-gray-800'
-                      }`}
+                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                     >
                       <Settings size={20} className="sm:w-6 sm:h-6" />
                       <span>Dashboard</span>
@@ -570,9 +582,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <li>
                     <button
                       onClick={() => handleNavigation('workout-manager')}
-                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
-                        currentPage === 'workout-manager' ? 'text-red-600' : 'text-gray-800'
-                      }`}
+                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                     >
                       <FileText size={20} className="sm:w-6 sm:h-6" />
                       <span>Schede</span>
@@ -582,9 +592,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <li>
                     <button
                       onClick={() => handleNavigation('athlete-manager')}
-                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
-                        currentPage === 'athlete-manager' ? 'text-red-600' : 'text-gray-800'
-                      }`}
+                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                     >
                       <Users size={20} className="sm:w-6 sm:h-6" />
                       <span>Atleti</span>
@@ -594,9 +602,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <li>
                     <button
                       onClick={() => handleNavigation('rankings')}
-                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
-                        currentPage === 'rankings' ? 'text-red-600' : 'text-gray-800'
-                      }`}
+                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                     >
                       <Trophy size={20} className="sm:w-6 sm:h-6" />
                       <span>Classifiche</span>
@@ -606,9 +612,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <li>
                     <button
                       onClick={() => handleNavigation('athlete-statistics')}
-                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
-                        currentPage === 'athlete-statistics' ? 'text-red-600' : 'text-gray-800'
-                      }`}
+                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                     >
                       <BarChart3 size={20} className="sm:w-6 sm:h-6" />
                       <span>Statistiche</span>
@@ -618,24 +622,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <li>
                     <button
                       onClick={() => handleNavigation('membership-cards')}
-                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
-                        currentPage === 'membership-cards' ? 'text-red-600' : 'text-gray-800'
-                      }`}
+                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
                     >
                       <CreditCard size={20} className="sm:w-6 sm:h-6" />
                       <span>Tessere</span>
-                    </button>
-                  </li>
-                  {/* 8. Aree */}
-                  <li>
-                    <button
-                      onClick={() => handleNavigation('areas-manager')}
-                      className={`inline-flex items-center space-x-3 sm:space-x-4 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 transition-colors duration-200 hover:bg-black/5 ${
-                        currentPage === 'areas-manager' ? 'text-red-600' : 'text-gray-800'
-                      }`}
-                    >
-                      <MapPin size={20} className="sm:w-6 sm:h-6" />
-                      <span>Aree</span>
                     </button>
                   </li>
                 </React.Fragment>

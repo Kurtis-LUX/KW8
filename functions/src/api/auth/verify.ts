@@ -31,15 +31,28 @@ const ALLOWED_ORIGINS = [
   "https://palestra-kw8.web.app"
 ];
 
-export const authVerify = onRequest({ cors: false }, async (req, res) => {
-  // Imposta header CORS immediatamente per tutte le richieste
-  const origin = req.headers.origin;
-  if (ALLOWED_ORIGINS.includes(origin)) {
-    res.set("Access-Control-Allow-Origin", origin);
-    res.set("Access-Control-Allow-Credentials", "true");
-    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // Middleware CORS personalizzato
+  function setCorsHeaders(req: any, res: any) {
+    const origin = req.headers.origin;
+    logger.info(`CORS Debug - Origin ricevuta: ${origin}`);
+    
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      logger.info(`CORS Debug - Origin consentita: ${origin}`);
+      res.set("Access-Control-Allow-Origin", origin);
+      res.set("Access-Control-Allow-Credentials", "true");
+      res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    } else {
+      logger.warn(`CORS Debug - Origin NON consentita: ${origin}`);
+    }
   }
+
+export const authVerify = onRequest({ 
+  cors: false,
+  invoker: "public" // Permette invocazioni pubbliche non autenticate
+}, async (req, res) => {
+  // Imposta header CORS immediatamente per tutte le richieste
+  setCorsHeaders(req, res);
 
   // Gestione preflight esplicita
   if (req.method === "OPTIONS") {

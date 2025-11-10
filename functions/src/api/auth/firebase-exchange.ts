@@ -33,20 +33,21 @@ const ALLOWED_ORIGINS = [
   "https://palestra-kw8.web.app"
 ];
 
-export const apiAuthFirebaseExchange = onRequest({ cors: false }, async (req, res) => {
+export const apiAuthFirebaseExchange = onRequest({ cors: false, invoker: "public" }, async (req, res) => {
   // Imposta header CORS immediatamente per tutte le richieste
   const origin = req.headers.origin;
   if (ALLOWED_ORIGINS.includes(origin)) {
     res.set("Access-Control-Allow-Origin", origin);
     res.set("Access-Control-Allow-Credentials", "true");
     res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    res.set("Access-Control-Max-Age", "86400");
   }
 
   // Gestione preflight esplicita
   if (req.method === "OPTIONS") {
     logger.info("Handling CORS preflight for firebase-exchange");
-    res.status(204).end();
+    res.status(200).end();
     return;
   }
 

@@ -43,6 +43,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import LoadingScreen from './components/LoadingScreen';
 import './styles/dropdown.css';
 import AthleteAuthPage from './components/auth/AthleteAuthPage';
+import AthleteRegisterPage from './pages/AthleteRegisterPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -130,7 +131,22 @@ function App() {
 
         console.log('🔐 Starting authentication check...');
         await checkAutoLogin();
-        console.log('✅ App initialization completed successfully');
+        // Apri la Privacy Policy se l'URL diretto è /privacy
+        if (window.location && window.location.pathname === '/privacy') {
+          setShowPrivacyPolicyModal(true);
+        }
+        // Apri i Termini se l'URL diretto è /terms
+        if (window.location && window.location.pathname === '/terms') {
+          setShowTermsModal(true);
+        }
+        // Apri la Cookie Policy se l'URL diretto è /cookie-policy
+        if (window.location && window.location.pathname === '/cookie-policy') {
+          setShowCookiePolicyModal(true);
+        }
+        // Apri le impostazioni cookie se l'URL diretto è /cookie-settings
+        if (window.location && window.location.pathname === '/cookie-settings') {
+          setShowCookieSettings(true);
+        }
         setAppInitialized(true);
       } catch (error) {
         console.error('❌ App initialization failed:', error);
@@ -146,22 +162,7 @@ function App() {
     initializeApp();
   }, []);
 
-  // Blocca lo scroll della pagina quando qualsiasi modal è aperto
-  useEffect(() => {
-    const isAnyModalOpen = showCookieSettings || showPrivacyModal || showTermsModal || 
-                          showCookiePolicyModal || showPrivacyPolicyModal;
-    
-    if (isAnyModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    // Cleanup quando il componente viene smontato
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showCookieSettings, showPrivacyModal, showTermsModal, showCookiePolicyModal, showPrivacyPolicyModal]);
+
 
   const handleNavigation = (page: string, plan?: string, linkId?: string) => {
     if (plan) {
@@ -267,6 +268,33 @@ function App() {
             }
           }}
           onNavigateHome={() => handleNavigation('home')}
+          onNavigateRegister={() => handleNavigation('athlete-register')}
+        />
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'athlete-register') {
+    return (
+      <LanguageProvider>
+        <AthleteRegisterPage
+          onAuthSuccess={async () => {
+            try {
+              const user = await authService.autoLogin();
+              if (user) {
+                setCurrentUser(user);
+                handleNavigation('workouts');
+              } else {
+                console.error('Registrazione riuscita ma utente non trovato');
+                handleNavigation('workouts');
+              }
+            } catch (error) {
+              console.error('Errore durante la verifica post-registrazione:', error);
+              handleNavigation('workouts');
+            }
+          }}
+          onNavigateHome={() => handleNavigation('home')}
+          onNavigateLogin={() => handleNavigation('athlete-auth')}
         />
       </LanguageProvider>
     );
@@ -584,7 +612,7 @@ function App() {
         onClose={() => setShowCookiePolicyModal(false)}
         title="Cookie Policy"
       >
-        <CookiePolicyPage onNavigate={() => {}} />
+        <CookiePolicyPage onNavigate={handleNavigation} />
       </Modal>
       
       {/* Modal per Privacy Policy */}
