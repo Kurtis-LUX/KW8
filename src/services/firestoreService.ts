@@ -221,6 +221,21 @@ class FirestoreService {
     }
   }
 
+  async getUserByEmail(email: string): Promise<User | null> {
+    try {
+      const q = query(collection(db, this.collections.users), where('email', '==', email), limit(1));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        return { id: d.id, ...d.data() } as User;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching user by email:', error);
+      return null;
+    }
+  }
+
   async createUser(userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
       const now = new Date().toISOString();

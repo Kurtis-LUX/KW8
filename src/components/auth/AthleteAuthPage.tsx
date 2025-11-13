@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { authService } from '../../services/authService';
 import { apiService } from '../../services/api';
 import { envConfig, debugEnvConfig } from '../../config/envConfig';
-import { ChevronLeft, CheckCircle } from 'lucide-react';
+import { ChevronLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { auth } from '../../config/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import firestoreService from '../../services/firestoreService';
 import zxcvbn from 'zxcvbn'
 
@@ -56,6 +56,11 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
   const [passwordTouched, setPasswordTouched] = useState(false)
   const [confirmTouched, setConfirmTouched] = useState(false)
 
+  // Toggle visibilità password
+  const [showLoginPassword, setShowLoginPassword] = useState(false)
+  const [showRegPassword, setShowRegPassword] = useState(false)
+  const [showRegConfirm, setShowRegConfirm] = useState(false)
+
   // Validazione email
   const validateEmail = (val: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val)
 
@@ -89,6 +94,8 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
   const phoneValid = !phone || validatePhone(phone)
   const passwordValid = validatePassword(password).length === 0
   const confirmValid = confirmPassword.length > 0 && confirmPassword === password
+  // Per login, consideriamo valida una password con almeno 6 caratteri
+  const loginPasswordValid = password.length >= 6
 
   // Classi dinamiche per bordo e focus ring
   const fieldClasses = (valid: boolean, touched: boolean) =>
@@ -254,13 +261,40 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
       const code = (err && err.code) ? String(err.code) : '';
       const msg = (err && err.message) ? String(err.message) : '';
       const lowerMsg = msg.toLowerCase();
-      if (code === 'auth/user-not-found' || lowerMsg.includes('user-not-found') || lowerMsg.includes('no user') || lowerMsg.includes('non trovato')) {
+
+      if (
+        code === 'auth/user-not-found' ||
+        lowerMsg.includes('user-not-found') ||
+        lowerMsg.includes('no user') ||
+        lowerMsg.includes('non trovato')
+      ) {
         // Email non registrata: mostra messaggio sotto il campo e apri sezione registrazione
         setNotRegistered(true);
         setShowRegistration(true);
         setError('');
+      } else if (
+        code === 'auth/wrong-password' ||
+        lowerMsg.includes('wrong-password') ||
+        lowerMsg.includes('password')
+      ) {
+        setError('Email o password non corretta.');
+        setNotRegistered(false);
+      } else if (
+        code === 'auth/invalid-email' ||
+        lowerMsg.includes('invalid-email') ||
+        lowerMsg.includes('formato email')
+      ) {
+        setError('Formato email non valido.');
+        setNotRegistered(false);
+      } else if (
+        code === 'auth/too-many-requests' ||
+        lowerMsg.includes('too many') ||
+        lowerMsg.includes('troppi tentativi')
+      ) {
+        setError('Troppi tentativi di accesso. Attendi qualche minuto e riprova.');
+        setNotRegistered(false);
       } else {
-        const sanitizedError = (msg || 'Login fallito').replace(/<[^>]*>/g, '').substring(0, 200);
+        const sanitizedError = (msg || 'Accesso non riuscito. Verifica le credenziali e riprova.').replace(/<[^>]*>/g, '').substring(0, 200);
         setError(sanitizedError);
         setNotRegistered(false);
       }
@@ -298,26 +332,40 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
     setLoading(true);
     try {
       // Registra l'utente atleta su Firebase Auth
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Crea il documento utente in Firestore con ruolo atleta
-      await firestoreService.createUser({
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      try { await sendEmailVerification(userCredential.user) } catch {}
+      // Sincronizza profilo su Firestore evitando duplicati per email
+      const safeEmail = email.trim();
+      const existing = await firestoreService.getUserByEmail(safeEmail);
+      const baseProfile = {
         name: `${firstName.trim()} ${lastName.trim()}`.trim(),
-        email: email.trim(),
+        email: safeEmail,
         phone: phone.trim(),
-        role: 'athlete',
-        certificatoMedicoStato: 'non_presente',
+        role: 'athlete' as const,
+        certificatoMedicoStato: 'non_presente' as const,
         notes: ''
-      });
+      };
+      if (existing && existing.id) {
+        await firestoreService.updateUser(existing.id, baseProfile);
+      } else {
+        await firestoreService.createUser(baseProfile);
+      }
 
-      setSuccess('Registrazione completata! Effettuo il login...');
+      setSuccess('Registrazione completata! Ti abbiamo inviato una email di verifica. Effettuo il login...');
       // Esegui il login per ottenere il JWT applicativo e impostare il ruolo
       await authService.login(email, password);
       setTimeout(() => {
         onAuthSuccess && onAuthSuccess();
       }, 600);
     } catch (err: any) {
-      const sanitizedError = (err.message || 'Registrazione non riuscita').replace(/<[^>]*>/g, '').substring(0, 200);
-      setError(sanitizedError);
+      const code = (err && err.code) ? String(err.code) : '';
+      const msg = (err && err.message) ? String(err.message) : '';
+      if (code === 'auth/email-already-in-use' || msg.toLowerCase().includes('already in use')) {
+        setError('Email già registrata. Accedi oppure reimposta la password.');
+      } else {
+        const sanitizedError = (msg || 'Registrazione non riuscita').replace(/<[^>]*>/g, '').substring(0, 200);
+        setError(sanitizedError);
+      }
     } finally {
       setLoading(false);
     }
@@ -408,7 +456,8 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-2xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-800"
+                onBlur={() => setEmailTouched(true)}
+                className={`w-full rounded-2xl border px-3 py-2 focus:outline-none focus:ring-2 ${fieldClasses(emailValid, emailTouched)}`}
                 placeholder="esempio@dominio.com"
                 autoComplete="email"
               />
@@ -423,14 +472,26 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-2xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-navy-800"
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onBlur={() => setPasswordTouched(true)}
+                  className={`w-full rounded-2xl border px-3 py-2 pr-10 focus:outline-none focus:ring-2 ${fieldClasses(loginPasswordValid, passwordTouched)}`}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  aria-label={showLoginPassword ? 'Nascondi password' : 'Mostra password'}
+                  title={showLoginPassword ? 'Nascondi password' : 'Mostra password'}
+                >
+                  {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
             <div className="flex gap-3">
               <button
@@ -518,38 +579,60 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => {
-                    const val = e.target.value
-                    setPassword(val)
-                    setPasswordErrors(validatePassword(val))
-                    const res = zxcvbn(val)
-                    setPasswordScore(res.score)
-                    const feedback = [...(res.feedback?.suggestions || []), res.feedback?.warning || ''].filter(Boolean)
-                    setPasswordFeedback(feedback as string[])
-                  }}
-                  onBlur={() => setPasswordTouched(true)}
-                  className={`w-full rounded-2xl border px-3 py-2 focus:outline-none focus:ring-2 ${fieldClasses(passwordValid, passwordTouched)}`}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                />
+                <div className="relative">
+                  <input
+                    type={showRegPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setPassword(val)
+                      setPasswordErrors(validatePassword(val))
+                      const res = zxcvbn(val)
+                      setPasswordScore(res.score)
+                      const feedback = [...(res.feedback?.suggestions || []), res.feedback?.warning || ''].filter(Boolean)
+                      setPasswordFeedback(feedback as string[])
+                    }}
+                    onBlur={() => setPasswordTouched(true)}
+                    className={`w-full rounded-2xl border px-3 py-2 pr-10 focus:outline-none focus:ring-2 ${fieldClasses(passwordValid, passwordTouched)}`}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegPassword((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={showRegPassword ? 'Nascondi password' : 'Mostra password'}
+                    title={showRegPassword ? 'Nascondi password' : 'Mostra password'}
+                  >
+                    {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 {passwordTouched && !passwordValid && (
                   <p className="mt-1 text-xs text-red-600">La password non soddisfa i requisiti.</p>
                 )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Conferma password</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  onBlur={() => setConfirmTouched(true)}
-                  className={`w-full rounded-2xl border px-3 py-2 focus:outline-none focus:ring-2 ${fieldClasses(confirmValid, confirmTouched)}`}
-                  placeholder="••••••••"
-                  autoComplete="new-password"
-                />
+                <div className="relative">
+                  <input
+                    type={showRegConfirm ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onBlur={() => setConfirmTouched(true)}
+                    className={`w-full rounded-2xl border px-3 py-2 pr-10 focus:outline-none focus:ring-2 ${fieldClasses(confirmValid, confirmTouched)}`}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegConfirm((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    aria-label={showRegConfirm ? 'Nascondi password' : 'Mostra password'}
+                    title={showRegConfirm ? 'Nascondi password' : 'Mostra password'}
+                  >
+                    {showRegConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
                 {confirmTouched && !confirmValid && (
                   <p className="mt-1 text-xs text-red-600">Le password non coincidono.</p>
                 )}
