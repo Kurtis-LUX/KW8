@@ -14,6 +14,7 @@ interface AuthUser {
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAdmin?: boolean;
+  requireCoach?: boolean;
   onUnauthorized?: () => void;
   fallback?: React.ReactNode;
 }
@@ -27,7 +28,8 @@ interface AuthState {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requireAdmin = false, 
+  requireAdmin = false,
+  requireCoach = false, 
   onUnauthorized,
   fallback 
 }) => {
@@ -82,6 +84,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           });
           return;
         }
+
+        // Controlla ruolo coach se richiesto
+        if (requireCoach && currentUser.role !== 'coach') {
+          setAuthState({
+            isLoading: false,
+            isAuthenticated: true,
+            user: currentUser,
+            error: 'Accesso riservato ai coach'
+          });
+          return;
+        }
         
         // Tutto ok
         setAuthState({
@@ -104,7 +117,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     };
 
     checkAuth();
-  }, [requireAdmin]);
+  }, [requireAdmin, requireCoach]);
 
   // Chiama la callback se non autorizzato
   useEffect(() => {
@@ -143,7 +156,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           </div>
           
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            {requireAdmin ? 'Accesso Negato' : 'Autenticazione Richiesta'}
+            {(requireAdmin || requireCoach) ? 'Accesso Negato' : 'Autenticazione Richiesta'}
           </h3>
           
           <p className="text-sm text-gray-500 mb-6">

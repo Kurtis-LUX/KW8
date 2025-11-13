@@ -26,28 +26,42 @@ if (!JWT_SECRET) {
   logger.error("Firebase config:", JSON.stringify(firebaseConfig, null, 2));
 }
 
-// Origini consentite
+// Origini consentite (incluso dominio firebaseapp.com)
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:5174",
-  "https://palestra-kw8.web.app"
+  "https://palestra-kw8.web.app",
+  "https://palestra-kw8.firebaseapp.com"
 ];
+
+function setCorsHeaders(req: any, res: any) {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Vary", "Origin");
+    res.set("Access-Control-Allow-Credentials", "true");
+    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.set(
+      "Access-Control-Allow-Headers",
+      req.headers['access-control-request-headers'] || "Content-Type, Authorization, X-Requested-With"
+    );
+    res.set("Access-Control-Max-Age", "86400");
+  } else {
+    logger.warn(`CORS: Origin not allowed: ${origin}`);
+  }
+}
 
 export const apiAuthFirebaseExchange = onRequest({ cors: false, invoker: "public" }, async (req, res) => {
   // Imposta header CORS immediatamente per tutte le richieste
-  const origin = req.headers.origin;
-  if (ALLOWED_ORIGINS.includes(origin)) {
-    res.set("Access-Control-Allow-Origin", origin);
-    res.set("Access-Control-Allow-Credentials", "true");
-    res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-    res.set("Access-Control-Max-Age", "86400");
-  }
+  setCorsHeaders(req, res);
 
   // Gestione preflight esplicita
   if (req.method === "OPTIONS") {
-    logger.info("Handling CORS preflight for firebase-exchange");
-    res.status(200).end();
+    logger.info("Handling CORS preflight for firebase-exchange", {
+      origin: req.headers.origin,
+      acrh: req.headers['access-control-request-headers']
+    });
+    res.status(204).end();
     return;
   }
 
@@ -102,15 +116,18 @@ export const apiAuthFirebaseExchange = onRequest({ cors: false, invoker: "public
       return;
     }
 
-    // Determina ruolo: admin se email autorizzata, altrimenti athlete
+    // Determina ruolo: usa custom claim 'admin'; fallback a athlete
     let role: 'admin' | 'athlete' = 'athlete';
-    if (AUTHORIZED_EMAILS && typeof AUTHORIZED_EMAILS === 'string') {
+    const hasAdminClaim = userRecord.customClaims && userRecord.customClaims['admin'] === true;
+    if (hasAdminClaim) {
+      role = 'admin';
+    } else if (AUTHORIZED_EMAILS && typeof AUTHORIZED_EMAILS === 'string') {
       const normalized = email.toLowerCase().trim();
       const allowed = AUTHORIZED_EMAILS.split(',')
         .map(e => e.toLowerCase().trim())
         .filter(e => e.length > 0);
       if (allowed.includes(normalized)) {
-        role = 'admin';
+        logger.warn(`Email ${normalized} presente in AUTHORIZED_EMAILS ma senza admin claim; tratto come athlete.`);
       }
     }
 
@@ -139,6 +156,9 @@ export const apiAuthFirebaseExchange = onRequest({ cors: false, invoker: "public
       domain: isProduction ? ".palestra-kw8.web.app" : undefined,
     });
 
+    // Reimposta CORS per la risposta finale (alcuni proxy possono sovrascrivere)
+    setCorsHeaders(req, res);
+
     res.status(200).json({
       success: true,
       data: {
@@ -154,6 +174,8 @@ export const apiAuthFirebaseExchange = onRequest({ cors: false, invoker: "public
     });
   } catch (error) {
     logger.error("Firebase token exchange error:", error);
+    // Reimposta CORS anche in caso di errore
+    setCorsHeaders(req, res);
     res.status(401).json({ error: "Invalid or expired Firebase ID token" });
   }
 });

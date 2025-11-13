@@ -410,10 +410,7 @@ function App() {
                   </div>
                   <p className="text-sm sm:text-base text-gray-600">Visualizza progressi e analisi dettagliate degli atleti</p>
                 </div>
->
-              </div>
-              
-              {/* Sezione Migrazione Dati */}
+                </div>
               <div className="mt-8">
                 <DataMigration currentUser={currentUser} />
               </div>
@@ -455,13 +452,13 @@ function App() {
   if (currentPage === 'workout-manager') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
-          <WorkoutManagerPage 
-            onNavigate={handleNavigation} 
-            currentUser={currentUser} 
-          />
-        </ProtectedRoute>
-      </LanguageProvider>
+<ProtectedRoute requireCoach={true} onUnauthorized={() => handleNavigation('login')}>
+           <WorkoutManagerPage 
+             onNavigate={handleNavigation} 
+             currentUser={currentUser} 
+           />
+         </ProtectedRoute>
+       </LanguageProvider>
     );
   }
 

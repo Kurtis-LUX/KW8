@@ -23,6 +23,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [isClosing, setIsClosing] = useState(false);
   const { t, language, setLanguage } = useLanguageContext();
   
+  // Helper: genera un nome leggibile dall'email se il name non è disponibile
+  const deriveNameFromEmail = (email?: string): string => {
+    if (!email) return '';
+    const local = email.split('@')[0];
+    return local
+      .replace(/[._-]+/g, ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  };
+
   // Aggiungi event listener per lo scroll
   useEffect(() => {
     const handleScroll = () => {
@@ -420,14 +432,14 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   className="inline-flex items-center space-x-2 rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-3.5 py-2 text-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
                 >
                   <User size={24} className="text-gray-700" />
-                  <span className="hidden md:inline font-medium">{currentUser.name}</span>
+                  <span className="hidden md:inline font-medium">{currentUser.name || deriveNameFromEmail(currentUser.email)}</span>
                 </button>
                 
                 {/* User Dropdown Menu */}
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-64 bg-white/80 backdrop-blur-md rounded-2xl shadow-[0_16px_32px_rgba(0,0,0,0.12)] ring-1 ring-black/10 p-2 z-50">
                     <div className="px-4 py-3 border-b border-black/5">
-                      <p className="font-semibold text-gray-800">{currentUser.name}</p>
+                      <p className="font-semibold text-gray-800">{currentUser.name || deriveNameFromEmail(currentUser.email)}</p>
                       <p className="text-sm text-gray-600">{currentUser.email}</p>
                       <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
                     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import DB from '../utils/database';
-import { ArrowLeft, Calendar, Clock, Dumbbell, Target, CheckCircle, Play, Download, User as UserIcon, Settings } from 'lucide-react';
+import DB, { User } from '../utils/database';
+import Header from '../components/Header';
+import { ChevronLeft, Calendar, Clock, Dumbbell, Target, CheckCircle, Play, Download, User as UserIcon, Settings } from 'lucide-react';
 import FileExplorer from '../components/FileExplorer';
 
 
@@ -12,6 +13,7 @@ interface WorkoutsPageProps {
 }
 
 const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, defaultTab = 'current' }) => {
+  const isCoach = currentUser?.role === 'coach';
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [assignedWorkouts, setAssignedWorkouts] = useState([]);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
@@ -72,6 +74,11 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
       return;
     }
     
+    // Se l'utente non è coach, impedisci il tab manager
+    if (!isCoach && activeTab === 'manager') {
+      setActiveTab('current');
+    }
+    
     // Carica le schede assegnate all'atleta
     loadAssignedWorkouts();
   }, [currentUser]);
@@ -111,66 +118,86 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => onNavigate('home')}
-            className="flex items-center space-x-2 text-navy-900 hover:text-red-600 transition-colors duration-300"
-          >
-            <ArrowLeft size={24} />
-            <span className="font-semibold">Torna alla home</span>
-          </button>
-          
-          <h1 className="text-3xl md:text-4xl font-bold text-navy-900">Le Tue Schede</h1>
-          
-          <div className="w-24"></div> {/* Spacer for centering */}
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <Header 
+        onNavigate={onNavigate} 
+        currentUser={currentUser}
+        showAuthButtons={false}
+      />
+      <div className="pt-20">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+          {/* Header in stile Apple */}
+          <div className="mb-8">
+            <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 flex items-center justify-between">
+              <button
+                onClick={() => onNavigate('home')}
+                className="inline-flex items-center justify-center p-2 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                title="Torna alla Home"
+              >
+                <ChevronLeft size={24} className="block" />
+              </button>
+
+              <div className="flex-1 flex justify-center">
+                <div className="text-center">
+                  <h1 className="font-sfpro text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm">Le Tue Schede</h1>
+                  <p className="font-sfpro text-[#001f3f]/90 font-medium text-sm sm:text-base mt-1">Visualizza e gestisci le tue schede</p>
+                </div>
+              </div>
+
+              <div className="w-10"></div>
+            </div>
+          </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 mb-8 bg-gray-100 p-1 rounded-lg max-w-2xl mx-auto">
-          <button
-            onClick={() => setActiveTab('current')}
-            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-300 ${
-              activeTab === 'current'
-                ? 'bg-white text-red-600 shadow-sm'
-                : 'text-navy-700 hover:text-navy-900'
-            }`}
-          >
-            Scheda Attuale
-          </button>
-          <button
-            onClick={() => setActiveTab('manager')}
-            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-300 ${
-              activeTab === 'manager'
-                ? 'bg-white text-red-600 shadow-sm'
-                : 'text-navy-700 hover:text-navy-900'
-            }`}
-          >
-            <Settings className="inline mr-1" size={16} />
-            Gestionale
-          </button>
-          <button
-            onClick={() => setActiveTab('history')}
-            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-300 ${
-              activeTab === 'history'
-                ? 'bg-white text-red-600 shadow-sm'
-                : 'text-navy-700 hover:text-navy-900'
-            }`}
-          >
-            Storico
-          </button>
-          <button
-            onClick={() => setActiveTab('programs')}
-            className={`flex-1 py-2 px-4 rounded-md font-medium transition-all duration-300 ${
-              activeTab === 'programs'
-                ? 'bg-white text-red-600 shadow-sm'
-                : 'text-navy-700 hover:text-navy-900'
-            }`}
-          >
-            Programmi
-          </button>
+>
+        <div className="w-full max-w-2xl mx-auto mb-8">
+          <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-2">
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                onClick={() => setActiveTab('current')}
+                className={`py-2 px-4 rounded-xl font-medium transition-all duration-300 ${
+                  activeTab === 'current'
+                    ? 'bg-white text-red-600 shadow-sm ring-1 ring-red-200'
+                    : 'text-navy-700 hover:bg-white/80 hover:text-navy-900'
+                }`}
+              >
+                Scheda Attuale
+              </button>
+              {isCoach && (
+                <button
+                  onClick={() => setActiveTab('manager')}
+                  className={`py-2 px-4 rounded-xl font-medium transition-all duration-300 ${
+                    activeTab === 'manager'
+                      ? 'bg-white text-red-600 shadow-sm ring-1 ring-red-200'
+                      : 'text-navy-700 hover:bg-white/80 hover:text-navy-900'
+                  }`}
+                >
+                  <Settings className="inline mr-1" size={16} />
+                  Gestionale
+                </button>
+              )}
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`py-2 px-4 rounded-xl font-medium transition-all duration-300 ${
+                  activeTab === 'history'
+                    ? 'bg-white text-red-600 shadow-sm ring-1 ring-red-200'
+                    : 'text-navy-700 hover:bg-white/80 hover:text-navy-900'
+                }`}
+              >
+                Storico
+              </button>
+              <button
+                onClick={() => setActiveTab('programs')}
+                className={`py-2 px-4 rounded-xl font-medium transition-all duration-300 ${
+                  activeTab === 'programs'
+                    ? 'bg-white text-red-600 shadow-sm ring-1 ring-red-200'
+                    : 'text-navy-700 hover:bg-white/80 hover:text-navy-900'
+                }`}
+              >
+                Programmi
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Current Workout Tab */}
@@ -196,7 +223,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
                   {assignedWorkouts.map((workout, index) => (
                     <div 
                       key={workout.id} 
-                      className={`bg-white rounded-xl shadow-lg p-6 cursor-pointer transition-all duration-300 hover:shadow-xl ${
+                      className={`bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-6 cursor-pointer transition-all duration-300 hover:bg-white ${
                         selectedWorkout?.id === workout.id ? 'ring-2 ring-red-500' : ''
                       }`}
                       onClick={() => setSelectedWorkout(workout)}
@@ -254,60 +281,58 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
 
                 {/* Dettagli della scheda selezionata */}
                 {selectedWorkout && (
-                  <div className="bg-white rounded-xl shadow-lg p-8">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-bold text-navy-900">{selectedWorkout.name}</h2>
-                      <div className="flex items-center space-x-4">
-                        <span className="text-navy-700">Coach: {selectedWorkout.coach}</span>
-                        <div className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
-                          Attiva
-                        </div>
-                      </div>
-                    </div>
+                  <div className="bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-8">
+                     <div className="flex items-center justify-between mb-6">
+                       <h2 className="text-2xl font-bold text-navy-900">{selectedWorkout.name}</h2>
+                       <div className="flex items-center space-x-4">
+                         <span className="text-navy-700">Coach: {selectedWorkout.coach}</span>
+                         <div className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">Attiva</div>
+                       </div>
+                     </div>
 
                     {selectedWorkout.description && (
-                      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                        <h3 className="font-semibold text-navy-900 mb-2">Descrizione</h3>
-                        <p className="text-navy-700">{selectedWorkout.description}</p>
-                      </div>
-                    )}
+                      <div className="mb-6 p-4 bg-white/70 rounded-xl ring-1 ring-black/10">
+                         <h3 className="font-semibold text-navy-900 mb-2">Descrizione</h3>
+                         <p className="text-navy-700">{selectedWorkout.description}</p>
+                       </div>
+                     )}
 
-                    <div className="mb-6">
-                      <h3 className="text-lg font-semibold text-navy-900 mb-4">Esercizi</h3>
-                      {selectedWorkout.exercises && selectedWorkout.exercises.length > 0 ? (
-                        <div className="space-y-4">
-                          {selectedWorkout.exercises.map((exercise, index) => (
-                            <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                              <div className="flex-1">
-                                <h4 className="font-medium text-navy-900">{exercise.name}</h4>
-                                <div className="text-sm text-navy-700 mt-1">
-                                  <span className="mr-4">Serie: {exercise.sets}</span>
-                                  <span className="mr-4">Ripetizioni: {exercise.reps}</span>
-                                  <span>Riposo: {exercise.rest}s</span>
-                                </div>
-                                {exercise.description && (
-                                  <p className="text-sm text-navy-600 mt-2">{exercise.description}</p>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => toggleExerciseCompletion(index)}
-                                className={`ml-4 p-2 rounded-full transition-colors ${
-                                  exercise.completed 
-                                    ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                                    : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                                }`}
-                              >
-                                <CheckCircle size={20} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-navy-600">Nessun esercizio definito per questa scheda.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                     <div className="mb-6">
+                       <h3 className="text-lg font-semibold text-navy-900 mb-4">Esercizi</h3>
+                       {selectedWorkout.exercises && selectedWorkout.exercises.length > 0 ? (
+                         <div className="space-y-4">
+                           {selectedWorkout.exercises.map((exercise, index) => (
+                            <div key={index} className="flex items-center justify-between p-4 rounded-xl ring-1 ring-black/10 bg-white/70">
+                               <div className="flex-1">
+                                 <h4 className="font-medium text-navy-900">{exercise.name}</h4>
+                                 <div className="text-sm text-navy-700 mt-1">
+                                   <span className="mr-4">Serie: {exercise.sets}</span>
+                                   <span className="mr-4">Ripetizioni: {exercise.reps}</span>
+                                   <span>Riposo: {exercise.rest}s</span>
+                                 </div>
+                                 {exercise.description && (
+                                   <p className="text-sm text-navy-600 mt-2">{exercise.description}</p>
+                                 )}
+                               </div>
+                               <button
+                                 onClick={() => toggleExerciseCompletion(index)}
+                                 className={`ml-4 p-2 rounded-full transition-colors ${
+                                   exercise.completed 
+                                     ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                                     : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                                 }`}
+                               >
+                                 <CheckCircle size={20} />
+                               </button>
+                             </div>
+                           ))}
+                         </div>
+                       ) : (
+                         <p className="text-navy-600">Nessun esercizio definito per questa scheda.</p>
+                       )}
+                     </div>
+                   </div>
+                 )}
               </div>
             )}
           </div>
@@ -316,20 +341,20 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
         {/* History Tab */}
         {activeTab === 'history' && (
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <h2 className="text-2xl font-bold text-navy-900 mb-6">Storico Allenamenti</h2>
-              <div className="space-y-4">
-                {workoutHistory.map((workout, index) => (
-                  <div key={index} className="flex items-center justify-between p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow duration-300">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckCircle className="text-green-600" size={24} />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-navy-900">{workout.name}</h3>
-                        <p className="text-navy-700 text-sm">{workout.date}</p>
-                      </div>
-                    </div>
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-8">
+               <h2 className="text-2xl font-bold text-navy-900 mb-6">Storico Allenamenti</h2>
+               <div className="space-y-4">
+                 {workoutHistory.map((workout, index) => (
+                  <div key={index} className="flex items-center justify-between p-6 rounded-xl ring-1 ring-black/10 bg-white/70 hover:bg-white">
+                     <div className="flex items-center space-x-4">
+                       <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                         <CheckCircle className="text-green-600" size={24} />
+                       </div>
+                       <div>
+                         <h3 className="font-semibold text-navy-900">{workout.name}</h3>
+                         <p className="text-navy-700 text-sm">{workout.date}</p>
+                       </div>
+                     </div>
                     <div className="text-right">
                       <p className="font-medium text-navy-900">{workout.duration}</p>
                       <p className="text-navy-700 text-sm">{workout.exercises} esercizi</p>
@@ -342,7 +367,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
         )}
 
         {/* Manager Tab - File Explorer */}
-        {activeTab === 'manager' && (
+        {activeTab === 'manager' && isCoach && (
           <div className="max-w-7xl mx-auto">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden" style={{ height: '85vh' }}>
               <FileExplorer currentUser={currentUser} />
@@ -360,7 +385,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {availablePrograms.map((program, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300">
+                <div key={index} className="bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm overflow-hidden transition-transform duration-300 hover:scale-105">
                   <img 
                     src={program.image} 
                     alt={program.name}
@@ -396,6 +421,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
         )}
       </div>
     </div>
+  </div>
   );
 };
 
