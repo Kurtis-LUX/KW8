@@ -444,53 +444,53 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                       <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
                     </div>
                     
-                    <button
-                      onClick={() => {
-                        handleNavigation('home');
-                        setShowUserMenu(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
-                    >
-                      <Home size={16} />
-                      <span>Home</span>
-                    </button>
-                    
                     {currentUser.role === 'coach' && (
-                      <button
-                        onClick={() => {
-                          handleNavigation('coach-dashboard');
-                          setShowUserMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
-                      >
-                        <Settings size={16} />
-                        <span>Dashboard Coach</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={() => {
+                            handleNavigation('coach-home');
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
+                        >
+                          <Home size={16} />
+                          <span>Home</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleNavigation('coach-dashboard');
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
+                        >
+                          <Settings size={16} />
+                          <span>Dashboard Coach</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleNavigation('workout-manager');
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
+                        >
+                          <FileText size={16} />
+                          <span>Gestione schede</span>
+                        </button>
+                        <div className="mt-2 pt-2 border-t border-black/5">
+                          <button
+                            onClick={() => {
+                              handleLogout();
+                              setShowUserMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors text-red-700"
+                          >
+                            <LogOut size={16} />
+                            <span>Logout</span>
+                          </button>
+                        </div>
+                      </>
                     )}
                     
-                    {currentUser.role === 'athlete' && (
-                      <button
-                        onClick={() => {
-                          handleNavigation('workouts');
-                          setShowUserMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
-                      >
-                        <FileText size={16} />
-                        <span>{t.header.workouts}</span>
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        setShowUserMenu(false);
-                      }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-red-600 flex items-center space-x-2 transition-colors"
-                    >
-                      <UserIcon size={16} />
-                      <span>{t.header.logout}</span>
-                    </button>
                   </div>
                 )}
               </div>

@@ -26,6 +26,7 @@ interface WorkoutVariant {
   isActive: boolean;
   description?: string;
   exercises?: Exercise[];
+  days?: { [key: string]: Exercise[] };
   parentWorkoutId?: string;
   modifications?: any[];
   createdAt?: string;
@@ -63,6 +64,66 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [durationWeeksTemp, setDurationWeeksTemp] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [originalExercises, setOriginalExercises] = useState<Exercise[] | null>(null); // Esercizi originali - null indica che non sono ancora stati caricati
+  // Gestione giorni (G1–G10)
+const [activeDayKey, setActiveDayKey] = useState<string>('G1');
+const [originalDays, setOriginalDays] = useState<{ [key: string]: Exercise[] }>({ G1: [] });
+const [variantDaysById, setVariantDaysById] = useState<{ [variantId: string]: { [key: string]: Exercise[] } }>({});
+
+// Aggiungi un nuovo giorno alla scheda corrente (indipendente dalle varianti), con limite massimo a 10
+const handleAddDay = () => {
+  const currentKeys = activeVariantId === 'original'
+    ? Object.keys(originalDays)
+    : Object.keys(variantDaysById[activeVariantId] || {});
+
+  // Se già ci sono 10 giornate, non aggiungere oltre
+  if (currentKeys.length >= 10) {
+    setSaveMessage('Limite massimo di giornate raggiunto (10)');
+    return;
+  }
+
+  // Trova il primo numero disponibile tra 2 e 10 (G1 è sempre riservato)
+  const usedNums = currentKeys
+    .map(d => parseInt(String(d).replace(/^G/, ''), 10))
+    .filter(n => !isNaN(n));
+  let candidateNum: number | null = null;
+  for (let n = 2; n <= 10; n++) {
+    if (!usedNums.includes(n)) { candidateNum = n; break; }
+  }
+  if (!candidateNum) {
+    setSaveMessage('Limite massimo di giornate raggiunto (10)');
+    return;
+  }
+  const nextKey = `G${candidateNum}`;
+
+  if (activeVariantId === 'original') {
+    const newOriginalDays = { ...originalDays, [nextKey]: [] };
+    setOriginalDays(newOriginalDays);
+    // Seleziona automaticamente la nuova giornata e mostra lista vuota
+    setActiveDayKey(nextKey);
+    setExercises([]);
+  } else {
+    const prevVariantDays = variantDaysById[activeVariantId] || {};
+    const newVariantDays = { ...prevVariantDays, [nextKey]: [] };
+    setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
+    // Aggiorna il modello variante per coerenza
+    const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, days: newVariantDays, updatedAt: new Date().toISOString() } : v);
+    setVariants(updatedVariants);
+    // Seleziona automaticamente la nuova giornata e mostra lista vuota
+    setActiveDayKey(nextKey);
+    setExercises([]);
+  }
+
+  // Scorri la toolbar giorni verso destra per mostrare il nuovo giorno
+  if (dayTabsRef.current) {
+    try {
+      dayTabsRef.current.scrollTo({ left: dayTabsRef.current.scrollWidth, behavior: 'smooth' });
+    } catch {
+      dayTabsRef.current.scrollLeft = dayTabsRef.current.scrollWidth;
+    }
+  }
+
+  triggerAutoSave();
+};
   const [showExerciseForm, setShowExerciseForm] = useState(false);
   const [showExerciseDropdown, setShowExerciseDropdown] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
@@ -226,7 +287,7 @@ const longPressTimerRef = useRef<number | null>(null);
 const [draggedExerciseId, setDraggedExerciseId] = useState<string | null>(null);
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
-  const variantTabsRef = useRef<HTMLDivElement>(null);
+const variantTabsRef = useRef<HTMLDivElement>(null);
 const [isDragging, setIsDragging] = useState(false);
 const dragStartXRef = useRef(0);
 const scrollStartLeftRef = useRef(0);
@@ -235,6 +296,36 @@ const dragInitiatedRef = useRef(false);
 // Ref per i tab per auto-scroll verso la variante attiva
 const originalTabRef = useRef<HTMLDivElement | null>(null);
 const variantTabRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+// Scorrimento orizzontale dei tab giorni via drag/swipe (stile varianti)
+const dayTabsRef = useRef<HTMLDivElement>(null);
+const [isDraggingDays, setIsDraggingDays] = useState(false);
+const dayDragStartXRef = useRef(0);
+const dayScrollStartLeftRef = useRef(0);
+const dayDragInitiatedRef = useRef(false);
+
+const handleDayTabsPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  if (!dayTabsRef.current) return;
+  setIsDraggingDays(false);
+  dayDragInitiatedRef.current = true;
+  dayDragStartXRef.current = e.clientX;
+  dayScrollStartLeftRef.current = dayTabsRef.current.scrollLeft;
+};
+
+const handleDayTabsPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  if (!dayTabsRef.current || !dayDragInitiatedRef.current) return;
+  const deltaX = e.clientX - dayDragStartXRef.current;
+  if (Math.abs(deltaX) > 5) {
+    if (!isDraggingDays) setIsDraggingDays(true);
+    dayTabsRef.current.scrollLeft = dayScrollStartLeftRef.current - deltaX;
+    e.preventDefault();
+  }
+};
+
+const handleDayTabsPointerUp = (_e: React.PointerEvent<HTMLDivElement>) => {
+  setIsDraggingDays(false);
+  dayDragInitiatedRef.current = false;
+};
 
 // Drag & Drop intelligente per esercizi e superset
 // Applica aggiornamento uniforme e salvataggio
@@ -742,6 +833,7 @@ useEffect(() => {
             duration: Math.max(1, durationWeeks) * 7,
             durationWeeks,
             exercises: exercises || [], // Include gli esercizi esistenti nella creazione iniziale
+            days: { [activeDayKey]: exercises || [] },
             category: 'strength' as const,
             status: workoutStatus || 'draft',
             mediaFiles: { images: [], videos: [], audio: [] },
@@ -752,6 +844,7 @@ useEffect(() => {
             folderId: null,
             color: '#10B981',
             variants: [],
+            activeVariantId: 'original',
             createdAt: now,
             updatedAt: now
           };
@@ -774,23 +867,33 @@ useEffect(() => {
         // Aggiorna gli esercizi in base alla variante attiva
         let exercisesToSave = exercises;
         let updatedVariants = variants;
-        
+        let updatedOriginalDays = originalDays;
+
         if (activeVariantId === 'original' || !variants.length || !variants.find(v => v.id === activeVariantId)) {
           // Se siamo nell'originale, salva gli esercizi nell'originale
-          exercisesToSave = exercises;
+          const newOriginalDays = { ...originalDays, [activeDayKey]: [...exercises] };
+          updatedOriginalDays = newOriginalDays;
+          setOriginalDays(newOriginalDays);
+          exercisesToSave = newOriginalDays['G1'] || [];
           // Mantieni le varianti esistenti senza modificarle
-          updatedVariants = variants;
+          updatedVariants = variants.map(v => ({ ...v, days: (variantDaysById[v.id] || (v as any).days || {}) }));
           console.log('💾 Saving original workout exercises:', exercisesToSave.length);
         } else {
           // Se siamo in una variante esistente, salva gli esercizi nella variante
+          const prevVariantDays = variantDaysById[activeVariantId] || {};
+          const newVariantDays = { ...prevVariantDays, [activeDayKey]: [...exercises] };
+          setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
           updatedVariants = variants.map(v => 
             v.id === activeVariantId 
-              ? { ...v, exercises: exercises, updatedAt: new Date().toISOString() }
-              : v
+              ? { ...v, exercises: newVariantDays['G1'] || (v.exercises || []), days: newVariantDays, updatedAt: new Date().toISOString() }
+              : { ...v, days: (variantDaysById[v.id] || (v as any).days || {}) }
           );
           // IMPORTANTE: Quando siamo in una variante, NON modificare gli esercizi originali
           // Usa gli originalExercises per mantenere l'originale intatto
-          exercisesToSave = originalExercises || [];
+          const safeOriginalDays = { ...originalDays };
+          if (!safeOriginalDays['G1']) safeOriginalDays['G1'] = originalExercises || [];
+          updatedOriginalDays = safeOriginalDays;
+          exercisesToSave = safeOriginalDays['G1'] || [];
           console.log('🔄 Saving variant exercises to variant, keeping original intact');
           console.log('📊 Variant exercises count:', exercises.length);
           console.log('📊 Original exercises count (unchanged):', exercisesToSave.length);
@@ -805,6 +908,7 @@ useEffect(() => {
           duration: calculatedDuration,
           durationWeeks,
           exercises: exercisesToSave,
+          days: updatedOriginalDays,
           associatedAthletes,
           status: workoutStatus,
           variants: updatedVariants,
@@ -979,18 +1083,34 @@ useEffect(() => {
                 });
               }
               
-              // IMPORTANTE: Gli originalExercises devono essere sempre gli esercizi base del workout
-              // Non devono mai includere esercizi aggiunti alle varianti
-              // Se il workout ha varianti, gli originalExercises sono gli esercizi salvati nel campo 'exercises'
-              // che rappresenta sempre la versione originale
-              setOriginalExercises(exercisesWithValidIds); // Salva gli esercizi originali dal database
-              console.log('🔒 Original exercises set:', exercisesWithValidIds.length, 'exercises');
-              
-              // Carica sempre gli esercizi originali all'ingresso nella pagina
-              console.log('📥 Loading original exercises (default on entry)');
-              setExercises(exercisesWithValidIds); // Carica sempre gli esercizi della scheda originale
-              
-              console.log('✅ Exercises loaded from database:', exercisesWithValidIds);
+              // Inizializza mappa giorni originale in modo dinamico (inizialmente solo G1)
+              const incomingDays = (workoutData as any).days || {};
+              const incomingKeys = Object.keys(incomingDays);
+              const sortedKeys = incomingKeys.length
+                ? incomingKeys.slice().sort((a, b) => {
+                    const na = parseInt(String(a).replace(/^G/, ''), 10);
+                    const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                    return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                  })
+                : ['G1'];
+              const initializedOriginalDays: { [key: string]: Exercise[] } = {};
+              sortedKeys.forEach((dk) => {
+                const list = dk === 'G1' ? (incomingDays[dk] || exercisesWithValidIds) : (incomingDays[dk] || []);
+                initializedOriginalDays[dk] = list;
+              });
+              // Se non c'erano giorni, assicurati che G1 esista
+              if (!initializedOriginalDays['G1']) initializedOriginalDays['G1'] = exercisesWithValidIds;
+              setOriginalDays(initializedOriginalDays);
+
+              // Gli originalExercises corrispondono sempre a G1
+              setOriginalExercises(initializedOriginalDays['G1']);
+              console.log('🔒 Original exercises set (G1):', initializedOriginalDays['G1'].length, 'exercises');
+
+              // Carica gli esercizi del giorno attivo (default G1) all'ingresso
+              const entryList = initializedOriginalDays[activeDayKey] || [];
+              console.log('📥 Loading original day', activeDayKey, 'exercises:', entryList.length);
+              setExercises(entryList);
+              console.log('✅ Exercises loaded from database for day', activeDayKey, ':', entryList.length);
             } else {
               // Resetta sempre a array vuoto per nuove schede
               setOriginalExercises([]);
@@ -1015,7 +1135,7 @@ useEffect(() => {
             
             // Carica le varianti se esistono, ma all'ingresso forziamo la scheda originale attiva
               if (workoutData.variants && workoutData.variants.length > 0) {
-                // Normalizza gli ID degli esercizi all'interno delle varianti
+                // Normalizza gli ID degli esercizi e inizializza giorni per ciascuna variante
                 const normalizedVariants = workoutData.variants.map(v => {
                   const fixedExercises = (v.exercises || []).map(ex => {
                     if (!ex.id || ex.id.trim() === '') {
@@ -1025,11 +1145,30 @@ useEffect(() => {
                     }
                     return ex;
                   });
-                  return { ...v, isActive: false, exercises: fixedExercises };
+                  const incomingVariantDays = (v as any).days || {};
+                  const initializedVariantDays: { [key: string]: Exercise[] } = {};
+                  const variantKeys = Object.keys(incomingVariantDays).length
+                    ? Object.keys(incomingVariantDays)
+                    : Object.keys(initializedOriginalDays);
+                  const sortedVariantKeys = variantKeys.slice().sort((a, b) => {
+                    const na = parseInt(String(a).replace(/^G/, ''), 10);
+                    const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                    return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                  });
+                  sortedVariantKeys.forEach((dk) => {
+                    const list = dk === 'G1' ? (incomingVariantDays[dk] || fixedExercises) : (incomingVariantDays[dk] || []);
+                    initializedVariantDays[dk] = list;
+                  });
+                  if (!initializedVariantDays['G1']) initializedVariantDays['G1'] = fixedExercises;
+                  return { ...v, isActive: false, exercises: initializedVariantDays['G1'], days: initializedVariantDays };
                 });
                 const getNumAsc = (name: string) => { const m = name.match(/Variante (\d+)/); return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER; };
                 const sortedVariants = normalizedVariants.slice().sort((a, b) => getNumAsc(a.name) - getNumAsc(b.name));
                 setVariants(sortedVariants);
+                // Inizializza mappa giorni locali per le varianti
+                const initialVariantDaysById: { [variantId: string]: { [key: string]: Exercise[] } } = {};
+                sortedVariants.forEach(v => { if ((v as any).days) initialVariantDaysById[v.id] = (v as any).days as any; });
+                setVariantDaysById(initialVariantDaysById);
                 setActiveVariantId('original');
                 setWorkoutDescription(workoutData.description || '');
               } else {
@@ -1105,24 +1244,28 @@ useEffect(() => {
         
         // IMPORTANTE: Gestione corretta dell'isolamento tra variante e originale
         if (activeVariantId !== 'original') {
-          // Se siamo in una variante, aggiorna SOLO la variante
-          // NON toccare MAI gli originalExercises quando si è in una variante
+          // Aggiorna i giorni della variante corrente
+          const prevVariantDays = variantDaysById[activeVariantId] || {};
+          const newVariantDays = { ...prevVariantDays, [activeDayKey]: finalExercises };
+          setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
           const updatedVariants = variants.map(v => 
             v.id === activeVariantId 
-              ? { ...v, exercises: finalExercises, updatedAt: new Date().toISOString() }
-              : v
+              ? { ...v, exercises: newVariantDays['G1'] || finalExercises, updatedAt: new Date().toISOString(), days: newVariantDays }
+              : { ...v, days: (variantDaysById[v.id] || (v as any).days || {}) }
           );
           setVariants(updatedVariants);
-          console.log('🔄 Updated ONLY variant with new exercise:', {
+          console.log('🔄 Updated ONLY variant day', activeDayKey, 'with new exercise:', {
             variantId: activeVariantId,
             exerciseCount: finalExercises.length
           });
           console.log('🔒 OriginalExercises PROTECTED and unchanged:', originalExercises?.length || 0, 'exercises');
         } else {
-          // Se siamo nell'originale, aggiorna SOLO gli originalExercises
-          setOriginalExercises(finalExercises);
-          console.log('🔄 Updated ONLY original exercises:', finalExercises.length);
-          console.log('🔍 Original exercises content:', finalExercises.map(ex => ex.name));
+          // Aggiorna i giorni dell'originale
+          const newOriginalDays = { ...originalDays, [activeDayKey]: finalExercises };
+          setOriginalDays(newOriginalDays);
+          if (activeDayKey === 'G1') setOriginalExercises(finalExercises);
+          console.log('🔄 Updated ONLY original day', activeDayKey, 'exercises:', finalExercises.length);
+          console.log('🔍 Original day exercises content:', finalExercises.map(ex => ex.name));
         }
 
         // ➕ Aggiunge automaticamente il nome alla libreria personalizzata se non presente
@@ -1381,10 +1524,15 @@ useEffect(() => {
     const normalized = normalizeSupersets(updatedExercises);
     setExercises(normalized);
     if (activeVariantId !== 'original') {
-      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+      const prevVariantDays = variantDaysById[activeVariantId] || {};
+      const newVariantDays = { ...prevVariantDays, [activeDayKey]: normalized };
+      setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
+      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: newVariantDays['G1'] || normalized, days: newVariantDays, updatedAt: new Date().toISOString() } : { ...v, days: (variantDaysById[v.id] || (v as any).days || {}) });
       setVariants(updatedVariants);
     } else {
-      setOriginalExercises(normalized);
+      const newOriginalDays = { ...originalDays, [activeDayKey]: normalized };
+      setOriginalDays(newOriginalDays);
+      if (activeDayKey === 'G1') setOriginalExercises(normalized);
     }
     triggerAutoSave();
     setOpenCloneActionsId(null);
@@ -1421,10 +1569,15 @@ useEffect(() => {
     const normalized = normalizeSupersets(updated);
     setExercises(normalized);
     if (activeVariantId !== 'original') {
-      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+      const prevVariantDays = variantDaysById[activeVariantId] || {};
+      const newVariantDays = { ...prevVariantDays, [activeDayKey]: normalized };
+      setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
+      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: newVariantDays['G1'] || normalized, days: newVariantDays, updatedAt: new Date().toISOString() } : { ...v, days: (variantDaysById[v.id] || (v as any).days || {}) });
       setVariants(updatedVariants);
     } else {
-      setOriginalExercises(normalized);
+      const newOriginalDays = { ...originalDays, [activeDayKey]: normalized };
+      setOriginalDays(newOriginalDays);
+      if (activeDayKey === 'G1') setOriginalExercises(normalized);
     }
     triggerAutoSave();
     setOpenCloneActionsId(null);
@@ -1438,22 +1591,50 @@ useEffect(() => {
         return match ? parseInt(match[1]) : 0;
       })
       .filter(num => num > 0);
-    
-    const nextVariantNumber = existingVariantNumbers.length > 0 
-      ? Math.max(...existingVariantNumbers) + 1 
+
+    const nextVariantNumber = existingVariantNumbers.length > 0
+      ? Math.max(...existingVariantNumbers) + 1
       : 1;
+
+    // Determina la sorgente da clonare: scheda originale o variante attiva
+    const isCloningOriginal = activeVariantId === 'original';
+    const selectedVariant = isCloningOriginal ? null : variants.find(v => v.id === activeVariantId);
+    const sourceDaysRaw: { [key: string]: Exercise[] } = isCloningOriginal
+      ? (originalDays || {})
+      : (variantDaysById[activeVariantId] || (selectedVariant as any)?.days || {});
+
+    // Clona esattamente i giorni presenti nella sorgente (senza aggiunte implicite)
+    const sourceDayKeys = Object.keys(sourceDaysRaw);
+    const clonedDays: { [key: string]: Exercise[] } = {};
+    if (sourceDayKeys.length === 0) {
+      // Se la sorgente non ha giorni mappati, crea G1 dal contesto corrente
+      const fallbackG1 = isCloningOriginal
+        ? (originalExercises || [])
+        : (selectedVariant?.exercises || []);
+      clonedDays['G1'] = deepCloneExercises(fallbackG1);
+    } else {
+      sourceDayKeys.forEach(dk => {
+        clonedDays[dk] = deepCloneExercises(sourceDaysRaw[dk] || []);
+      });
+    }
+
+    // L'array exercises della variante punta a G1 della sorgente (se esiste), altrimenti lista vuota
+    const newVariantExercises = deepCloneExercises(
+      (sourceDayKeys.includes('G1') ? sourceDaysRaw['G1'] : clonedDays[sourceDayKeys[0]]) || []
+    );
 
     const newVariant: WorkoutVariant = {
       id: Date.now().toString(),
       name: `Variante ${nextVariantNumber} di ${workoutTitle}`,
-      isActive: true, // La nuova variante diventa attiva
-      exercises: deepCloneExercises(originalExercises), // Usa deep clone per indipendenza
+      isActive: true,
+      exercises: newVariantExercises,
+      days: clonedDays,
       parentWorkoutId: workoutId,
       modifications: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
     // Disattiva tutte le altre varianti e inserisci la nuova mantenendo ordine crescente (da sinistra a destra)
     const updatedVariants = [...variants.map(v => ({ ...v, isActive: false })), newVariant].sort((a, b) => {
       const ma = (a.name || '').match(/Variante\s+(\d+)/i);
@@ -1464,31 +1645,37 @@ useEffect(() => {
     });
     setVariants(updatedVariants);
     setActiveVariantId(newVariant.id);
+    // Inizializza giorni per la nuova variante nell'UI state
+    setVariantDaysById({ ...variantDaysById, [newVariant.id]: newVariant.days || {} });
 
     // Porta lo scroll all'inizio per mostrare la testa del percorso
     if (variantTabsRef.current) {
       try { variantTabsRef.current.scrollTo({ left: 0, behavior: 'smooth' }); }
       catch { variantTabsRef.current.scrollLeft = 0; }
     }
-    
-    // Carica gli esercizi della nuova variante
-    setExercises(deepCloneExercises(originalExercises));
-    
+
+    // Carica gli esercizi della nuova variante per il giorno attivo (fallback al primo giorno se non esiste)
+    const clonedDayKeys = Object.keys(newVariant.days || {});
+    const targetDayKey = clonedDayKeys.includes(activeDayKey) ? activeDayKey : (clonedDayKeys[0] || 'G1');
+    if (targetDayKey !== activeDayKey) setActiveDayKey(targetDayKey);
+    const nextList = (newVariant.days || {})[targetDayKey] || [];
+    setExercises(deepCloneExercises(nextList));
+
     // Notifica creazione variante
     setSaveMessage(`Nuova variante creata: ${newVariant.name}`);
-    
+
     // NON modificare il titolo della scheda - mantieni quello originale
     // La variante avrà il suo nome ma la scheda mantiene il titolo originale
-    
+
     // Salva immediatamente le modifiche nel database
     try {
       const workoutData = await DB.getWorkoutPlanById(workoutId);
       if (workoutData) {
-        const updatedWorkout = { 
-          ...workoutData, 
+        const updatedWorkout = {
+          ...workoutData,
           variants: updatedVariants,
           activeVariantId: newVariant.id,
-          updatedAt: new Date().toISOString() 
+          updatedAt: new Date().toISOString()
         };
         await updateWorkoutPlan(workoutId, updatedWorkout);
       }
@@ -1509,19 +1696,25 @@ useEffect(() => {
     // IMPORTANTE: Prima di cambiare variante, salva CORRETTAMENTE gli esercizi correnti
     if (activeVariantId !== variantId) {
       if (activeVariantId === 'original') {
-        // Se stiamo lasciando l'originale, salva gli esercizi correnti negli originalExercises
-        console.log('💾 Saving current exercises to originalExercises before switching to variant');
-        setOriginalExercises([...exercises]); // Crea una copia indipendente
+        // Salva gli esercizi correnti nel giorno attivo della scheda originale
+        console.log('💾 Saving current exercises to originalDays before switching variant');
+        const newOriginalDays = { ...originalDays, [activeDayKey]: [...exercises] };
+        setOriginalDays(newOriginalDays);
+        if (activeDayKey === 'G1') setOriginalExercises([...exercises]);
       } else {
-        // Se stiamo lasciando una variante, salva gli esercizi nella variante
+        // Salva gli esercizi correnti nel giorno attivo della variante corrente
+        const prevVariantDays = variantDaysById[activeVariantId] || {};
+        const newVariantDays = { ...prevVariantDays, [activeDayKey]: [...exercises] };
+        console.log('💾 Saving current exercises to variantDays:', activeVariantId, activeDayKey, exercises.length);
+        setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
+        // Aggiorna anche l'array exercises della variante per compatibilità (G1)
         const currentVariantIndex = variants.findIndex(v => v.id === activeVariantId);
         if (currentVariantIndex !== -1) {
-          console.log('💾 Saving current exercises to variant:', activeVariantId, exercises.length, 'exercises');
           const updatedVariants = [...variants];
           updatedVariants[currentVariantIndex] = {
             ...updatedVariants[currentVariantIndex],
-            exercises: [...exercises], // Crea una copia indipendente
-            updatedAt: new Date().toISOString()
+            exercises: newVariantDays['G1'] || updatedVariants[currentVariantIndex].exercises || [],
+            updatedAt: new Date().toISOString(),
           };
           setVariants(updatedVariants);
         }
@@ -1537,23 +1730,25 @@ useEffect(() => {
     
     // Aggiorna la descrizione mostrata in base alla variante
     if (variantId === 'original') {
-      // Torna agli esercizi originali
-      console.log('📥 Loading original exercises:', originalExercises?.length || 0);
-      setExercises(originalExercises ? [...originalExercises] : []); // Crea una copia indipendente
+      // Torna agli esercizi del giorno attivo nell'originale
+      const hasDay = activeDayKey in originalDays;
+      const nextDayKey = hasDay ? activeDayKey : 'G1';
+      if (!hasDay) setActiveDayKey(nextDayKey);
+      const list = originalDays[nextDayKey] || [];
+      console.log('📥 Loading original day', activeDayKey, 'exercises:', list.length);
+      setExercises([...list]);
       // Usa la descrizione originale della scheda
       setWorkoutDescription(originalWorkoutDescription || '');
     } else {
-      // Carica gli esercizi della variante
+      // Carica gli esercizi della variante per il giorno attivo
       const selectedVariant = variants.find(v => v.id === variantId);
-      console.log('📥 Loading variant exercises:', selectedVariant?.name, selectedVariant?.exercises?.length || 0);
-      if (selectedVariant && selectedVariant.exercises && selectedVariant.exercises.length > 0) {
-        setExercises([...selectedVariant.exercises]); // Crea una copia indipendente
-      } else {
-        // La variante non ha esercizi: NON copiare quelli dell'originale
-        console.log('📭 Variant has no exercises. Starting with empty list.');
-        setExercises([]);
-        // Non salvare nulla nella variante: resta vuota finché l’utente non aggiunge esercizi
-      }
+      const vDays = variantDaysById[variantId] || (selectedVariant as any)?.days || {};
+      const hasDay = activeDayKey in vDays;
+      const nextDayKey = hasDay ? activeDayKey : 'G1';
+      if (!hasDay) setActiveDayKey(nextDayKey);
+      const list = vDays[nextDayKey] || [];
+      console.log('📥 Loading variant day', activeDayKey, 'exercises:', selectedVariant?.name, list.length);
+      setExercises([...list]);
       // Usa la descrizione della variante se presente
       setWorkoutDescription(selectedVariant?.description || '');
     }
@@ -1566,6 +1761,100 @@ useEffect(() => {
     // NON modificare il titolo della scheda quando si cambia variante
     // Il titolo della scheda rimane sempre quello originale
     // Solo il nome della variante cambia nei tab
+  };
+
+  // Cambio giorno G1–G10 con salvataggio degli esercizi correnti
+  const handleSwitchDay = (dayKey: string) => {
+    if (dayKey === activeDayKey) return;
+    // Salva gli esercizi correnti nel giorno attuale per la variante attiva
+    if (activeVariantId === 'original') {
+      const updatedOriginalDays = {
+        ...originalDays,
+        [activeDayKey]: [...exercises],
+      };
+      setOriginalDays(updatedOriginalDays);
+      // Aggiorna originalExercises se stiamo toccando G1
+      if (activeDayKey === 'G1') {
+        setOriginalExercises([...exercises]);
+      }
+      setActiveDayKey(dayKey);
+      const nextList = updatedOriginalDays[dayKey] || [];
+      setExercises([...nextList]);
+      if (dayKey === 'G1') {
+        setOriginalExercises([...nextList]);
+      }
+    } else {
+      const prevVariantDays = variantDaysById[activeVariantId] || {};
+      const updatedVariantDays = {
+        ...prevVariantDays,
+        [activeDayKey]: [...exercises],
+      };
+      setVariantDaysById({
+        ...variantDaysById,
+        [activeVariantId]: updatedVariantDays,
+      });
+      setActiveDayKey(dayKey);
+      const nextList = updatedVariantDays[dayKey] || [];
+      setExercises([...nextList]);
+    }
+    // Salvataggio veloce dello stato
+    triggerAutoSave();
+  };
+
+  // Rimozione giorno corrente (solo per variante/scheda attiva). Non consente rimozione di G1
+  const handleRemoveDay = (dayKey: string) => {
+    if (dayKey === 'G1') {
+      setSaveMessage('G1 non può essere eliminato');
+      return;
+    }
+    showConfirmation(
+      `Vuoi davvero rimuovere il giorno ${dayKey}?`,
+      () => {
+        if (activeVariantId === 'original') {
+          const newOriginalDays = { ...originalDays };
+          delete newOriginalDays[dayKey];
+          // Se stai rimuovendo il giorno attivo, passare a giorno esistente più vicino
+          let nextDay = activeDayKey;
+          if (!(nextDay in newOriginalDays)) {
+            const remainingKeys = Object.keys(newOriginalDays);
+            const sorted = (remainingKeys.length ? remainingKeys : ['G1']).slice().sort((a, b) => {
+              const na = parseInt(String(a).replace(/^G/, ''), 10);
+              const nb = parseInt(String(b).replace(/^G/, ''), 10);
+              return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+            });
+            nextDay = sorted[0] || 'G1';
+          }
+          setOriginalDays(newOriginalDays);
+          setActiveDayKey(nextDay);
+          const nextList = newOriginalDays[nextDay] || [];
+          setExercises([...nextList]);
+          if (nextDay === 'G1') setOriginalExercises([...nextList]);
+        } else {
+          const prevMap = variantDaysById[activeVariantId] || {};
+          const newVariantDays = { ...prevMap };
+          delete newVariantDays[dayKey];
+          let nextDay = activeDayKey;
+          if (!(nextDay in newVariantDays)) {
+            const remainingKeys = Object.keys(newVariantDays);
+            const sorted = (remainingKeys.length ? remainingKeys : ['G1']).slice().sort((a, b) => {
+              const na = parseInt(String(a).replace(/^G/, ''), 10);
+              const nb = parseInt(String(b).replace(/^G/, ''), 10);
+              return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+            });
+            nextDay = sorted[0] || 'G1';
+          }
+          setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
+          const list = newVariantDays[nextDay] || [];
+          setActiveDayKey(nextDay);
+          setExercises([...list]);
+          // Mantieni coerenza nel modello variante
+          const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, days: newVariantDays, exercises: newVariantDays['G1'] || v.exercises || [], updatedAt: new Date().toISOString() } : v);
+          setVariants(updatedVariants);
+        }
+        setSaveMessage(`Giorno ${dayKey} rimosso`);
+        triggerAutoSave();
+      }
+    );
   };
   
   const handleRemoveVariant = (variantId: string) => {
@@ -1734,14 +2023,19 @@ useEffect(() => {
       setExercises(updatedExercises);
 
       if (activeVariantId !== 'original') {
+        const prevVariantDays = variantDaysById[activeVariantId] || {};
+        const newVariantDays = { ...prevVariantDays, [activeDayKey]: updatedExercises };
+        setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
         const updatedVariants = variants.map(v => 
           v.id === activeVariantId 
-            ? { ...v, exercises: updatedExercises, updatedAt: new Date().toISOString() }
-            : v
+            ? { ...v, exercises: newVariantDays['G1'] || updatedExercises, days: newVariantDays, updatedAt: new Date().toISOString() }
+            : { ...v, days: (variantDaysById[v.id] || (v as any).days || {}) }
         );
         setVariants(updatedVariants);
       } else {
-        setOriginalExercises(updatedExercises);
+        const newOriginalDays = { ...originalDays, [activeDayKey]: updatedExercises };
+        setOriginalDays(newOriginalDays);
+        if (activeDayKey === 'G1') setOriginalExercises(updatedExercises);
       }
 
       setEditingExerciseId(null);
@@ -1796,26 +2090,28 @@ useEffect(() => {
         const updatedExercises = exercises.filter(ex => ex.id !== exerciseId);
         const normalized = normalizeSupersets(updatedExercises);
         setExercises(normalized);
-        
-        // IMPORTANTE: Gestione corretta dell'isolamento per la rimozione
+
+        // IMPORTANTE: Gestione corretta dell'isolamento per la rimozione con giorni
         if (activeVariantId !== 'original') {
-          // Se siamo in una variante, aggiorna SOLO la variante
-          // NON toccare MAI gli originalExercises quando si è in una variante
+          const prevVariantDays = variantDaysById[activeVariantId] || {};
+          const newVariantDays = { ...prevVariantDays, [activeDayKey]: normalized };
+          setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
           const updatedVariants = variants.map(v => 
             v.id === activeVariantId 
-              ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() }
-              : v
+              ? { ...v, exercises: newVariantDays['G1'] || normalized, days: newVariantDays, updatedAt: new Date().toISOString() }
+              : { ...v, days: (variantDaysById[v.id] || (v as any).days || {}) }
           );
           setVariants(updatedVariants);
-          console.log('🔄 Updated ONLY variant after deletion:', {
+          console.log('🔄 Updated ONLY variant day', activeDayKey, 'after deletion:', {
             variantId: activeVariantId,
             exerciseCount: normalized.length
           });
           console.log('🔒 OriginalExercises PROTECTED and unchanged:', originalExercises?.length || 0, 'exercises');
         } else {
-          // Se siamo nell'originale, aggiorna SOLO gli originalExercises
-          setOriginalExercises(normalized);
-          console.log('🔄 Updated ONLY original exercises after deletion:', normalized.length);
+          const newOriginalDays = { ...originalDays, [activeDayKey]: normalized };
+          setOriginalDays(newOriginalDays);
+          if (activeDayKey === 'G1') setOriginalExercises(normalized);
+          console.log('🔄 Updated ONLY original day', activeDayKey, 'exercises after deletion:', normalized.length);
         }
         
         // Trigger auto-save immediately for exercise removal
@@ -1908,7 +2204,7 @@ useEffect(() => {
 
             {/* Bottoni varianti - solo icona con X e numero */}
             {variants.map((variant, index) => (
-              <div key={variant.id} className="relative h-12 w-12 flex-shrink-0 overflow-visible">
+              <div key={variant.id} className="group relative h-12 w-12 flex-shrink-0 overflow-visible">
                 <button
                   onClick={() => handleSwitchVariant(variant.id)}
                   className={`${variant.isActive ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
@@ -1917,17 +2213,15 @@ useEffect(() => {
                 >
                   <Copy size={20} className={variant.isActive ? 'text-red-600' : 'text-gray-500'} />
                 </button>
-                {/* X in alto a destra visibile quando la variante è attiva */}
-                {variant.isActive && (
-                  <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveVariant(variant.id); }}
-                    className="absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20"
-                    title={`Chiudi variante: ${variant.name}`}
-                    aria-label={`Chiudi variante: ${variant.name}`}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
+                {/* X in alto a destra: visibile su hover e sempre sulla variante attiva */}
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveVariant(variant.id); }}
+                  className={`absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20 ${variant.isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                  title={`Chiudi variante: ${variant.name}`}
+                  aria-label={`Chiudi variante: ${variant.name}`}
+                >
+                  <X size={12} />
+                </button>
                 {/* Numero sotto l'icona posizionato internamente */}
                 {(() => {
                   const match = (variant.name || '').match(/Variante\s+(\d+)/i);
@@ -1941,7 +2235,9 @@ useEffect(() => {
           </div>
         </div>
       </div>
-      
+
+      {/* Sezione giorni verrà posizionata dentro il contenitore, sopra "Esercizi" */}
+
       <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border border-gray-200 ${variants.length > 0 ? '' : '-mt-px'} transition-shadow backdrop-blur-sm bg-white/95 ring-1 ring-black/10 shadow-md`}>
 
         
@@ -2859,6 +3155,69 @@ useEffect(() => {
           </div>
         </Modal>
         
+        {/* Sezione Giorni: sotto la toolbar varianti, sopra "Esercizi" */}
+        <div className="mb-6">
+          <div className="flex justify-center">
+            <div
+              ref={dayTabsRef}
+              onPointerDown={handleDayTabsPointerDown}
+              onPointerMove={handleDayTabsPointerMove}
+              onPointerUp={handleDayTabsPointerUp}
+              className={`inline-flex items-center gap-2 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-2.5 overflow-x-auto no-scrollbar select-none ${isDraggingDays ? 'cursor-grabbing' : 'cursor-grab'} max-w-[85vw]`}
+              style={{ touchAction: 'pan-x' }}
+            >
+              {(() => {
+                const dayKeysToRender = (() => {
+                  const keys = activeVariantId === 'original'
+                    ? Object.keys(originalDays)
+                    : Object.keys(variantDaysById[activeVariantId] || {});
+                  const sorted = (keys.length ? keys : ['G1']).slice().sort((a, b) => {
+                    const na = parseInt(String(a).replace(/^G/, ''), 10);
+                    const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                    return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                  });
+                  return sorted;
+                })();
+                return dayKeysToRender.map((dk) => (
+                  <div key={dk} className="group relative flex-shrink-0 overflow-visible">
+                    <button
+                      onClick={() => handleSwitchDay(dk)}
+                      className={`${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
+                      title={`Giorno ${dk}`}
+                      aria-label={`Giorno ${dk}`}
+                    >
+                      {dk}
+                    </button>
+                    {dk !== 'G1' && (
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveDay(dk); }}
+                        className={`absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20 ${activeDayKey === dk ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        title={`Chiudi giorno: ${dk}`}
+                        aria-label={`Chiudi giorno: ${dk}`}
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                ));
+              })()}
+              <button
+                onClick={handleAddDay}
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Aggiungi giorno"
+                aria-label="Aggiungi giorno"
+                disabled={(() => {
+                  const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                  const count = keys.length > 0 ? keys.length : 1; // fallback G1
+                  return count >= 10;
+                })()}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Exercises List */}
         <div className="mb-8">
           <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight">Esercizi</h3>

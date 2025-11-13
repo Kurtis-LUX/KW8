@@ -47,6 +47,8 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showCompactTitle, setShowCompactTitle] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState<number>(0);
 
   // Converti utenti Firestore in atleti
   useEffect(() => {
@@ -110,6 +112,29 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
 
     setFilteredAthletes(filtered);
   }, [athletes, searchTerm, statusFilter, sortBy, sortOrder]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setShowCompactTitle(window.scrollY > 60);
+      const headerEl = document.querySelector('header');
+      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
+    };
+    const onResize = () => {
+      const headerEl = document.querySelector('header');
+      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
+    };
+    const initHeader = () => {
+      const headerEl = document.querySelector('header');
+      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
+    };
+    initHeader();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -266,6 +291,28 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
         showAuthButtons={false}
         isDashboard={true}
       />
+      <div
+        className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+        aria-hidden={!showCompactTitle}
+        style={{ top: headerHeight || undefined }}
+      >
+        <div className="container mx-auto px-6 py-2 flex items-center justify-between">
+          <button
+            onClick={() => onNavigate('coach-dashboard')}
+            className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
+            title="Torna alla Dashboard Coach"
+            aria-label="Torna alla Dashboard Coach"
+          >
+            <ChevronLeft size={20} className="block" />
+          </button>
+
+          <div className="text-center flex-1">
+            <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Gestione atleti</h2>
+          </div>
+
+          <div className="w-8"></div>
+        </div>
+      </div>
       
       <div className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

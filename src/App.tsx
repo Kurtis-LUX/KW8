@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Settings, ChevronLeft, Users } from 'lucide-react';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
@@ -60,6 +60,89 @@ function App() {
   const [initError, setInitError] = useState<string | null>(null);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
   const [workoutsDefaultTab, setWorkoutsDefaultTab] = useState<string>('current');
+  // Stato per la barra titolo compatta della Dashboard Coach
+  const [dashboardShowCompactTitle, setDashboardShowCompactTitle] = useState(false);
+  const [dashboardHeaderHeight, setDashboardHeaderHeight] = useState<number>(0);
+  const dashboardTitleRef = useRef<HTMLDivElement | null>(null);
+  const anchorVisibleRef = useRef<boolean>(false);
+
+  // Mappa path -> pagina interna
+  const applyPathToState = (pathname: string) => {
+    try {
+      const clean = pathname || '/';
+      // Gestione link diretto alla scheda
+      const urlParams = new URLSearchParams(window.location.search);
+      const linkId = urlParams.get('workout');
+      if (clean === '/workout-card' && linkId) {
+        setWorkoutLinkId(linkId);
+        setCurrentPage('workout-card');
+        return;
+      }
+
+      switch (clean) {
+        case '/':
+          setCurrentPage('home');
+          break;
+        case '/login':
+          setCurrentPage('login');
+          break;
+        case '/athlete-auth':
+          setCurrentPage('athlete-auth');
+          break;
+        case '/athlete-register':
+          setCurrentPage('athlete-register');
+          break;
+        case '/coach-dashboard':
+          setCurrentPage('coach-dashboard');
+          break;
+        case '/coach-home':
+          // Alias: Home Coach apre la Home principale
+          setCurrentPage('home');
+          break;
+        case '/workouts':
+        case '/athlete-home':
+          setWorkoutsDefaultTab('current');
+          setCurrentPage('workouts');
+          break;
+        case '/workout-manager':
+          setCurrentPage('workout-manager');
+          break;
+        case '/athlete-statistics':
+          setCurrentPage('athlete-statistics');
+          break;
+        case '/athlete-manager':
+          setCurrentPage('athlete-manager');
+          break;
+        case '/rankings':
+          setCurrentPage('rankings');
+          break;
+        case '/membership-cards':
+          setCurrentPage('membership-cards');
+          break;
+        case '/email-test':
+          setCurrentPage('email-test');
+          break;
+        // Le seguenti route aprono modali: lasciamo currentPage invariato
+        case '/privacy':
+          setShowPrivacyPolicyModal(true);
+          break;
+        case '/terms':
+          setShowTermsModal(true);
+          break;
+        case '/cookie-policy':
+          setShowCookiePolicyModal(true);
+          break;
+        case '/cookie-settings':
+          setShowCookieSettings(true);
+          break;
+        default:
+          // Fallback alla home
+          setCurrentPage('home');
+      }
+    } catch (e) {
+      console.warn('applyPathToState failed:', e);
+    }
+  };
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -131,22 +214,9 @@ function App() {
 
         console.log('🔐 Starting authentication check...');
         await checkAutoLogin();
-        // Apri la Privacy Policy se l'URL diretto è /privacy
-        if (window.location && window.location.pathname === '/privacy') {
-          setShowPrivacyPolicyModal(true);
-        }
-        // Apri i Termini se l'URL diretto è /terms
-        if (window.location && window.location.pathname === '/terms') {
-          setShowTermsModal(true);
-        }
-        // Apri la Cookie Policy se l'URL diretto è /cookie-policy
-        if (window.location && window.location.pathname === '/cookie-policy') {
-          setShowCookiePolicyModal(true);
-        }
-        // Apri le impostazioni cookie se l'URL diretto è /cookie-settings
-        if (window.location && window.location.pathname === '/cookie-settings') {
-          setShowCookieSettings(true);
-        }
+        // Sincronizza la pagina con l'URL attuale
+        applyPathToState(window.location?.pathname || '/');
+        
         setAppInitialized(true);
       } catch (error) {
         console.error('❌ App initialization failed:', error);
@@ -162,6 +232,69 @@ function App() {
     initializeApp();
   }, []);
 
+  // Gestisce back/forward del browser sincronizzando lo stato
+  useEffect(() => {
+    const onPopState = () => {
+      applyPathToState(window.location.pathname || '/');
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  // Gestione titolo compatto sticky per la Dashboard Coach
+  useEffect(() => {
+    if (currentPage !== 'coach-dashboard') {
+      setDashboardShowCompactTitle(false);
+      anchorVisibleRef.current = false;
+      return;
+    }
+    const updateHeaderHeight = () => {
+      const headerEl = document.querySelector('header');
+      if (headerEl) setDashboardHeaderHeight(headerEl.getBoundingClientRect().height);
+    };
+    const updateStickyVisibilityByScroll = () => {
+      const y = (document.scrollingElement?.scrollTop ?? window.scrollY ?? window.pageYOffset ?? 0);
+      setDashboardShowCompactTitle((y > 60) || anchorVisibleRef.current);
+    };
+    let observer: IntersectionObserver | null = null;
+    const setupObserver = () => {
+      const anchor = dashboardTitleRef.current;
+      const headerH = dashboardHeaderHeight || (document.querySelector('header')?.getBoundingClientRect().height || 64);
+      if (!anchor) return;
+      observer = new IntersectionObserver((entries) => {
+        const entry = entries[0];
+        anchorVisibleRef.current = !entry.isIntersecting;
+        const y = (document.scrollingElement?.scrollTop ?? window.scrollY ?? window.pageYOffset ?? 0);
+        setDashboardShowCompactTitle((y > 60) || anchorVisibleRef.current);
+      }, { root: null, threshold: 0, rootMargin: `-${headerH}px 0px 0px 0px` });
+      observer.observe(anchor);
+    };
+    const onScroll = () => {
+      updateHeaderHeight();
+      updateStickyVisibilityByScroll();
+    };
+    // Aggiorna subito visibilità e altezza all'ingresso nella Dashboard
+    updateHeaderHeight();
+    updateStickyVisibilityByScroll();
+    setupObserver();
+    const onResize = () => {
+      updateHeaderHeight();
+      updateStickyVisibilityByScroll();
+      // Reimposta l'observer se l'altezza header cambia
+      if (observer) {
+        observer.disconnect();
+        setupObserver();
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+      if (observer) observer.disconnect();
+    };
+  }, [currentPage, dashboardHeaderHeight]);
+
 
 
   const handleNavigation = (page: string, plan?: string, linkId?: string) => {
@@ -172,22 +305,52 @@ function App() {
     if (page === 'workout-card' && linkId) {
       setWorkoutLinkId(linkId);
       setCurrentPage('workout-card');
+      window.history.pushState({}, '', `/workout-card?workout=${linkId}`);
+    } else if (page === 'coach-home') {
+      // Alias: Home Coach indirizza alla Home principale
+      setCurrentPage('home');
+      window.history.pushState({}, '', '/coach-home');
+    } else if (page === 'athlete-home') {
+      // Alias: Home Atleta indirizza alla pagina Schede
+      setWorkoutsDefaultTab('current');
+      setCurrentPage('workouts');
+      window.history.pushState({}, '', '/athlete-home');
     } else if (page === 'privacy') {
       setShowPrivacyModal(true);
+      window.history.pushState({}, '', '/privacy');
     } else if (page === 'terms') {
       setShowTermsModal(true);
+      window.history.pushState({}, '', '/terms');
     } else if (page === 'cookie-policy') {
       setShowCookiePolicyModal(true);
+      window.history.pushState({}, '', '/cookie-policy');
     } else if (page === 'privacy-policy') {
       setShowPrivacyPolicyModal(true);
+      window.history.pushState({}, '', '/privacy');
     } else if (page === 'cookie-settings') {
       setShowCookieSettings(true);
+      window.history.pushState({}, '', '/cookie-settings');
     } else {
       // Reset del tab di default per workouts se non viene dalla dashboard coach
       if (page === 'workouts' && workoutsDefaultTab !== 'current') {
         setWorkoutsDefaultTab('current');
       }
       setCurrentPage(page);
+      const pagePathMap: Record<string, string> = {
+        home: '/',
+        login: '/login',
+        'athlete-auth': '/athlete-auth',
+        'athlete-register': '/athlete-register',
+        'coach-dashboard': '/coach-dashboard',
+        workouts: '/workouts',
+        'workout-manager': '/workout-manager',
+        'athlete-statistics': '/athlete-statistics',
+        'athlete-manager': '/athlete-manager',
+        rankings: '/rankings',
+        'membership-cards': '/membership-cards',
+        'email-test': '/email-test',
+      };
+      window.history.pushState({}, '', pagePathMap[page] || '/');
     }
   };
 
@@ -196,6 +359,7 @@ function App() {
     // Mantieni la sincronizzazione con localStorage per compatibilità
     localStorage.setItem('currentUser', JSON.stringify(user));
     setCurrentPage('home');
+    window.history.pushState({}, '', '/');
   };
   
   const handleLogout = () => {
@@ -216,6 +380,7 @@ function App() {
     
     // Reindirizza immediatamente alla home
     setCurrentPage('home');
+    window.history.pushState({}, '', '/');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     
     console.log('✅ Logout completato');
@@ -327,26 +492,47 @@ function App() {
   if (currentPage === 'coach-dashboard') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
+        <ProtectedRoute requireCoach={true} onUnauthorized={() => handleNavigation('login')}>
           <div className="min-h-screen bg-gray-100">
             <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} currentPage={currentPage} />
+            {/* Titolo compatto sticky (stile iOS) sotto l'header principale */}
+            <div
+              className={`fixed left-0 right-0 z-50 transition-all duration-300 ${dashboardShowCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+              aria-hidden={!dashboardShowCompactTitle}
+              style={{ top: (dashboardHeaderHeight || 64) }}
+            >
+              <div className="container mx-auto px-6 py-2 flex items-center justify-between">
+                <button
+                  onClick={() => handleNavigation('home')}
+                  className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
+                  title="Torna alla Home"
+                  aria-label="Torna alla Home"
+                >
+                  <ChevronLeft size={20} className="block" />
+                </button>
+                <div className="text-center flex-1">
+                  <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Dashboard Coach</h2>
+                </div>
+                <div className="w-8"></div>
+              </div>
+            </div>
             <div className="pt-20">
               <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-                <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3">
+                <div ref={dashboardTitleRef} className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2">
                   <button
                     onClick={() => handleNavigation('home')}
-                    className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
+                    className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
                     title="Torna alla Home"
                   >
-                    <ChevronLeft size={24} className="block" />
+                    <ChevronLeft size={20} className="block" />
                   </button>
                   
                   <div className="text-center flex-1">
-                    <h1 className="font-sfpro text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-1">Dashboard Coach</h1>
-                    <p className="font-sfpro text-[#001f3f]/90 font-medium text-sm sm:text-base">Gestione schede, programmi e atleti</p>
+                    <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">Dashboard Coach</h1>
+                    <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">Gestione schede, programmi e atleti</p>
                   </div>
                   
-                  <div className="w-10"></div>
+                  <div className="w-8"></div>
                 </div>
               </div>
             </div>

@@ -204,17 +204,25 @@ const CoachAuthPage: React.FC<CoachAuthPageProps> = ({ onAuthSuccess, onNavigate
 
         {/* Messaggi */}
         {error && (
-          <div className="bg-red-50/80 backdrop-blur-sm ring-1 ring-red-200 text-red-800 px-4 py-3 rounded-2xl mb-4 shadow-sm">
-            <div className="flex items-center">
+          <div
+            className="bg-red-50/80 backdrop-blur-sm ring-1 ring-red-200 text-red-800 px-4 py-3 rounded-2xl mb-4 shadow-sm text-center"
+            role="alert"
+            aria-live="polite"
+          >
+            <div className="flex items-center justify-center">
               <span className="mr-2">⚠️</span>
-              {error}
+              <span className="text-sm font-medium tracking-tight">{error}</span>
             </div>
           </div>
         )}
         
         {success && (
-          <div className="bg-white/85 backdrop-blur-sm ring-1 ring-black/10 text-navy-900 px-4 py-3 rounded-2xl mb-4 shadow-sm">
-            <div className="flex items-center">
+          <div
+            className="bg-white/85 backdrop-blur-sm ring-1 ring-black/10 text-navy-900 px-4 py-3 rounded-2xl mb-4 shadow-sm text-center"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="flex items-center justify-center">
               <CheckCircle size={18} className="mr-2 text-green-600" />
               <span className="text-sm font-medium tracking-tight">{success}</span>
             </div>

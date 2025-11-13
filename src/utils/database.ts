@@ -24,6 +24,8 @@ export interface WorkoutPlan {
   endDate?: string; // Data di fine per calcolo durata
   duration: number; // in giorni
   exercises: Exercise[];
+  // Supporto per giorni G1–G10; chiave es. "G1"
+  days?: { [key: string]: Exercise[] };
   category?: string;
   status: 'draft' | 'published' | 'archived';
   mediaFiles?: {
@@ -41,6 +43,10 @@ export interface WorkoutPlan {
   color?: string;
   variants?: WorkoutVariant[];
   originalWorkoutTitle?: string; // Titolo originale per le varianti
+  // Variante attiva corrente ("original" oppure id variante)
+  activeVariantId?: string;
+  // Durata in settimane (derivata o esplicita)
+  durationWeeks?: number;
 }
 
 export interface WorkoutVariant {
@@ -49,6 +55,8 @@ export interface WorkoutVariant {
   description?: string;
   parentWorkoutId: string;
   exercises?: Exercise[]; // Esercizi specifici della variante
+  // Supporto per giorni G1–G10; chiave es. "G1"
+  days?: { [key: string]: Exercise[] };
   modifications: {
     exerciseId: string;
     changes: {
@@ -231,7 +239,11 @@ const DB = {
           createdAt: plan.createdAt || now,
           updatedAt: plan.updatedAt || now,
           difficulty: plan.difficulty || 'beginner',
-          targetMuscles: plan.targetMuscles || []
+          targetMuscles: plan.targetMuscles || [],
+          // Inizializza nuove proprietà se mancanti
+          days: plan.days || {},
+          activeVariantId: plan.activeVariantId || 'original',
+          durationWeeks: plan.durationWeeks || (plan.duration ? Math.max(1, Math.ceil(plan.duration / 7)) : 1),
         };
       });
       
