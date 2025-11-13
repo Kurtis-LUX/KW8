@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import { auth } from '../config/firebase';
+import { auth, db, doc, setDoc } from '../config/firebase';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import firestoreService from '../services/firestoreService';
 import { authService } from '../services/authService';
@@ -126,21 +126,22 @@ const AthleteRegisterPage: React.FC<AthleteRegisterPageProps> = ({ onAuthSuccess
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Sincronizza profilo su Firestore evitando duplicati per email
+      const uid = userCredential.user?.uid;
       const safeEmail = email.trim();
-      const existing = await firestoreService.getUserByEmail(safeEmail);
       const baseProfile = {
         name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         email: safeEmail,
         phone: phone.trim(),
         role: 'athlete' as const,
         certificatoMedicoStato: 'non_presente' as const,
-        notes: ''
+        notes: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
-      if (existing && existing.id) {
-        await firestoreService.updateUser(existing.id, baseProfile);
+      if (uid) {
+        await setDoc(doc(db, 'users', uid), baseProfile);
       } else {
-        await firestoreService.createUser(baseProfile);
+        console.warn('⚠️ UID non disponibile dopo la registrazione, salto sincronizzazione profilo');
       }
       try { await sendEmailVerification(userCredential.user) } catch {}
 
@@ -152,8 +153,21 @@ const AthleteRegisterPage: React.FC<AthleteRegisterPageProps> = ({ onAuthSuccess
     } catch (err: any) {
       const code = (err && err.code) ? String(err.code) : '';
       const msg = (err && err.message) ? String(err.message) : '';
+      console.error('🔥 Firebase register error', { code, msg });
       if (code === 'auth/email-already-in-use' || msg.toLowerCase().includes('already in use')) {
         setError('Email già registrata. Accedi oppure reimposta la password.');
+      } else if (code === 'auth/operation-not-allowed') {
+        setError('Metodo Email/Password non abilitato su Firebase Auth. Abilitalo in Authentication → Sign-in method.');
+      } else if (code === 'auth/weak-password') {
+        setError('Password troppo debole. Usa almeno 8 caratteri con maiuscole, minuscole e numeri.');
+      } else if (code === 'auth/invalid-email') {
+        setError('Email non valida. Controlla formattazione (es. nome@dominio.tld).');
+      } else if (code === 'auth/invalid-api-key') {
+        setError('API key Firebase non valida. Controlla .env.local e riavvia il server.');
+      } else if (code === 'auth/app-not-authorized' || code === 'auth/unauthorized-domain') {
+        setError('Dominio non autorizzato. Aggiungi localhost tra i domini autorizzati in Firebase Auth → Settings.');
+      } else if (code === 'auth/network-request-failed') {
+        setError('Errore di rete. Controlla la connessione e riprova.');
       } else {
         const sanitizedError = (msg || 'Registrazione non riuscita').replace(/<[^>]*>/g, '').substring(0, 200);
         setError(sanitizedError);

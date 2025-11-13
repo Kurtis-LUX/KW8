@@ -257,14 +257,26 @@ function App() {
               const user = await authService.autoLogin();
               if (user) {
                 setCurrentUser(user);
-                handleNavigation('workouts');
+                handleNavigation('home');
               } else {
                 console.error('Login riuscito ma utente non trovato');
-                handleNavigation('workouts');
+                // Fallback: usa utente locale se presente
+                const localUser = authService.getCurrentUser();
+                if (localUser) {
+                  setCurrentUser(localUser);
+                  handleNavigation('home');
+                } else {
+                  handleNavigation('home');
+                }
               }
             } catch (error) {
               console.error('Errore durante la verifica post-login:', error);
-              handleNavigation('workouts');
+              // Fallback: usa utente locale se presente
+              const localUser = authService.getCurrentUser();
+              if (localUser) {
+                setCurrentUser(localUser);
+              }
+              handleNavigation('home');
             }
           }}
           onNavigateHome={() => handleNavigation('home')}
@@ -283,14 +295,26 @@ function App() {
               const user = await authService.autoLogin();
               if (user) {
                 setCurrentUser(user);
-                handleNavigation('workouts');
+                handleNavigation('home');
               } else {
                 console.error('Registrazione riuscita ma utente non trovato');
-                handleNavigation('workouts');
+                // Fallback: usa utente locale se presente
+                const localUser = authService.getCurrentUser();
+                if (localUser) {
+                  setCurrentUser(localUser);
+                  handleNavigation('home');
+                } else {
+                  handleNavigation('home');
+                }
               }
             } catch (error) {
               console.error('Errore durante la verifica post-registrazione:', error);
-              handleNavigation('workouts');
+              // Fallback: usa utente locale se presente
+              const localUser = authService.getCurrentUser();
+              if (localUser) {
+                setCurrentUser(localUser);
+              }
+              handleNavigation('home');
             }
           }}
           onNavigateHome={() => handleNavigation('home')}

@@ -36,6 +36,7 @@ app.use((req, res, next) => {
     '/api/auth/verify': ['POST', 'OPTIONS'],
     '/api/auth/google-signin': ['POST', 'OPTIONS'],
     '/apiAuthGoogleSignin': ['POST', 'OPTIONS'],
+    '/apiAuthFirebaseExchange': ['POST', 'OPTIONS'],
     '/api/users': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     '/api/health': ['GET', 'OPTIONS']
   };
@@ -589,3 +590,69 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
+// CORS preflight per apiAuthFirebaseExchange (compatibile con Firebase Functions)
+app.options('/apiAuthFirebaseExchange', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
+// Proxy locale per apiAuthFirebaseExchange -> Firebase Functions
+app.post('/apiAuthFirebaseExchange', async (req, res) => {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  try {
+    const { idToken } = req.body || {};
+    if (!idToken || typeof idToken !== 'string') {
+      return res.status(400).json({ success: false, message: 'Missing Firebase ID token' });
+    }
+
+    const url = 'https://us-central1-palestra-kw8.cloudfunctions.net/apiAuthFirebaseExchange';
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Origin': process.env.CORS_ORIGIN || 'http://localhost:5173'
+      },
+      body: JSON.stringify({ idToken })
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+    const text = await response.text();
+    console.log('🔁 [proxy] apiAuthFirebaseExchange upstream:', {
+      status: response.status,
+      contentType,
+      preview: text.slice(0, 200)
+    });
+
+    if (contentType.includes('application/json')) {
+      try {
+        const data = JSON.parse(text);
+        return res.status(response.status).json(data);
+      } catch (parseErr) {
+        console.error('Errore parse JSON upstream:', parseErr);
+        return res.status(502).json({ success: false, message: 'JSON parse error from auth exchange', raw: text });
+      }
+    }
+
+    // Upstream non ha restituito JSON: incapsula in JSON per il client
+    return res.status(response.status).json({
+      success: false,
+      message: 'Upstream did not return JSON',
+      status: response.status,
+      contentType,
+      raw: text
+    });
+  } catch (err) {
+    console.error('Errore proxy apiAuthFirebaseExchange:', err);
+    return res.status(500).json({ success: false, message: 'Errore interno proxy auth exchange' });
+  }
+});
