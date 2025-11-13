@@ -2,7 +2,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { collection as fsCollection, doc as fsDoc, getDocs as fsGetDocs, getDoc as fsGetDoc, addDoc as fsAddDoc, updateDoc as fsUpdateDoc, deleteDoc as fsDeleteDoc, setDoc as fsSetDoc, query as fsQuery, where as fsWhere, orderBy as fsOrderBy, limit as fsLimit, startAfter as fsStartAfter, writeBatch as fsWriteBatch, serverTimestamp as fsServerTimestamp, onSnapshot as fsOnSnapshot } from 'firebase/firestore';
+import { collection as fsCollection, doc as fsDoc, getDocs as fsGetDocs, getDoc as fsGetDoc, addDoc as fsAddDoc, updateDoc as fsUpdateDoc, deleteDoc as fsDeleteDoc, setDoc as fsSetDoc, query as fsQuery, where as fsWhere, orderBy as fsOrderBy, limit as fsLimit, startAfter as fsStartAfter, writeBatch as fsWriteBatch, serverTimestamp as fsServerTimestamp, onSnapshot as fsOnSnapshot, Unsubscribe as FsUnsubscribe } from 'firebase/firestore';
 
 // Disabilita Firebase per lo sviluppo locale per evitare errori di connessione
 const DISABLE_FIREBASE = false; // Abilitato per usare Firebase Auth in login
@@ -14,17 +14,21 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  // measurementId opzionale
+  measurementId: (import.meta as any).env?.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Configurazione di fallback per lo sviluppo
+// Configurazione di fallback per lo sviluppo/produzione quando le env non sono presenti
+// Usa i valori reali forniti per evitare "demo-api-key"
 const fallbackConfig = {
-  apiKey: "demo-api-key",
-  authDomain: "palestra-kw8.firebaseapp.com",
-  projectId: "palestra-kw8",
-  storageBucket: "palestra-kw8.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "demo-app-id"
+  apiKey: 'AIzaSyBzMFdfgzW6p8JQgbtmLVK16lS7SuI2lO4',
+  authDomain: 'palestra-kw8.firebaseapp.com',
+  projectId: 'palestra-kw8',
+  storageBucket: 'palestra-kw8.firebasestorage.app',
+  messagingSenderId: '287398471780',
+  appId: '1:287398471780:web:21f8436718c7627f165771',
+  measurementId: 'G-D6VVVREWKN'
 };
 
 // Mock per le collezioni Firestore
@@ -95,7 +99,7 @@ if (DISABLE_FIREBASE) {
   const config = hasValidConfig ? firebaseConfig : fallbackConfig;
   
   if (!hasValidConfig) {
-    console.log('⚠️ Using fallback Firebase config - API key not valid or missing');
+    console.log('⚠️ Using fallback Firebase config (real keys provided).');
   }
   
   // Inizializza Firebase
@@ -132,15 +136,11 @@ export const getDocs = DISABLE_FIREBASE
   : fsGetDocs;
 
 export const getDoc = DISABLE_FIREBASE
-  ? (docRef: any) => Promise.resolve({ 
-      exists: false, 
-      data: () => ({}),
-      id: 'mock-doc-id'
-    })
+  ? (docRef: any) => Promise.resolve({ exists: false, data: () => ({}) })
   : fsGetDoc;
 
 export const addDoc = DISABLE_FIREBASE
-  ? (collection: any, data: any) => Promise.resolve({ id: 'mock-doc-id' })
+  ? (collection: any, data: any) => Promise.resolve({ id: 'mock-id' })
   : fsAddDoc;
 
 export const updateDoc = DISABLE_FIREBASE
@@ -156,7 +156,7 @@ export const setDoc = DISABLE_FIREBASE
   : fsSetDoc;
 
 export const query = DISABLE_FIREBASE
-  ? (...args: any[]) => ({ get: () => Promise.resolve({ docs: [], empty: true }) })
+  ? (...args: any[]) => ({})
   : fsQuery;
 
 export const where = DISABLE_FIREBASE
@@ -168,29 +168,26 @@ export const orderBy = DISABLE_FIREBASE
   : fsOrderBy;
 
 export const limit = DISABLE_FIREBASE
-  ? (limitCount: number) => ({})
+  ? (...args: any[]) => ({})
   : fsLimit;
 
 export const startAfter = DISABLE_FIREBASE
-  ? (snapshot: any) => ({})
+  ? (...args: any[]) => ({})
   : fsStartAfter;
 
 export const writeBatch = DISABLE_FIREBASE
-  ? (db: any) => ({
-      set: () => {},
-      update: () => {},
-      delete: () => {},
-      commit: () => Promise.resolve()
-    })
+  ? (db: any) => ({ set: () => {}, update: () => {}, delete: () => {}, commit: () => Promise.resolve() })
   : fsWriteBatch;
 
 export const serverTimestamp = DISABLE_FIREBASE
-  ? () => new Date().toISOString()
+  ? () => new Date()
   : fsServerTimestamp;
 
 export const onSnapshot = DISABLE_FIREBASE
-  ? (query: any, callback: any) => () => {}
+  ? (query: any, callback: any) => { callback({ docs: [] }); return () => {}; }
   : fsOnSnapshot;
+
+export type Unsubscribe = FsUnsubscribe;
 
 export { db, auth };
 
