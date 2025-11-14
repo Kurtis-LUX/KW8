@@ -329,8 +329,8 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
 
               <div className="flex-1 flex justify-center">
                 <div className="text-center">
-                  <h1 className="font-sfpro text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm">Gestione atleti</h1>
-                  <p className="font-sfpro text-[#001f3f]/90 font-medium text-sm sm:text-base mt-1">Gestisci i profili e le informazioni dei tuoi atleti</p>
+                  <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">Gestione atleti</h1>
+                  <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">Gestisci i profili e le informazioni dei tuoi atleti</p>
                 </div>
               </div>
 

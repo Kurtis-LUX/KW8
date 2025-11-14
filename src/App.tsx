@@ -44,6 +44,7 @@ import LoadingScreen from './components/LoadingScreen';
 import './styles/dropdown.css';
 import AthleteAuthPage from './components/auth/AthleteAuthPage';
 import AthleteRegisterPage from './pages/AthleteRegisterPage';
+import AthleteProfilePage from './pages/AthleteProfilePage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -91,6 +92,9 @@ function App() {
           break;
         case '/athlete-register':
           setCurrentPage('athlete-register');
+          break;
+        case '/profile':
+          setCurrentPage('athlete-profile');
           break;
         case '/coach-dashboard':
           setCurrentPage('coach-dashboard');
@@ -341,6 +345,7 @@ function App() {
         login: '/login',
         'athlete-auth': '/athlete-auth',
         'athlete-register': '/athlete-register',
+        'athlete-profile': '/profile',
         'coach-dashboard': '/coach-dashboard',
         workouts: '/workouts',
         'workout-manager': '/workout-manager',
@@ -409,6 +414,34 @@ function App() {
           }}
           onNavigateHome={() => handleNavigation('home')}
         />
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'athlete-profile') {
+    return (
+      <LanguageProvider>
+        {currentUser && currentUser.role === 'athlete' ? (
+          <AthleteProfilePage
+            currentUser={currentUser}
+            onNavigateHome={() => handleNavigation('home')}
+            onUserUpdated={(u: User) => {
+              setCurrentUser(u);
+              try { localStorage.setItem('currentUser', JSON.stringify(u)); } catch {}
+            }}
+          />
+        ) : (
+          <div className="p-8 text-center">
+            <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
+            <p className="mt-4">Devi essere un atleta autenticato per accedere al profilo.</p>
+            <button
+              onClick={() => handleNavigation('athlete-auth')}
+              className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+            >
+              Accedi come Atleta
+            </button>
+          </div>
+        )}
       </LanguageProvider>
     );
   }

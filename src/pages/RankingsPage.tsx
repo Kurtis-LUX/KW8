@@ -373,10 +373,10 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
             </button>
             
             <div className="text-center flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent mb-2">
+              <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">
                 Classifiche
               </h1>
-              <p className="text-gray-600">
+              <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">
                 Visualizza i massimali e i record degli atleti per ogni esercizio
               </p>
             </div>

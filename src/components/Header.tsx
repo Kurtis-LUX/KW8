@@ -490,6 +490,53 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                         </div>
                       </>
                     )}
+
+                    {currentUser.role === 'athlete' && (
+                      <>
+                        <button
+                          onClick={() => {
+                            handleNavigation('athlete-profile');
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
+                        >
+                          <UserIcon size={16} />
+                          <span>Profilo</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleNavigation('home');
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-xl hover:bg_black/5 flex items-center space-x-2 transition-colors"
+                        >
+                          <Home size={16} />
+                          <span>Home</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleNavigation('workouts');
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors"
+                        >
+                          <FileText size={16} />
+                          <span>Schede</span>
+                        </button>
+                        <div className="mt-2 pt-2 border-t border-black/5">
+                          <button
+                            onClick={() => {
+                              handleLogout();
+                              setShowUserMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors text-red-700"
+                          >
+                            <LogOut size={16} />
+                            <span>Logout</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
                     
                   </div>
                 )}

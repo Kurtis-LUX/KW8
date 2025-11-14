@@ -331,10 +331,10 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
           </button>
           
           <div className="text-center flex-1">
-            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent">
+            <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">
               Tesserini Atleti
             </h1>
-            <p className="text-gray-600 text-sm">
+            <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">
               Gestisci i tesserini e i pagamenti degli atleti
             </p>
           </div>

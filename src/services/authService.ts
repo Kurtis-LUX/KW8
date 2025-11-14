@@ -2,11 +2,13 @@
 import { envConfig, checkCriticalEnvVars } from '../config/envConfig';
 import { auth } from '../config/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import firestoreService from './firestoreService';
 
 interface AuthUser {
   id: string;
   email: string;
   role: string;
+  name?: string;
   nome?: string;
   cognome?: string;
 }
@@ -38,6 +40,7 @@ interface VerifyResponse {
     id: string;
     email: string;
     role: string;
+    name?: string;
   };
   message: string;
 }
@@ -160,10 +163,16 @@ class AuthService {
         
         console.log('✅ Login riuscito, salvando token e user');
         this.setToken(data.data.token);
+        let name: string | undefined;
+        try {
+          const fsUser = await firestoreService.getUserByEmail(data.data.user.email);
+          name = fsUser?.name;
+        } catch {}
         this.setUser({
           id: data.data.user.email, // Usa email come ID
           email: data.data.user.email,
-          role: data.data.user.role || 'user'
+          role: data.data.user.role || 'user',
+          name,
         });
       } else {
         console.log('❌ Login fallito:', data.message || 'Autenticazione non riuscita');
@@ -236,10 +245,16 @@ class AuthService {
 
         console.log('✅ Registrazione riuscita, salvando token e user (athlete)');
         this.setToken(data.data.token);
+        let name: string | undefined = data.data.user.name;
+        try {
+          const fsUser = await firestoreService.getUserByEmail(data.data.user.email);
+          name = name || fsUser?.name;
+        } catch {}
         this.setUser({
           id: data.data.user.email,
           email: data.data.user.email,
           role: data.data.user.role || 'athlete',
+          name,
         });
       } else {
         console.log('❌ Registrazione fallita:', data.message || 'Registrazione non riuscita');
@@ -292,9 +307,14 @@ class AuthService {
           const localToken = btoa(JSON.stringify(localTokenPayload));
           this.setToken(localToken);
           const userEmail = (firebaseUser.email || email || 'unknown');
-          this.setUser({ id: userEmail, email: userEmail, role: 'athlete' });
+          let name: string | undefined;
+          try {
+            const fsUser = await firestoreService.getUserByEmail(userEmail);
+            name = fsUser?.name;
+          } catch {}
+          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name });
           const result: LoginResponse = {
-            user: { id: userEmail, email: userEmail, role: 'athlete' },
+            user: { id: userEmail, email: userEmail, role: 'athlete', name },
             token: localToken,
             message: 'Login effettuato (fallback locale)',
             expiresIn: '7d',
@@ -319,9 +339,14 @@ class AuthService {
           };
           const localToken = btoa(JSON.stringify(localTokenPayload));
           this.setToken(localToken);
-          this.setUser({ id: userEmail, email: userEmail, role: 'athlete' });
+          let name: string | undefined;
+          try {
+            const fsUser = await firestoreService.getUserByEmail(userEmail);
+            name = fsUser?.name;
+          } catch {}
+          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name });
           const result: LoginResponse = {
-            user: { id: userEmail, email: userEmail, role: 'athlete' },
+            user: { id: userEmail, email: userEmail, role: 'athlete', name },
             token: localToken,
             message: `Login effettuato (fallback locale): ${errorMessage}`,
             expiresIn: '7d',
@@ -343,9 +368,14 @@ class AuthService {
           };
           const localToken = btoa(JSON.stringify(localTokenPayload));
           this.setToken(localToken);
-          this.setUser({ id: userEmail, email: userEmail, role: 'athlete' });
+          let name: string | undefined;
+          try {
+            const fsUser = await firestoreService.getUserByEmail(userEmail);
+            name = fsUser?.name;
+          } catch {}
+          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name });
           const result: LoginResponse = {
-            user: { id: userEmail, email: userEmail, role: 'athlete' },
+            user: { id: userEmail, email: userEmail, role: 'athlete', name },
             token: localToken,
             message: `Login effettuato (fallback locale): ${errorMessage}`,
             expiresIn: '7d',
@@ -362,10 +392,16 @@ class AuthService {
 
       // 4) Salva il token e i dati utente
       this.setToken(data.data.token);
+      let name: string | undefined;
+      try {
+        const fsUser = await firestoreService.getUserByEmail(data.data.user.email);
+        name = fsUser?.name;
+      } catch {}
       this.setUser({
         id: data.data.user.email,
         email: data.data.user.email,
         role: (data.data.user.role === 'user') ? 'athlete' : (data.data.user.role || 'athlete'),
+        name,
       });
 
       // 5) Restituisci nel formato atteso da chiamanti esistenti
@@ -374,6 +410,7 @@ class AuthService {
           id: data.data.user.email,
           email: data.data.user.email,
           role: (data.data.user.role === 'user') ? 'athlete' : (data.data.user.role || 'athlete'),
+          name,
         },
         token: data.data.token,
         message: data.message || 'Login effettuato',
@@ -497,9 +534,14 @@ class AuthService {
       
       // Se il token è valido, restituisci i dati utente
       const normalizedRole = (data.user.role === 'user') ? 'athlete' : (data.user.role || 'athlete');
+      let name: string | undefined;
+      try {
+        const fsUser = await firestoreService.getUserByEmail(data.user.email);
+        name = fsUser?.name;
+      } catch {}
       return {
         valid: true,
-        user: { ...data.user, role: normalizedRole },
+        user: { ...data.user, role: normalizedRole, name },
         message: data.message || 'Token valido'
       } as VerifyResponse;
     } catch (error) {
@@ -619,6 +661,9 @@ class AuthService {
           
           if (result && result.valid) {
             console.log('✅ Auto-login successful');
+            if (result.user) {
+              this.setUser(result.user);
+            }
             return result.user;
           } else {
             console.log(`❌ Token verification failed during auto-login (attempt ${attempt})`);

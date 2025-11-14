@@ -56,6 +56,30 @@ const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigat
     }
   }, [firestoreUsers]);
 
+  // Gestione titolo compatto sticky e altezza header: gli hook devono essere sempre chiamati
+  useEffect(() => {
+    const onScroll = () => {
+      setShowCompactTitle(window.scrollY > 60);
+      const headerEl = document.querySelector('header');
+      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
+    };
+    const onResize = () => {
+      const headerEl = document.querySelector('header');
+      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
+    };
+    const initHeader = () => {
+      const headerEl = document.querySelector('header');
+      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
+    };
+    initHeader();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+
   // Gestione loading e errori
   if (loading) {
     return (
@@ -84,28 +108,6 @@ const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigat
     );
   }
 
-  useEffect(() => {
-    const onScroll = () => {
-      setShowCompactTitle(window.scrollY > 60);
-      const headerEl = document.querySelector('header');
-      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
-    };
-    const onResize = () => {
-      const headerEl = document.querySelector('header');
-      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
-    };
-    const initHeader = () => {
-      const headerEl = document.querySelector('header');
-      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
-    };
-    initHeader();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onResize);
-    };
-  }, []);
 
   // Dati mock per il progresso (da sostituire con dati reali quando disponibili)
   const mockProgressData = [
@@ -220,10 +222,10 @@ const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigat
             </button>
             
             <div className="text-center flex-1">
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-600 to-blue-900 bg-clip-text text-transparent mb-2">
+              <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">
                 Statistiche Atleti
               </h1>
-              <p className="text-gray-600">
+              <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">
                 Monitora i progressi e le performance dei tuoi atleti
               </p>
             </div>
