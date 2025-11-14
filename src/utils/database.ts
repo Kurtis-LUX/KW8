@@ -26,6 +26,8 @@ export interface WorkoutPlan {
   exercises: Exercise[];
   // Supporto per giorni G1–G10; chiave es. "G1"
   days?: { [key: string]: Exercise[] };
+  // Nomi personalizzati per i giorni (chiavi corrispondono a days: es. "G1")
+  dayNames?: { [key: string]: string };
   category?: string;
   status: 'draft' | 'published' | 'archived';
   mediaFiles?: {
@@ -57,6 +59,8 @@ export interface WorkoutVariant {
   exercises?: Exercise[]; // Esercizi specifici della variante
   // Supporto per giorni G1–G10; chiave es. "G1"
   days?: { [key: string]: Exercise[] };
+  // Nomi personalizzati per i giorni di questa variante
+  dayNames?: { [key: string]: string };
   modifications: {
     exerciseId: string;
     changes: {

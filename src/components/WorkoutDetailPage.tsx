@@ -27,6 +27,7 @@ interface WorkoutVariant {
   description?: string;
   exercises?: Exercise[];
   days?: { [key: string]: Exercise[] };
+  dayNames?: { [key: string]: string };
   parentWorkoutId?: string;
   modifications?: any[];
   createdAt?: string;
@@ -64,10 +65,16 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [durationWeeksTemp, setDurationWeeksTemp] = useState('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [originalExercises, setOriginalExercises] = useState<Exercise[] | null>(null); // Esercizi originali - null indica che non sono ancora stati caricati
-  // Gestione giorni (G1–G10)
+// Gestione giorni (G1–G10)
 const [activeDayKey, setActiveDayKey] = useState<string>('G1');
 const [originalDays, setOriginalDays] = useState<{ [key: string]: Exercise[] }>({ G1: [] });
 const [variantDaysById, setVariantDaysById] = useState<{ [variantId: string]: { [key: string]: Exercise[] } }>({});
+// Nomi personalizzati dei giorni: se assente si mostra l'indice (1,2,3...)
+const [originalDayNames, setOriginalDayNames] = useState<{ [key: string]: string }>({});
+const [variantDayNamesById, setVariantDayNamesById] = useState<{ [variantId: string]: { [key: string]: string } }>({});
+// Stato rinomina giorno
+const [renamingDayKey, setRenamingDayKey] = useState<string | null>(null);
+const [renamingDayName, setRenamingDayName] = useState<string>('');
 
 // Aggiungi un nuovo giorno alla scheda corrente (indipendente dalle varianti), con limite massimo a 10
 const handleAddDay = () => {
@@ -98,6 +105,7 @@ const handleAddDay = () => {
   if (activeVariantId === 'original') {
     const newOriginalDays = { ...originalDays, [nextKey]: [] };
     setOriginalDays(newOriginalDays);
+    // Nessun nome personalizzato di default: fallback numerico
     // Seleziona automaticamente la nuova giornata e mostra lista vuota
     setActiveDayKey(nextKey);
     setExercises([]);
@@ -834,6 +842,7 @@ useEffect(() => {
             durationWeeks,
             exercises: exercises || [], // Include gli esercizi esistenti nella creazione iniziale
             days: { [activeDayKey]: exercises || [] },
+            dayNames: originalDayNames || {},
             category: 'strength' as const,
             status: workoutStatus || 'draft',
             mediaFiles: { images: [], videos: [], audio: [] },
@@ -909,9 +918,13 @@ useEffect(() => {
           durationWeeks,
           exercises: exercisesToSave,
           days: updatedOriginalDays,
+          dayNames: originalDayNames,
           associatedAthletes,
           status: workoutStatus,
-          variants: updatedVariants,
+          variants: updatedVariants.map(v => ({
+            ...v,
+            dayNames: variantDayNamesById[v.id] || (v as any).dayNames || {}
+          })),
           activeVariantId,
           tags,
           originalWorkoutTitle: originalWorkoutTitle || workoutData.originalWorkoutTitle || workoutData.name,
@@ -1083,24 +1096,26 @@ useEffect(() => {
                 });
               }
               
-              // Inizializza mappa giorni originale in modo dinamico (inizialmente solo G1)
-              const incomingDays = (workoutData as any).days || {};
-              const incomingKeys = Object.keys(incomingDays);
-              const sortedKeys = incomingKeys.length
-                ? incomingKeys.slice().sort((a, b) => {
-                    const na = parseInt(String(a).replace(/^G/, ''), 10);
-                    const nb = parseInt(String(b).replace(/^G/, ''), 10);
-                    return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
-                  })
-                : ['G1'];
-              const initializedOriginalDays: { [key: string]: Exercise[] } = {};
-              sortedKeys.forEach((dk) => {
-                const list = dk === 'G1' ? (incomingDays[dk] || exercisesWithValidIds) : (incomingDays[dk] || []);
-                initializedOriginalDays[dk] = list;
-              });
-              // Se non c'erano giorni, assicurati che G1 esista
-              if (!initializedOriginalDays['G1']) initializedOriginalDays['G1'] = exercisesWithValidIds;
-              setOriginalDays(initializedOriginalDays);
+            // Inizializza mappa giorni originale in modo dinamico (inizialmente solo G1)
+            const incomingDays = (workoutData as any).days || {};
+            const incomingDayNames = (workoutData as any).dayNames || {};
+            const incomingKeys = Object.keys(incomingDays);
+            const sortedKeys = incomingKeys.length
+              ? incomingKeys.slice().sort((a, b) => {
+                  const na = parseInt(String(a).replace(/^G/, ''), 10);
+                  const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                  return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                })
+              : ['G1'];
+            const initializedOriginalDays: { [key: string]: Exercise[] } = {};
+            sortedKeys.forEach((dk) => {
+              const list = dk === 'G1' ? (incomingDays[dk] || exercisesWithValidIds) : (incomingDays[dk] || []);
+              initializedOriginalDays[dk] = list;
+            });
+            // Se non c'erano giorni, assicurati che G1 esista
+            if (!initializedOriginalDays['G1']) initializedOriginalDays['G1'] = exercisesWithValidIds;
+            setOriginalDays(initializedOriginalDays);
+            setOriginalDayNames(incomingDayNames);
 
               // Gli originalExercises corrispondono sempre a G1
               setOriginalExercises(initializedOriginalDays['G1']);
@@ -1146,6 +1161,7 @@ useEffect(() => {
                     return ex;
                   });
                   const incomingVariantDays = (v as any).days || {};
+                  const incomingVariantDayNames = (v as any).dayNames || {};
                   const initializedVariantDays: { [key: string]: Exercise[] } = {};
                   const variantKeys = Object.keys(incomingVariantDays).length
                     ? Object.keys(incomingVariantDays)
@@ -1160,7 +1176,7 @@ useEffect(() => {
                     initializedVariantDays[dk] = list;
                   });
                   if (!initializedVariantDays['G1']) initializedVariantDays['G1'] = fixedExercises;
-                  return { ...v, isActive: false, exercises: initializedVariantDays['G1'], days: initializedVariantDays };
+                  return { ...v, isActive: false, exercises: initializedVariantDays['G1'], days: initializedVariantDays, dayNames: incomingVariantDayNames };
                 });
                 const getNumAsc = (name: string) => { const m = name.match(/Variante (\d+)/); return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER; };
                 const sortedVariants = normalizedVariants.slice().sort((a, b) => getNumAsc(a.name) - getNumAsc(b.name));
@@ -1169,6 +1185,9 @@ useEffect(() => {
                 const initialVariantDaysById: { [variantId: string]: { [key: string]: Exercise[] } } = {};
                 sortedVariants.forEach(v => { if ((v as any).days) initialVariantDaysById[v.id] = (v as any).days as any; });
                 setVariantDaysById(initialVariantDaysById);
+                const initialVariantDayNamesById: { [variantId: string]: { [key: string]: string } } = {};
+                sortedVariants.forEach(v => { if ((v as any).dayNames) initialVariantDayNamesById[v.id] = (v as any).dayNames as any; });
+                setVariantDayNamesById(initialVariantDayNamesById);
                 setActiveVariantId('original');
                 setWorkoutDescription(workoutData.description || '');
               } else {
@@ -1602,19 +1621,27 @@ useEffect(() => {
     const sourceDaysRaw: { [key: string]: Exercise[] } = isCloningOriginal
       ? (originalDays || {})
       : (variantDaysById[activeVariantId] || (selectedVariant as any)?.days || {});
+    const sourceDayNamesRaw: { [key: string]: string } = isCloningOriginal
+      ? (originalDayNames || {})
+      : (variantDayNamesById[activeVariantId] || (selectedVariant as any)?.dayNames || {});
 
     // Clona esattamente i giorni presenti nella sorgente (senza aggiunte implicite)
     const sourceDayKeys = Object.keys(sourceDaysRaw);
     const clonedDays: { [key: string]: Exercise[] } = {};
+    const clonedDayNames: { [key: string]: string } = {};
     if (sourceDayKeys.length === 0) {
       // Se la sorgente non ha giorni mappati, crea G1 dal contesto corrente
       const fallbackG1 = isCloningOriginal
         ? (originalExercises || [])
         : (selectedVariant?.exercises || []);
       clonedDays['G1'] = deepCloneExercises(fallbackG1);
+      // Nessun nome personalizzato specificato: lascia vuoto per fallback numerico
     } else {
       sourceDayKeys.forEach(dk => {
         clonedDays[dk] = deepCloneExercises(sourceDaysRaw[dk] || []);
+        if (sourceDayNamesRaw[dk] && String(sourceDayNamesRaw[dk]).trim()) {
+          clonedDayNames[dk] = String(sourceDayNamesRaw[dk]).trim();
+        }
       });
     }
 
@@ -1629,6 +1656,7 @@ useEffect(() => {
       isActive: true,
       exercises: newVariantExercises,
       days: clonedDays,
+      dayNames: clonedDayNames,
       parentWorkoutId: workoutId,
       modifications: [],
       createdAt: new Date().toISOString(),
@@ -1647,6 +1675,7 @@ useEffect(() => {
     setActiveVariantId(newVariant.id);
     // Inizializza giorni per la nuova variante nell'UI state
     setVariantDaysById({ ...variantDaysById, [newVariant.id]: newVariant.days || {} });
+    setVariantDayNamesById({ ...variantDayNamesById, [newVariant.id]: newVariant.dayNames || {} });
 
     // Porta lo scroll all'inizio per mostrare la testa del percorso
     if (variantTabsRef.current) {
@@ -1813,6 +1842,8 @@ useEffect(() => {
         if (activeVariantId === 'original') {
           const newOriginalDays = { ...originalDays };
           delete newOriginalDays[dayKey];
+          const newOriginalDayNames = { ...originalDayNames };
+          delete newOriginalDayNames[dayKey];
           // Se stai rimuovendo il giorno attivo, passare a giorno esistente più vicino
           let nextDay = activeDayKey;
           if (!(nextDay in newOriginalDays)) {
@@ -1825,6 +1856,7 @@ useEffect(() => {
             nextDay = sorted[0] || 'G1';
           }
           setOriginalDays(newOriginalDays);
+          setOriginalDayNames(newOriginalDayNames);
           setActiveDayKey(nextDay);
           const nextList = newOriginalDays[nextDay] || [];
           setExercises([...nextList]);
@@ -1833,6 +1865,9 @@ useEffect(() => {
           const prevMap = variantDaysById[activeVariantId] || {};
           const newVariantDays = { ...prevMap };
           delete newVariantDays[dayKey];
+          const prevNames = variantDayNamesById[activeVariantId] || {};
+          const newVariantNames = { ...prevNames };
+          delete newVariantNames[dayKey];
           let nextDay = activeDayKey;
           if (!(nextDay in newVariantDays)) {
             const remainingKeys = Object.keys(newVariantDays);
@@ -1844,11 +1879,12 @@ useEffect(() => {
             nextDay = sorted[0] || 'G1';
           }
           setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
+          setVariantDayNamesById({ ...variantDayNamesById, [activeVariantId]: newVariantNames });
           const list = newVariantDays[nextDay] || [];
           setActiveDayKey(nextDay);
           setExercises([...list]);
           // Mantieni coerenza nel modello variante
-          const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, days: newVariantDays, exercises: newVariantDays['G1'] || v.exercises || [], updatedAt: new Date().toISOString() } : v);
+          const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, days: newVariantDays, dayNames: newVariantNames, exercises: newVariantDays['G1'] || v.exercises || [], updatedAt: new Date().toISOString() } : v);
           setVariants(updatedVariants);
         }
         setSaveMessage(`Giorno ${dayKey} rimosso`);
@@ -3178,28 +3214,71 @@ useEffect(() => {
                   });
                   return sorted;
                 })();
-                return dayKeysToRender.map((dk) => (
-                  <div key={dk} className="group relative flex-shrink-0 overflow-visible">
-                    <button
-                      onClick={() => handleSwitchDay(dk)}
-                      className={`${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
-                      title={`Giorno ${dk}`}
-                      aria-label={`Giorno ${dk}`}
-                    >
-                      {dk}
-                    </button>
-                    {dk !== 'G1' && (
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveDay(dk); }}
-                        className={`absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20 ${activeDayKey === dk ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                        title={`Chiudi giorno: ${dk}`}
-                        aria-label={`Chiudi giorno: ${dk}`}
-                      >
-                        <X size={12} />
-                      </button>
-                    )}
-                  </div>
-                ));
+                const currentNamesMap = activeVariantId === 'original' ? originalDayNames : (variantDayNamesById[activeVariantId] || {});
+                return dayKeysToRender.map((dk, idx) => {
+                  const label = (currentNamesMap[dk] && currentNamesMap[dk].trim()) ? currentNamesMap[dk].trim() : String(idx + 1);
+                  const isRenaming = renamingDayKey === dk;
+                  return (
+                    <div key={dk} className="group relative flex-shrink-0 overflow-visible">
+                      {isRenaming ? (
+                        <input
+                          autoFocus
+                          value={renamingDayName}
+                          onChange={(e) => setRenamingDayName(e.target.value)}
+                          onBlur={() => {
+                            const trimmed = renamingDayName.trim();
+                            if (activeVariantId === 'original') {
+                              const next = { ...originalDayNames };
+                              if (trimmed) next[dk] = trimmed; else delete next[dk];
+                              setOriginalDayNames(next);
+                            } else {
+                              const prev = variantDayNamesById[activeVariantId] || {};
+                              const next = { ...prev };
+                              if (trimmed) next[dk] = trimmed; else delete next[dk];
+                              setVariantDayNamesById({ ...variantDayNamesById, [activeVariantId]: next });
+                              // Aggiorna anche il modello variante per coerenza
+                              setVariants(variants.map(v => v.id === activeVariantId ? { ...v, dayNames: next, updatedAt: new Date().toISOString() } : v));
+                            }
+                            setRenamingDayKey(null);
+                            setRenamingDayName('');
+                            triggerAutoSave();
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              (e.target as HTMLInputElement).blur();
+                            }
+                            if (e.key === 'Escape') {
+                              setRenamingDayKey(null);
+                              setRenamingDayName('');
+                            }
+                          }}
+                          className={`${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600'} h-8 px-3 rounded-full text-sm font-medium transition-colors outline-none`}
+                          aria-label={`Rinomina giorno ${label}`}
+                        />
+                      ) : (
+                        <button
+                          onClick={() => handleSwitchDay(dk)}
+                          onDoubleClick={(e) => { e.preventDefault(); e.stopPropagation(); setRenamingDayKey(dk); setRenamingDayName(label); }}
+                          className={`${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
+                          title={`Giorno ${label}`}
+                          aria-label={`Giorno ${label}`}
+                        >
+                          {label}
+                        </button>
+                      )}
+                      {dk !== 'G1' && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveDay(dk); }}
+                          className={`absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20 ${activeDayKey === dk ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                          title={`Chiudi giorno: ${label}`}
+                          aria-label={`Chiudi giorno: ${label}`}
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                });
               })()}
               <button
                 onClick={handleAddDay}
