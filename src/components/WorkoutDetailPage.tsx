@@ -584,18 +584,41 @@ useEffect(() => {
   
   // Utility function for deep cloning exercises to ensure independence between variants
   const deepCloneExercises = (exercises: any[]): any[] => {
-    return exercises.map(exercise => ({
-      ...exercise,
-      // Assegna sempre un id valido e unico ai cloni
-      id: (exercise.id && exercise.id.trim() !== '')
-        ? `${exercise.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        : `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      instructions: exercise.instructions ? [...exercise.instructions] : [],
-      equipment: exercise.equipment ? [...exercise.equipment] : [],
-      // Clone any nested objects or arrays that might exist
-      ...(exercise.sets && typeof exercise.sets === 'object' ? { sets: { ...exercise.sets } } : {}),
-      ...(exercise.notes && typeof exercise.notes === 'object' ? { notes: { ...exercise.notes } } : {}),
-    }));
+    // Primo passaggio: genera nuovi ID e mappa oldId->newId
+    const idMap: Record<string, string> = {};
+    exercises.forEach((ex: any) => {
+      const oldId: string = (ex.id && String(ex.id).trim() !== '') ? String(ex.id) : '';
+      const newId: string = `${oldId || 'ex'}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      if (oldId) idMap[oldId] = newId;
+      // Se non c'è oldId, non possiamo mappare follower verso leader: verrà gestito come non-superset
+    });
+
+    // Secondo passaggio: clona esercizi aggiornando supersetGroupId
+    return exercises.map((ex: any) => {
+      const oldId: string = (ex.id && String(ex.id).trim() !== '') ? String(ex.id) : '';
+      const newId: string = oldId && idMap[oldId]
+        ? idMap[oldId]
+        : `${oldId || 'ex'}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      const isLeader: boolean = !!ex.isSupersetLeader;
+      const oldGroupId: string | undefined = ex.supersetGroupId ? String(ex.supersetGroupId) : undefined;
+      const mappedGroupId: string | undefined = oldGroupId && idMap[oldGroupId] ? idMap[oldGroupId] : undefined;
+      // Il leader deve puntare a sé stesso. I follower devono puntare al nuovo leader.
+      const finalGroupId: string | undefined = isLeader
+        ? newId
+        : (mappedGroupId ?? oldGroupId);
+
+      return {
+        ...ex,
+        id: newId,
+        supersetGroupId: finalGroupId,
+        isSupersetLeader: isLeader,
+        instructions: ex.instructions ? [...ex.instructions] : [],
+        equipment: ex.equipment ? [...ex.equipment] : [],
+        ...(ex.sets && typeof ex.sets === 'object' ? { sets: { ...ex.sets } } : {}),
+        ...(ex.notes && typeof ex.notes === 'object' ? { notes: { ...ex.notes } } : {}),
+      };
+    });
   };
   
   // Exercise form states
@@ -1366,6 +1389,17 @@ useEffect(() => {
     return `${durationWeeks} settimana${durationWeeks > 1 ? 'e' : ''}`;
   };
   
+  const getDayDisplayName = (dayKey: string) => {
+    const namesMap = activeVariantId === 'original' ? originalDayNames : (variantDayNamesById[activeVariantId] || {});
+    const customName = namesMap[dayKey];
+    if (customName && String(customName).trim()) {
+      return String(customName).trim();
+    }
+    const match = String(dayKey).match(/^G(\d+)/);
+    const num = match ? parseInt(match[1], 10) : null;
+    return num ? `Allenamento ${num}` : 'Allenamento';
+  };
+  
   // Gestisce l'eliminazione della scheda
   const handleDeleteWorkout = () => {
     setShowDeleteWorkoutDialog(true);
@@ -1833,11 +1867,11 @@ useEffect(() => {
   // Rimozione giorno corrente (solo per variante/scheda attiva). Non consente rimozione di G1
   const handleRemoveDay = (dayKey: string) => {
     if (dayKey === 'G1') {
-      setSaveMessage('G1 non può essere eliminato');
+      setSaveMessage('Allenamento 1 non può essere eliminato');
       return;
     }
     showConfirmation(
-      `Vuoi davvero rimuovere il giorno ${dayKey}?`,
+      `Vuoi davvero rimuovere ${getDayDisplayName(dayKey)}?`,
       () => {
         if (activeVariantId === 'original') {
           const newOriginalDays = { ...originalDays };
@@ -1887,7 +1921,7 @@ useEffect(() => {
           const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, days: newVariantDays, dayNames: newVariantNames, exercises: newVariantDays['G1'] || v.exercises || [], updatedAt: new Date().toISOString() } : v);
           setVariants(updatedVariants);
         }
-        setSaveMessage(`Giorno ${dayKey} rimosso`);
+        setSaveMessage(`${getDayDisplayName(dayKey)} rimosso`);
         triggerAutoSave();
       }
     );
@@ -2352,7 +2386,8 @@ useEffect(() => {
 
         {/* Tags sotto la descrizione */}
         {tags && tags.length > 0 && (
-          <div className="flex justify-center mb-4">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Tag size={16} className="text-purple-600" />
             <div ref={tagsUnderDescContainerRef as React.RefObject<HTMLDivElement>} className="flex flex-wrap items-center gap-2 max-w-2xl justify-center">
               {tags.map((tag, idx) => (
                 <div key={idx} className="relative inline-flex items-center">
@@ -2544,7 +2579,7 @@ useEffect(() => {
                 onClick={handleCloneWorkout}
                 title="Clona"
                 aria-label="Clona"
-                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-300 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Copy size={18} className="text-red-600" />
               </button>
@@ -3214,58 +3249,19 @@ useEffect(() => {
                   });
                   return sorted;
                 })();
-                const currentNamesMap = activeVariantId === 'original' ? originalDayNames : (variantDayNamesById[activeVariantId] || {});
                 return dayKeysToRender.map((dk, idx) => {
-                  const label = (currentNamesMap[dk] && currentNamesMap[dk].trim()) ? currentNamesMap[dk].trim() : String(idx + 1);
-                  const isRenaming = renamingDayKey === dk;
+                  const label = `Allenamento ${idx + 1}`;
                   return (
                     <div key={dk} className="group relative flex-shrink-0 overflow-visible">
-                      {isRenaming ? (
-                        <input
-                          autoFocus
-                          value={renamingDayName}
-                          onChange={(e) => setRenamingDayName(e.target.value)}
-                          onBlur={() => {
-                            const trimmed = renamingDayName.trim();
-                            if (activeVariantId === 'original') {
-                              const next = { ...originalDayNames };
-                              if (trimmed) next[dk] = trimmed; else delete next[dk];
-                              setOriginalDayNames(next);
-                            } else {
-                              const prev = variantDayNamesById[activeVariantId] || {};
-                              const next = { ...prev };
-                              if (trimmed) next[dk] = trimmed; else delete next[dk];
-                              setVariantDayNamesById({ ...variantDayNamesById, [activeVariantId]: next });
-                              // Aggiorna anche il modello variante per coerenza
-                              setVariants(variants.map(v => v.id === activeVariantId ? { ...v, dayNames: next, updatedAt: new Date().toISOString() } : v));
-                            }
-                            setRenamingDayKey(null);
-                            setRenamingDayName('');
-                            triggerAutoSave();
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              (e.target as HTMLInputElement).blur();
-                            }
-                            if (e.key === 'Escape') {
-                              setRenamingDayKey(null);
-                              setRenamingDayName('');
-                            }
-                          }}
-                          className={`${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600'} h-8 px-3 rounded-full text-sm font-medium transition-colors outline-none`}
-                          aria-label={`Rinomina giorno ${label}`}
-                        />
-                      ) : (
-                        <button
-                          onClick={() => handleSwitchDay(dk)}
-                          onDoubleClick={(e) => { e.preventDefault(); e.stopPropagation(); setRenamingDayKey(dk); setRenamingDayName(label); }}
-                          className={`${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
-                          title={`Giorno ${label}`}
-                          aria-label={`Giorno ${label}`}
-                        >
-                          {label}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleSwitchDay(dk)}
+                        className={`${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
+                        title={label}
+                        aria-label={label}
+                      >
+                        {label}
+                      </button>
+                      
                       {dk !== 'G1' && (
                         <button
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveDay(dk); }}

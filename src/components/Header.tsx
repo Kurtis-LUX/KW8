@@ -417,7 +417,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {currentUser && currentUser.role === 'coach' && !isDashboard && (
               <button aria-label="Gestione Schede (Coach)"
                 onClick={() => handleNavigation('workout-manager')}
-                className="inline-flex items-center rounded-full border border-gray-200 bg-white/60 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:border-gray-300 hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
+                className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-sm ring-1 ring-black/10 px-3 py-2 text-gray-800 hover:bg-white hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
                 title="Gestione Schede"
               >
                 <FileText size={24} className="text-gray-700" />
