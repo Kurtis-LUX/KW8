@@ -27,9 +27,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [isClosing, setIsClosing] = useState(false);
   const { t, language, setLanguage } = useLanguageContext();
   const isStandaloneMobile = useIsStandaloneMobile();
-  const [isBottomVisible, setIsBottomVisible] = useState(true);
-  const lastScrollYRef = useRef<number>(0);
-  const scrollTickRef = useRef<number | null>(null);
+  const shouldHideHeader = isStandaloneMobile && (
+    currentPage === 'home' ||
+    currentPage === 'coach-dashboard' ||
+    currentPage === 'workout-manager' ||
+    currentPage === 'athlete-manager' ||
+    currentPage === 'workouts'
+  );
   
   // Helper: genera un nome leggibile dall'email se il name non è disponibile
   const deriveNameFromEmail = (email?: string): string => {
@@ -321,44 +325,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     };
   }, [isStandaloneMobile]);
 
-  // Mostra/nasconde la bottom bar in base alla direzione di scroll (stile iOS)
-  useEffect(() => {
-    if (!isStandaloneMobile) {
-      setIsBottomVisible(false);
-      return;
-    }
-    const handleScroll = () => {
-      if (scrollTickRef.current) return;
-      scrollTickRef.current = window.requestAnimationFrame(() => {
-        const currentY = window.scrollY;
-        const delta = currentY - (lastScrollYRef.current || 0);
-        const nearTop = currentY < 32;
-        const nearBottom = (window.innerHeight + currentY) >= (document.body.scrollHeight - 32);
-        if (nearTop || nearBottom) {
-          setIsBottomVisible(true);
-        } else if (delta > 2) {
-          // Scroll down: nascondi
-          setIsBottomVisible(false);
-        } else if (delta < -2) {
-          // Scroll up: mostra
-          setIsBottomVisible(true);
-        }
-        lastScrollYRef.current = currentY;
-        scrollTickRef.current = null;
-      });
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollTickRef.current) {
-        cancelAnimationFrame(scrollTickRef.current);
-        scrollTickRef.current = null;
-      }
-    };
-  }, [isStandaloneMobile]);
+  // La bottom bar rimane sempre visibile in modalità standalone
+  // (rimuove la logica di hide/show basata sullo scroll)
 
   return (
     <React.Fragment>
+      {!shouldHideHeader && (
       <header 
         className={`fixed top-0 left-0 right-0 z-40 bg-transparent backdrop-blur-sm transition-all duration-300 cursor-pointer`}
         style={{ 
@@ -681,8 +653,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           </div>
         </div>
 
-        {/* Titolo mobile centrato con back quando è attiva la bottom nav (escluse home) */}
-        {isStandaloneMobile && !isHomePage && !!getMobilePageTitle(currentPage) && (
+        {/* Titolo mobile centrato con back quando è attiva la bottom nav (escluse home e dashboard coach) */}
+        {isStandaloneMobile && !isHomePage && currentPage !== 'coach-dashboard' && !!getMobilePageTitle(currentPage) && (
           <div className="lg:hidden">
             <div className="container mx-auto px-6 pb-2">
               <div className="w-full bg-white/70 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2 flex items-center justify-between">
@@ -705,11 +677,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           </div>
         )}
       </header>
+      )}
 
-      {/* Bottom Navigation - visibile solo su mobile/tablet e in modalità standalone */}
-      {/* Bottom Navigation - sempre presente ma con animazioni show/dismiss e visibile solo se standalone */}
+      {/* Bottom Navigation - visibile solo su mobile/tablet e in modalità standalone; sempre visibile */}
       <div
-        className={`fixed left-0 right-0 z-[60] lg:hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform will-change-opacity ${isStandaloneMobile && isBottomVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}
+        className={`fixed left-0 right-0 z-[60] lg:hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform will-change-opacity ${isStandaloneMobile ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}
         style={{
           bottom: '14px',
           paddingBottom: 'env(safe-area-inset-bottom)'
