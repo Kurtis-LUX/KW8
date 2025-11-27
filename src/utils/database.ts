@@ -760,4 +760,33 @@ export const subscribeToTransformationCases = (callback: (data: any) => void) =>
   }
 };
 
+// Funzioni per la gestione della sezione Avvisi
+export const getAnnouncementsSection = async () => {
+  try {
+    return await firestoreService.getDocument('announcements', 'announcements-section');
+  } catch (error) {
+    console.error('Error getting announcements section:', error);
+    return null;
+  }
+};
+
+export const saveAnnouncementsSection = async (announcementsData: any) => {
+  try {
+    await firestoreService.setDocument('announcements', 'announcements-section', announcementsData);
+    return true;
+  } catch (error) {
+    console.error('Error saving announcements section:', error);
+    throw error;
+  }
+};
+
+export const subscribeToAnnouncementsSection = (callback: (data: any) => void) => {
+  try {
+    return firestoreService.subscribeToDocument('announcements', 'announcements-section', callback);
+  } catch (error) {
+    console.error('Error subscribing to announcements section:', error);
+    return () => {};
+  }
+};
+
 export default DB;

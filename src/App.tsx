@@ -45,6 +45,8 @@ import './styles/dropdown.css';
 import AthleteAuthPage from './components/auth/AthleteAuthPage';
 import AthleteRegisterPage from './pages/AthleteRegisterPage';
 import AthleteProfilePage from './pages/AthleteProfilePage';
+import PwaHomePage from './pages/PwaHomePage';
+import useIsStandaloneMobile from './hooks/useIsStandaloneMobile';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -57,6 +59,7 @@ function App() {
   const [showCookiePolicyModal, setShowCookiePolicyModal] = useState(false);
   const [showPrivacyPolicyModal, setShowPrivacyPolicyModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [lastAuthEvent, setLastAuthEvent] = useState<'register' | 'login' | null>(null);
   const [appInitialized, setAppInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
@@ -66,6 +69,7 @@ function App() {
   const [dashboardHeaderHeight, setDashboardHeaderHeight] = useState<number>(0);
   const dashboardTitleRef = useRef<HTMLDivElement | null>(null);
   const anchorVisibleRef = useRef<boolean>(false);
+  const isStandaloneMobile = useIsStandaloneMobile();
 
   // Mappa path -> pagina interna
   const applyPathToState = (pathname: string) => {
@@ -193,6 +197,7 @@ function App() {
             const jwtUser = await authService.autoLogin();
             if (jwtUser) {
               setCurrentUser(jwtUser);
+              setLastAuthEvent('login');
               // Sincronizza con localStorage per compatibilità
               localStorage.setItem('currentUser', JSON.stringify(jwtUser));
               console.log('👤 Restored JWT user session:', jwtUser.email);
@@ -204,6 +209,7 @@ function App() {
             if (savedUser && !authService.getToken()) {
               const user = JSON.parse(savedUser);
               setCurrentUser(user);
+              setLastAuthEvent('login');
               console.log('👤 Restored legacy user session:', user.name);
             } else {
               console.log('👤 No existing session found');
@@ -361,6 +367,7 @@ function App() {
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    setLastAuthEvent('login');
     // Mantieni la sincronizzazione con localStorage per compatibilità
     localStorage.setItem('currentUser', JSON.stringify(user));
     setCurrentPage('home');
@@ -372,6 +379,7 @@ function App() {
     
     // Pulisci lo stato dell'applicazione
     setCurrentUser(null);
+    setLastAuthEvent(null);
     
     // Pulisci localStorage
     localStorage.removeItem('currentUser');
@@ -402,6 +410,7 @@ function App() {
               const user = await authService.autoLogin();
               if (user) {
                 setCurrentUser(user);
+                setLastAuthEvent('login');
                 handleNavigation('home');
               } else {
                 console.error('Login Google riuscito ma utente non trovato');
@@ -455,6 +464,7 @@ function App() {
               const user = await authService.autoLogin();
               if (user) {
                 setCurrentUser(user);
+                setLastAuthEvent('login');
                 handleNavigation('home');
               } else {
                 console.error('Login riuscito ma utente non trovato');
@@ -462,6 +472,7 @@ function App() {
                 const localUser = authService.getCurrentUser();
                 if (localUser) {
                   setCurrentUser(localUser);
+                  setLastAuthEvent('login');
                   handleNavigation('home');
                 } else {
                   handleNavigation('home');
@@ -473,6 +484,7 @@ function App() {
               const localUser = authService.getCurrentUser();
               if (localUser) {
                 setCurrentUser(localUser);
+                setLastAuthEvent('login');
               }
               handleNavigation('home');
             }
@@ -493,6 +505,7 @@ function App() {
               const user = await authService.autoLogin();
               if (user) {
                 setCurrentUser(user);
+                setLastAuthEvent('register');
                 handleNavigation('home');
               } else {
                 console.error('Registrazione riuscita ma utente non trovato');
@@ -500,6 +513,7 @@ function App() {
                 const localUser = authService.getCurrentUser();
                 if (localUser) {
                   setCurrentUser(localUser);
+                  setLastAuthEvent('register');
                   handleNavigation('home');
                 } else {
                   handleNavigation('home');
@@ -511,6 +525,7 @@ function App() {
               const localUser = authService.getCurrentUser();
               if (localUser) {
                 setCurrentUser(localUser);
+                setLastAuthEvent('register');
               }
               handleNavigation('home');
             }
@@ -802,13 +817,15 @@ function App() {
 
   return (
     <LanguageProvider>
-      <div className="min-h-screen bg-white">
-        <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} currentPage={currentPage} />
+      <div className={`min-h-screen ${isStandaloneMobile ? 'bg-transparent' : 'bg-white'}`}>
+        <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} currentPage={isStandaloneMobile ? 'pwa-home' : currentPage} />
         {showCookieConsent && (
           <CookieConsent 
             onAccept={handleCookieAccept} 
             onDecline={handleCookieDecline}
-            onNavigate={handleNavigation}
+            onShowPrivacyModal={() => setShowPrivacyPolicyModal(true)}
+            onShowCookiePolicyModal={() => setShowCookiePolicyModal(true)}
+            onManageSettings={() => setShowCookieSettings(true)}
           />
         )}
         {showCookieSettings && (
@@ -817,16 +834,22 @@ function App() {
             currentUser={currentUser} 
           />
         )}
-        <HeroSection currentUser={currentUser} onNavigate={handleNavigation} />
-        <StatisticsSection />
-        <GymAreasSection />
-        <ScheduleSection currentUser={currentUser} />
-        <LocationSection />
-        <EditableStaffSection currentUser={currentUser} />
-        <NewsletterSection />
-        <TrustpilotSection />
-        <SocialSection />
-        <Footer onNavigate={handleNavigation} />
+        {isStandaloneMobile ? (
+          <PwaHomePage onNavigate={handleNavigation} currentUser={currentUser} lastAuthEvent={lastAuthEvent} />
+        ) : (
+          <>
+            <HeroSection currentUser={currentUser} onNavigate={handleNavigation} />
+            <StatisticsSection />
+            <GymAreasSection />
+            <ScheduleSection currentUser={currentUser} />
+            <LocationSection />
+            <EditableStaffSection currentUser={currentUser} />
+            <NewsletterSection />
+            <TrustpilotSection />
+            <SocialSection />
+            <Footer onNavigate={handleNavigation} />
+          </>
+        )}
       
       {/* Modal per Privacy */}
       <Modal 

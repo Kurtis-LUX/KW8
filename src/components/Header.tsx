@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3, User, AlignJustify, LogOut, ChevronLeft } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3, User, AlignJustify, LogOut, ChevronLeft, Bell } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
+import IosBottomBar from './ui/IosBottomBar';
 import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface HeaderProps {
@@ -30,6 +31,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [isBottomVisible, setIsBottomVisible] = useState(true);
   const lastScrollYRef = useRef<number>(0);
   const scrollTickRef = useRef<number | null>(null);
+  const [headerOpacity, setHeaderOpacity] = useState(1);
+  const [displayText, setDisplayText] = useState('');
+  const [isTypingComplete, setIsTypingComplete] = useState(false);
+  const fullText = t.heroTitle;
   
   // Helper: genera un nome leggibile dall'email se il name non è disponibile
   const deriveNameFromEmail = (email?: string): string => {
@@ -66,6 +71,37 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       document.body.style.overflow = 'unset';
     };
   }, [isMenuOpen]);
+
+  // Header fade-out on scroll
+  useEffect(() => {
+    const onScroll = () => {
+      const y = (document.scrollingElement?.scrollTop ?? window.scrollY ?? 0);
+      const fadeDistance = 220; // px to fully fade
+      const opacity = Math.max(0, Math.min(1, 1 - y / fadeDistance));
+      setHeaderOpacity(opacity);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Typing animation for PWA header title
+  useEffect(() => {
+    if (!(isStandaloneMobile && currentPage === 'pwa-home')) return;
+    setDisplayText('');
+    setIsTypingComplete(false);
+    let currentIndex = 0;
+    const typingInterval = setInterval(() => {
+      if (currentIndex <= fullText.length) {
+        setDisplayText(fullText.slice(0, currentIndex));
+        currentIndex++;
+      } else {
+        clearInterval(typingInterval);
+        setIsTypingComplete(true);
+      }
+    }, 100);
+    return () => clearInterval(typingInterval);
+  }, [fullText, isStandaloneMobile, currentPage]);
 
   // Gestisce i click esterni per chiudere il menu profilo
   useEffect(() => {
@@ -321,35 +357,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     };
   }, [isStandaloneMobile]);
 
-  // Mostra/nasconde la bottom bar in base alla direzione di scroll (stile iOS)
+  // Bottom bar sempre visibile in modalità standalone (rimuove auto-hide su scroll)
   useEffect(() => {
-    if (!isStandaloneMobile) {
-      setIsBottomVisible(false);
-      return;
-    }
-    const handleScroll = () => {
-      if (scrollTickRef.current) return;
-      scrollTickRef.current = window.requestAnimationFrame(() => {
-        const currentY = window.scrollY;
-        const delta = currentY - (lastScrollYRef.current || 0);
-        const nearTop = currentY < 32;
-        const nearBottom = (window.innerHeight + currentY) >= (document.body.scrollHeight - 32);
-        if (nearTop || nearBottom) {
-          setIsBottomVisible(true);
-        } else if (delta > 2) {
-          // Scroll down: nascondi
-          setIsBottomVisible(false);
-        } else if (delta < -2) {
-          // Scroll up: mostra
-          setIsBottomVisible(true);
-        }
-        lastScrollYRef.current = currentY;
-        scrollTickRef.current = null;
-      });
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    setIsBottomVisible(!!isStandaloneMobile);
+    // Nessun listener di scroll necessario
     return () => {
-      window.removeEventListener('scroll', handleScroll);
       if (scrollTickRef.current) {
         cancelAnimationFrame(scrollTickRef.current);
         scrollTickRef.current = null;
@@ -359,18 +371,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
 
   return (
     <React.Fragment>
-      <header 
-        className={`fixed top-0 left-0 right-0 z-40 bg-transparent backdrop-blur-sm transition-all duration-300 cursor-pointer`}
-        style={{ 
-          marginRight: '0px',
-          boxSizing: 'border-box'
-        }}
-        onClick={handleHeaderClick}
-      >
-        <div 
-          className="container mx-auto px-6 py-3 flex items-center justify-between relative"
-          onClick={(e) => e.stopPropagation()}
+      {/* Rimuovi completamente l'header su Home PWA */}
+      {!(isStandaloneMobile && currentPage === 'pwa-home') && (
+        <header 
+          className={`fixed top-0 left-0 right-0 z-40 bg-transparent backdrop-blur-sm transition-all duration-300 cursor-pointer`}
+          style={{ 
+            marginRight: '0px',
+            boxSizing: 'border-box',
+            opacity: headerOpacity,
+            transition: 'opacity 150ms ease-out'
+          }}
+          onClick={handleHeaderClick}
         >
+        {(isStandaloneMobile && currentPage === 'pwa-home') ? null : (
+          <div 
+            className="container mx-auto px-6 py-3 flex items-center justify-between relative"
+            onClick={(e) => e.stopPropagation()}
+          >
           {/* Logo */}
           <div className="flex items-center">
             <img 
@@ -457,6 +474,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                     className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
                   >
                     Orari
+                  </button>
+                  <div className="mx-1.5 h-5 w-px bg-black/10" />
+                  <button
+                    onClick={() => scrollToSection('avvisi')}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
+                  >
+                    Avvisi
                   </button>
                   <div className="mx-1.5 h-5 w-px bg-black/10" />
                   <button
@@ -680,9 +704,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             </button>
           </div>
         </div>
+        )}
+
+        {/* Titolo pagina mobile: usa animazione su PWA Home, titolo statico altrove */}
 
         {/* Titolo mobile centrato con back quando è attiva la bottom nav (escluse home) */}
-        {isStandaloneMobile && !isHomePage && !!getMobilePageTitle(currentPage) && (
+        {isStandaloneMobile && !isHomePage && (currentPage === 'pwa-home' || !!getMobilePageTitle(currentPage)) && (
           <div className="lg:hidden">
             <div className="container mx-auto px-6 pb-2">
               <div className="w-full bg-white/70 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2 flex items-center justify-between">
@@ -695,32 +722,52 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <ChevronLeft size={20} className="block" />
                 </button>
                 <div className="flex-1 text-center">
-                  <span className="font-sfpro text-base font-semibold text-gray-900 tracking-tight">
-                    {getMobilePageTitle(currentPage)}
-                  </span>
+                  {currentPage === 'pwa-home' ? (
+                    <h1
+                      className={`text-2xl sm:text-3xl font-bold tracking-wider animate-fadeInSlideUp ${isTypingComplete ? 'animate-pulse' : ''}`}
+                      style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}
+                    >
+                      <span style={{ fontFamily: 'Bebas Neue, cursive' }}>
+                        {displayText.split(' ').map((word, index) => {
+                          if (word === 'CROSS' || word === 'YOUR') {
+                            return <span key={index} className="text-white">{word}</span>;
+                          } else if (word === 'LIMITS.') {
+                            return <span key={index} className="text-red-500">{word}</span>;
+                          }
+                          return <span key={index}>{word}</span>;
+                        }).reduce((prev, curr) => (Array.isArray(prev) ? [...prev, ' ', curr] : [prev, ' ', curr]))}
+                      </span>
+                      {!isTypingComplete && <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>}
+                    </h1>
+                  ) : (
+                    <span className="font-sfpro text-base font-semibold text-gray-900 tracking-tight">
+                      {getMobilePageTitle(currentPage)}
+                    </span>
+                  )}
                 </div>
                 <div className="w-8" />
               </div>
             </div>
           </div>
         )}
-      </header>
+        </header>
+      )}
 
       {/* Bottom Navigation - visibile solo su mobile/tablet e in modalità standalone */}
       {/* Bottom Navigation - sempre presente ma con animazioni show/dismiss e visibile solo se standalone */}
       <div
-        className={`fixed left-0 right-0 z-[60] lg:hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform will-change-opacity ${isStandaloneMobile && isBottomVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}
+        className={`fixed left-0 right-0 z-[60] lg:hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform will-change-opacity ${isStandaloneMobile ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}
         style={{
           bottom: '14px',
           paddingBottom: 'env(safe-area-inset-bottom)'
         }}
       >
         <div className="mx-auto max-w-screen-sm px-6 pb-3">
-          <div className="w-full h-[60px] bg-white/85 backdrop-blur-lg rounded-2xl shadow-[0_12px_28px_rgba(0,0,0,0.16)] flex items-center px-2">
+          <IosBottomBar className="flex items-center px-2">
             {/* Layout a 3 colonne per centro logo assoluto */}
             <div className="grid grid-cols-3 w-full items-center">
               {/* Colonna sinistra: profilo + (eventuale) schede */}
-              <div className="flex items-center gap-2 justify-start pl-2" ref={bottomProfileRef}>
+              <div className="flex items-center gap-2 justify-start pl-2 relative" ref={bottomProfileRef}>
                 {/* Profilo: apre il menu utente */}
                 <button
                   onClick={() => { setUserMenuOrigin('bottom'); setShowUserMenu(!showUserMenu); }}
@@ -731,8 +778,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   <User size={22} />
                 </button>
 
-                {/* Accesso rapido Schede (solo coach, nascosto su gestione schede) */}
-                {currentUser?.role === 'coach' && currentPage !== 'workout-manager' && (
+                {/* Accesso rapido Schede (solo coach, nascosto su gestione schede; spostato su destra in PWA Home) */}
+                {currentUser?.role === 'coach' && currentPage !== 'workout-manager' && currentPage !== 'pwa-home' && (
                   <button
                     onClick={() => onNavigate && onNavigate('workout-manager')}
                     className="inline-flex items-center justify-center w-11 h-11 rounded-2xl text-gray-800"
@@ -825,8 +872,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 </button>
               </div>
 
-              {/* Colonna destra: menu hamburger */}
+              {/* Colonna destra: accesso rapido (solo coach su PWA Home) + menu hamburger */}
               <div className="flex items-center justify-end pr-2">
+                {currentUser?.role === 'coach' && currentPage === 'pwa-home' && (
+                  <button
+                    onClick={() => onNavigate && onNavigate('workout-manager')}
+                    className="inline-flex items-center justify-center w-11 h-11 rounded-2xl text-gray-800 mr-1"
+                    title="Gestione schede"
+                    aria-label="Gestione schede"
+                  >
+                    <FileText size={22} />
+                  </button>
+                )}
                 <button
                   onClick={toggleMenu}
                   className="inline-flex items-center justify-center w-11 h-11 rounded-2xl text-gray-800"
@@ -837,7 +894,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 </button>
               </div>
             </div>
-          </div>
+          </IosBottomBar>
         </div>
       </div>
 
@@ -962,6 +1019,16 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   >
                     <Clock size={20} className="sm:w-6 sm:h-6" />
                     <span>Orari</span>
+                  </button>
+                </li>
+                {/* 2b. Avvisi */}
+                <li>
+                  <button
+                    onClick={() => scrollToSection('avvisi')}
+                    className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
+                  >
+                    <Bell size={20} className="sm:w-6 sm:h-6" />
+                    <span>Avvisi</span>
                   </button>
                 </li>
                 {/* 3. Regole */}
