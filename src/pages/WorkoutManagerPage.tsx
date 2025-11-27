@@ -43,6 +43,7 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
         currentUser={currentUser}
         showAuthButtons={false}
         isDashboard={true}
+        currentPage={'workout-manager'}
       />
       {/* Titolo compatto sticky sotto l'header principale (stile iOS) */}
       <div

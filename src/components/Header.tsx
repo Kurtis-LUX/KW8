@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3, User, AlignJustify, LogOut } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3, User, AlignJustify, LogOut, ChevronLeft } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface HeaderProps {
   onNavigate?: (page: string) => void;
@@ -10,6 +11,7 @@ interface HeaderProps {
   onLogout?: () => void;
   isDashboard?: boolean;
   currentPage?: string;
+  showAuthButtons?: boolean;
 }
 
 const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDashboard = false, currentPage = 'home' }) => {
@@ -22,6 +24,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const { t, language, setLanguage } = useLanguageContext();
+  const isStandaloneMobile = useIsStandaloneMobile();
   
   // Helper: genera un nome leggibile dall'email se il name non è disponibile
   const deriveNameFromEmail = (email?: string): string => {
@@ -262,6 +265,52 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       }
     }, 300);
   };
+
+  // Titolo pagina per header mobile quando è presente la bottom nav
+  const getMobilePageTitle = (page: string) => {
+    switch (page) {
+      case 'workout-manager':
+        return 'Gestione schede';
+      case 'coach-dashboard':
+        return 'Dashboard Coach';
+      case 'workouts':
+        return 'Le tue schede';
+      case 'athlete-manager':
+        return 'Gestione atleti';
+      default:
+        return '';
+    }
+  };
+
+  const isHomePage = currentPage === 'home' || currentPage === '/' || !currentPage;
+
+  const handleBack = () => {
+    try {
+      if (window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+    } catch {}
+    if (onNavigate) {
+      if (currentPage === 'workout-manager' || currentPage === 'athlete-manager' || currentPage === 'rankings' || currentPage === 'athlete-statistics') {
+        onNavigate('coach-dashboard');
+      } else {
+        onNavigate('home');
+      }
+    }
+  };
+
+  // Evita sovrapposizione: aggiunge padding-bottom quando la bottom nav è visibile
+  useEffect(() => {
+    if (isStandaloneMobile) {
+      document.body.style.paddingBottom = 'calc(72px + env(safe-area-inset-bottom))';
+    } else {
+      document.body.style.paddingBottom = '';
+    }
+    return () => {
+      document.body.style.paddingBottom = '';
+    };
+  }, [isStandaloneMobile]);
 
   return (
     <React.Fragment>
@@ -586,7 +635,93 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             </button>
           </div>
         </div>
+
+        {/* Titolo mobile centrato con back quando è attiva la bottom nav (escluse home) */}
+        {isStandaloneMobile && !isHomePage && !!getMobilePageTitle(currentPage) && (
+          <div className="lg:hidden">
+            <div className="container mx-auto px-6 pb-2">
+              <div className="w-full bg-white/70 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2 flex items-center justify-between">
+                <button
+                  onClick={handleBack}
+                  className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                  title="Indietro"
+                  aria-label="Indietro"
+                >
+                  <ChevronLeft size={20} className="block" />
+                </button>
+                <div className="flex-1 text-center">
+                  <span className="font-sfpro text-base font-semibold text-gray-900 tracking-tight">
+                    {getMobilePageTitle(currentPage)}
+                  </span>
+                </div>
+                <div className="w-8" />
+              </div>
+            </div>
+          </div>
+        )}
       </header>
+
+      {/* Bottom Navigation - visibile solo su mobile/tablet e in modalità standalone */}
+      {isStandaloneMobile && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-[60] lg:hidden"
+          style={{
+            paddingBottom: 'env(safe-area-inset-bottom)'
+          }}
+        >
+          <div className="mx-auto max-w-screen-sm px-6 pb-3">
+            <div className="w-full h-[60px] bg-white/80 backdrop-blur-lg rounded-2xl ring-1 ring-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex items-center justify-between px-4">
+              {/* Profilo */}
+              <button
+                onClick={() => {
+                  if (currentUser?.role === 'coach') {
+                    onNavigate && onNavigate('coach-dashboard');
+                  } else {
+                    onNavigate && onNavigate('athlete-profile');
+                  }
+                }}
+                className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all"
+                title="Profilo"
+                aria-label="Profilo"
+              >
+                <User size={22} />
+              </button>
+
+              {/* Accesso rapido Schede (solo coach) */}
+              {currentUser?.role === 'coach' && (
+                <button
+                  onClick={() => onNavigate && onNavigate('workout-manager')}
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all"
+                  title="Gestione schede"
+                  aria-label="Gestione schede"
+                >
+                  <FileText size={22} />
+                </button>
+              )}
+
+              {/* Logo Centrale */}
+              <button
+                onClick={() => onNavigate && onNavigate('home')}
+                className="inline-flex items-center justify-center"
+                aria-label="Home"
+                title="Home"
+              >
+                <img src="/images/logo.png" alt="KW8 Logo" className="h-10 w-auto object-contain drop-shadow" />
+              </button>
+
+              {/* Menu */}
+              <button
+                onClick={toggleMenu}
+                className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all"
+                title="Menu"
+                aria-label="Menu"
+              >
+                <AlignJustify size={22} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Menu Overlay & Side Panel */}
       <div className={`${(isMenuOpen || isClosing) ? 'visible' : 'invisible'} fixed inset-0 z-[100] pointer-events-none`}>

@@ -89,18 +89,21 @@ if (document.readyState === 'loading') {
   initializeApp();
 }
 
-// Temporarily disable service worker for debugging
-// Register service worker for PWA
-/*
+// Registrazione Service Worker per PWA
+// In produzione è attivo, in sviluppo si può forzare con ?sw=1
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('SW registered: ', registration);
-      })
-      .catch((registrationError) => {
-        console.log('SW registration failed: ', registrationError);
-      });
-  });
+  const shouldRegister = (import.meta as any).env?.PROD || /(^|[?&])sw=1([&#]|$)/.test(window.location.search);
+  if (shouldRegister) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          console.log('SW registered: ', registration);
+        })
+        .catch((registrationError) => {
+          console.log('SW registration failed: ', registrationError);
+        });
+    });
+  } else {
+    console.log('SW non registrato (dev senza ?sw=1)');
+  }
 }
-*/

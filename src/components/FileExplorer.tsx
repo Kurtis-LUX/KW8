@@ -26,7 +26,8 @@ import {
   Ban,
   Copy,
   X,
-  Tag
+  Tag,
+  LayoutGrid
 } from 'lucide-react';
 import Portal from './Portal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
@@ -41,7 +42,7 @@ interface FileExplorerProps {
   currentUser: any;
 }
 
-type ViewMode = 'list' | 'grid';
+type ViewMode = 'list' | 'compact' | 'grid';
 
 interface FolderTreeItem {
   id: string;
@@ -58,10 +59,12 @@ interface FolderTreeItem {
 }
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Home' }]);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
 
   const { position, triggerRef, dropdownRef, openDropdown, closeDropdown, isOpen } = useDropdownPosition({ offset: 6, preferredPosition: 'bottom-left' });
 
@@ -391,6 +394,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       if (draggedItem.type === 'folder') {
         // Evita spostamenti non validi: dentro sé stessa o una sua sottocartella
         if (targetFolderId === draggedItem.id) {
+          dropInProgressRef.current = false;
           return;
         }
         if (targetFolderId) {
@@ -404,6 +408,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           }
           if (isTargetDescendant) {
             alert('Non puoi spostare una cartella dentro sé stessa o una sua sottocartella.');
+            dropInProgressRef.current = false;
             return;
           }
         }
@@ -413,6 +418,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         const newParentId = targetFolderId ?? null;
         // Impedisci trasferimento nella stessa cartella
         if ((newParentId ?? null) === (prevParentId ?? null)) {
+          dropInProgressRef.current = false;
           return;
         }
         await DB.saveWorkoutFolder({ ...folder, parentId: targetFolderId });
@@ -430,6 +436,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         const newFolderId = (targetFolderId ?? null);
         // Impedisci trasferimento nella stessa cartella
         if ((newFolderId ?? null) === (prevFolderId ?? null)) {
+          dropInProgressRef.current = false;
           return;
         }
         await updateWorkoutPlan(workout.id, { folderId: targetFolderId ?? null });
@@ -824,6 +831,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       }
       return false;
     })();
+    // Vista compatta/elenco: niente sfondi o contorni
+    const isPlain = viewMode !== 'grid';
+    const isSelected = selectedItemId === item.id;
+    const isHovered = hoveredItemId === item.id;
     
     // Hook separato per il posizionamento del menu di ogni elemento
     const {
@@ -851,6 +862,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           (e.target as HTMLElement).closest('.dropdown-menu')) {
         return;
       }
+      e.stopPropagation();
+      setSelectedItemId(item.id);
       // Singolo click non apre più la scheda/cartella (richiesto doppio click)
     };
     
@@ -865,12 +878,30 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     
     return (
       <div 
-          className={`group relative w-full rounded-2xl sm:rounded-xl transition-colors duration-200 ease-in-out cursor-pointer 
-            ${isDragOver ? (isForbidden ? 'ring-2 ring-red-500 bg-red-100/80 shadow-lg' : 'ring-2 ring-red-300 bg-red-50/70 shadow-lg') : 'ring-inset ring-1 ring-black/10 sm:ring-gray-300 sm:hover:ring-gray-400 hover:shadow-lg'} 
-            bg-white/60 ${item.type === 'folder' ? 'sm:bg-white/70' : 'sm:bg-white/80'} backdrop-blur-md sm:backdrop-blur-sm`}
+          className={`group item-card relative w-full rounded-2xl sm:rounded-xl transition-colors duration-200 ease-in-out cursor-pointer 
+            ${
+              isDragOver
+                ? (isForbidden
+                    ? 'ring-2 ring-red-500 bg-red-100/80 shadow-lg'
+                    : 'ring-2 ring-red-300 bg-red-50/70 shadow-lg')
+                : (isSelected
+                    ? 'ring-2 ring-gray-400 bg-gray-200/70'
+                    : (isHovered
+                        ? 'ring-2 ring-gray-300 bg-gray-100/60'
+                        : (
+                            isPlain
+                              ? 'ring-0 bg-transparent shadow-none'
+                              : `ring-inset ring-1 ring-black/10 sm:ring-gray-300 sm:hover:ring-gray-400 hover:shadow-lg bg-white/60 ${item.type === 'folder' ? 'sm:bg-white/70' : 'sm:bg-white/80'} backdrop-blur-md sm:backdrop-blur-sm`
+                          )
+                      )
+                  )
+            }`}
           data-item-type={item.type}
           data-folder-id={item.type === 'folder' ? item.id : undefined}
+          onClick={handleCardClick}
           onDoubleClick={handleCardDoubleClick}
+          onMouseEnter={() => setHoveredItemId(item.id)}
+          onMouseLeave={() => { if (hoveredItemId === item.id) setHoveredItemId(null); }}
           draggable
           onDragStart={(e) => handleDragStart(e, item)}
           onDragEnd={() => { setDragOverItem(null); }}
@@ -892,11 +923,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           {/* Header con icona e nome */}
           <div className="flex items-center space-x-3 mb-2">
             <div 
-              className="p-2.5 rounded-xl ring-1 ring-gray-200 backdrop-blur-sm"
+              className={`p-2.5 rounded-xl ${isPlain ? '' : 'ring-1 ring-gray-200 backdrop-blur-sm'}`}
               style={{
-                backgroundColor: item.type === 'folder'
-                  ? (((item.data && 'color' in item.data) ? ((item.data as any).color === '#3B82F6' ? '#EF4444' : (item.data as any).color) : '#EF4444') + '20')
-                  : (((item.data && 'color' in item.data) ? (item.data as any).color : '#3B82F6') + '20'),
+                backgroundColor: isPlain
+                  ? 'transparent'
+                  : (item.type === 'folder'
+                      ? (((item.data && 'color' in item.data) ? ((item.data as any).color === '#3B82F6' ? '#EF4444' : (item.data as any).color) : '#EF4444') + '20')
+                      : (((item.data && 'color' in item.data) ? (item.data as any).color : '#3B82F6') + '20')),
                 color: item.type === 'folder'
                   ? ((item.data && 'color' in item.data) ? (((item.data as any).color === '#3B82F6') ? '#EF4444' : (item.data as any).color) : '#EF4444')
                   : ((item.data && 'color' in item.data) ? (item.data as any).color : '#3B82F6')
@@ -1075,6 +1108,179 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     );
   };
 
+  // Pulsante menu per i tile in griglia
+  const TileMenuButton: React.FC<{ item: FolderTreeItem }> = ({ item }) => {
+    const [open, setOpen] = useState(false);
+    const btnRef = useRef<HTMLButtonElement | null>(null);
+    const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
+    const MENU_WIDTH = 176; // w-44
+
+    const toggleOpen = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      setOpen((prev) => {
+        const next = !prev;
+        if (next && btnRef.current) {
+          const r = btnRef.current.getBoundingClientRect();
+          const left = Math.min(Math.max(8, r.right - MENU_WIDTH), window.innerWidth - MENU_WIDTH - 8);
+          const top = Math.min(r.bottom + 8, window.innerHeight - 8 - 160);
+          setCoords({ left, top });
+        }
+        return next;
+      });
+    };
+
+    const close = () => setOpen(false);
+
+    return (
+      <div className="relative">
+        <button
+          ref={btnRef}
+          className="menu-button p-2 rounded-lg bg-white/60 hover:bg-white border border-gray-200 ring-1 ring-gray-200 backdrop-blur-sm transition-shadow hover:shadow-sm"
+          onClick={toggleOpen}
+        >
+          <MoreVertical size={16} />
+        </button>
+        {open && (
+          <Portal>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={close} />
+            <div
+              className="dropdown-menu w-44 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2"
+              style={{ position: 'fixed', left: coords?.left ?? -9999, top: coords?.top ?? -9999, zIndex: 9999, visibility: coords ? 'visible' : 'hidden' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => { e.stopPropagation(); setItemToEdit(item); setShowEditModal(true); close(); }}
+                className="dropdown-item"
+              >
+                <Edit3 size={14} />
+                <span>Modifica</span>
+              </button>
+              <hr className="my-1" />
+              <button
+                onClick={(e) => { e.stopPropagation(); setItemToDelete(item); setShowDeleteModal(true); close(); }}
+                className="dropdown-item text-red-600 hover:bg-red-50"
+              >
+                <Trash2 size={14} />
+                <span>Elimina</span>
+              </button>
+            </div>
+          </Portal>
+        )}
+      </div>
+    );
+  };
+
+  // Nuova card stile "Apple Files" per la vista Griglia
+  const TileCard = ({ item, isSelected, onSelect }: { item: FolderTreeItem; isSelected: boolean; onSelect: () => void }) => {
+    const isDragOver = dragOverItem === item.id;
+    const isForbidden = ((): boolean => {
+      if (item.type !== 'folder') return false;
+      if (!draggedItem) return false;
+      if (draggedItem.type === 'file') {
+        const plan: any = draggedItem.data as any;
+        return ((plan?.folderId ?? null) === (item.id ?? null));
+      }
+      if (draggedItem.type === 'folder') {
+        const folder: any = draggedItem.data as any;
+        return ((draggedItem.id === item.id) || ((folder?.parentId ?? null) === (item.id ?? null)));
+      }
+      return false;
+    })();
+
+    const handleDoubleClick = (e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).closest('.dropdown-menu')) return;
+      handleItemClick(item);
+    };
+
+    const handleClickSelect = (e: React.MouseEvent) => {
+      // Evita che il click sul tile propaghi e cancelli la selezione dal container
+      e.stopPropagation();
+      onSelect();
+    };
+
+    const primaryColor = item.type === 'folder'
+      ? ((item.data && 'color' in item.data) ? (((item.data as any).color === '#3B82F6') ? '#EF4444' : (item.data as any).color) : '#EF4444')
+      : ((item.data && 'color' in item.data) ? (item.data as any).color : '#3B82F6');
+
+    const iconBg = `${primaryColor}20`;
+
+    const formatDate = (iso?: string) => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+
+    const statusLabel = (s?: string) => {
+      if (!s) return '—';
+      if (s === 'published') return 'Pubblicata';
+      if (s === 'draft') return 'Bozza';
+      return 'Archiviata';
+    };
+
+    const totalElements = (item.workoutCount || 0) + (item.subfolderCount || 0);
+
+    return (
+      <div
+        className={`group item-card relative select-none cursor-pointer rounded-xl p-2 transition-all aspect-square flex flex-col items-center justify-between ${
+          isSelected
+            ? 'ring-2 ring-gray-400 bg-gray-200/70'
+            : 'hover:ring-2 hover:ring-gray-300 hover:bg-gray-100/60'
+        }`}
+        data-item-type={item.type}
+        data-folder-id={item.type === 'folder' ? item.id : undefined}
+        onClick={handleClickSelect}
+        onDoubleClick={handleDoubleClick}
+        draggable
+        onDragStart={(e) => handleDragStart(e, item)}
+        onDragEnd={() => { setDragOverItem(null); }}
+        onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (dragOverItem !== item.id) { setDragOverItem(item.id); } }}
+        onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : (e.preventDefault(), e.stopPropagation(), (e.dataTransfer.dropEffect = 'none'))}
+        onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
+        onDrop={(e) => item.type === 'folder' ? (e.preventDefault(), e.stopPropagation(), handleDrop(e, item.id)) : (e.preventDefault(), e.stopPropagation())}
+      >
+        {/* Icona centrale */}
+        <div className="flex-1 w-full flex items-center justify-center">
+          <div
+            className="rounded-xl ring-1 ring-gray-200 w-16 h-16 sm:w-18 sm:h-18 flex items-center justify-center"
+            style={{ backgroundColor: iconBg, color: primaryColor }}
+          >
+            <FolderIcon item={item} />
+          </div>
+        </div>
+
+        {/* Menu azioni tre puntini (visibile su hover) */}
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <TileMenuButton item={item} />
+        </div>
+
+        {/* Testi sotto l'icona, con spaziatura minima alla Apple */}
+        <div className="mt-1 text-center px-1 w-full">
+          <div className="font-semibold text-gray-900 truncate">{item.name}</div>
+          {item.type === 'file' && item.data && 'createdAt' in item.data && (
+            <div className="text-xs text-gray-600 mt-[2px]">{formatDate((item.data as any).createdAt)}</div>
+          )}
+          {item.type === 'file' && item.data && 'status' in item.data && (
+            <div className="text-xs text-gray-600">{statusLabel((item.data as any).status)}</div>
+          )}
+          {item.type === 'folder' && (
+            <div className="text-xs text-gray-600 mt-[2px]">{totalElements} elementi</div>
+          )}
+        </div>
+
+        {/* Overlay divieto quando il drop è proibito sulla cartella */}
+        {item.type === 'folder' && isDragOver && isForbidden && (
+          <div className="pointer-events-none absolute inset-0 z-20 flex items-start justify-end p-3">
+            <div className="flex items-center gap-2 bg-red-600 text-white rounded-full px-3 py-1 shadow-lg ring-1 ring-red-700/50">
+              <Ban size={16} />
+              <span className="text-xs font-semibold">Divieto</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Renderizza WorkoutDetailPage se una scheda è selezionata
   if (showWorkoutDetail && selectedWorkoutId) {
     return (
@@ -1087,7 +1293,15 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   }
 
   return (
-    <div className="min-h-[calc(100vh-200px)] flex flex-col bg-gray-50">
+    <div
+      className="min-h-[calc(100vh-200px)] flex flex-col"
+      onClick={(e) => {
+        const t = e.target as HTMLElement;
+        if (t.closest('.item-card') || t.closest('.dropdown-menu') || t.closest('.menu-button')) return;
+        setSelectedItemId(null);
+        setHoveredItemId(null);
+      }}
+    >
 
       {toastMessage && (
         <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-md flex items-center space-x-2 text-gray-800 transform transition-all duration-300 ease-out ${isToastExiting ? 'opacity-0 -translate-y-2 scale-95' : 'opacity-100 translate-y-0 scale-100'}`} role="status" aria-live="polite">
@@ -1270,18 +1484,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                      <div className="px-4 py-2">
                        <p className="text-sm font-medium text-gray-700 mb-2">Modalità vista</p>
                        <div className="flex space-x-2">
-                         <button
-                           onClick={() => {
-                             setViewMode('list');
-                             closeToolbarDropdown();
-                           }}
-                           className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
-                             viewMode === 'list' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
-                           }`}
-                         >
-                           <List size={16} />
-                           <span className="text-sm">Lista</span>
-                         </button>
+                         {/* Griglia prima di Elenco */}
                          <button
                            onClick={() => {
                              setViewMode('grid');
@@ -1293,6 +1496,30 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                          >
                            <Grid3X3 size={16} />
                            <span className="text-sm">Griglia</span>
+                         </button>
+                         <button
+                           onClick={() => {
+                             setViewMode('compact');
+                             closeToolbarDropdown();
+                           }}
+                           className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+                             viewMode === 'compact' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
+                           }`}
+                         >
+                           <LayoutGrid size={16} />
+                           <span className="text-sm">Compatta</span>
+                         </button>
+                         <button
+                           onClick={() => {
+                             setViewMode('list');
+                             closeToolbarDropdown();
+                           }}
+                           className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+                             viewMode === 'list' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
+                           }`}
+                         >
+                           <List size={16} />
+                           <span className="text-sm">Elenco</span>
                          </button>
                        </div>
                      </div>
@@ -1555,13 +1782,30 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               }
               
               return (
-                <div className={`${
-                  viewMode === 'grid' 
-                    ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-                    : 'space-y-2'
-                }`}>
+                <div
+                  className={`${
+                    viewMode === 'compact'
+                      ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+                      : viewMode === 'grid'
+                        ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6'
+                        : 'space-y-2'
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedItemId(null);
+                  }}
+                >
                   {filteredItems.map((item) => (
-                    <ItemCard key={item.id} item={item} />
+                    viewMode === 'grid' ? (
+                      <TileCard
+                        key={item.id}
+                        item={item}
+                        isSelected={selectedItemId === item.id}
+                        onSelect={() => setSelectedItemId(item.id)}
+                      />
+                    ) : (
+                      <ItemCard key={item.id} item={item} />
+                    )
                   ))}
                 </div>
               );

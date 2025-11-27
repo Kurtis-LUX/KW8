@@ -240,6 +240,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
           onLogout={onLogout}
           showAuthButtons={false}
           isDashboard={true}
+          currentPage={'athlete-manager'}
         />
         <div className="pt-20 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -260,6 +261,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
           onLogout={onLogout}
           showAuthButtons={false}
           isDashboard={true}
+          currentPage={'athlete-manager'}
         />
         <div className="pt-20 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
@@ -290,6 +292,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
         onLogout={onLogout}
         showAuthButtons={false}
         isDashboard={true}
+        currentPage={'athlete-manager'}
       />
       <div
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
