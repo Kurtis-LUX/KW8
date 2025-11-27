@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Clock, Dumbbell, Target, CheckCircle, User, Calendar, History, AlertCircle } from 'lucide-react';
 import { useParams } from 'react-router-dom';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface Exercise {
   id: string;
@@ -49,6 +50,7 @@ interface WorkoutHistory {
 
 const WorkoutCardPage: React.FC = () => {
   const { linkId } = useParams<{ linkId: string }>();
+  const isStandaloneMobile = useIsStandaloneMobile();
   const [workoutCard, setWorkoutCard] = useState<WorkoutCard | null>(null);
   const [membershipCard, setMembershipCard] = useState<MembershipCard | null>(null);
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistory[]>([]);
@@ -227,39 +229,41 @@ const WorkoutCardPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => window.history.back()}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">{workoutCard.title}</h1>
-                <p className="text-sm text-gray-600">Coach: {workoutCard.coachName}</p>
+      {/* Header - nascosto in modalità PWA standalone */}
+      {!isStandaloneMobile && (
+        <div className="bg-white shadow-sm border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => window.history.back()}
+                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">{workoutCard.title}</h1>
+                  <p className="text-sm text-gray-600">Coach: {workoutCard.coachName}</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              {saving && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
-                  Salvataggio...
-                </div>
-              )}
-              {lastSaved && !saving && (
-                <div className="flex items-center text-sm text-green-600">
-                  <CheckCircle size={16} className="mr-1" />
-                  Salvato {lastSaved.toLocaleTimeString()}
-                </div>
-              )}
+              <div className="flex items-center space-x-2">
+                {saving && (
+                  <div className="flex items-center text-sm text-gray-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                    Salvataggio...
+                  </div>
+                )}
+                {lastSaved && !saving && (
+                  <div className="flex items-center text-sm text-green-600">
+                    <CheckCircle size={16} className="mr-1" />
+                    Salvato {lastSaved.toLocaleTimeString()}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="bg-white border-b border-gray-200">

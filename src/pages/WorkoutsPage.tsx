@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import DB, { User } from '../utils/database';
 import Header from '../components/Header';
-import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 import { ChevronLeft, Calendar, Clock, Dumbbell, Target, CheckCircle, Play, Download, User as UserIcon, Settings } from 'lucide-react';
 import FileExplorer from '../components/FileExplorer';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 
 
@@ -130,7 +130,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
       />
       <div className="pt-20">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header in stile Apple - nascosto in PWA standalone mobile */}
+          {/* Header in stile Apple - nascosto in PWA standalone */}
           {!isStandaloneMobile && (
           <div className="mb-8">
             <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 flex items-center justify-between">
@@ -155,7 +155,6 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
           )}
 
         {/* Tabs */}
->
         <div className="w-full max-w-2xl mx-auto mb-8">
           <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-2">
             <div className="grid grid-cols-4 gap-2">

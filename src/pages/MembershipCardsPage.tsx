@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import { User as UserType } from '../utils/database';
 import { useMembershipCards } from '../hooks/useFirestore';
 import { MembershipCard as FirestoreMembershipCard } from '../services/firestoreService';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface MembershipCardsPageProps {
   currentUser: UserType | null;
@@ -294,59 +295,65 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
   const totalRevenue = cards.reduce((sum, c) => sum + c.totalPaid, 0);
   const expiringSoon = cards.filter(c => isExpiringSoon(c.expiryDate)).length;
 
+  const isStandaloneMobile = useIsStandaloneMobile();
+
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       <Header onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} isDashboard={true} />
-      <div
-        className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-        aria-hidden={!showCompactTitle}
-        style={{ top: headerHeight || undefined }}
-      >
-        <div className="container mx-auto px-6 py-2 flex items-center justify-between">
-          <button
-            onClick={() => onNavigate('coach-dashboard')}
-            className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
-            title="Torna alla Dashboard Coach"
-            aria-label="Torna alla Dashboard Coach"
-          >
-            <ChevronLeft size={20} className="block" />
-          </button>
+      {!isStandaloneMobile && (
+        <div
+          className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+          aria-hidden={!showCompactTitle}
+          style={{ top: headerHeight || undefined }}
+        >
+          <div className="container mx-auto px-6 py-2 flex items-center justify-between">
+            <button
+              onClick={() => onNavigate('coach-dashboard')}
+              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
+              title="Torna alla Dashboard Coach"
+              aria-label="Torna alla Dashboard Coach"
+            >
+              <ChevronLeft size={20} className="block" />
+            </button>
 
-          <div className="text-center flex-1">
-            <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Tesserini Atleti</h2>
+            <div className="text-center flex-1">
+              <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Tesserini Atleti</h2>
+            </div>
+
+            <div className="w-8"></div>
           </div>
-
-          <div className="w-8"></div>
         </div>
-      </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        {/* Header compatto */}
-        <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3 mb-6">
-          <button
-            onClick={() => onNavigate('coach-dashboard')}
-            className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
-            title="Torna alla Dashboard Coach"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          
-          <div className="text-center flex-1">
-            <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">
-              Tesserini Atleti
-            </h1>
-            <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">
-              Gestisci i tesserini e i pagamenti degli atleti
-            </p>
+        {/* Header compatto - nascosto in PWA standalone */}
+        {!isStandaloneMobile && (
+          <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3 mb-6">
+            <button
+              onClick={() => onNavigate('coach-dashboard')}
+              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
+              title="Torna alla Dashboard Coach"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            
+            <div className="text-center flex-1">
+              <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">
+                Tesserini Atleti
+              </h1>
+              <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">
+                Gestisci i tesserini e i pagamenti degli atleti
+              </p>
+            </div>
+            
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center space-x-1 bg-white/70 backdrop-blur-md ring-1 ring-black/10 text-gray-900 px-3 py-2 rounded-full hover:bg-white hover:shadow-md transition-all text-sm"
+            >
+              <Plus size={16} />
+              <span>Nuovo</span>
+            </button>
           </div>
-          
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-1 bg-white/70 backdrop-blur-md ring-1 ring-black/10 text-gray-900 px-3 py-2 rounded-full hover:bg-white hover:shadow-md transition-all text-sm"
-          >
-            <Plus size={16} />
-            <span>Nuovo</span>
-          </button>
-        </div>
+        )}
 
         {/* Statistiche rapide compatte */}
         <div className="bg-white/70 backdrop-blur-md ring-1 ring-black/10 rounded-xl shadow-sm p-4 mb-6">

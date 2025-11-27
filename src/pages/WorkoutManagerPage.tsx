@@ -49,35 +49,35 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
       />
       {/* Titolo compatto sticky sotto l'header principale (stile iOS) - nascosto in PWA standalone */}
       {!isStandaloneMobile && (
-      <div
-        className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-        aria-hidden={!showCompactTitle}
-        style={{ top: headerHeight || undefined }}
-      >
-        <div className="container mx-auto px-6 py-2 flex items-center justify-between">
-          <button
-            onClick={() => onNavigate('coach-dashboard')}
-            className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
-            title="Torna alla Dashboard Coach"
-            aria-label="Torna alla Dashboard Coach"
-          >
-            <ChevronLeft size={20} className="block" />
-          </button>
+        <div
+          className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+          aria-hidden={!showCompactTitle}
+          style={{ top: headerHeight || undefined }}
+        >
+          <div className="container mx-auto px-6 py-2 flex items-center justify-between">
+            <button
+              onClick={() => onNavigate('coach-dashboard')}
+              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
+              title="Torna alla Dashboard Coach"
+              aria-label="Torna alla Dashboard Coach"
+            >
+              <ChevronLeft size={20} className="block" />
+            </button>
 
-          <div className="text-center flex-1">
-            <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Gestione schede</h2>
+            <div className="text-center flex-1">
+              <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Gestione schede</h2>
+            </div>
+
+            <div className="w-8"></div>
           </div>
-
-          <div className="w-8"></div>
         </div>
-      </div>
       )}
       
       <div className="pt-20">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-5">
-          {!isStandaloneMobile && (
           <div className="mb-4">
-            {/* Header allineato alla Dashboard Coach */}
+            {/* Header allineato alla Dashboard Coach - nascosto in PWA standalone */}
+            {!isStandaloneMobile && (
             <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2">
               <button
                 onClick={() => onNavigate('coach-dashboard')}
@@ -94,8 +94,8 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
 
               <div className="w-8"></div>
             </div>
+            )}
           </div>
-          )}
           
           {/* Rimosso il contenitore inferiore (div sotto) */}
           <FileExplorer currentUser={currentUser} />

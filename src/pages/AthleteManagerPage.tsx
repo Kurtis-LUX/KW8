@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Users, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Activity, TrendingUp, Mail, Phone, MapPin, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import Header from '../components/Header';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 import AthleteForm from '../components/AthleteForm';
 import AthleteImport from '../components/AthleteImport';
 import { User } from '../utils/database';
 import { useUsers } from '../hooks/useFirestore';
 import type { User as FirestoreUser } from '../services/firestoreService';
-import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface AthleteManagerPageProps {
   onNavigate: (page: string) => void;
@@ -297,33 +297,33 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
         currentPage={'athlete-manager'}
       />
       {!isStandaloneMobile && (
-      <div
-        className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-        aria-hidden={!showCompactTitle}
-        style={{ top: headerHeight || undefined }}
-      >
-        <div className="container mx-auto px-6 py-2 flex items-center justify-between">
-          <button
-            onClick={() => onNavigate('coach-dashboard')}
-            className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
-            title="Torna alla Dashboard Coach"
-            aria-label="Torna alla Dashboard Coach"
-          >
-            <ChevronLeft size={20} className="block" />
-          </button>
+        <div
+          className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
+          aria-hidden={!showCompactTitle}
+          style={{ top: headerHeight || undefined }}
+        >
+          <div className="container mx-auto px-6 py-2 flex items-center justify-between">
+            <button
+              onClick={() => onNavigate('coach-dashboard')}
+              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
+              title="Torna alla Dashboard Coach"
+              aria-label="Torna alla Dashboard Coach"
+            >
+              <ChevronLeft size={20} className="block" />
+            </button>
 
-          <div className="text-center flex-1">
-            <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Gestione atleti</h2>
+            <div className="text-center flex-1">
+              <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Gestione atleti</h2>
+            </div>
+
+            <div className="w-8"></div>
           </div>
-
-          <div className="w-8"></div>
         </div>
-      </div>
       )}
       
       <div className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header */}
+          {/* Header - nascosto in PWA standalone */}
           {!isStandaloneMobile && (
           <div className="mb-8">
             <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 flex items-center justify-between">
@@ -360,10 +360,10 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                   <span className="hidden sm:block text-sm">Nuovo</span>
                 </button>
               </div>
-            </div>
           </div>
-          )}
+          </div>
 
+          )}
           {/* Filtri e ricerca */}
           <div className="bg-white/70 backdrop-blur rounded-2xl shadow-sm p-6 mb-8 border border-gray-200">
             {/* Prima riga: Ricerca e Filtro Stato nella stessa riga */}

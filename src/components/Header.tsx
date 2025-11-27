@@ -18,14 +18,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [userMenuOrigin, setUserMenuOrigin] = useState<'header' | 'bottom' | null>(null);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const bottomProfileRef = useRef<HTMLDivElement>(null);
   const roleMenuRef = useRef<HTMLDivElement>(null);
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const { t, language, setLanguage } = useLanguageContext();
   const isStandaloneMobile = useIsStandaloneMobile();
-  const [showBottomBar, setShowBottomBar] = useState(false);
+  const [isBottomVisible, setIsBottomVisible] = useState(true);
+  const lastScrollYRef = useRef<number>(0);
+  const scrollTickRef = useRef<number | null>(null);
   
   // Helper: genera un nome leggibile dall'email se il name non è disponibile
   const deriveNameFromEmail = (email?: string): string => {
@@ -66,8 +70,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   // Gestisce i click esterni per chiudere il menu profilo
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedInsideHeaderMenu = userMenuRef.current && userMenuRef.current.contains(target);
+      const clickedInsideBottomProfile = bottomProfileRef.current && bottomProfileRef.current.contains(target);
+      if (!clickedInsideHeaderMenu && !clickedInsideBottomProfile) {
         setShowUserMenu(false);
+        setUserMenuOrigin(null);
       }
     };
 
@@ -305,28 +313,49 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   useEffect(() => {
     if (isStandaloneMobile) {
       document.body.style.paddingBottom = 'calc(72px + env(safe-area-inset-bottom))';
-      (document.body as any).dataset.bottomnavActive = 'true';
-      setShowBottomBar(true);
     } else {
       document.body.style.paddingBottom = '';
-      delete (document.body as any).dataset.bottomnavActive;
-      setShowBottomBar(false);
     }
     return () => {
       document.body.style.paddingBottom = '';
-      delete (document.body as any).dataset.bottomnavActive;
-      setShowBottomBar(false);
     };
   }, [isStandaloneMobile]);
 
-  // Haptics leggeri per i pulsanti supportati
-  const hapticLight = () => {
-    try {
-      if ('vibrate' in navigator) {
-        navigator.vibrate(10);
+  // Mostra/nasconde la bottom bar in base alla direzione di scroll (stile iOS)
+  useEffect(() => {
+    if (!isStandaloneMobile) {
+      setIsBottomVisible(false);
+      return;
+    }
+    const handleScroll = () => {
+      if (scrollTickRef.current) return;
+      scrollTickRef.current = window.requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const delta = currentY - (lastScrollYRef.current || 0);
+        const nearTop = currentY < 32;
+        const nearBottom = (window.innerHeight + currentY) >= (document.body.scrollHeight - 32);
+        if (nearTop || nearBottom) {
+          setIsBottomVisible(true);
+        } else if (delta > 2) {
+          // Scroll down: nascondi
+          setIsBottomVisible(false);
+        } else if (delta < -2) {
+          // Scroll up: mostra
+          setIsBottomVisible(true);
+        }
+        lastScrollYRef.current = currentY;
+        scrollTickRef.current = null;
+      });
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTickRef.current) {
+        cancelAnimationFrame(scrollTickRef.current);
+        scrollTickRef.current = null;
       }
-    } catch {}
-  };
+    };
+  }, [isStandaloneMobile]);
 
   return (
     <React.Fragment>
@@ -493,7 +522,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             {currentUser ? (
               <div className="relative" ref={userMenuRef}>
                 <button
-                  onClick={toggleUserMenu}
+                  onClick={() => { setUserMenuOrigin('header'); toggleUserMenu(); }}
                   className="inline-flex items-center space-x-2 rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-3.5 py-2 text-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
                 >
                   <User size={24} className="text-gray-700" />
@@ -678,57 +707,135 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       </header>
 
       {/* Bottom Navigation - visibile solo su mobile/tablet e in modalità standalone */}
-      {/* Bottom Navigation iOS-style con animazioni di presentazione/dismiss */}
+      {/* Bottom Navigation - sempre presente ma con animazioni show/dismiss e visibile solo se standalone */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-[60] lg:hidden transition-all duration-300 ease-out ${showBottomBar ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className={`fixed left-0 right-0 z-[60] lg:hidden transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform will-change-opacity ${isStandaloneMobile && isBottomVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}
+        style={{
+          bottom: '14px',
+          paddingBottom: 'env(safe-area-inset-bottom)'
+        }}
       >
         <div className="mx-auto max-w-screen-sm px-6 pb-3">
-          <div className="relative w-full h-[60px] bg-white/80 backdrop-blur-xl rounded-2xl ring-1 ring-black/10 shadow-[0_8px_28px_rgba(0,0,0,0.12)] px-4">
-            {/* Cluster sinistro: Profilo + Schede (solo coach) */}
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-              <button
-                onClick={() => { hapticLight(); if (currentUser?.role === 'coach') { onNavigate && onNavigate('coach-dashboard'); } else { onNavigate && onNavigate('athlete-profile'); } }}
-                className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all active:scale-[0.98]"
-                title="Profilo"
-                aria-label="Profilo"
-              >
-                <User size={22} />
-              </button>
-              {currentUser?.role === 'coach' && (
+          <div className="w-full h-[60px] bg-white/85 backdrop-blur-lg rounded-2xl shadow-[0_12px_28px_rgba(0,0,0,0.16)] flex items-center px-2">
+            {/* Layout a 3 colonne per centro logo assoluto */}
+            <div className="grid grid-cols-3 w-full items-center">
+              {/* Colonna sinistra: profilo + (eventuale) schede */}
+              <div className="flex items-center gap-2 justify-start pl-2" ref={bottomProfileRef}>
+                {/* Profilo: apre il menu utente */}
                 <button
-                  onClick={() => { hapticLight(); onNavigate && onNavigate('workout-manager'); }}
-                  className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all active:scale-[0.98]"
-                  title="Gestione schede"
-                  aria-label="Gestione schede"
+                  onClick={() => { setUserMenuOrigin('bottom'); setShowUserMenu(!showUserMenu); }}
+                  className={`inline-flex items-center justify-center w-11 h-11 rounded-2xl transition-transform ${showUserMenu && userMenuOrigin === 'bottom' ? 'text-red-600 scale-105' : 'text-gray-800'}`}
+                  title="Profilo"
+                  aria-label="Profilo"
                 >
-                  <FileText size={22} />
+                  <User size={22} />
                 </button>
-              )}
-            </div>
 
-            {/* Logo centrato assoluto */}
-            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-              <button
-                onClick={() => { hapticLight(); onNavigate && onNavigate('home'); }}
-                className="inline-flex items-center justify-center"
-                aria-label="Home"
-                title="Home"
-              >
-                <img src="/images/logo.png" alt="KW8 Logo" className="h-10 w-auto object-contain drop-shadow" />
-              </button>
-            </div>
+                {/* Accesso rapido Schede (solo coach, nascosto su gestione schede) */}
+                {currentUser?.role === 'coach' && currentPage !== 'workout-manager' && (
+                  <button
+                    onClick={() => onNavigate && onNavigate('workout-manager')}
+                    className="inline-flex items-center justify-center w-11 h-11 rounded-2xl text-gray-800"
+                    title="Gestione schede"
+                    aria-label="Gestione schede"
+                  >
+                    <FileText size={22} />
+                  </button>
+                )}
 
-            {/* Cluster destro: Menu */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-              <button
-                onClick={() => { hapticLight(); toggleMenu(); }}
-                className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all active:scale-[0.98]"
-                title="Menu"
-                aria-label="Menu"
-              >
-                <AlignJustify size={22} />
-              </button>
+                {/* Menu utente (contenuto identico a header) reso sopra la bottom bar */}
+                {showUserMenu && userMenuOrigin === 'bottom' && (
+                  <div ref={userMenuRef} className="absolute -top-2 left-2 right-auto translate-y-[-100%] w-64 bg-white/90 backdrop-blur-md rounded-2xl shadow-[0_16px_32px_rgba(0,0,0,0.12)] ring-1 ring-black/10 p-2 z-[70]">
+                    {currentUser ? (
+                      <>
+                        <div className="px-4 py-3 border-b border-black/5">
+                          <p className="font-semibold text-gray-800">{currentUser.name || deriveNameFromEmail(currentUser.email)}</p>
+                          <p className="text-sm text-gray-600">{currentUser.email}</p>
+                          <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
+                        </div>
+                        {currentUser.role === 'coach' ? (
+                          <>
+                            <button onClick={() => { handleNavigation('coach-home'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                              <Home size={16} />
+                              <span>Home</span>
+                            </button>
+                            <button onClick={() => { handleNavigation('coach-dashboard'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                              <Settings size={16} />
+                              <span>Dashboard Coach</span>
+                            </button>
+                            <button onClick={() => { handleNavigation('workout-manager'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                              <FileText size={16} />
+                              <span>Gestione schede</span>
+                            </button>
+                            <div className="mt-2 pt-2 border-t border-black/5">
+                              <button onClick={() => { handleLogout(); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors text-red-700">
+                                <LogOut size={16} />
+                                <span>Logout</span>
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => { handleNavigation('athlete-profile'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                              <UserIcon size={16} />
+                              <span>Profilo</span>
+                            </button>
+                            <button onClick={() => { handleNavigation('home'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                              <Home size={16} />
+                              <span>Home</span>
+                            </button>
+                            <button onClick={() => { handleNavigation('workouts'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                              <FileText size={16} />
+                              <span>Schede</span>
+                            </button>
+                            <div className="mt-2 pt-2 border-t border-black/5">
+                              <button onClick={() => { handleLogout(); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors text-red-700">
+                                <LogOut size={16} />
+                                <span>Logout</span>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => { handleNavigation('login'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                          <UserIcon size={16} />
+                          <span>Accedi come Coach</span>
+                        </button>
+                        <button onClick={() => { handleNavigation('athlete-auth'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                          <UserIcon size={16} />
+                          <span>Accedi come Atleta</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Colonna centrale: logo sempre centrato */}
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={() => onNavigate && onNavigate('home')}
+                  className="inline-flex items-center justify-center"
+                  aria-label="Home"
+                  title="Home"
+                >
+                  <img src="/images/logo.png" alt="KW8 Logo" className="h-10 w-auto object-contain drop-shadow" />
+                </button>
+              </div>
+
+              {/* Colonna destra: menu hamburger */}
+              <div className="flex items-center justify-end pr-2">
+                <button
+                  onClick={toggleMenu}
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-2xl text-gray-800"
+                  title="Menu"
+                  aria-label="Menu"
+                >
+                  <AlignJustify size={22} />
+                </button>
+              </div>
             </div>
           </div>
         </div>

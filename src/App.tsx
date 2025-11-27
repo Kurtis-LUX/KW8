@@ -45,7 +45,6 @@ import './styles/dropdown.css';
 import AthleteAuthPage from './components/auth/AthleteAuthPage';
 import AthleteRegisterPage from './pages/AthleteRegisterPage';
 import AthleteProfilePage from './pages/AthleteProfilePage';
-import useIsStandaloneMobile from './hooks/useIsStandaloneMobile';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -67,7 +66,6 @@ function App() {
   const [dashboardHeaderHeight, setDashboardHeaderHeight] = useState<number>(0);
   const dashboardTitleRef = useRef<HTMLDivElement | null>(null);
   const anchorVisibleRef = useRef<boolean>(false);
-  const isStandaloneMobile = useIsStandaloneMobile();
 
   // Mappa path -> pagina interna
   const applyPathToState = (pathname: string) => {
@@ -530,8 +528,7 @@ function App() {
         <ProtectedRoute requireCoach={true} onUnauthorized={() => handleNavigation('login')}>
           <div className="min-h-screen bg-gray-100">
             <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} currentPage={currentPage} />
-            {/* Titolo compatto sticky (stile iOS) sotto l'header principale - nascosto in PWA standalone */}
-            {!isStandaloneMobile && (
+            {/* Titolo compatto sticky (stile iOS) sotto l'header principale */}
             <div
               className={`fixed left-0 right-0 z-50 transition-all duration-300 ${dashboardShowCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
               aria-hidden={!dashboardShowCompactTitle}
@@ -552,10 +549,8 @@ function App() {
                 <div className="w-8"></div>
               </div>
             </div>
-            )}
             <div className="pt-20">
               <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-                {!isStandaloneMobile && (
                 <div ref={dashboardTitleRef} className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2">
                   <button
                     onClick={() => handleNavigation('home')}
@@ -572,7 +567,6 @@ function App() {
                   
                   <div className="w-8"></div>
                 </div>
-                )}
               </div>
             </div>
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
