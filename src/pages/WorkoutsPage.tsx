@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DB, { User } from '../utils/database';
 import Header from '../components/Header';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 import { ChevronLeft, Calendar, Clock, Dumbbell, Target, CheckCircle, Play, Download, User as UserIcon, Settings } from 'lucide-react';
 import FileExplorer from '../components/FileExplorer';
 
@@ -117,6 +118,8 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
     loadAssignedWorkouts();
   };
 
+  const isStandaloneMobile = useIsStandaloneMobile();
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
@@ -127,7 +130,8 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
       />
       <div className="pt-20">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-          {/* Header in stile Apple */}
+          {/* Header in stile Apple - nascosto in PWA standalone mobile */}
+          {!isStandaloneMobile && (
           <div className="mb-8">
             <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 flex items-center justify-between">
               <button
@@ -148,6 +152,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser, de
               <div className="w-10"></div>
             </div>
           </div>
+          )}
 
         {/* Tabs */}
 >

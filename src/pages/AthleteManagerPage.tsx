@@ -6,6 +6,7 @@ import AthleteImport from '../components/AthleteImport';
 import { User } from '../utils/database';
 import { useUsers } from '../hooks/useFirestore';
 import type { User as FirestoreUser } from '../services/firestoreService';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface AthleteManagerPageProps {
   onNavigate: (page: string) => void;
@@ -49,6 +50,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
   const [isEditing, setIsEditing] = useState(false);
   const [showCompactTitle, setShowCompactTitle] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number>(0);
+  const isStandaloneMobile = useIsStandaloneMobile();
 
   // Converti utenti Firestore in atleti
   useEffect(() => {
@@ -294,6 +296,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
         isDashboard={true}
         currentPage={'athlete-manager'}
       />
+      {!isStandaloneMobile && (
       <div
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
         aria-hidden={!showCompactTitle}
@@ -316,10 +319,12 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
           <div className="w-8"></div>
         </div>
       </div>
+      )}
       
       <div className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
+          {!isStandaloneMobile && (
           <div className="mb-8">
             <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 flex items-center justify-between">
               <button
@@ -357,6 +362,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
               </div>
             </div>
           </div>
+          )}
 
           {/* Filtri e ricerca */}
           <div className="bg-white/70 backdrop-blur rounded-2xl shadow-sm p-6 mb-8 border border-gray-200">

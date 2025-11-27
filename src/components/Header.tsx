@@ -25,6 +25,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [isClosing, setIsClosing] = useState(false);
   const { t, language, setLanguage } = useLanguageContext();
   const isStandaloneMobile = useIsStandaloneMobile();
+  const [showBottomBar, setShowBottomBar] = useState(false);
   
   // Helper: genera un nome leggibile dall'email se il name non è disponibile
   const deriveNameFromEmail = (email?: string): string => {
@@ -304,13 +305,28 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   useEffect(() => {
     if (isStandaloneMobile) {
       document.body.style.paddingBottom = 'calc(72px + env(safe-area-inset-bottom))';
+      (document.body as any).dataset.bottomnavActive = 'true';
+      setShowBottomBar(true);
     } else {
       document.body.style.paddingBottom = '';
+      delete (document.body as any).dataset.bottomnavActive;
+      setShowBottomBar(false);
     }
     return () => {
       document.body.style.paddingBottom = '';
+      delete (document.body as any).dataset.bottomnavActive;
+      setShowBottomBar(false);
     };
   }, [isStandaloneMobile]);
+
+  // Haptics leggeri per i pulsanti supportati
+  const hapticLight = () => {
+    try {
+      if ('vibrate' in navigator) {
+        navigator.vibrate(10);
+      }
+    } catch {}
+  };
 
   return (
     <React.Fragment>
@@ -662,57 +678,52 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       </header>
 
       {/* Bottom Navigation - visibile solo su mobile/tablet e in modalità standalone */}
-      {isStandaloneMobile && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-[60] lg:hidden"
-          style={{
-            paddingBottom: 'env(safe-area-inset-bottom)'
-          }}
-        >
-          <div className="mx-auto max-w-screen-sm px-6 pb-3">
-            <div className="w-full h-[60px] bg-white/80 backdrop-blur-lg rounded-2xl ring-1 ring-black/10 shadow-[0_8px_30px_rgba(0,0,0,0.12)] flex items-center justify-between px-4">
-              {/* Profilo */}
+      {/* Bottom Navigation iOS-style con animazioni di presentazione/dismiss */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-[60] lg:hidden transition-all duration-300 ease-out ${showBottomBar ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'}`}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="mx-auto max-w-screen-sm px-6 pb-3">
+          <div className="relative w-full h-[60px] bg-white/80 backdrop-blur-xl rounded-2xl ring-1 ring-black/10 shadow-[0_8px_28px_rgba(0,0,0,0.12)] px-4">
+            {/* Cluster sinistro: Profilo + Schede (solo coach) */}
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
               <button
-                onClick={() => {
-                  if (currentUser?.role === 'coach') {
-                    onNavigate && onNavigate('coach-dashboard');
-                  } else {
-                    onNavigate && onNavigate('athlete-profile');
-                  }
-                }}
-                className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all"
+                onClick={() => { hapticLight(); if (currentUser?.role === 'coach') { onNavigate && onNavigate('coach-dashboard'); } else { onNavigate && onNavigate('athlete-profile'); } }}
+                className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all active:scale-[0.98]"
                 title="Profilo"
                 aria-label="Profilo"
               >
                 <User size={22} />
               </button>
-
-              {/* Accesso rapido Schede (solo coach) */}
               {currentUser?.role === 'coach' && (
                 <button
-                  onClick={() => onNavigate && onNavigate('workout-manager')}
-                  className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all"
+                  onClick={() => { hapticLight(); onNavigate && onNavigate('workout-manager'); }}
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all active:scale-[0.98]"
                   title="Gestione schede"
                   aria-label="Gestione schede"
                 >
                   <FileText size={22} />
                 </button>
               )}
+            </div>
 
-              {/* Logo Centrale */}
+            {/* Logo centrato assoluto */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
               <button
-                onClick={() => onNavigate && onNavigate('home')}
+                onClick={() => { hapticLight(); onNavigate && onNavigate('home'); }}
                 className="inline-flex items-center justify-center"
                 aria-label="Home"
                 title="Home"
               >
                 <img src="/images/logo.png" alt="KW8 Logo" className="h-10 w-auto object-contain drop-shadow" />
               </button>
+            </div>
 
-              {/* Menu */}
+            {/* Cluster destro: Menu */}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
               <button
-                onClick={toggleMenu}
-                className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all"
+                onClick={() => { hapticLight(); toggleMenu(); }}
+                className="inline-flex items-center justify-center w-11 h-11 rounded-2xl bg-white/80 ring-1 ring-black/10 text-gray-800 shadow-sm hover:bg-white transition-all active:scale-[0.98]"
                 title="Menu"
                 aria-label="Menu"
               >
@@ -721,7 +732,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Mobile Menu Overlay & Side Panel */}
       <div className={`${(isMenuOpen || isClosing) ? 'visible' : 'invisible'} fixed inset-0 z-[100] pointer-events-none`}>

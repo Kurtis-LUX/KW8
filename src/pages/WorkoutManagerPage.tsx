@@ -3,6 +3,7 @@ import { User } from '../utils/database';
 import FileExplorer from '../components/FileExplorer';
 import Header from '../components/Header';
 import { ArrowLeft, ChevronLeft } from 'lucide-react';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface WorkoutManagerPageProps {
   onNavigate: (page: string) => void;
@@ -12,6 +13,7 @@ interface WorkoutManagerPageProps {
 const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, currentUser }) => {
   const [showCompactTitle, setShowCompactTitle] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number>(0);
+  const isStandaloneMobile = useIsStandaloneMobile();
 
   useEffect(() => {
     const onScroll = () => {
@@ -45,7 +47,8 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
         isDashboard={true}
         currentPage={'workout-manager'}
       />
-      {/* Titolo compatto sticky sotto l'header principale (stile iOS) */}
+      {/* Titolo compatto sticky sotto l'header principale (stile iOS) - nascosto in PWA standalone */}
+      {!isStandaloneMobile && (
       <div
         className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
         aria-hidden={!showCompactTitle}
@@ -68,9 +71,11 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
           <div className="w-8"></div>
         </div>
       </div>
+      )}
       
       <div className="pt-20">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-5">
+          {!isStandaloneMobile && (
           <div className="mb-4">
             {/* Header allineato alla Dashboard Coach */}
             <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2">
@@ -90,6 +95,7 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
               <div className="w-8"></div>
             </div>
           </div>
+          )}
           
           {/* Rimosso il contenitore inferiore (div sotto) */}
           <FileExplorer currentUser={currentUser} />
