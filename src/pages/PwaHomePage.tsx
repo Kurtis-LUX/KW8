@@ -58,7 +58,7 @@ const PwaHomePage: React.FC<PwaHomePageProps> = ({ onNavigate, currentUser, last
 
       {/* Titolo "CROSS YOUR LIMITS." sotto la header (top della pagina) */}
       <div className="absolute top-0 left-0 right-0 z-10">
-        <div className="container mx-auto px-6 pt-3 pb-2">
+        <div className="container mx-auto px-6 pt-3 pb-2 text-center">
           <h1
             className={`text-4xl md:text-7xl lg:text-8xl font-bold mb-2 tracking-wider animate-fadeInSlideUp ${isTypingComplete ? 'animate-pulse' : ''}`}
             style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}
@@ -97,7 +97,7 @@ const PwaHomePage: React.FC<PwaHomePageProps> = ({ onNavigate, currentUser, last
           </div>
         ) : (
           <div className="w-full flex flex-col items-center justify-center">
-            <h2 className="font-semibold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis"
+            <h2 className="font-semibold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis animate-pulse"
                 style={{ fontFamily: 'SF Pro Display, system-ui, -apple-system', fontSize: 'clamp(24px, 7vw, 36px)' }}>
               <span className="text-white">Ciao</span>
               <span className="text-red-600 font-bold"> {displayName}</span>
@@ -107,7 +107,7 @@ const PwaHomePage: React.FC<PwaHomePageProps> = ({ onNavigate, currentUser, last
       </div>
     </section>
     {/* Sezione Avvisi - sotto la hero */}
-    <AnnouncementsSection />
+    <AnnouncementsSection currentUser={currentUser} />
     </>
   );
 };

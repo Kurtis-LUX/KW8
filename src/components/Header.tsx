@@ -4,6 +4,7 @@ import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
 import IosBottomBar from './ui/IosBottomBar';
+import Portal from './Portal';
 import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface HeaderProps {
@@ -35,6 +36,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [displayText, setDisplayText] = useState('');
   const [isTypingComplete, setIsTypingComplete] = useState(false);
   const fullText = t.heroTitle;
+  const [bottomMenuPos, setBottomMenuPos] = useState<{ top: number; left: number } | null>(null);
   
   // Helper: genera un nome leggibile dall'email se il name non è disponibile
   const deriveNameFromEmail = (email?: string): string => {
@@ -103,9 +105,23 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     return () => clearInterval(typingInterval);
   }, [fullText, isStandaloneMobile, currentPage]);
 
-  // Gestisce i click esterni per chiudere il menu profilo
+  // Calcola posizione overlay menu profilo (ancorato al bottone della bottom bar)
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    if (showUserMenu && userMenuOrigin === 'bottom' && bottomProfileRef.current) {
+      const rect = bottomProfileRef.current.getBoundingClientRect();
+      const overlayWidth = 256; // w-64
+      const margin = 8;
+      const left = Math.min(Math.max(rect.left, margin), window.innerWidth - overlayWidth - margin);
+      const top = rect.top; // verrà traslato verso l'alto via transform
+      setBottomMenuPos({ top, left });
+    } else {
+      setBottomMenuPos(null);
+    }
+  }, [showUserMenu, userMenuOrigin]);
+
+  // Gestisce i click/touch/pointer esterni per chiudere il menu profilo (affidabile su mobile)
+  useEffect(() => {
+    const handleOutside = (event: Event) => {
       const target = event.target as Node;
       const clickedInsideHeaderMenu = userMenuRef.current && userMenuRef.current.contains(target);
       const clickedInsideBottomProfile = bottomProfileRef.current && bottomProfileRef.current.contains(target);
@@ -116,11 +132,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     };
 
     if (showUserMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleOutside);
+      document.addEventListener('pointerdown', handleOutside);
+      document.addEventListener('touchstart', handleOutside, { passive: true });
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('pointerdown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
     };
   }, [showUserMenu]);
 
@@ -790,74 +810,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   </button>
                 )}
 
-                {/* Menu utente (contenuto identico a header) reso sopra la bottom bar */}
-                {showUserMenu && userMenuOrigin === 'bottom' && (
-                  <div ref={userMenuRef} className="absolute -top-2 left-2 right-auto translate-y-[-100%] w-64 bg-white/90 backdrop-blur-md rounded-2xl shadow-[0_16px_32px_rgba(0,0,0,0.12)] ring-1 ring-black/10 p-2 z-[70]">
-                    {currentUser ? (
-                      <>
-                        <div className="px-4 py-3 border-b border-black/5">
-                          <p className="font-semibold text-gray-800">{currentUser.name || deriveNameFromEmail(currentUser.email)}</p>
-                          <p className="text-sm text-gray-600">{currentUser.email}</p>
-                          <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
-                        </div>
-                        {currentUser.role === 'coach' ? (
-                          <>
-                            <button onClick={() => { handleNavigation('coach-home'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
-                              <Home size={16} />
-                              <span>Home</span>
-                            </button>
-                            <button onClick={() => { handleNavigation('coach-dashboard'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
-                              <Settings size={16} />
-                              <span>Dashboard Coach</span>
-                            </button>
-                            <button onClick={() => { handleNavigation('workout-manager'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
-                              <FileText size={16} />
-                              <span>Gestione schede</span>
-                            </button>
-                            <div className="mt-2 pt-2 border-t border-black/5">
-                              <button onClick={() => { handleLogout(); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors text-red-700">
-                                <LogOut size={16} />
-                                <span>Logout</span>
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={() => { handleNavigation('athlete-profile'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
-                              <UserIcon size={16} />
-                              <span>Profilo</span>
-                            </button>
-                            <button onClick={() => { handleNavigation('home'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
-                              <Home size={16} />
-                              <span>Home</span>
-                            </button>
-                            <button onClick={() => { handleNavigation('workouts'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
-                              <FileText size={16} />
-                              <span>Schede</span>
-                            </button>
-                            <div className="mt-2 pt-2 border-t border-black/5">
-                              <button onClick={() => { handleLogout(); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors text-red-700">
-                                <LogOut size={16} />
-                                <span>Logout</span>
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => { handleNavigation('login'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
-                          <UserIcon size={16} />
-                          <span>Accedi come Coach</span>
-                        </button>
-                        <button onClick={() => { handleNavigation('athlete-auth'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
-                          <UserIcon size={16} />
-                          <span>Accedi come Atleta</span>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Colonna centrale: logo sempre centrato */}
@@ -895,6 +847,80 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               </div>
             </div>
           </IosBottomBar>
+          {/* Overlay menu profilo in Portal (body): evita clipping da maschere/transform */}
+          {showUserMenu && userMenuOrigin === 'bottom' && bottomMenuPos && (
+            <Portal containerId="menu-portal">
+              <div
+                ref={userMenuRef}
+                className="fixed z-[10000] w-64 bg-white/90 backdrop-blur-md rounded-2xl shadow-[0_16px_32px_rgba(0,0,0,0.12)] ring-1 ring-black/10 p-2"
+                style={{ top: bottomMenuPos.top, left: bottomMenuPos.left, transform: 'translateY(calc(-100% - 8px))' }}
+              >
+                {currentUser ? (
+                  <>
+                    <div className="px-4 py-3 border-b border-black/5">
+                      <p className="font-semibold text-gray-800">{currentUser.name || deriveNameFromEmail(currentUser.email)}</p>
+                      <p className="text-sm text-gray-600">{currentUser.email}</p>
+                      <p className="text-xs text-gray-500 capitalize">{currentUser.role}</p>
+                    </div>
+                    {currentUser.role === 'coach' ? (
+                      <>
+                        <button onClick={() => { handleNavigation('coach-home'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                          <Home size={16} />
+                          <span>Home</span>
+                        </button>
+                        <button onClick={() => { handleNavigation('coach-dashboard'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                          <Settings size={16} />
+                          <span>Dashboard Coach</span>
+                        </button>
+                        <button onClick={() => { handleNavigation('workout-manager'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                          <FileText size={16} />
+                          <span>Gestione schede</span>
+                        </button>
+                        <div className="mt-2 pt-2 border-t border-black/5">
+                          <button onClick={() => { handleLogout(); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors text-red-700">
+                            <LogOut size={16} />
+                            <span>Logout</span>
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => { handleNavigation('athlete-profile'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                          <UserIcon size={16} />
+                          <span>Profilo</span>
+                        </button>
+                        <button onClick={() => { handleNavigation('home'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                          <Home size={16} />
+                          <span>Home</span>
+                        </button>
+                        <button onClick={() => { handleNavigation('workouts'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                          <FileText size={16} />
+                          <span>Schede</span>
+                        </button>
+                        <div className="mt-2 pt-2 border-t border-black/5">
+                          <button onClick={() => { handleLogout(); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors text-red-700">
+                            <LogOut size={16} />
+                            <span>Logout</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <button onClick={() => { handleNavigation('login'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                      <UserIcon size={16} />
+                      <span>Accedi come Coach</span>
+                    </button>
+                    <button onClick={() => { handleNavigation('athlete-auth'); setShowUserMenu(false); setUserMenuOrigin(null); }} className="w-full text-left px-3 py-2 rounded-xl hover:bg-black/5 flex items-center space-x-2 transition-colors">
+                      <UserIcon size={16} />
+                      <span>Accedi come Atleta</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </Portal>
+          )}
         </div>
       </div>
 

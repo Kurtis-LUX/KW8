@@ -762,31 +762,87 @@ export const subscribeToTransformationCases = (callback: (data: any) => void) =>
 
 // Funzioni per la gestione della sezione Avvisi
 export const getAnnouncementsSection = async () => {
+  // Usa Firestore se abilitato, altrimenti fallback a localStorage
   try {
-    return await firestoreService.getDocument('announcements', 'announcements-section');
+    if (isFirestoreEnabled()) {
+      const doc = await firestoreService.getDocument('announcements', 'announcements-section');
+      if (doc) return doc;
+    }
   } catch (error) {
-    console.error('Error getting announcements section:', error);
+    console.error('Error getting announcements section from Firestore:', error);
+  }
+
+  // Fallback locale
+  try {
+    const raw = DB.getItem('kw8_announcementsSection');
+    if (raw) {
+      return JSON.parse(raw);
+    }
+    const now = new Date().toISOString();
+    const initial = {
+      id: 'announcements-section',
+      title: 'Avvisi',
+      subtitle: '',
+      announcements: [],
+      createdAt: now,
+      updatedAt: now
+    };
+    // Non scriviamo subito su storage per evitare effetti collaterali
+    return initial;
+  } catch (error) {
+    console.error('Error getting announcements section (local):', error);
     return null;
   }
 };
 
 export const saveAnnouncementsSection = async (announcementsData: any) => {
+  // Prova a salvare su Firestore se abilitato
   try {
-    await firestoreService.setDocument('announcements', 'announcements-section', announcementsData);
+    if (isFirestoreEnabled()) {
+      await firestoreService.setDocument('announcements', 'announcements-section', announcementsData);
+      return true;
+    }
+  } catch (error) {
+    console.error('Error saving announcements section to Firestore:', error);
+  }
+
+  // Fallback locale
+  try {
+    const safe = {
+      ...announcementsData,
+      id: announcementsData?.id || 'announcements-section',
+      updatedAt: new Date().toISOString(),
+      createdAt: announcementsData?.createdAt || new Date().toISOString()
+    };
+    DB.setItem('kw8_announcementsSection', JSON.stringify(safe));
     return true;
   } catch (error) {
-    console.error('Error saving announcements section:', error);
+    console.error('Error saving announcements section (local):', error);
     throw error;
   }
 };
 
 export const subscribeToAnnouncementsSection = (callback: (data: any) => void) => {
+  // Subscription Firestore se disponibile
   try {
-    return firestoreService.subscribeToDocument('announcements', 'announcements-section', callback);
+    if (isFirestoreEnabled()) {
+      return firestoreService.subscribeToDocument('announcements', 'announcements-section', callback);
+    }
   } catch (error) {
-    console.error('Error subscribing to announcements section:', error);
-    return () => {};
+    console.error('Error subscribing to announcements section via Firestore:', error);
   }
+
+  // Fallback: chiamata immediata con i dati locali, senza vera subscription
+  try {
+    (async () => {
+      const data = await getAnnouncementsSection();
+      callback(data);
+    })();
+  } catch (error) {
+    console.error('Error loading announcements section for subscription (local):', error);
+    callback(null);
+  }
+  return () => {};
 };
 
 export default DB;
