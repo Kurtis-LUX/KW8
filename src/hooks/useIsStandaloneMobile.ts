@@ -13,9 +13,16 @@ export default function useIsStandaloneMobile() {
     const detect = () => {
       const isIOSStandalone = (typeof navigator !== 'undefined' && (navigator as any).standalone === true);
       const isDisplayModeStandalone = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
-      const isForced = typeof window !== 'undefined' && /(^|[?&])bottomnav=1([&#]|$)/.test(window.location.search);
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const forcedParam = urlParams?.get('bottomnav');
+      const isForced = forcedParam === '1'; // forza solo via query param, non persistente
       const isMobileOrTablet = typeof window !== 'undefined' && window.innerWidth <= 1024;
-      setIsStandaloneMobile(((isIOSStandalone || isDisplayModeStandalone) || isForced) && isMobileOrTablet);
+      // Se forzato via query/localStorage, considera standalone indipendentemente dalla larghezza.
+      // Altrimenti, applica il gating mobile/tablet.
+      const baseStandalone = (isIOSStandalone || isDisplayModeStandalone);
+      // Forzato richiede comunque viewport mobile/tablet
+      const result = (isForced || baseStandalone) && isMobileOrTablet;
+      setIsStandaloneMobile(result);
     };
 
     detect();

@@ -37,6 +37,7 @@ import FolderCustomizer, { AVAILABLE_ICONS, AVAILABLE_COLORS } from './FolderCus
 import WorkoutCustomizer from './WorkoutCustomizer';
 import WorkoutDetailPage from './WorkoutDetailPage';
 import Modal from './Modal';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface FileExplorerProps {
   currentUser: any;
@@ -65,6 +66,7 @@ const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Home' }]);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
+  const isStandaloneMobile = useIsStandaloneMobile();
 
   const { position, triggerRef, dropdownRef, openDropdown, closeDropdown, isOpen } = useDropdownPosition({ offset: 6, preferredPosition: 'bottom-left' });
 
@@ -869,6 +871,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       isOpen: isItemMenuOpen,
       triggerRef: itemMenuTriggerRef,
       dropdownRef: itemMenuDropdownRef,
+      openDropdown: openItemMenu,
       toggleDropdown: toggleItemMenu,
       closeDropdown: closeItemMenu
     } = useDropdownPosition({
@@ -901,7 +904,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       clearPressTimer();
       pressTimerRef.current = window.setTimeout(() => {
         longPressTriggeredRef.current = true;
-        setSelectedItemId(item.id);
+        // Apri direttamente il menu impostazioni con long‑press
+        openItemMenu();
       }, LONG_PRESS_MS);
     };
     const handlePointerUp = (e: React.PointerEvent) => {
@@ -942,6 +946,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
             }`}
           data-item-type={item.type}
           data-folder-id={item.type === 'folder' ? item.id : undefined}
+          ref={itemMenuTriggerRef as any}
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerLeave}
@@ -1064,83 +1069,90 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         </div>
 
         {/* Menu azioni */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button 
-            ref={itemMenuTriggerRef}
-            className="menu-button p-2 rounded-lg bg-white/60 hover:bg-white border border-gray-200 ring-1 ring-gray-200 backdrop-blur-sm transition-shadow hover:shadow-sm"
-            onClick={handleItemMenuClick}
-          >
-            <MoreVertical size={16} />
-          </button>
-          
-          {/* Dropdown menu con Portal */}
-          {isItemMenuOpen && (
-            <Portal>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeItemMenu} />
-              <div 
-                ref={itemMenuDropdownRef}
-                className="dropdown-menu w-44 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 relative"
-                style={{
-                   position: 'fixed',
-                   left: itemMenuPosition?.left ?? -9999,
-                   top: itemMenuPosition?.top ?? -9999,
-                   visibility: itemMenuPosition ? 'visible' : 'hidden',
-                 }}
-                 onClick={(e) => e.stopPropagation()}
+        {!isStandaloneMobile && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button 
+              ref={itemMenuTriggerRef}
+              className="menu-button p-2 rounded-lg bg-white/60 hover:bg-white border border-gray-200 ring-1 ring-gray-200 backdrop-blur-sm transition-shadow hover:shadow-sm"
+              onClick={handleItemMenuClick}
+            >
+              <MoreVertical size={16} />
+            </button>
+          </div>
+        )}
+        
+        {/* Dropdown menu con Portal */}
+        {isItemMenuOpen && (
+          <Portal>
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+              className="bg-black/10"
+              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); closeItemMenu(); }}
+              onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); closeItemMenu(); }}
+            />
+            <div 
+              ref={itemMenuDropdownRef}
+              className="dropdown-menu w-44 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 relative"
+              style={{
+                 position: 'fixed',
+                 left: itemMenuPosition?.left ?? -9999,
+                 top: itemMenuPosition?.top ?? -9999,
+                 visibility: itemMenuPosition ? 'visible' : 'hidden',
+               }}
+               onClick={(e) => e.stopPropagation()}
+            >
+              {(() => {
+                const rect = itemMenuTriggerRef.current?.getBoundingClientRect();
+                const placement = rect && itemMenuPosition ? (itemMenuPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
+                return placement === 'bottom' ? (
+                  <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                ) : (
+                  <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                );
+              })()}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setItemToEdit(item);
+                  setShowEditModal(true);
+                  closeItemMenu();
+                }}
+                className="dropdown-item"
               >
-                {(() => {
-                  const rect = itemMenuTriggerRef.current?.getBoundingClientRect();
-                  const placement = rect && itemMenuPosition ? (itemMenuPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
-                  return placement === 'bottom' ? (
-                    <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                  ) : (
-                    <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                  );
-                })()}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setItemToEdit(item);
-                    setShowEditModal(true);
-                    toggleItemMenu();
-                  }}
-                  className="dropdown-item"
-                >
-                  <Edit3 size={14} />
-                  <span>Modifica</span>
-                </button>
-                
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDownload(item);
-                    toggleItemMenu();
-                  }}
-                  className="dropdown-item"
-                >
-                  <Download size={14} />
-                  <span>Scarica</span>
-                </button>
-                
-                
-                <hr className="my-1" />
-                
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setItemToDelete(item);
-                    setShowDeleteModal(true);
-                    toggleItemMenu();
-                  }}
-                  className="dropdown-item text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 size={14} />
-                  <span>Elimina</span>
-                </button>
-              </div>
-            </Portal>
-          )}
-        </div>
+                <Edit3 size={14} />
+                <span>Modifica</span>
+              </button>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownload(item);
+                  closeItemMenu();
+                }}
+                className="dropdown-item"
+              >
+                <Download size={14} />
+                <span>Scarica</span>
+              </button>
+              
+              
+              <hr className="my-1" />
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setItemToDelete(item);
+                  setShowDeleteModal(true);
+                  closeItemMenu();
+                }}
+                className="dropdown-item text-red-600 hover:bg-red-50"
+              >
+                <Trash2 size={14} />
+                <span>Elimina</span>
+              </button>
+            </div>
+          </Portal>
+        )}
 
         {item.type === 'file' && isDragOver && (
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -1187,7 +1199,12 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         </button>
         {open && (
           <Portal>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={close} />
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+              className="bg-black/10"
+              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); close(); }}
+              onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); close(); }}
+            />
             <div
               className="dropdown-menu w-44 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2"
               style={{ position: 'fixed', left: coords?.left ?? -9999, top: coords?.top ?? -9999, zIndex: 9999, visibility: coords ? 'visible' : 'hidden' }}
@@ -1232,6 +1249,25 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       return false;
     })();
 
+    // Hook menu per long‑press su tile (PWA)
+    const {
+      position: tileMenuPosition,
+      isOpen: isTileMenuOpen,
+      triggerRef: tileMenuTriggerRef,
+      dropdownRef: tileMenuDropdownRef,
+      openDropdown: openTileMenu,
+      closeDropdown: closeTileMenu,
+    } = useDropdownPosition({ preferredPosition: 'bottom-right', offset: 8, autoAdjust: true });
+
+    // Previeni il riapertura immediata del menu dopo click fuori
+    const blockOpenUntilRef = useRef<number>(0);
+    const doCloseTileMenu = () => {
+      blockOpenUntilRef.current = Date.now() + 300;
+      clearPressTimer();
+      longPressTriggeredRef.current = false;
+      closeTileMenu();
+    };
+
     // Long‑press per selezionare, click per aprire
     const LONG_PRESS_MS = 400;
     const pressTimerRef = useRef<number | null>(null);
@@ -1245,12 +1281,18 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     const handlePointerDown = (e: React.PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.dropdown-menu')) return;
+      // Se il menu è aperto o appena chiuso, non avviare nuovo long‑press
+      if (isTileMenuOpen || Date.now() < blockOpenUntilRef.current) {
+        e.stopPropagation();
+        return;
+      }
       e.stopPropagation();
       longPressTriggeredRef.current = false;
       clearPressTimer();
       pressTimerRef.current = window.setTimeout(() => {
         longPressTriggeredRef.current = true;
-        onSelect();
+        // In PWA, apri il menu impostazioni con pressione prolungata
+        openTileMenu();
       }, LONG_PRESS_MS);
     };
     const handlePointerUp = (e: React.PointerEvent) => {
@@ -1300,6 +1342,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         }`}
         data-item-type={item.type}
         data-folder-id={item.type === 'folder' ? item.id : undefined}
+        ref={tileMenuTriggerRef as any}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
@@ -1321,24 +1364,90 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           </div>
         </div>
 
-        {/* Menu azioni tre puntini (visibile su hover) */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          <TileMenuButton item={item} />
-        </div>
+        {/* Menu azioni tre puntini (visibile su hover) - solo desktop */}
+        {!isStandaloneMobile && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <TileMenuButton item={item} />
+          </div>
+        )}
 
         {/* Testi sotto l'icona, con spaziatura minima alla Apple */}
         <div className="mt-1 text-center px-1 w-full">
           <div className="font-semibold text-gray-900 truncate">{item.name}</div>
           {item.type === 'file' && item.data && 'createdAt' in item.data && (
-            <div className="text-xs text-gray-600 mt-[2px]">{formatDate((item.data as any).createdAt)}</div>
-          )}
-          {item.type === 'file' && item.data && 'status' in item.data && (
-            <div className="text-xs text-gray-600">{statusLabel((item.data as any).status)}</div>
+            <div className="flex items-center justify-center gap-1 text-xs text-gray-600 mt-[2px]">
+              <span>{formatDate((item.data as any).createdAt)}</span>
+              {item.data && 'status' in item.data && (
+                <span
+                  className={`inline-block w-2 h-2 rounded-full ${
+                    (item.data as any).status === 'published' ? 'bg-green-500' :
+                    (item.data as any).status === 'draft' ? 'bg-yellow-500' :
+                    'bg-gray-400'
+                  }`}
+                  title={statusLabel((item.data as any).status)}
+                />
+              )}
+            </div>
           )}
           {item.type === 'folder' && (
             <div className="text-xs text-gray-600 mt-[2px]">{totalElements} elementi</div>
           )}
         </div>
+
+        {/* Dropdown menu per long‑press su tile (PWA) */}
+        {isTileMenuOpen && (
+          <Portal>
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+              className="bg-black/10"
+              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); doCloseTileMenu(); }}
+              onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); doCloseTileMenu(); }}
+            />
+            <div
+              ref={tileMenuDropdownRef}
+              className="dropdown-menu w-44 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 relative"
+              style={{
+                position: 'fixed',
+                left: tileMenuPosition?.left ?? -9999,
+                top: tileMenuPosition?.top ?? -9999,
+                visibility: tileMenuPosition ? 'visible' : 'hidden',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {(() => {
+                const rect = tileMenuTriggerRef.current?.getBoundingClientRect();
+                const placement = rect && tileMenuPosition ? (tileMenuPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
+                return placement === 'bottom' ? (
+                  <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                ) : (
+                  <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                );
+              })()}
+              <button
+                onClick={(e) => { e.stopPropagation(); setItemToEdit(item); setShowEditModal(true); closeTileMenu(); }}
+                className="dropdown-item"
+              >
+                <Edit3 size={14} />
+                <span>Modifica</span>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDownload(item); closeTileMenu(); }}
+                className="dropdown-item"
+              >
+                <Download size={14} />
+                <span>Scarica</span>
+              </button>
+              <hr className="my-1" />
+              <button
+                onClick={(e) => { e.stopPropagation(); setItemToDelete(item); setShowDeleteModal(true); closeTileMenu(); }}
+                className="dropdown-item text-red-600 hover:bg-red-50"
+              >
+                <Trash2 size={14} />
+                <span>Elimina</span>
+              </button>
+            </div>
+          </Portal>
+        )}
 
         {/* Overlay divieto quando il drop è proibito sulla cartella */}
         {item.type === 'folder' && isDragOver && isForbidden && (
@@ -1383,396 +1492,598 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       )}
       
       {/* Toolbar */}
-      <div className="relative z-30 bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4">
+      <div className={`relative z-30 bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 ${isStandaloneMobile ? 'hidden' : ''}`}>
         {/* Barra di ricerca e filtri */}
         <div className="mb-4">
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Barra di ricerca */}
-            <div className="relative flex-1 min-w-0" ref={searchDropdownRef}>
-              <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Cerca cartelle, schede e varianti..."
-                value={searchTerm}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setSearchTerm(value);
-                  setShowSearchSuggestions(!!value);
-                }}
-                onFocus={() => {
-                  if (searchTerm.trim().length > 0) {
-                    setShowSearchSuggestions(true);
-                  }
-                  openDropdown();
-                }}
-                onBlur={(e) => {
-                  const container = searchDropdownRef.current;
-                  // Ritarda la chiusura per consentire il click sui suggerimenti
-                  setTimeout(() => {
-                    if (!container) { setShowSearchSuggestions(false); closeDropdown(); return; }
-                    if (!document.activeElement || !container.contains(document.activeElement)) {
-                      setShowSearchSuggestions(false);
-                      closeDropdown();
-                    }
-                  }, 150);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                }}
-                className="w-full pl-10 pr-10 py-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500 hover:bg-white/70"
-                ref={triggerRef as any}
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600 transition-colors"
-                  aria-label="Pulisci ricerca"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setSearchTerm('');
-                    setShowSearchSuggestions(false);
-                  }}
-                >
-                  <X size={16} />
-                </button>
-              )}
-
-              {/* Suggerimenti ricerca intelligente */}
-              {showSearchSuggestions && searchTerm.trim().length > 0 && isOpen && (
-                <div
-                  ref={dropdownRef as any}
-                  className="fixed bg-white/95 border border-gray-200 rounded-xl ring-1 ring-black/10 shadow-md z-[1000] max-h-64 overflow-y-auto backdrop-blur-sm pointer-events-auto"
-                  style={{
-                    top: position?.top ?? 0,
-                    left: position?.left ?? 0,
-                    width: triggerRef.current ? triggerRef.current.getBoundingClientRect().width : undefined,
-                  }}
-                >
-                  {getSmartSearchSuggestions().length > 0 ? (
-                    getSmartSearchSuggestions().map((s, idx) => {
-                      const lower = s.label.toLowerCase();
-                      const q = searchTerm.toLowerCase();
-                      const mi = lower.indexOf(q);
-                      const before = mi >= 0 ? s.label.slice(0, mi) : s.label;
-                      const match = mi >= 0 ? s.label.slice(mi, mi + q.length) : '';
-                      const after = mi >= 0 ? s.label.slice(mi + q.length) : '';
-                      return (
-                        <button
-                          type="button"
-                          key={`${s.type}-${s.id}-${idx}`}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center gap-2"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (s.type === 'folder') {
-                              navigateToFolder(s.id, s.label);
-                            } else if (s.type === 'workout') {
-                              setInitialActiveVariantId(undefined);
-                              setSelectedWorkoutId(s.id);
-                              setShowWorkoutDetail(true);
-                            } else {
-                              // variant
-                              setInitialActiveVariantId(s.id);
-                              setSelectedWorkoutId(s.workoutId!);
-                              setShowWorkoutDetail(true);
-                            }
-                            setShowSearchSuggestions(false);
-                            closeDropdown();
-                          }}
-                        >
-                          {s.type === 'folder' ? (
-                            <Folder size={16} className="text-gray-500" />
-                          ) : s.type === 'workout' ? (
-                            <FileText size={16} className="text-gray-500" />
-                          ) : (
-                            <Copy size={16} className="text-red-500" />
-                          )}
-                          <span className="flex-1 text-sm">
-                            {mi >= 0 ? (
-                              <>
-                                {before}
-                                <mark className="bg-yellow-100 text-gray-900 rounded px-0.5">{match}</mark>
-                                {after}
-                              </>
-                            ) : (
-                              s.label
-                            )}
-                          </span>
-                          {s.type === 'variant' && s.parentLabel && (
-                            <span className="text-xs text-gray-500">({s.parentLabel})</span>
-                          )}
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <div className="px-4 py-2 text-sm text-gray-500">Nessun risultato per "{searchTerm}"</div>
+            {/* Barra di ricerca: inline su desktop, nel Portal dentro la header su PWA */}
+            {isStandaloneMobile ? (
+              <Portal containerId="pwa-fileexplorer-search">
+                <div className="relative w-full" ref={searchDropdownRef}>
+                  <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Cerca cartelle, schede e varianti..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSearchTerm(value);
+                      setShowSearchSuggestions(!!value);
+                    }}
+                    onFocus={() => {
+                      if (searchTerm.trim().length > 0) {
+                        setShowSearchSuggestions(true);
+                      }
+                      openDropdown();
+                    }}
+                    onBlur={(e) => {
+                      const container = searchDropdownRef.current;
+                      setTimeout(() => {
+                        if (!container) { setShowSearchSuggestions(false); closeDropdown(); return; }
+                        if (!document.activeElement || !container.contains(document.activeElement)) {
+                          setShowSearchSuggestions(false);
+                          closeDropdown();
+                        }
+                      }, 150);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }
+                    }}
+                    className="w-full pl-10 pr-10 py-2 rounded-2xl bg-transparent ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500"
+                    ref={triggerRef as any}
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600 transition-colors"
+                      aria-label="Pulisci ricerca"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSearchTerm('');
+                        setShowSearchSuggestions(false);
+                      }}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                  {showSearchSuggestions && searchTerm.trim().length > 0 && isOpen && (
+                    <div
+                      ref={dropdownRef as any}
+                      className="fixed bg-white/95 border border-gray-200 rounded-xl ring-1 ring-black/10 shadow-md z-[1000] max-h-64 overflow-y-auto backdrop-blur-sm pointer-events-auto"
+                      style={{
+                        top: position?.top ?? 0,
+                        left: position?.left ?? 0,
+                        width: triggerRef.current ? triggerRef.current.getBoundingClientRect().width : undefined,
+                      }}
+                    >
+                      {getSmartSearchSuggestions().length > 0 ? (
+                        getSmartSearchSuggestions().map((s, idx) => {
+                          const lower = s.label.toLowerCase();
+                          const q = searchTerm.toLowerCase();
+                          const mi = lower.indexOf(q);
+                          const before = mi >= 0 ? s.label.slice(0, mi) : s.label;
+                          const match = mi >= 0 ? s.label.slice(mi, mi + q.length) : '';
+                          const after = mi >= 0 ? s.label.slice(mi + q.length) : '';
+                          return (
+                            <button
+                              type="button"
+                              key={`${s.type}-${s.id}-${idx}`}
+                              className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center gap-2"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (s.type === 'folder') {
+                                  navigateToFolder(s.id, s.label);
+                                } else if (s.type === 'workout') {
+                                  setInitialActiveVariantId(undefined);
+                                  setSelectedWorkoutId(s.id);
+                                  setShowWorkoutDetail(true);
+                                } else {
+                                  setInitialActiveVariantId(s.id);
+                                  setSelectedWorkoutId(s.workoutId!);
+                                  setShowWorkoutDetail(true);
+                                }
+                                setShowSearchSuggestions(false);
+                                closeDropdown();
+                              }}
+                            >
+                              {s.type === 'folder' ? (
+                                <Folder size={16} className="text-gray-500" />
+                              ) : s.type === 'workout' ? (
+                                <FileText size={16} className="text-gray-500" />
+                              ) : (
+                                <Copy size={16} className="text-red-500" />
+                              )}
+                              <span className="flex-1 text-sm">
+                                {mi >= 0 ? (
+                                  <>
+                                    {before}
+                                    <mark className="bg-yellow-100 text-gray-900 rounded px-0.5">{match}</mark>
+                                    {after}
+                                  </>
+                                ) : (
+                                  s.label
+                                )}
+                              </span>
+                              {s.type === 'variant' && s.parentLabel && (
+                                <span className="text-xs text-gray-500">({s.parentLabel})</span>
+                              )}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="px-4 py-2 text-sm text-gray-500">Nessun risultato per "{searchTerm}"</div>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
+              </Portal>
+            ) : (
+              <div className="relative flex-1 min-w-0" ref={searchDropdownRef}>
+                <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Cerca cartelle, schede e varianti..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSearchTerm(value);
+                    setShowSearchSuggestions(!!value);
+                  }}
+                  onFocus={() => {
+                    if (searchTerm.trim().length > 0) {
+                      setShowSearchSuggestions(true);
+                    }
+                    openDropdown();
+                  }}
+                  onBlur={(e) => {
+                    const container = searchDropdownRef.current;
+                    setTimeout(() => {
+                      if (!container) { setShowSearchSuggestions(false); closeDropdown(); return; }
+                      if (!document.activeElement || !container.contains(document.activeElement)) {
+                        setShowSearchSuggestions(false);
+                        closeDropdown();
+                      }
+                    }, 150);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  }}
+                  className="w-full pl-10 pr-10 py-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500 hover:bg-white/70"
+                  ref={triggerRef as any}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-600 transition-colors"
+                    aria-label="Pulisci ricerca"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSearchTerm('');
+                      setShowSearchSuggestions(false);
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+                {showSearchSuggestions && searchTerm.trim().length > 0 && isOpen && (
+                  <div
+                    ref={dropdownRef as any}
+                    className="fixed bg-white/95 border border-gray-200 rounded-xl ring-1 ring-black/10 shadow-md z-[1000] max-h-64 overflow-y-auto backdrop-blur-sm pointer-events-auto"
+                    style={{
+                      top: position?.top ?? 0,
+                      left: position?.left ?? 0,
+                      width: triggerRef.current ? triggerRef.current.getBoundingClientRect().width : undefined,
+                    }}
+                  >
+                    {getSmartSearchSuggestions().length > 0 ? (
+                      getSmartSearchSuggestions().map((s, idx) => {
+                        const lower = s.label.toLowerCase();
+                        const q = searchTerm.toLowerCase();
+                        const mi = lower.indexOf(q);
+                        const before = mi >= 0 ? s.label.slice(0, mi) : s.label;
+                        const match = mi >= 0 ? s.label.slice(mi, mi + q.length) : '';
+                        const after = mi >= 0 ? s.label.slice(mi + q.length) : '';
+                        return (
+                          <button
+                            type="button"
+                            key={`${s.type}-${s.id}-${idx}`}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors flex items-center gap-2"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (s.type === 'folder') {
+                                navigateToFolder(s.id, s.label);
+                              } else if (s.type === 'workout') {
+                                setInitialActiveVariantId(undefined);
+                                setSelectedWorkoutId(s.id);
+                                setShowWorkoutDetail(true);
+                              } else {
+                                setInitialActiveVariantId(s.id);
+                                setSelectedWorkoutId(s.workoutId!);
+                                setShowWorkoutDetail(true);
+                              }
+                              setShowSearchSuggestions(false);
+                              closeDropdown();
+                            }}
+                          >
+                            {s.type === 'folder' ? (
+                              <Folder size={16} className="text-gray-500" />
+                            ) : s.type === 'workout' ? (
+                              <FileText size={16} className="text-gray-500" />
+                            ) : (
+                              <Copy size={16} className="text-red-500" />
+                            )}
+                            <span className="flex-1 text-sm">
+                              {mi >= 0 ? (
+                                <>
+                                  {before}
+                                  <mark className="bg-yellow-100 text-gray-900 rounded px-0.5">{match}</mark>
+                                  {after}
+                                </>
+                              ) : (
+                                s.label
+                              )}
+                            </span>
+                            {s.type === 'variant' && s.parentLabel && (
+                              <span className="text-xs text-gray-500">({s.parentLabel})</span>
+                            )}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="px-4 py-2 text-sm text-gray-500">Nessun risultato per "{searchTerm}"</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             
-            {/* Menu unificato */}
-            <div className="relative">
-              <button
-                ref={toolbarTriggerRef}
-                onClick={toggleToolbarDropdown}
-                className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 px-4 py-2 rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0 sm:px-4 px-2"
-              >
-                <Menu size={16} />
-                <span className="hidden sm:inline">Menu</span>
-                <ChevronDown size={14} className={`transition-transform duration-200 ${isToolbarOpen ? 'rotate-180' : ''} hidden sm:inline`} />
+            {/* Menu unificato: nascondi il bottone su PWA, mantieni il dropdown ancorato all’header */}
+            {!isStandaloneMobile && (
+              <div className="relative">
+                <button
+                  ref={toolbarTriggerRef}
+                  onClick={toggleToolbarDropdown}
+                  className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 px-4 py-2 rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0 sm:px-4 px-2"
+                >
+                  <Menu size={16} />
+                  <span className="hidden sm:inline">Menu</span>
+                  <ChevronDown size={14} className={`transition-transform duration-200 ${isToolbarOpen ? 'rotate-180' : ''} hidden sm:inline`} />
+                </button>
+              </div>
+            )}
+
+            {/* Dropdown Menu con Portal, visibile anche in PWA e ancorato al bottone dell’header */}
+            {isToolbarOpen && (
+              <Portal>
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+                  className="bg-black/10"
+                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); closeToolbarDropdown(); }}
+                  onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); closeToolbarDropdown(); }}
+                />
+                {(() => {
+                  // Calcolo fallback per PWA: ancora il dropdown al bottone "Menu cartella" della header
+                  const headerBtnRect = document.querySelector('button[aria-label="Menu cartella"]')?.getBoundingClientRect();
+                  const dropdownWidth = 18 * 16; // w-72 => 18rem => 288px
+                  const fallbackLeft = headerBtnRect ? Math.max(8, headerBtnRect.right - dropdownWidth) : (toolbarPosition?.left ?? -9999);
+                  const fallbackTop = headerBtnRect ? headerBtnRect.bottom + 8 : (toolbarPosition?.top ?? -9999);
+                  const rect = toolbarTriggerRef.current?.getBoundingClientRect();
+                  const placement = rect && toolbarPosition ? (toolbarPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
+                  return (
+                    <div
+                      ref={toolbarDropdownRef}
+                      className="dropdown-menu w-72 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 relative"
+                      style={{
+                        position: 'fixed',
+                        left: fallbackLeft,
+                        top: fallbackTop,
+                        visibility: 'visible',
+                        zIndex: 9999,
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {placement === 'bottom' ? (
+                        <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                      ) : (
+                        <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                      )}
+                      {/* Modalità vista */}
+                      <div className="px-4 py-2">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Modalità vista</p>
+                        <div className="flex space-x-2">
+                          {/* Griglia prima di Elenco */}
+                          <button
+                            onClick={() => {
+                              setViewMode('grid');
+                              closeToolbarDropdown();
+                            }}
+                            className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+                              viewMode === 'grid' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
+                            }`}
+                          >
+                            <Grid3X3 size={16} />
+                            <span className="text-sm">Griglia</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setViewMode('compact');
+                              closeToolbarDropdown();
+                            }}
+                            className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+                              viewMode === 'compact' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
+                            }`}
+                          >
+                            <LayoutGrid size={16} />
+                            <span className="text-sm">Compatta</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setViewMode('list');
+                              closeToolbarDropdown();
+                            }}
+                            className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+                              viewMode === 'list' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
+                            }`}
+                          >
+                            <List size={16} />
+                            <span className="text-sm">Elenco</span>
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <hr className="my-2" />
+ 
+                      {/* Ordina - Menu a tendina interno */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowSortSubmenu(!showSortSubmenu)}
+                          className="dropdown-item justify-between w-full"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <SlidersHorizontal size={16} />
+                            <span>Ordina</span>
+                          </div>
+                          <ChevronRight size={14} className={`transition-transform duration-200 ${showSortSubmenu ? 'rotate-90' : ''}`} />
+                        </button>
+ 
+                        {showSortSubmenu && (
+                          <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200/60 pl-4 pr-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Cartelle</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Nome</button>
+                                <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Data creazione</button>
+                              </div>
+                            </div>
+ 
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Schede</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Nome</button>
+                                <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Data creazione</button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+ 
+                      <hr className="my-2" />
+                      
+                      {/* Filtri - Menu a tendina interno */}
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowFiltersSubmenu(!showFiltersSubmenu)}
+                          className="dropdown-item justify-between w-full"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Filter size={16} />
+                            <span>Filtri</span>
+                          </div>
+                          <ChevronRight size={14} className={`transition-transform duration-200 ${showFiltersSubmenu ? 'rotate-90' : ''}`} />
+                        </button>
+                        
+                        {/* Submenu Filtri */}
+                        {showFiltersSubmenu && (
+                          <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200 pl-4 pr-4">
+                            {/* Filtri tipo */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Mostra</label>
+                              <div className="space-y-1">
+                                <label className="flex items-center text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={filters.showFolders}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, showFolders: e.target.checked }))}
+                                    className="mr-2 text-red-600 focus:ring-red-500"
+                                  />
+                                  <Folder size={14} className="mr-1" />
+                                  Cartelle
+                                </label>
+                                <label className="flex items-center text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={filters.showWorkouts}
+                                    onChange={(e) => setFilters(prev => ({ ...prev, showWorkouts: e.target.checked }))}
+                                    className="mr-2 text-red-600 focus:ring-red-500"
+                                  />
+                                  <FileText size={14} className="mr-1" />
+                                  Schede
+                                </label>
+                              </div>
+                            </div>
+                            
+                            {/* Azioni filtri */}
+                            <div className="flex justify-between pt-2">
+                              <button
+                                onClick={() => {
+                                  setSearchTerm('');
+                                  setFilters({ showFolders: false, showWorkouts: false, sortBy: 'name' });
+                                }}
+                                className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50"
+                              >
+                                Reset
+                              </button>
+                              <button
+                                onClick={() => setShowFiltersSubmenu(false)}
+                                className="px-2 py-1 text-xs text-white bg-red-600 hover:bg-red-700 rounded"
+                              >
+                                Applica
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </Portal>
+            )}
+
+             {/* Pulsante Aggiungi (nascosto in PWA standalone) */}
+             {!isStandaloneMobile && (
+               <button
+                 onClick={() => setShowCreateModal(true)}
+                 className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0 sm:px-4 px-2"
+               >
+                 <Plus size={16} />
+                 <span className="hidden sm:inline">Aggiungi</span>
                </button>
-               
-               {/* Dropdown Menu con Portal */}
-               {isToolbarOpen && (
-                 <Portal>
-                   <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeToolbarDropdown} />
-                   <div 
-                     ref={toolbarDropdownRef}
-                     className="dropdown-menu w-72 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 relative"
-                     style={{
-                       position: 'fixed',
-                       left: toolbarPosition?.left ?? -9999,
-                       top: toolbarPosition?.top ?? -9999,
-                       visibility: toolbarPosition ? 'visible' : 'hidden',
-                       zIndex: 9999,
-                     }}
-                     onClick={(e) => e.stopPropagation()}
-                   >
-                     {(() => {
-                       const rect = toolbarTriggerRef.current?.getBoundingClientRect();
-                       const placement = rect && toolbarPosition ? (toolbarPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
-                       return placement === 'bottom' ? (
-                         <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                       ) : (
-                         <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                       );
-                     })()}
-                     {/* Modalità vista */}
-                     <div className="px-4 py-2">
-                       <p className="text-sm font-medium text-gray-700 mb-2">Modalità vista</p>
-                       <div className="flex space-x-2">
-                         {/* Griglia prima di Elenco */}
-                         <button
-                           onClick={() => {
-                             setViewMode('grid');
-                             closeToolbarDropdown();
-                           }}
-                           className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
-                             viewMode === 'grid' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
-                           }`}
-                         >
-                           <Grid3X3 size={16} />
-                           <span className="text-sm">Griglia</span>
-                         </button>
-                         <button
-                           onClick={() => {
-                             setViewMode('compact');
-                             closeToolbarDropdown();
-                           }}
-                           className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
-                             viewMode === 'compact' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
-                           }`}
-                         >
-                           <LayoutGrid size={16} />
-                           <span className="text-sm">Compatta</span>
-                         </button>
-                         <button
-                           onClick={() => {
-                             setViewMode('list');
-                             closeToolbarDropdown();
-                           }}
-                           className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
-                             viewMode === 'list' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
-                           }`}
-                         >
-                           <List size={16} />
-                           <span className="text-sm">Elenco</span>
-                         </button>
-                       </div>
-                     </div>
-                     
-                     <hr className="my-2" />
-
-                     {/* Ordina - Menu a tendina interno */}
-                     <div className="relative">
-                       <button
-                         onClick={() => setShowSortSubmenu(!showSortSubmenu)}
-                         className="dropdown-item justify-between w-full"
-                       >
-                         <div className="flex items-center space-x-3">
-                           <SlidersHorizontal size={16} />
-                           <span>Ordina</span>
-                         </div>
-                         <ChevronRight size={14} className={`transition-transform duration-200 ${showSortSubmenu ? 'rotate-90' : ''}`} />
-                       </button>
-
-                       {showSortSubmenu && (
-                         <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200/60 pl-4 pr-4">
-                           <div>
-                             <label className="block text-xs font-medium text-gray-600 mb-1">Cartelle</label>
-                             <div className="grid grid-cols-2 gap-2">
-                               <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Nome</button>
-                               <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Data creazione</button>
-                             </div>
-                           </div>
-
-                           <div>
-                             <label className="block text-xs font-medium text-gray-600 mb-1">Schede</label>
-                             <div className="grid grid-cols-2 gap-2">
-                               <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Nome</button>
-                               <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Data creazione</button>
-                             </div>
-                           </div>
-                         </div>
-                       )}
-                     </div>
-
-                     <hr className="my-2" />
-                     
-                     {/* Filtri - Menu a tendina interno */}
-                     <div className="relative">
-                       <button
-                         onClick={() => setShowFiltersSubmenu(!showFiltersSubmenu)}
-                         className="dropdown-item justify-between w-full"
-                       >
-                         <div className="flex items-center space-x-3">
-                           <Filter size={16} />
-                           <span>Filtri</span>
-                         </div>
-                         <ChevronRight size={14} className={`transition-transform duration-200 ${showFiltersSubmenu ? 'rotate-90' : ''}`} />
-                       </button>
-                       
-                       {/* Submenu Filtri */}
-                       {showFiltersSubmenu && (
-                         <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200 pl-4 pr-4">
-                           {/* Filtri tipo */}
-                           <div>
-                             <label className="block text-xs font-medium text-gray-600 mb-1">Mostra</label>
-                             <div className="space-y-1">
-                               <label className="flex items-center text-sm">
-                                 <input
-                                   type="checkbox"
-                                   checked={filters.showFolders}
-                                   onChange={(e) => setFilters(prev => ({ ...prev, showFolders: e.target.checked }))}
-                                   className="mr-2 text-red-600 focus:ring-red-500"
-                                 />
-                                 <Folder size={14} className="mr-1" />
-                                 Cartelle
-                               </label>
-                               <label className="flex items-center text-sm">
-                                 <input
-                                   type="checkbox"
-                                   checked={filters.showWorkouts}
-                                   onChange={(e) => setFilters(prev => ({ ...prev, showWorkouts: e.target.checked }))}
-                                   className="mr-2 text-red-600 focus:ring-red-500"
-                                 />
-                                 <FileText size={14} className="mr-1" />
-                                 Schede
-                               </label>
-                             </div>
-                           </div>
-                           
-                           {/* Azioni filtri */}
-                           <div className="flex justify-between pt-2">
-                             <button
-                               onClick={() => {
-                                 setSearchTerm('');
-                                 setFilters({ showFolders: false, showWorkouts: false, sortBy: 'name' });
-                               }}
-                               className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50"
-                             >
-                               Reset
-                             </button>
-                             <button
-                               onClick={() => setShowFiltersSubmenu(false)}
-                               className="px-2 py-1 text-xs text-white bg-red-600 hover:bg-red-700 rounded"
-                             >
-                               Applica
-                             </button>
-                           </div>
-                         </div>
-                       )}
-                     </div>
-                   </div>
-                 </Portal>
-               )}
-             </div>
-
-             {/* Pulsante Aggiungi */}
-             <button
-               onClick={() => setShowCreateModal(true)}
-               className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0 sm:px-4 px-2"
-             >
-               <Plus size={16} />
-               <span className="hidden sm:inline">Aggiungi</span>
-             </button>
+             )}
            </div>
          </div>
         
-        <div className="flex items-center justify-between">
-          {/* Breadcrumb con pulsante indietro */}
-          <div className="flex items-center space-x-3 min-w-0 flex-1">
-            {/* Pulsante freccia indietro */}
-            {breadcrumb.length > 1 && (
-              <button
-                onClick={() => {
-                  const parentIndex = breadcrumb.length - 2;
-                  navigateToBreadcrumb(parentIndex);
-                }}
-                className="p-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 transition-all duration-300 ease-in-out hover:shadow-sm active:scale-[0.98] flex-shrink-0"
-                title="Torna indietro"
-              >
-                <ArrowLeft size={16} />
-              </button>
-            )}
-            
-            {/* Breadcrumb con scroll orizzontale */}
-            <div className="min-w-0 flex-1">
-              <nav
-                ref={breadcrumbNavRef}
-                className="flex items-center space-x-2 text-sm overflow-x-auto overflow-y-visible no-scrollbar py-1 px-2 cursor-grab active:cursor-grabbing select-none"
-                style={{ touchAction: 'pan-x' }}
-                onMouseDown={onBreadcrumbMouseDown}
-                onMouseMove={onBreadcrumbMouseMove}
-                onMouseUp={onBreadcrumbMouseUp}
-                onMouseLeave={onBreadcrumbMouseLeave}
-                onTouchStart={onBreadcrumbTouchStart}
-                onTouchMove={onBreadcrumbTouchMove}
-                onTouchEnd={onBreadcrumbTouchEnd}
-              >
-                <div className="flex items-center space-x-2 whitespace-nowrap bg-white/60 backdrop-blur-sm ring-inset ring-1 ring-black/10 rounded-2xl px-3 py-1.5">
-                  {breadcrumb.map((crumb, index) => {
-                    const isCurrentFolder = index === breadcrumb.length - 1;
-                    return (
-                      <React.Fragment key={index}>
-                        <button
-                          onClick={() => navigateToBreadcrumb(index)}
-                          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); }}
-                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); const isCurrent = index === breadcrumb.length - 1; let isForbidden = false; if (isCurrent && draggedItem) { if (draggedItem.type === 'file') { const plan: any = draggedItem.data as any; isForbidden = ((plan?.folderId ?? null) === (currentFolderId ?? null)); } else if (draggedItem.type === 'folder') { const folder: any = draggedItem.data as any; isForbidden = ((draggedItem.id === (crumb.id ?? null)) || ((folder?.parentId ?? null) === (currentFolderId ?? null))); } } e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move'; }}
-                          onDragLeave={() => { const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (dragOverItem === targetKey) setDragOverItem(null); }}
-                          onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const targetFolderId = index === 0 ? null : (crumb.id ?? null); handleDrop(e, targetFolderId); }}
-                          data-breadcrumb-index={index}
-                          className={`font-medium whitespace-nowrap transition-colors duration-200 ${isCurrentFolder ? 'text-red-600 hover:text-red-700' : 'text-gray-700 hover:text-gray-900'}`}
-                        >
-                          {crumb.name}
-                          
-                        </button>
-                        {index < breadcrumb.length - 1 && (
-                          <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
+        {/* Breadcrumb: inline su desktop, in Portal dentro header su PWA */}
+        {isStandaloneMobile ? (
+          <Portal containerId="pwa-folder-breadcrumb">
+            <div className="flex items-center justify-between">
+              {/* Breadcrumb con pulsante indietro */}
+              <div className="flex items-center space-x-3 min-w-0 flex-1">
+                {/* Pulsante freccia indietro */}
+                {breadcrumb.length > 1 && (
+                  <button
+                    onClick={() => {
+                      const parentIndex = breadcrumb.length - 2;
+                      navigateToBreadcrumb(parentIndex);
+                    }}
+                    className="p-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 transition-all duration-300 ease-in-out hover:shadow-sm active:scale-[0.98] flex-shrink-0"
+                    title="Torna indietro"
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
+                )}
+                
+                {/* Breadcrumb con scroll orizzontale */}
+                <div className="min-w-0 flex-1">
+                  <nav
+                    ref={breadcrumbNavRef}
+                    className="flex items-center space-x-2 text-sm overflow-x-auto overflow-y-visible no-scrollbar py-1 px-2 cursor-grab active:cursor-grabbing select-none"
+                    style={{ touchAction: 'pan-x' }}
+                    onMouseDown={onBreadcrumbMouseDown}
+                    onMouseMove={onBreadcrumbMouseMove}
+                    onMouseUp={onBreadcrumbMouseUp}
+                    onMouseLeave={onBreadcrumbMouseLeave}
+                    onTouchStart={onBreadcrumbTouchStart}
+                    onTouchMove={onBreadcrumbTouchMove}
+                    onTouchEnd={onBreadcrumbTouchEnd}
+                  >
+                    <div className="flex items-center space-x-2 whitespace-nowrap bg-white/60 backdrop-blur-sm ring-inset ring-1 ring-black/10 rounded-2xl px-3 py-1.5">
+                      {breadcrumb.map((crumb, index) => {
+                        const isCurrentFolder = index === breadcrumb.length - 1;
+                        return (
+                          <React.Fragment key={index}>
+                            <button
+                              onClick={() => navigateToBreadcrumb(index)}
+                              onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); }}
+                              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); const isCurrent = index === breadcrumb.length - 1; let isForbidden = false; if (isCurrent && draggedItem) { if (draggedItem.type === 'file') { const plan: any = draggedItem.data as any; isForbidden = ((plan?.folderId ?? null) === (currentFolderId ?? null)); } else if (draggedItem.type === 'folder') { const folder: any = draggedItem.data as any; isForbidden = ((draggedItem.id === (crumb.id ?? null)) || ((folder?.parentId ?? null) === (currentFolderId ?? null))); } } e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move'; }}
+                              onDragLeave={() => { const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (dragOverItem === targetKey) setDragOverItem(null); }}
+                              onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const targetFolderId = index === 0 ? null : (crumb.id ?? null); handleDrop(e, targetFolderId); }}
+                              data-breadcrumb-index={index}
+                              className={`font-medium whitespace-nowrap transition-colors duration-200 ${isCurrentFolder ? 'text-red-600 hover:text-red-700' : 'text-gray-700 hover:text-gray-900'}`}
+                            >
+                              {crumb.name}
+                            </button>
+                            {index < breadcrumb.length - 1 && (
+                              <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </nav>
                 </div>
-              </nav>
+              </div>
+            </div>
+          </Portal>
+        ) : (
+          <div className="flex items-center justify-between">
+            {/* Breadcrumb con pulsante indietro */}
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
+              {/* Pulsante freccia indietro */}
+              {breadcrumb.length > 1 && (
+                <button
+                  onClick={() => {
+                    const parentIndex = breadcrumb.length - 2;
+                    navigateToBreadcrumb(parentIndex);
+                  }}
+                  className="p-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 transition-all duration-300 ease-in-out hover:shadow-sm active:scale-[0.98] flex-shrink-0"
+                  title="Torna indietro"
+                >
+                  <ArrowLeft size={16} />
+                </button>
+              )}
+              
+              {/* Breadcrumb con scroll orizzontale */}
+              <div className="min-w-0 flex-1">
+                <nav
+                  ref={breadcrumbNavRef}
+                  className="flex items-center space-x-2 text-sm overflow-x-auto overflow-y-visible no-scrollbar py-1 px-2 cursor-grab active:cursor-grabbing select-none"
+                  style={{ touchAction: 'pan-x' }}
+                  onMouseDown={onBreadcrumbMouseDown}
+                  onMouseMove={onBreadcrumbMouseMove}
+                  onMouseUp={onBreadcrumbMouseUp}
+                  onMouseLeave={onBreadcrumbMouseLeave}
+                  onTouchStart={onBreadcrumbTouchStart}
+                  onTouchMove={onBreadcrumbTouchMove}
+                  onTouchEnd={onBreadcrumbTouchEnd}
+                >
+                  <div className="flex items-center space-x-2 whitespace-nowrap bg-white/60 backdrop-blur-sm ring-inset ring-1 ring-black/10 rounded-2xl px-3 py-1.5">
+                    {breadcrumb.map((crumb, index) => {
+                      const isCurrentFolder = index === breadcrumb.length - 1;
+                      return (
+                        <React.Fragment key={index}>
+                          <button
+                            onClick={() => navigateToBreadcrumb(index)}
+                            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); }}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (targetKey && dragOverItem !== targetKey) setDragOverItem(targetKey); const isCurrent = index === breadcrumb.length - 1; let isForbidden = false; if (isCurrent && draggedItem) { if (draggedItem.type === 'file') { const plan: any = draggedItem.data as any; isForbidden = ((plan?.folderId ?? null) === (currentFolderId ?? null)); } else if (draggedItem.type === 'folder') { const folder: any = draggedItem.data as any; isForbidden = ((draggedItem.id === (crumb.id ?? null)) || ((folder?.parentId ?? null) === (currentFolderId ?? null))); } } e.dataTransfer.dropEffect = isForbidden ? 'none' : 'move'; }}
+                            onDragLeave={() => { const targetKey = index === 0 ? 'root' : (crumb.id ?? ''); if (dragOverItem === targetKey) setDragOverItem(null); }}
+                            onDrop={(e) => { e.preventDefault(); e.stopPropagation(); const targetFolderId = index === 0 ? null : (crumb.id ?? null); handleDrop(e, targetFolderId); }}
+                            data-breadcrumb-index={index}
+                            className={`font-medium whitespace-nowrap transition-colors duration-200 ${isCurrentFolder ? 'text-red-600 hover:text-red-700' : 'text-gray-700 hover:text-gray-900'}`}
+                          >
+                            {crumb.name}
+                          </button>
+                          {index < breadcrumb.length - 1 && (
+                            <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                </nav>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Contenuto */}

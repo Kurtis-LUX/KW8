@@ -352,6 +352,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   };
 
   const isHomePage = currentPage === 'home' || currentPage === '/' || !currentPage;
+  const isPwaWorkoutManager = isStandaloneMobile && currentPage === 'workout-manager';
 
   const handleBack = () => {
     try {
@@ -412,33 +413,35 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             className="container mx-auto px-6 py-3 flex items-center justify-between relative"
             onClick={(e) => e.stopPropagation()}
           >
-          {/* Logo */}
-          <div className="flex items-center">
-            <img 
-              src="/images/logo.png" 
-              alt="KW8 Logo" 
-              className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer filter drop-shadow-lg"
-              onClick={() => {
-                if (isDashboard) {
-                  // Se siamo nella dashboard, naviga alla home senza reload per mantenere la sessione
-                  if (onNavigate) {
-                    onNavigate('home');
+          {/* Logo - nascosto su PWA Gestione Schede */}
+          {!isPwaWorkoutManager && (
+            <div className="flex items-center">
+              <img 
+                src="/images/logo.png" 
+                alt="KW8 Logo" 
+                className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer filter drop-shadow-lg"
+                onClick={() => {
+                  if (isDashboard) {
+                    // Se siamo nella dashboard, naviga alla home senza reload per mantenere la sessione
+                    if (onNavigate) {
+                      onNavigate('home');
+                    }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  } else {
+                    // Per le altre pagine, mantieni il comportamento originale
+                    if (onNavigate) {
+                      onNavigate('home');
+                    }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    // Refresh della pagina dopo un breve delay per permettere la navigazione
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 100);
                   }
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                  // Per le altre pagine, mantieni il comportamento originale
-                  if (onNavigate) {
-                    onNavigate('home');
-                  }
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                  // Refresh della pagina dopo un breve delay per permettere la navigazione
-                  setTimeout(() => {
-                    window.location.reload();
-                  }, 100);
-                }
-              }}
-            />
-          </div>
+                }}
+              />
+            </div>
+          )}
 
           {/* Desktop Navigation - Hidden on mobile */}
           <nav className="hidden lg:flex items-center justify-center absolute left-1/2 -translate-x-1/2">
@@ -546,7 +549,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
             )}
           </nav>
 
-          {/* Right side buttons */}
+          {/* Right side buttons - nascosti su PWA Gestione Schede */}
+          {!isPwaWorkoutManager && (
           <div className="flex items-center space-x-4">
             {/* Gestione Schede Button - Solo per coach (non visibile nella Dashboard) */}
             {currentUser && currentUser.role === 'coach' && !isDashboard && (
@@ -716,37 +720,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               </div>
             )}
             
-            {/* Azioni rapide FileExplorer in header (solo PWA su Workout Manager) */}
-            {isStandaloneMobile && currentPage === 'workout-manager' && (
-              <div className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-2 py-1 shadow-sm">
-                <button
-                  onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:focus-search'))}
-                  className="p-2 rounded-xl hover:bg-black/5 transition-colors"
-                  title="Cerca"
-                  aria-label="Cerca"
-                >
-                  <Search size={18} className="text-gray-800" />
-                </button>
-                <div className="mx-1 h-5 w-px bg-black/10" />
-                <button
-                  onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:open-menu'))}
-                  className="p-2 rounded-xl hover:bg-black/5 transition-colors"
-                  title="Menu"
-                  aria-label="Menu"
-                >
-                  <Menu size={18} className="text-gray-800" />
-                </button>
-                <div className="mx-1 h-5 w-px bg-black/10" />
-                <button
-                  onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:add'))}
-                  className="p-2 rounded-xl bg-red-600 text-white hover:bg-red-700 ring-1 ring-red-300/40 transition-colors"
-                  title="Aggiungi"
-                  aria-label="Aggiungi"
-                >
-                  <Plus size={18} />
-                </button>
-              </div>
-            )}
+            {/* Azioni rapide spostate accanto al titolo nella header mobile di Gestione schede */}
 
             {/* Hamburger Menu */}
             <button
@@ -756,16 +730,18 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               <AlignJustify size={24} className="text-gray-700" />
             </button>
           </div>
+          )}
         </div>
         )}
 
         {/* Titolo pagina mobile: usa animazione su PWA Home, titolo statico altrove */}
 
-        {/* Titolo mobile centrato con back quando è attiva la bottom nav (escluse home) */}
+        {/* Titolo mobile centrato con back quando è attiva la bottom nav */}
         {isStandaloneMobile && !isHomePage && (currentPage === 'pwa-home' || !!getMobilePageTitle(currentPage)) && (
           <div className="lg:hidden">
             <div className="container mx-auto px-6 pb-2">
               <div className="w-full bg-white/70 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2 flex items-center justify-between">
+                {/* Back button nascosto su PWA Gestione Schede */}
                 <button
                   onClick={handleBack}
                   className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
@@ -798,8 +774,36 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                     </span>
                   )}
                 </div>
-                <div className="w-8" />
+                {currentPage === 'workout-manager' ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:add'))}
+                      className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                      title="Aggiungi"
+                      aria-label="Aggiungi"
+                    >
+                      <Plus size={18} />
+                    </button>
+                    <button
+                      onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:open-menu'))}
+                      className="inline-flex items-center justify-center p-1.5 text-gray-800 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                      title="Menu cartella"
+                      aria-label="Menu cartella"
+                    >
+                      <Menu size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-8" />
+                )}
               </div>
+              {/* Contenitori PWA per barra di ricerca e breadcrumb, quando su Gestione schede */}
+              {currentPage === 'workout-manager' && (
+                <div className="pt-2 space-y-2">
+                  <div id="pwa-fileexplorer-search" className="w-full"></div>
+                  <div id="pwa-folder-breadcrumb" className="w-full"></div>
+                </div>
+              )}
             </div>
           </div>
         )}
