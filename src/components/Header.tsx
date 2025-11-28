@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3, User, AlignJustify, LogOut, ChevronLeft, Bell } from 'lucide-react';
+import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3, User, AlignJustify, LogOut, ChevronLeft, Bell, Search, Plus } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -74,8 +74,12 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     };
   }, [isMenuOpen]);
 
-  // Header fade-out on scroll
+  // Header fade-out on scroll (disabilitato in modalità PWA standalone)
   useEffect(() => {
+    if (isStandaloneMobile) {
+      setHeaderOpacity(1);
+      return;
+    }
     const onScroll = () => {
       const y = (document.scrollingElement?.scrollTop ?? window.scrollY ?? 0);
       const fadeDistance = 220; // px to fully fade
@@ -85,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [isStandaloneMobile]);
 
   // Typing animation for PWA header title
   useEffect(() => {
@@ -497,13 +501,6 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   </button>
                   <div className="mx-1.5 h-5 w-px bg-black/10" />
                   <button
-                    onClick={() => scrollToSection('avvisi')}
-                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
-                  >
-                    Avvisi
-                  </button>
-                  <div className="mx-1.5 h-5 w-px bg-black/10" />
-                  <button
                     onClick={handleShowRules}
                     className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
                   >
@@ -570,7 +567,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   className="inline-flex items-center space-x-2 rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-3.5 py-2 text-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:bg-white/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.12)] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
                 >
                   <User size={24} className="text-gray-700" />
-                  <span className="hidden md:inline font-medium">{currentUser.name || deriveNameFromEmail(currentUser.email)}</span>
+                  {!isHomePage && (
+                    <span className="hidden md:inline font-medium">
+                      {currentUser.name || deriveNameFromEmail(currentUser.email)}
+                    </span>
+                  )}
                 </button>
                 
                 {/* User Dropdown Menu */}
@@ -715,6 +716,38 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               </div>
             )}
             
+            {/* Azioni rapide FileExplorer in header (solo PWA su Workout Manager) */}
+            {isStandaloneMobile && currentPage === 'workout-manager' && (
+              <div className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-md ring-1 ring-black/10 px-2 py-1 shadow-sm">
+                <button
+                  onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:focus-search'))}
+                  className="p-2 rounded-xl hover:bg-black/5 transition-colors"
+                  title="Cerca"
+                  aria-label="Cerca"
+                >
+                  <Search size={18} className="text-gray-800" />
+                </button>
+                <div className="mx-1 h-5 w-px bg-black/10" />
+                <button
+                  onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:open-menu'))}
+                  className="p-2 rounded-xl hover:bg-black/5 transition-colors"
+                  title="Menu"
+                  aria-label="Menu"
+                >
+                  <Menu size={18} className="text-gray-800" />
+                </button>
+                <div className="mx-1 h-5 w-px bg-black/10" />
+                <button
+                  onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:add'))}
+                  className="p-2 rounded-xl bg-red-600 text-white hover:bg-red-700 ring-1 ring-red-300/40 transition-colors"
+                  title="Aggiungi"
+                  aria-label="Aggiungi"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            )}
+
             {/* Hamburger Menu */}
             <button
               onClick={toggleMenu}

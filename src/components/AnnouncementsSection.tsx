@@ -408,7 +408,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ currentUser
                               placeholder="Descrizione dell'avviso"
                               onChange={(e) => updateAnnouncement(a.id, { message: e.target.value })}
                             />
-                            <div className="mt-3 flex items-center justify-between w-full">
+                            <div className="mt-3 flex items-center justify-start w-full">
                               <div className="flex items-center space-x-2">
                                 {(['info','warning','alert'] as const).map((lvl) => (
                                   <button
@@ -431,9 +431,10 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ currentUser
                                   <span>Fissa</span>
                                 </button>
                               </div>
+                              <span className="ml-2 mr-2 inline-block w-px h-6 bg-black/10" />
                               <button
                                 onClick={() => requestDelete(a.id)}
-                                className="inline-flex items-center justify-center rounded-full bg-white/70 backdrop-blur-md ring-1 ring-red-300 px-2 py-1 text-red-600 hover:bg-white hover:shadow-md shadow-sm transition-all"
+                                className="ml-auto inline-flex items-center justify-center rounded-full bg-white/70 backdrop-blur-md ring-1 ring-red-300 px-2 py-1 text-red-600 hover:bg-white hover:shadow-md shadow-sm transition-all"
                                 aria-label="Elimina avviso"
                                 title="Elimina"
                               >
@@ -480,7 +481,7 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ currentUser
                                   placeholder="Descrizione dell'avviso"
                                   onChange={(e) => updateAnnouncement(a.id, { message: e.target.value })}
                                 />
-                                <div className="mt-3 flex items-center justify-between w-full">
+                                <div className="mt-3 flex items-center justify-start w-full">
                                   <div className="flex items-center space-x-2">
                                     {(['info','warning','alert'] as const).map((lvl) => (
                                       <button
@@ -503,9 +504,10 @@ const AnnouncementsSection: React.FC<AnnouncementsSectionProps> = ({ currentUser
                                       <span>Fissa</span>
                                     </button>
                                   </div>
+                                  <span className="ml-2 mr-2 inline-block w-px h-6 bg-black/10" />
                                   <button
                                     onClick={() => requestDelete(a.id)}
-                                    className="inline-flex items-center justify-center rounded-full bg-white/70 backdrop-blur-md ring-1 ring-red-300 px-2 py-1 text-red-600 hover:bg-white hover:shadow-md shadow-sm transition-all"
+                                    className="ml-auto inline-flex items-center justify-center rounded-full bg-white/70 backdrop-blur-md ring-1 ring-red-300 px-2 py-1 text-red-600 hover:bg-white hover:shadow-md shadow-sm transition-all"
                                     aria-label="Elimina avviso"
                                     title="Elimina"
                                   >

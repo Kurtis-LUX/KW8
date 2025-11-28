@@ -210,6 +210,33 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     sortBy: 'name' as 'name' | 'date'
   });
 
+  // Azioni rapide dall'Header (PWA): ascolta eventi globali per aprire ricerca/menu/aggiungi
+  useEffect(() => {
+    const handleAdd = () => {
+      setShowCreateModal(true);
+    };
+    const handleFocusSearch = () => {
+      openDropdown();
+      if (searchTerm.trim().length > 0) {
+        setShowSearchSuggestions(true);
+      }
+      (triggerRef.current as any)?.focus?.();
+    };
+    const handleOpenMenu = () => {
+      toggleToolbarDropdown();
+    };
+
+    window.addEventListener('kw8:fileexplorer:add', handleAdd as EventListener);
+    window.addEventListener('kw8:fileexplorer:focus-search', handleFocusSearch as EventListener);
+    window.addEventListener('kw8:fileexplorer:open-menu', handleOpenMenu as EventListener);
+
+    return () => {
+      window.removeEventListener('kw8:fileexplorer:add', handleAdd as EventListener);
+      window.removeEventListener('kw8:fileexplorer:focus-search', handleFocusSearch as EventListener);
+      window.removeEventListener('kw8:fileexplorer:open-menu', handleOpenMenu as EventListener);
+    };
+  }, [searchTerm]);
+
   // Funzione per contare schede e sottocartelle
   const getFolderCounts = (folderId: string, allFolders: WorkoutFolder[], allWorkouts: WorkoutPlan[]) => {
     const subfolders = allFolders.filter(folder => folder.parentId === folderId);
@@ -856,24 +883,41 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       toggleItemMenu();
     };
     
-    const handleCardClick = (e: React.MouseEvent) => {
-      // Previeni il click se si sta cliccando sul menu o sui suoi elementi
-      if ((e.target as HTMLElement).closest('.menu-button') || 
-          (e.target as HTMLElement).closest('.dropdown-menu')) {
-        return;
+    // Long‑press per selezionare, click per aprire
+    const LONG_PRESS_MS = 400;
+    const pressTimerRef = useRef<number | null>(null);
+    const longPressTriggeredRef = useRef(false);
+    const clearPressTimer = () => {
+      if (pressTimerRef.current) {
+        window.clearTimeout(pressTimerRef.current);
+        pressTimerRef.current = null;
       }
-      e.stopPropagation();
-      setSelectedItemId(item.id);
-      // Singolo click non apre più la scheda/cartella (richiesto doppio click)
     };
-    
-    const handleCardDoubleClick = (e: React.MouseEvent) => {
-      // Previeni il doppio click se si sta cliccando sul menu o sui suoi elementi
-      if ((e.target as HTMLElement).closest('.menu-button') || 
-          (e.target as HTMLElement).closest('.dropdown-menu')) {
-        return;
+    const handlePointerDown = (e: React.PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.menu-button') || target.closest('.dropdown-menu')) return;
+      e.stopPropagation();
+      longPressTriggeredRef.current = false;
+      clearPressTimer();
+      pressTimerRef.current = window.setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        setSelectedItemId(item.id);
+      }, LONG_PRESS_MS);
+    };
+    const handlePointerUp = (e: React.PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.menu-button') || target.closest('.dropdown-menu')) return;
+      e.stopPropagation();
+      const wasLongPress = longPressTriggeredRef.current;
+      clearPressTimer();
+      longPressTriggeredRef.current = false;
+      if (!wasLongPress) {
+        handleItemClick(item);
       }
-      handleItemClick(item);
+    };
+    const handlePointerLeave = () => {
+      clearPressTimer();
+      longPressTriggeredRef.current = false;
     };
     
     return (
@@ -898,12 +942,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
             }`}
           data-item-type={item.type}
           data-folder-id={item.type === 'folder' ? item.id : undefined}
-          onClick={handleCardClick}
-          onDoubleClick={handleCardDoubleClick}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerLeave}
           onMouseEnter={() => setHoveredItemId(item.id)}
           onMouseLeave={() => { if (hoveredItemId === item.id) setHoveredItemId(null); }}
           draggable
-          onDragStart={(e) => handleDragStart(e, item)}
+          onDragStart={(e) => { clearPressTimer(); handleDragStart(e, item); }}
           onDragEnd={() => { setDragOverItem(null); }}
           onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (dragOverItem !== item.id) { setDragOverItem(item.id); } }}
           onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : (e.preventDefault(), e.stopPropagation(), (e.dataTransfer.dropEffect = 'none'))}
@@ -1187,15 +1232,41 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       return false;
     })();
 
-    const handleDoubleClick = (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest('.dropdown-menu')) return;
-      handleItemClick(item);
+    // Long‑press per selezionare, click per aprire
+    const LONG_PRESS_MS = 400;
+    const pressTimerRef = useRef<number | null>(null);
+    const longPressTriggeredRef = useRef(false);
+    const clearPressTimer = () => {
+      if (pressTimerRef.current) {
+        window.clearTimeout(pressTimerRef.current);
+        pressTimerRef.current = null;
+      }
     };
-
-    const handleClickSelect = (e: React.MouseEvent) => {
-      // Evita che il click sul tile propaghi e cancelli la selezione dal container
+    const handlePointerDown = (e: React.PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.dropdown-menu')) return;
       e.stopPropagation();
-      onSelect();
+      longPressTriggeredRef.current = false;
+      clearPressTimer();
+      pressTimerRef.current = window.setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        onSelect();
+      }, LONG_PRESS_MS);
+    };
+    const handlePointerUp = (e: React.PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('.dropdown-menu')) return;
+      e.stopPropagation();
+      const wasLongPress = longPressTriggeredRef.current;
+      clearPressTimer();
+      longPressTriggeredRef.current = false;
+      if (!wasLongPress) {
+        handleItemClick(item);
+      }
+    };
+    const handlePointerLeave = () => {
+      clearPressTimer();
+      longPressTriggeredRef.current = false;
     };
 
     const primaryColor = item.type === 'folder'
@@ -1229,10 +1300,11 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         }`}
         data-item-type={item.type}
         data-folder-id={item.type === 'folder' ? item.id : undefined}
-        onClick={handleClickSelect}
-        onDoubleClick={handleDoubleClick}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
         draggable
-        onDragStart={(e) => handleDragStart(e, item)}
+        onDragStart={(e) => { clearPressTimer(); handleDragStart(e, item); }}
         onDragEnd={() => { setDragOverItem(null); }}
         onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (dragOverItem !== item.id) { setDragOverItem(item.id); } }}
         onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : (e.preventDefault(), e.stopPropagation(), (e.dataTransfer.dropEffect = 'none'))}
