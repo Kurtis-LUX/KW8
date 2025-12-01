@@ -353,6 +353,29 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
 
   const isHomePage = currentPage === 'home' || currentPage === '/' || !currentPage;
   const isPwaWorkoutManager = isStandaloneMobile && currentPage === 'workout-manager';
+  const [isWorkoutDetailOpen, setIsWorkoutDetailOpen] = React.useState(false);
+
+  // Ascolta apertura/chiusura della scheda (WorkoutDetail) per nascondere azioni header
+  React.useEffect(() => {
+    const onOpen = () => setIsWorkoutDetailOpen(true);
+    const onClose = () => setIsWorkoutDetailOpen(false);
+    const onState = (e: Event) => {
+      try {
+        const ce = e as CustomEvent;
+        if (ce && ce.detail && typeof ce.detail.open !== 'undefined') {
+          setIsWorkoutDetailOpen(!!ce.detail.open);
+        }
+      } catch {}
+    };
+    window.addEventListener('kw8:workout-detail:open', onOpen as EventListener);
+    window.addEventListener('kw8:workout-detail:close', onClose as EventListener);
+    window.addEventListener('kw8:workout-detail:state', onState as EventListener);
+    return () => {
+      window.removeEventListener('kw8:workout-detail:open', onOpen as EventListener);
+      window.removeEventListener('kw8:workout-detail:close', onClose as EventListener);
+      window.removeEventListener('kw8:workout-detail:state', onState as EventListener);
+    };
+  }, []);
 
   const handleBack = () => {
     try {
@@ -399,7 +422,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       {/* Rimuovi completamente l'header su Home PWA */}
       {!(isStandaloneMobile && currentPage === 'pwa-home') && (
         <header 
-          className={`fixed top-0 left-0 right-0 z-40 bg-transparent backdrop-blur-sm transition-all duration-300 cursor-pointer`}
+          className={`fixed top-0 left-0 right-0 z-40 ${currentPage === 'workout-manager' ? '' : 'bg-transparent backdrop-blur-sm'} transition-all duration-300 cursor-pointer`}
           style={{ 
             marginRight: '0px',
             boxSizing: 'border-box',
@@ -740,7 +763,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         {isStandaloneMobile && !isHomePage && (currentPage === 'pwa-home' || !!getMobilePageTitle(currentPage)) && (
           <div className="lg:hidden">
             <div className="container mx-auto px-6 pb-2">
-              <div className="w-full bg-white/70 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2 flex items-center justify-between">
+              <div className={`w-full rounded-2xl px-3 py-2 flex items-center justify-between ${currentPage === 'workout-manager' ? '' : 'bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm'}`}>
                 {/* Back button nascosto su PWA Gestione Schede */}
                 <button
                   onClick={handleBack}
@@ -775,30 +798,34 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   )}
                 </div>
                 {currentPage === 'workout-manager' ? (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:add'))}
-                      className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
-                      title="Aggiungi"
-                      aria-label="Aggiungi"
-                    >
-                      <Plus size={18} />
-                    </button>
-                    <button
-                      onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:open-menu'))}
-                      className="inline-flex items-center justify-center p-1.5 text-gray-800 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
-                      title="Menu cartella"
-                      aria-label="Menu cartella"
-                    >
-                      <Menu size={18} />
-                    </button>
-                  </div>
+                  !isWorkoutDetailOpen ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:add'))}
+                        className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                        title="Aggiungi"
+                        aria-label="Aggiungi"
+                      >
+                        <Plus size={18} />
+                      </button>
+                      <button
+                        onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:open-menu'))}
+                        className="inline-flex items-center justify-center p-1.5 text-gray-800 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                        title="Menu cartella"
+                        aria-label="Menu cartella"
+                      >
+                        <Menu size={18} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-8" />
+                  )
                 ) : (
                   <div className="w-8" />
                 )}
               </div>
               {/* Contenitori PWA per barra di ricerca e breadcrumb, quando su Gestione schede */}
-              {currentPage === 'workout-manager' && (
+              {currentPage === 'workout-manager' && !isWorkoutDetailOpen && (
                 <div className="pt-2 space-y-2">
                   <div id="pwa-fileexplorer-search" className="w-full"></div>
                   <div id="pwa-folder-breadcrumb" className="w-full"></div>

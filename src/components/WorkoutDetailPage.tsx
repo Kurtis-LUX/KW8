@@ -6,6 +6,7 @@ import DB from '../utils/database';
 import Portal from './Portal';
 import Modal from './Modal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface Exercise {
   id: string;
@@ -53,6 +54,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const exerciseDropdownRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const isStandaloneMobile = useIsStandaloneMobile();
   
   // Hook Firestore per gestire i piani di allenamento e gli utenti
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
@@ -291,7 +293,7 @@ useEffect(() => {
 const [draggedExerciseIndex, setDraggedExerciseIndex] = useState<number | null>(null);
 const [dragOverExerciseIndex, setDragOverExerciseIndex] = useState<number | null>(null);
 const [selectedSwapIndex, setSelectedSwapIndex] = useState<number | null>(null);
-const longPressTimerRef = useRef<number | null>(null);
+const dayPressTimerRef = useRef<number | null>(null);
 const [draggedExerciseId, setDraggedExerciseId] = useState<string | null>(null);
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
@@ -311,20 +313,104 @@ const [isDraggingDays, setIsDraggingDays] = useState(false);
 const dayDragStartXRef = useRef(0);
 const dayScrollStartLeftRef = useRef(0);
 const dayDragInitiatedRef = useRef(false);
+const dayPointerIdRef = useRef<number | null>(null);
+// Long‑press context menu for day tabs
+const DAY_LONG_PRESS_MS = 400;
+const dayLongPressTriggeredRef = useRef(false);
+const dayPressStartPosRef = useRef<{ x: number; y: number } | null>(null);
+const [openDayKeyMenu, setOpenDayKeyMenu] = useState<string | null>(null);
+const dayMenuAnchorElRef = useRef<HTMLElement | null>(null);
+const dayMenuRef = useRef<HTMLDivElement | null>(null);
+const [dayMenuPosition, setDayMenuPosition] = useState<{ top: number; left: number } | null>(null);
+const [dayMenuPlacement, setDayMenuPlacement] = useState<'bottom' | 'top'>('bottom');
+const DAY_MENU_WIDTH = 160; // w-40
+
+const closeDayMenu = () => {
+  setOpenDayKeyMenu(null);
+  setDayMenuPosition(null);
+  dayMenuAnchorElRef.current = null;
+};
+
+const computeAndSetDayMenuPosition = (anchor: HTMLElement) => {
+  dayMenuAnchorElRef.current = anchor;
+  const rect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + DAY_MENU_WIDTH / 2, vw - MENU_MARGIN - DAY_MENU_WIDTH / 2);
+  let top = rect.bottom + MENU_OFFSET_Y;
+  setDayMenuPlacement('bottom');
+  setDayMenuPosition({ top, left });
+};
+
+const updateDayMenuPosition = useCallback(() => {
+  const anchor = dayMenuAnchorElRef.current;
+  if (!anchor || !openDayKeyMenu) return;
+  const rect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + DAY_MENU_WIDTH / 2, vw - MENU_MARGIN - DAY_MENU_WIDTH / 2);
+  let top = rect.bottom + MENU_OFFSET_Y;
+  const menuEl = dayMenuRef.current;
+  let placement: 'bottom' | 'top' = 'bottom';
+  if (menuEl) {
+    const mh = menuEl.offsetHeight || 0;
+    if (top + mh + MENU_MARGIN > window.innerHeight) {
+      top = rect.top - MENU_OFFSET_Y - mh;
+      placement = 'top';
+    }
+  }
+  setDayMenuPlacement(placement);
+  setDayMenuPosition({ top, left });
+}, [openDayKeyMenu]);
+
+useEffect(() => {
+  if (!openDayKeyMenu) return;
+  const handler = () => updateDayMenuPosition();
+  window.addEventListener('resize', handler);
+  window.addEventListener('scroll', handler, true);
+  return () => {
+    window.removeEventListener('resize', handler);
+    window.removeEventListener('scroll', handler, true);
+  };
+}, [openDayKeyMenu, updateDayMenuPosition]);
+// Fallback: rilascia lo scroll anche se il puntatore esce dal contenitore
+const handleDayTabsWindowPointerUp = (_e: PointerEvent) => {
+  setIsDraggingDays(false);
+  dayDragInitiatedRef.current = false;
+  try {
+    const id = (_e as any).pointerId;
+    if (dayTabsRef.current && typeof (dayTabsRef.current as any).releasePointerCapture === 'function') {
+      (dayTabsRef.current as any).releasePointerCapture(id);
+    }
+  } catch {}
+  window.removeEventListener('pointerup', handleDayTabsWindowPointerUp);
+  window.removeEventListener('pointercancel', handleDayTabsWindowPointerUp);
+};
 
 const handleDayTabsPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
   if (!dayTabsRef.current) return;
   setIsDraggingDays(false);
   dayDragInitiatedRef.current = true;
+  dayPointerIdRef.current = (e as any).pointerId ?? null;
   dayDragStartXRef.current = e.clientX;
   dayScrollStartLeftRef.current = dayTabsRef.current.scrollLeft;
+  // Non catturare subito: lascia passare click/long‑press al bottone.
+  // Fallback globale per rilascio
+  window.addEventListener('pointerup', handleDayTabsWindowPointerUp, { once: true });
+  window.addEventListener('pointercancel', handleDayTabsWindowPointerUp, { once: true });
 };
 
 const handleDayTabsPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
   if (!dayTabsRef.current || !dayDragInitiatedRef.current) return;
   const deltaX = e.clientX - dayDragStartXRef.current;
   if (Math.abs(deltaX) > 5) {
-    if (!isDraggingDays) setIsDraggingDays(true);
+    if (!isDraggingDays) {
+      setIsDraggingDays(true);
+      // Avviato drag: cattura il puntatore e annulla il long‑press
+      try { (dayTabsRef.current as any).setPointerCapture?.(dayPointerIdRef.current as any); } catch {}
+      if (dayPressTimerRef.current) {
+        window.clearTimeout(dayPressTimerRef.current);
+        dayPressTimerRef.current = null;
+      }
+    }
     dayTabsRef.current.scrollLeft = dayScrollStartLeftRef.current - deltaX;
     e.preventDefault();
   }
@@ -333,6 +419,63 @@ const handleDayTabsPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
 const handleDayTabsPointerUp = (_e: React.PointerEvent<HTMLDivElement>) => {
   setIsDraggingDays(false);
   dayDragInitiatedRef.current = false;
+  try { (dayTabsRef.current as any).releasePointerCapture?.((_e as any).pointerId); } catch {}
+  dayPointerIdRef.current = null;
+  window.removeEventListener('pointerup', handleDayTabsWindowPointerUp);
+  window.removeEventListener('pointercancel', handleDayTabsWindowPointerUp);
+};
+
+const handleDayTabsPointerCancel = (_e: React.PointerEvent<HTMLDivElement>) => {
+  setIsDraggingDays(false);
+  dayDragInitiatedRef.current = false;
+  try { (dayTabsRef.current as any).releasePointerCapture?.((_e as any).pointerId); } catch {}
+  dayPointerIdRef.current = null;
+  window.removeEventListener('pointerup', handleDayTabsWindowPointerUp);
+  window.removeEventListener('pointercancel', handleDayTabsWindowPointerUp);
+};
+
+const handleDayTabsPointerLeave = (_e: React.PointerEvent<HTMLDivElement>) => {
+  // In caso di uscita improvvisa, rilascia lo stato di drag
+  setIsDraggingDays(false);
+  dayDragInitiatedRef.current = false;
+  try { (dayTabsRef.current as any).releasePointerCapture?.((_e as any).pointerId); } catch {}
+  dayPointerIdRef.current = null;
+  window.removeEventListener('pointerup', handleDayTabsWindowPointerUp);
+  window.removeEventListener('pointercancel', handleDayTabsWindowPointerUp);
+};
+
+// Rename day modal handlers
+const handleStartRenameDay = (dayKey: string) => {
+  setRenamingDayKey(dayKey);
+  setRenamingDayName(getDayDisplayName(dayKey));
+  closeDayMenu();
+};
+
+const handleCancelRenameDay = () => {
+  setRenamingDayKey(null);
+  setRenamingDayName('');
+};
+
+const handleSaveDayName = () => {
+  const dk = renamingDayKey;
+  const newName = (renamingDayName || '').trim();
+  if (!dk) return;
+  if (activeVariantId === 'original') {
+    const updatedNames = { ...originalDayNames };
+    if (newName) updatedNames[dk] = newName; else delete updatedNames[dk];
+    setOriginalDayNames(updatedNames);
+  } else {
+    const prev = variantDayNamesById[activeVariantId] || {};
+    const updatedNames = { ...prev };
+    if (newName) updatedNames[dk] = newName; else delete updatedNames[dk];
+    setVariantDayNamesById({ ...variantDayNamesById, [activeVariantId]: updatedNames });
+    const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, dayNames: updatedNames, updatedAt: new Date().toISOString() } : v);
+    setVariants(updatedVariants);
+  }
+  setSaveMessage(`Nome allenamento aggiornato: ${newName || getDayDisplayName(dk)}`);
+  triggerAutoSave();
+  setRenamingDayKey(null);
+  setRenamingDayName('');
 };
 
 // Drag & Drop intelligente per esercizi e superset
@@ -2233,78 +2376,7 @@ useEffect(() => {
           </div>
         </div>
       )}
-      {/* Barra di navigazione varianti stile iPhone */}
-      <div className="mb-4 px-6">
-        <div className="flex justify-center">
-          <div
-            ref={variantTabsRef}
-            onPointerDown={handleVariantTabsPointerDown}
-            onPointerMove={handleVariantTabsPointerMove}
-            onPointerUp={handleVariantTabsPointerUp}
-            className={`inline-flex items-center gap-5 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-3.5 overflow-x-auto overflow-y-visible no-scrollbar select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-            style={{ touchAction: 'pan-x' }}
-          >
-            {/* Bottone scheda originale - solo icona */}
-            <div className="relative h-12 w-12 flex-shrink-0">
-              <button
-                onClick={(e) => {
-                  // Prima di tornare all'originale, salva gli esercizi correnti nella variante attiva
-                  if (activeVariantId !== 'original') {
-                    const currentVariantIndex = variants.findIndex(v => v.id === activeVariantId);
-                    if (currentVariantIndex !== -1) {
-                      const updatedVariants = [...variants];
-                      updatedVariants[currentVariantIndex] = {
-                        ...updatedVariants[currentVariantIndex],
-                        exercises: [...exercises],
-                        updatedAt: new Date().toISOString()
-                      };
-                      setVariants(updatedVariants.map(v => ({ ...v, isActive: false })));
-                    }
-                  }
-                  setActiveVariantId('original');
-                  setExercises(originalExercises ? [...originalExercises] : []);
-                }}
-                className={`${activeVariantId === 'original' ? 'bg-gray-100 text-blue-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
-                title={`Scheda originale: ${workoutTitle}`}
-                aria-label={`Scheda originale: ${workoutTitle}`}
-              >
-                {React.createElement(FileText, { size: 20, className: activeVariantId === 'original' ? 'text-blue-600' : 'text-gray-500' })}
-              </button>
-            </div>
-
-            {/* Bottoni varianti - solo icona con X e numero */}
-            {variants.map((variant, index) => (
-              <div key={variant.id} className="group relative h-12 w-12 flex-shrink-0 overflow-visible">
-                <button
-                  onClick={() => handleSwitchVariant(variant.id)}
-                  className={`${variant.isActive ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
-                  title={variant.name}
-                  aria-label={`Variante: ${variant.name}`}
-                >
-                  <Copy size={20} className={variant.isActive ? 'text-red-600' : 'text-gray-500'} />
-                </button>
-                {/* X in alto a destra: visibile su hover e sempre sulla variante attiva */}
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveVariant(variant.id); }}
-                  className={`absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20 ${variant.isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                  title={`Chiudi variante: ${variant.name}`}
-                  aria-label={`Chiudi variante: ${variant.name}`}
-                >
-                  <X size={12} />
-                </button>
-                {/* Numero sotto l'icona posizionato internamente */}
-                {(() => {
-                  const match = (variant.name || '').match(/Variante\s+(\d+)/i);
-                  const num = match ? parseInt(match[1], 10) : index + 1;
-                  return (
-                    <span className="absolute bottom-[2px] left-1/2 -translate-x-1/2 text-[11px] leading-none font-bold text-red-600 pointer-events-none">{num}</span>
-                  );
-                })()}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      {/* Barra di navigazione varianti spostata sotto il titolo della scheda */}
 
       {/* Sezione giorni verrà posizionata dentro il contenitore, sopra "Esercizi" */}
 
@@ -2322,7 +2394,7 @@ useEffect(() => {
               <ChevronLeft size={24} />
             </button>
           </div>
-          <div className="min-w-0 flex justify-center">
+          <div className="min-w-0 flex justify-center flex-col items-center">
             {isEditingTitle ? (
               <input
                 ref={titleInputRef}
@@ -2349,6 +2421,72 @@ useEffect(() => {
                 {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
               </h1>
             )}
+            {/* Variants navigation: sempre sotto il titolo della scheda (desktop e mobile) */}
+            <div className="mt-3">
+              <div className="flex justify-center">
+                <div
+                  ref={variantTabsRef}
+                  onPointerDown={handleVariantTabsPointerDown}
+                  onPointerMove={handleVariantTabsPointerMove}
+                  onPointerUp={handleVariantTabsPointerUp}
+                  className={`inline-flex items-center gap-5 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 ${isStandaloneMobile ? 'py-3' : 'py-3.5'} overflow-x-auto overflow-y-visible no-scrollbar select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                  style={{ touchAction: 'pan-x' }}
+                >
+                  <div className="relative h-12 w-12 flex-shrink-0">
+                    <button
+                      onClick={(e) => {
+                        if (activeVariantId !== 'original') {
+                          const currentVariantIndex = variants.findIndex(v => v.id === activeVariantId);
+                          if (currentVariantIndex !== -1) {
+                            const updatedVariants = [...variants];
+                            updatedVariants[currentVariantIndex] = {
+                              ...updatedVariants[currentVariantIndex],
+                              exercises: [...exercises],
+                              updatedAt: new Date().toISOString()
+                            };
+                            setVariants(updatedVariants.map(v => ({ ...v, isActive: false })));
+                          }
+                        }
+                        setActiveVariantId('original');
+                        setExercises(originalExercises ? [...originalExercises] : []);
+                      }}
+                      className={`${activeVariantId === 'original' ? 'bg-gray-100 text-blue-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
+                      title={`Scheda originale: ${workoutTitle}`}
+                      aria-label={`Scheda originale: ${workoutTitle}`}
+                    >
+                      {React.createElement(FileText, { size: 20, className: activeVariantId === 'original' ? 'text-blue-600' : 'text-gray-500' })}
+                    </button>
+                  </div>
+                  {variants.map((variant, index) => (
+                    <div key={variant.id} className="group relative h-12 w-12 flex-shrink-0 overflow-visible">
+                      <button
+                        onClick={() => handleSwitchVariant(variant.id)}
+                        className={`${variant.isActive ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
+                        title={variant.name}
+                        aria-label={`Variante: ${variant.name}`}
+                      >
+                        <Copy size={20} className={variant.isActive ? 'text-red-600' : 'text-gray-500'} />
+                      </button>
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveVariant(variant.id); }}
+                        className={`absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20 ${variant.isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        title={`Chiudi variante: ${variant.name}`}
+                        aria-label={`Chiudi variante: ${variant.name}`}
+                      >
+                        <X size={12} />
+                      </button>
+                      {(() => {
+                        const match = (variant.name || '').match(/Variante\s+(\d+)/i);
+                        const num = match ? parseInt(match[1], 10) : index + 1;
+                        return (
+                          <span className="absolute bottom-[2px] left-1/2 -translate-x-1/2 text-[11px] leading-none font-bold text-red-600 pointer-events-none">{num}</span>
+                        );
+                      })()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
           <div className="flex justify-end">
             {/* Placeholder invisibile per mantenere il titolo perfettamente centrato rispetto al contenitore */}
@@ -3228,12 +3366,14 @@ useEffect(() => {
         
         {/* Sezione Giorni: sotto la toolbar varianti, sopra "Esercizi" */}
         <div className="mb-6">
-          <div className="flex justify-center">
+          <div className="flex justify-center items-center gap-2">
             <div
               ref={dayTabsRef}
               onPointerDown={handleDayTabsPointerDown}
               onPointerMove={handleDayTabsPointerMove}
               onPointerUp={handleDayTabsPointerUp}
+              onPointerCancel={handleDayTabsPointerCancel}
+              onPointerLeave={handleDayTabsPointerLeave}
               className={`inline-flex items-center gap-2 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-2.5 overflow-x-auto no-scrollbar select-none ${isDraggingDays ? 'cursor-grabbing' : 'cursor-grab'} max-w-[85vw]`}
               style={{ touchAction: 'pan-x' }}
             >
@@ -3250,46 +3390,100 @@ useEffect(() => {
                   return sorted;
                 })();
                 return dayKeysToRender.map((dk, idx) => {
-                  const label = `Allenamento ${idx + 1}`;
+                  const label = getDayDisplayName(dk);
                   return (
                     <div key={dk} className="group relative flex-shrink-0 overflow-visible">
                       <button
-                        onClick={() => handleSwitchDay(dk)}
-                        className={`${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
+                        onClick={() => { if (!dayLongPressTriggeredRef.current) handleSwitchDay(dk); }}
+                        onPointerDown={(e) => {
+                          dayLongPressTriggeredRef.current = false;
+                          dayPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                          if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); }
+                          dayPressTimerRef.current = window.setTimeout(() => {
+                            dayLongPressTriggeredRef.current = true;
+                            computeAndSetDayMenuPosition(e.currentTarget as HTMLElement);
+                            setOpenDayKeyMenu(dk);
+                          }, DAY_LONG_PRESS_MS);
+                        }}
+                        onPointerMove={(e) => {
+                          const start = dayPressStartPosRef.current;
+                          if (!start) return;
+                          const dx = Math.abs(e.clientX - start.x);
+                          const dy = Math.abs(e.clientY - start.y);
+                          if (dx > 5 || dy > 5) {
+                            if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
+                          }
+                        }}
+                        onPointerUp={() => {
+                          if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
+                        }}
+                        onPointerCancel={() => {
+                          if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
+                        }}
+                        onPointerLeave={() => {
+                          if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
+                        }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          computeAndSetDayMenuPosition(e.currentTarget as HTMLElement);
+                          setOpenDayKeyMenu(dk);
+                        }}
+                        className={`day-tab-button ${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
                         title={label}
                         aria-label={label}
                       >
                         {label}
                       </button>
-                      
-                      {dk !== 'G1' && (
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveDay(dk); }}
-                          className={`absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20 ${activeDayKey === dk ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                          title={`Chiudi giorno: ${label}`}
-                          aria-label={`Chiudi giorno: ${label}`}
-                        >
-                          <X size={12} />
-                        </button>
+                      {openDayKeyMenu === dk && dayMenuPosition && (
+                        <Portal>
+                          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeDayMenu} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); closeDayMenu(); }} />
+                          <div
+                            ref={dayMenuRef}
+                            style={{ position: 'fixed', top: dayMenuPosition.top, left: dayMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }}
+                            className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40 relative"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {dayMenuPlacement === 'bottom' ? (
+                              <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                            ) : (
+                              <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                            )}
+                            <button
+                              onClick={() => { handleStartRenameDay(dk); }}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            >
+                              <Edit3 size={14} />
+                              <span>Modifica</span>
+                            </button>
+                            <button
+                              onClick={() => { handleRemoveDay(dk); closeDayMenu(); }}
+                              disabled={dk === 'G1'}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 disabled:opacity-50 flex items-center gap-2"
+                            >
+                              <Trash2 size={14} />
+                              <span>Elimina</span>
+                            </button>
+                          </div>
+                        </Portal>
                       )}
                     </div>
                   );
                 });
               })()}
-              <button
-                onClick={handleAddDay}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Aggiungi giorno"
-                aria-label="Aggiungi giorno"
-                disabled={(() => {
-                  const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
-                  const count = keys.length > 0 ? keys.length : 1; // fallback G1
-                  return count >= 10;
-                })()}
-              >
-                <Plus size={16} />
-              </button>
             </div>
+            <button
+              onClick={handleAddDay}
+              className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Aggiungi giorno"
+              aria-label="Aggiungi giorno"
+              disabled={(() => {
+                const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                const count = keys.length > 0 ? keys.length : 1; // fallback G1
+                return count >= 10;
+              })()}
+            >
+              <Plus size={16} />
+            </button>
           </div>
         </div>
 
@@ -3959,6 +4153,38 @@ useEffect(() => {
           >
             Annulla
           </button>
+        </div>
+      </Modal>
+
+      {/* Rename Day Modal */}
+      <Modal
+        isOpen={!!renamingDayKey}
+        onClose={handleCancelRenameDay}
+        title="Rinomina Allenamento"
+      >
+        <div className="space-y-4">
+          <input
+            type="text"
+            value={renamingDayName}
+            onChange={(e) => setRenamingDayName(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            placeholder="Nuovo nome allenamento"
+            autoFocus
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSaveDayName}
+              className="px-4 py-2 rounded-full bg-blue-600 text-white ring-1 ring-black/10 shadow-sm hover:bg-blue-700 transition-all"
+            >
+              Salva
+            </button>
+            <button
+              onClick={handleCancelRenameDay}
+              className="px-4 py-2 rounded-full bg-white text-gray-800 ring-1 ring-black/10 shadow-sm hover:bg-gray-100 transition-all"
+            >
+              Annulla
+            </button>
+          </div>
         </div>
       </Modal>
       

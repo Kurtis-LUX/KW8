@@ -61,6 +61,8 @@ interface FolderTreeItem {
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
 const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  // Colonne griglia PWA: default 3, switchabile a 5 dal menu cartella
+  const [pwaGridColumns, setPwaGridColumns] = useState<3 | 5>(3);
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Home' }]);
@@ -156,6 +158,78 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     autoAdjust: true
   });
 
+  // Origine apertura menu cartella e coordinate per apertura su sfondo
+  const [menuOrigin, setMenuOrigin] = useState<'header' | 'background' | null>(null);
+  const lastBgPointerRef = useRef<{ x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!isToolbarOpen) {
+      setMenuOrigin(null);
+    }
+  }, [isToolbarOpen]);
+
+  // Blocca lo scroll pagina quando il menu cartella è aperto (solo PWA)
+  useEffect(() => {
+    if (!isStandaloneMobile) return;
+    const html = document.documentElement;
+    const body = document.body;
+    if (isToolbarOpen) {
+      html.style.overflow = 'hidden';
+      body.style.overflow = 'hidden';
+    } else {
+      html.style.overflow = '';
+      body.style.overflow = '';
+    }
+    return () => {
+      html.style.overflow = '';
+      body.style.overflow = '';
+    };
+  }, [isToolbarOpen, isStandaloneMobile]);
+
+  // Long‑press sullo sfondo per aprire il menu cartella (PWA)
+  const BG_LONG_PRESS_MS = 400;
+  const bgPressTimerRef = useRef<number | null>(null);
+  const bgLongPressTriggeredRef = useRef(false);
+  const clearBgPressTimer = () => {
+    if (bgPressTimerRef.current) {
+      window.clearTimeout(bgPressTimerRef.current);
+      bgPressTimerRef.current = null;
+    }
+  };
+  const handleBackgroundPointerDown = (e: React.PointerEvent) => {
+    if (!isStandaloneMobile) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('.dropdown-menu')) return;
+    // Se menu già aperto, non avviare long‑press
+    if (isToolbarOpen) {
+      e.stopPropagation();
+      return;
+    }
+    e.stopPropagation();
+    // Memorizza coordinate del tocco/click sullo sfondo
+    lastBgPointerRef.current = { x: e.clientX, y: e.clientY };
+    bgLongPressTriggeredRef.current = false;
+    clearBgPressTimer();
+    bgPressTimerRef.current = window.setTimeout(() => {
+      bgLongPressTriggeredRef.current = true;
+      // Apri il menu cartella
+       setMenuOrigin('background');
+      toggleToolbarDropdown();
+    }, BG_LONG_PRESS_MS);
+  };
+  const handleBackgroundPointerUp = (e: React.PointerEvent) => {
+    if (!isStandaloneMobile) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('.dropdown-menu')) return;
+    e.stopPropagation();
+    clearBgPressTimer();
+    bgLongPressTriggeredRef.current = false;
+  };
+  const handleBackgroundPointerLeave = () => {
+    if (!isStandaloneMobile) return;
+    clearBgPressTimer();
+    bgLongPressTriggeredRef.current = false;
+  };
+
   const [draggedItem, setDraggedItem] = useState<FolderTreeItem | null>(null);
   const [dragOverItem, setDragOverItem] = useState<string | null>(null);
   const dropInProgressRef = useRef(false);
@@ -225,6 +299,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       (triggerRef.current as any)?.focus?.();
     };
     const handleOpenMenu = () => {
+      setMenuOrigin('header');
       toggleToolbarDropdown();
     };
 
@@ -612,6 +687,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       // Apri scheda di allenamento
       setSelectedWorkoutId(item.id);
       setShowWorkoutDetail(true);
+      try { window.dispatchEvent(new Event('kw8:workout-detail:open')); } catch {}
     }
   };
 
@@ -619,6 +695,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     setShowWorkoutDetail(false);
     setSelectedWorkoutId(null);
     setInitialActiveVariantId(undefined);
+    try { window.dispatchEvent(new Event('kw8:workout-detail:close')); } catch {}
     
     // Ricarica i dati per mostrare le modifiche aggiornate
     console.log('🔄 FileExplorer: Reloading data after workout detail close...');
@@ -1476,6 +1553,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   return (
     <div
       className="min-h-[calc(100vh-200px)] flex flex-col"
+      style={{ paddingTop: isStandaloneMobile ? 'calc(64px + env(safe-area-inset-top))' : undefined }}
       onClick={(e) => {
         const t = e.target as HTMLElement;
         if (t.closest('.item-card') || t.closest('.dropdown-menu') || t.closest('.menu-button')) return;
@@ -1582,10 +1660,12 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                                   setInitialActiveVariantId(undefined);
                                   setSelectedWorkoutId(s.id);
                                   setShowWorkoutDetail(true);
+                                  try { window.dispatchEvent(new Event('kw8:workout-detail:open')); } catch {}
                                 } else {
                                   setInitialActiveVariantId(s.id);
                                   setSelectedWorkoutId(s.workoutId!);
                                   setShowWorkoutDetail(true);
+                                  try { window.dispatchEvent(new Event('kw8:workout-detail:open')); } catch {}
                                 }
                                 setShowSearchSuggestions(false);
                                 closeDropdown();
@@ -1706,10 +1786,12 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                                 setInitialActiveVariantId(undefined);
                                 setSelectedWorkoutId(s.id);
                                 setShowWorkoutDetail(true);
+                                try { window.dispatchEvent(new Event('kw8:workout-detail:open')); } catch {}
                               } else {
                                 setInitialActiveVariantId(s.id);
                                 setSelectedWorkoutId(s.workoutId!);
                                 setShowWorkoutDetail(true);
+                                try { window.dispatchEvent(new Event('kw8:workout-detail:open')); } catch {}
                               }
                               setShowSearchSuggestions(false);
                               closeDropdown();
@@ -1766,17 +1848,27 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
             {isToolbarOpen && (
               <Portal>
                 <div
-                  style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+                  style={{ position: 'fixed', inset: 0, zIndex: 9998, touchAction: 'none' }}
                   className="bg-black/10"
                   onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); closeToolbarDropdown(); }}
                   onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); closeToolbarDropdown(); }}
                 />
                 {(() => {
-                  // Calcolo fallback per PWA: ancora il dropdown al bottone "Menu cartella" della header
-                  const headerBtnRect = document.querySelector('button[aria-label="Menu cartella"]')?.getBoundingClientRect();
+                  // Posizionamento dropdown: se apertura da sfondo in PWA, usa coordinate del click
                   const dropdownWidth = 18 * 16; // w-72 => 18rem => 288px
-                  const fallbackLeft = headerBtnRect ? Math.max(8, headerBtnRect.right - dropdownWidth) : (toolbarPosition?.left ?? -9999);
-                  const fallbackTop = headerBtnRect ? headerBtnRect.bottom + 8 : (toolbarPosition?.top ?? -9999);
+                  const pointer = lastBgPointerRef.current;
+                  const headerBtnRect = document.querySelector('button[aria-label="Menu cartella"]')?.getBoundingClientRect();
+                  // Default: ancorato al bottone header (PWA) o calcolato via hook
+                  let left = headerBtnRect ? Math.max(8, headerBtnRect.right - dropdownWidth) : (toolbarPosition?.left ?? -9999);
+                  let top = headerBtnRect ? headerBtnRect.bottom + 8 : (toolbarPosition?.top ?? -9999);
+
+                  if (isStandaloneMobile && menuOrigin === 'background' && pointer) {
+                    // Centra orizzontalmente rispetto al punto di pressione e clamp ai bordi
+                    left = Math.max(8, Math.min(window.innerWidth - dropdownWidth - 8, pointer.x - dropdownWidth / 2));
+                    // Mostra sotto al punto di pressione
+                    top = Math.max(8, pointer.y + 10);
+                  }
+
                   const rect = toolbarTriggerRef.current?.getBoundingClientRect();
                   const placement = rect && toolbarPosition ? (toolbarPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
                   return (
@@ -1785,8 +1877,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                       className="dropdown-menu w-72 max-h-96 overflow-y-auto bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 relative"
                       style={{
                         position: 'fixed',
-                        left: fallbackLeft,
-                        top: fallbackTop,
+                        left,
+                        top,
                         visibility: 'visible',
                         zIndex: 9999,
                       }}
@@ -1839,6 +1931,26 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                             <span className="text-sm">Elenco</span>
                           </button>
                         </div>
+                        {/* Colonne PWA per Griglia */}
+                        {isStandaloneMobile && viewMode === 'grid' && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Colonne (PWA)</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                onClick={() => setPwaGridColumns(3)}
+                                className={`p-2 rounded-xl text-sm ${pwaGridColumns === 3 ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}
+                              >
+                                3 colonne
+                              </button>
+                              <button
+                                onClick={() => setPwaGridColumns(5)}
+                                className={`p-2 rounded-xl text-sm ${pwaGridColumns === 5 ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}
+                              >
+                                5 colonne
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       
                       <hr className="my-2" />
@@ -2087,13 +2199,14 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       </div>
 
       {/* Contenuto */}
-      <div className="flex-1 p-4 overflow-auto min-h-[calc(100vh-300px)]">
+      <div className="flex-1 p-4 overflow-auto min-h-[calc(100vh-300px)]" style={{ userSelect: isStandaloneMobile ? 'none' as const : undefined }}>
         {/* Layout principale con sidebar opzionale */}
         <div className="flex">
           
           {/* Contenuto principale */}
           <div 
             className={`flex-1 transition-all duration-300 ease-in-out ${dragOverItem === 'root' ? 'ring-1 ring-blue-300 rounded-lg' : ''}`}
+            style={{ userSelect: isStandaloneMobile ? 'none' as const : undefined }}
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -2125,6 +2238,9 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               const targetFolderId = targetKey === 'root' ? currentFolderId : (targetKey ?? currentFolderId);
               handleDrop(e, targetFolderId);
             }}
+            onPointerDown={handleBackgroundPointerDown}
+            onPointerUp={handleBackgroundPointerUp}
+            onPointerLeave={handleBackgroundPointerLeave}
           >
             {(() => {
               const filteredItems = getFilteredAndSortedItems();
@@ -2170,7 +2286,11 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                     viewMode === 'compact'
                       ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
                       : viewMode === 'grid'
-                        ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6'
+                        ? (isStandaloneMobile
+                          ? (pwaGridColumns === 3
+                            ? 'grid grid-cols-3 gap-5'
+                            : 'grid grid-cols-5 gap-4')
+                          : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6')
                         : 'space-y-2'
                   }`}
                   onClick={(e) => {
