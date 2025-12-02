@@ -51,6 +51,9 @@ interface ProgramCardProps {
   viewMode?: 'grid' | 'list';
   isDragging?: boolean;
   showDetails?: boolean;
+  // Nuove opzioni per uso lato atleta
+  role?: 'coach' | 'athlete';
+  onOpen?: (program: ProgramItem) => void;
 }
 
 // Componente ProgramCard
@@ -68,11 +71,13 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
   level = 0,
   viewMode = 'grid',
   isDragging = false,
-  showDetails = true
+  showDetails = true,
+  role = 'coach',
+  onOpen
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   
-  const dragProps = createDragProps(program, onDragStart, onDragEnd);
+  const dragProps = role === 'coach' ? createDragProps(program, onDragStart, onDragEnd) : {};
   
   // Gestione del drag start
   const handleDragStart = (e: React.DragEvent) => {
@@ -132,14 +137,19 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
       <div
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all duration-300 cursor-move group ${
+        onClick={() => {
+          if (role === 'athlete' && onOpen) onOpen(program);
+        }}
+        className={`flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-all duration-300 ${role === 'coach' ? 'cursor-move' : 'cursor-pointer'} group ${
           isDragging ? 'opacity-50' : ''
         }`}
         style={{ marginLeft: `${level * 20}px` }}
         {...dragProps}
       >
         <div className="flex items-center space-x-4 flex-1">
-          <GripVertical size={16} className="text-gray-400 group-hover:text-gray-600" />
+          {role === 'coach' && (
+            <GripVertical size={16} className="text-gray-400 group-hover:text-gray-600" />
+          )}
           
           <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
             <Book size={20} className="text-blue-600" />
@@ -180,9 +190,10 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
           )}
         </div>
         
-        <div className={`flex items-center space-x-2 transition-opacity duration-300 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}>
+        {role === 'coach' && (
+          <div className={`flex items-center space-x-2 transition-opacity duration-300 ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          }`}>
           {onPreview && (
             <button
               onClick={() => onPreview(program)}
@@ -218,7 +229,8 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
           >
             <Trash2 size={16} />
           </button>
-        </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -228,16 +240,21 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all duration-300 cursor-move group relative ${
+      onClick={() => {
+        if (role === 'athlete' && onOpen) onOpen(program);
+      }}
+      className={`bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all duration-300 ${role === 'coach' ? 'cursor-move' : 'cursor-pointer'} group relative ${
         isDragging ? 'opacity-50' : ''
       }`}
       style={{ marginLeft: `${level * 20}px` }}
       {...dragProps}
     >
       {/* Grip per il drag */}
-      <div className="absolute top-2 right-2">
-        <GripVertical size={16} className="text-gray-400 group-hover:text-gray-600" />
-      </div>
+      {role === 'coach' && (
+        <div className="absolute top-2 right-2">
+          <GripVertical size={16} className="text-gray-400 group-hover:text-gray-600" />
+        </div>
+      )}
       
       {/* Header della card */}
       <div className="flex items-start justify-between mb-3">
@@ -317,9 +334,10 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
           </span>
         )}
         
-        <div className={`flex items-center space-x-1 transition-opacity duration-300 ${
-          isHovered ? 'opacity-100' : 'opacity-0'
-        }`}>
+        {role === 'coach' && (
+          <div className={`flex items-center space-x-1 transition-opacity duration-300 ${
+            isHovered ? 'opacity-100' : 'opacity-0'
+          }`}>
           {onToggleStatus && (
             <button
               onClick={() => {
@@ -368,7 +386,8 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
           >
             <Trash2 size={14} />
           </button>
-        </div>
+          </div>
+        )}
       </div>
       
       {/* Data di creazione/modifica */}

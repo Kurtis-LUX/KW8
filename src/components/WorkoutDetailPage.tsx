@@ -123,14 +123,29 @@ const handleAddDay = () => {
     setExercises([]);
   }
 
-  // Scorri la toolbar giorni verso destra per mostrare il nuovo giorno
-  if (dayTabsRef.current) {
-    try {
-      dayTabsRef.current.scrollTo({ left: dayTabsRef.current.scrollWidth, behavior: 'smooth' });
-    } catch {
-      dayTabsRef.current.scrollLeft = dayTabsRef.current.scrollWidth;
+  // Scorri la toolbar giorni verso destra per mostrare il nuovo giorno (post-render)
+  // Pianifica dopo il render per assicurare che il bottone del nuovo giorno esista nel DOM
+  window.setTimeout(() => {
+    const container = dayTabsRef.current;
+    if (!container) return;
+    // Tenta di portare esplicitamente in vista il nuovo tab
+    const newTab = container.querySelector<HTMLButtonElement>(`button[data-day-key="${nextKey}"]`);
+    if (newTab && newTab.scrollIntoView) {
+      try {
+        newTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
+      } catch {
+        // Fallback per browser che non supportano opzioni avanzate
+        newTab.scrollIntoView();
+      }
+    } else {
+      // Fallback: scorri fino alla fine
+      try {
+        container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+      } catch {
+        container.scrollLeft = container.scrollWidth;
+      }
     }
-  }
+  }, 0);
 
   triggerAutoSave();
 };
@@ -295,6 +310,34 @@ const [dragOverExerciseIndex, setDragOverExerciseIndex] = useState<number | null
 const [selectedSwapIndex, setSelectedSwapIndex] = useState<number | null>(null);
 const dayPressTimerRef = useRef<number | null>(null);
 const [draggedExerciseId, setDraggedExerciseId] = useState<string | null>(null);
+
+  // Offset dinamico per far iniziare il contenitore sotto l'header (varianti in header)
+  const [headerOffsetTop, setHeaderOffsetTop] = useState<number>(0);
+  const updateHeaderOffsetTop = useCallback(() => {
+    try {
+      const headerEl = document.querySelector('header');
+      // Se l'header è presente ed è fixed, usa la sua altezza totale
+      const h = headerEl ? (headerEl as HTMLElement).getBoundingClientRect().height : 0;
+      // Spazio minimo tra barra varianti e inizio contenitore
+      setHeaderOffsetTop(Math.max(0, Math.round(h)));
+    } catch {
+      setHeaderOffsetTop(0);
+    }
+  }, []);
+  useEffect(() => {
+    updateHeaderOffsetTop();
+    const handler = () => updateHeaderOffsetTop();
+    window.addEventListener('resize', handler);
+    // Alcuni overlay/portals possono cambiare layout al scroll (header trasparente): ricalcola
+    window.addEventListener('scroll', handler, true);
+    // Ricalcola anche dopo breve delay per attendere il rendering del Portal
+    const t = window.setTimeout(updateHeaderOffsetTop, 50);
+    return () => {
+      window.removeEventListener('resize', handler);
+      window.removeEventListener('scroll', handler, true);
+      window.clearTimeout(t);
+    };
+  }, [updateHeaderOffsetTop, isStandaloneMobile, activeVariantId, variants.length]);
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
 const variantTabsRef = useRef<HTMLDivElement>(null);
@@ -325,10 +368,27 @@ const [dayMenuPosition, setDayMenuPosition] = useState<{ top: number; left: numb
 const [dayMenuPlacement, setDayMenuPlacement] = useState<'bottom' | 'top'>('bottom');
 const DAY_MENU_WIDTH = 160; // w-40
 
+// Long‑press context menu for variant tabs
+const VARIANT_LONG_PRESS_MS = 400;
+const variantLongPressTriggeredRef = useRef(false);
+const variantPressStartPosRef = useRef<{ x: number; y: number } | null>(null);
+const [openVariantMenuId, setOpenVariantMenuId] = useState<string | null>(null);
+const variantMenuAnchorElRef = useRef<HTMLElement | null>(null);
+const variantMenuRef = useRef<HTMLDivElement | null>(null);
+const [variantMenuPosition, setVariantMenuPosition] = useState<{ top: number; left: number } | null>(null);
+const [variantMenuPlacement, setVariantMenuPlacement] = useState<'bottom' | 'top'>('bottom');
+const VARIANT_MENU_WIDTH = 140; // w-36
+
 const closeDayMenu = () => {
   setOpenDayKeyMenu(null);
   setDayMenuPosition(null);
   dayMenuAnchorElRef.current = null;
+};
+
+const closeVariantMenu = () => {
+  setOpenVariantMenuId(null);
+  setVariantMenuPosition(null);
+  variantMenuAnchorElRef.current = null;
 };
 
 const computeAndSetDayMenuPosition = (anchor: HTMLElement) => {
@@ -339,6 +399,16 @@ const computeAndSetDayMenuPosition = (anchor: HTMLElement) => {
   let top = rect.bottom + MENU_OFFSET_Y;
   setDayMenuPlacement('bottom');
   setDayMenuPosition({ top, left });
+};
+
+const computeAndSetVariantMenuPosition = (anchor: HTMLElement) => {
+  variantMenuAnchorElRef.current = anchor;
+  const rect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + VARIANT_MENU_WIDTH / 2, vw - MENU_MARGIN - VARIANT_MENU_WIDTH / 2);
+  let top = rect.bottom + MENU_OFFSET_Y;
+  setVariantMenuPlacement('bottom');
+  setVariantMenuPosition({ top, left });
 };
 
 const updateDayMenuPosition = useCallback(() => {
@@ -361,6 +431,26 @@ const updateDayMenuPosition = useCallback(() => {
   setDayMenuPosition({ top, left });
 }, [openDayKeyMenu]);
 
+const updateVariantMenuPosition = useCallback(() => {
+  const anchor = variantMenuAnchorElRef.current;
+  if (!anchor || !openVariantMenuId) return;
+  const rect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + VARIANT_MENU_WIDTH / 2, vw - MENU_MARGIN - VARIANT_MENU_WIDTH / 2);
+  let top = rect.bottom + MENU_OFFSET_Y;
+  const menuEl = variantMenuRef.current;
+  let placement: 'bottom' | 'top' = 'bottom';
+  if (menuEl) {
+    const mh = menuEl.offsetHeight || 0;
+    if (top + mh + MENU_MARGIN > window.innerHeight) {
+      top = rect.top - MENU_OFFSET_Y - mh;
+      placement = 'top';
+    }
+  }
+  setVariantMenuPlacement(placement);
+  setVariantMenuPosition({ top, left });
+}, [openVariantMenuId]);
+
 useEffect(() => {
   if (!openDayKeyMenu) return;
   const handler = () => updateDayMenuPosition();
@@ -371,6 +461,17 @@ useEffect(() => {
     window.removeEventListener('scroll', handler, true);
   };
 }, [openDayKeyMenu, updateDayMenuPosition]);
+
+useEffect(() => {
+  if (!openVariantMenuId) return;
+  const handler = () => updateVariantMenuPosition();
+  window.addEventListener('resize', handler);
+  window.addEventListener('scroll', handler, true);
+  return () => {
+    window.removeEventListener('resize', handler);
+    window.removeEventListener('scroll', handler, true);
+  };
+}, [openVariantMenuId, updateVariantMenuPosition]);
 // Fallback: rilascia lo scroll anche se il puntatore esce dal contenitore
 const handleDayTabsWindowPointerUp = (_e: PointerEvent) => {
   setIsDraggingDays(false);
@@ -2380,7 +2481,7 @@ useEffect(() => {
 
       {/* Sezione giorni verrà posizionata dentro il contenitore, sopra "Esercizi" */}
 
-      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border border-gray-200 ${variants.length > 0 ? '' : '-mt-px'} transition-shadow backdrop-blur-sm bg-white/95 ring-1 ring-black/10 shadow-md`}>
+      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border border-gray-200 ${variants.length > 0 ? '' : '-mt-px'} transition-shadow backdrop-blur-sm bg-white/95 ring-1 ring-black/10 shadow-md`} style={{ marginTop: headerOffsetTop }}>
 
         
         {/* Header Row: Back button + centered Title within card container */}
@@ -2421,72 +2522,127 @@ useEffect(() => {
                 {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
               </h1>
             )}
-            {/* Variants navigation: sempre sotto il titolo della scheda (desktop e mobile) */}
-            <div className="mt-3">
-              <div className="flex justify-center">
-                <div
-                  ref={variantTabsRef}
-                  onPointerDown={handleVariantTabsPointerDown}
-                  onPointerMove={handleVariantTabsPointerMove}
-                  onPointerUp={handleVariantTabsPointerUp}
-                  className={`inline-flex items-center gap-5 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 ${isStandaloneMobile ? 'py-3' : 'py-3.5'} overflow-x-auto overflow-y-visible no-scrollbar select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                  style={{ touchAction: 'pan-x' }}
-                >
-                  <div className="relative h-12 w-12 flex-shrink-0">
-                    <button
-                      onClick={(e) => {
-                        if (activeVariantId !== 'original') {
-                          const currentVariantIndex = variants.findIndex(v => v.id === activeVariantId);
-                          if (currentVariantIndex !== -1) {
-                            const updatedVariants = [...variants];
-                            updatedVariants[currentVariantIndex] = {
-                              ...updatedVariants[currentVariantIndex],
-                              exercises: [...exercises],
-                              updatedAt: new Date().toISOString()
-                            };
-                            setVariants(updatedVariants.map(v => ({ ...v, isActive: false })));
+            {/* Barra varianti: resa nel titolo "Gestione schede" tramite Portal */}
+            <Portal containerId="workout-variant-tabs">
+              <div className="mt-2">
+                <div className="flex justify-center">
+                  <div
+                    ref={variantTabsRef}
+                    onPointerDown={handleVariantTabsPointerDown}
+                    onPointerMove={handleVariantTabsPointerMove}
+                    onPointerUp={handleVariantTabsPointerUp}
+                    className={`inline-flex items-center gap-3 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-4 ${isStandaloneMobile ? 'py-2' : 'py-2.5'} overflow-x-auto overflow-y-visible no-scrollbar select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                    style={{ touchAction: 'pan-x' }}
+                  >
+                    <div className="relative h-10 w-10 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          if (activeVariantId !== 'original') {
+                            const currentVariantIndex = variants.findIndex(v => v.id === activeVariantId);
+                            if (currentVariantIndex !== -1) {
+                              const updatedVariants = [...variants];
+                              updatedVariants[currentVariantIndex] = {
+                                ...updatedVariants[currentVariantIndex],
+                                exercises: [...exercises],
+                                updatedAt: new Date().toISOString()
+                              };
+                              setVariants(updatedVariants.map(v => ({ ...v, isActive: false })));
+                            }
                           }
-                        }
-                        setActiveVariantId('original');
-                        setExercises(originalExercises ? [...originalExercises] : []);
-                      }}
-                      className={`${activeVariantId === 'original' ? 'bg-gray-100 text-blue-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
-                      title={`Scheda originale: ${workoutTitle}`}
-                      aria-label={`Scheda originale: ${workoutTitle}`}
-                    >
-                      {React.createElement(FileText, { size: 20, className: activeVariantId === 'original' ? 'text-blue-600' : 'text-gray-500' })}
-                    </button>
-                  </div>
-                  {variants.map((variant, index) => (
-                    <div key={variant.id} className="group relative h-12 w-12 flex-shrink-0 overflow-visible">
-                      <button
-                        onClick={() => handleSwitchVariant(variant.id)}
-                        className={`${variant.isActive ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-12 w-12 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
-                        title={variant.name}
-                        aria-label={`Variante: ${variant.name}`}
+                          setActiveVariantId('original');
+                          setExercises(originalExercises ? [...originalExercises] : []);
+                        }}
+                        className={`${activeVariantId === 'original' ? 'bg-gray-100 text-blue-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-10 w-10 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
+                        title={`Scheda originale: ${workoutTitle}`}
+                        aria-label={`Scheda originale: ${workoutTitle}`}
                       >
-                        <Copy size={20} className={variant.isActive ? 'text-red-600' : 'text-gray-500'} />
+                        {React.createElement(FileText, { size: 18, className: activeVariantId === 'original' ? 'text-blue-600' : 'text-gray-500' })}
                       </button>
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveVariant(variant.id); }}
-                        className={`absolute -top-2 -right-2 h-5 w-5 rounded-full flex items-center justify-center bg-white text-gray-700 hover:text-black shadow-lg ring-1 ring-gray-300 z-20 ${variant.isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
-                        title={`Chiudi variante: ${variant.name}`}
-                        aria-label={`Chiudi variante: ${variant.name}`}
-                      >
-                        <X size={12} />
-                      </button>
-                      {(() => {
-                        const match = (variant.name || '').match(/Variante\s+(\d+)/i);
-                        const num = match ? parseInt(match[1], 10) : index + 1;
-                        return (
-                          <span className="absolute bottom-[2px] left-1/2 -translate-x-1/2 text-[11px] leading-none font-bold text-red-600 pointer-events-none">{num}</span>
-                        );
-                      })()}
                     </div>
-                  ))}
+                    {variants.map((variant, index) => (
+                      <div key={variant.id} className="group relative h-10 w-10 flex-shrink-0 overflow-visible">
+                        <button
+                          onClick={() => { if (!variantLongPressTriggeredRef.current) handleSwitchVariant(variant.id); }}
+                          onPointerDown={(e) => {
+                            variantLongPressTriggeredRef.current = false;
+                            variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                            // cancella eventuale timer precedente
+                            if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); }
+                            // usa un nuovo timer dedicato per varianti
+                            const t = window.setTimeout(() => {
+                              variantLongPressTriggeredRef.current = true;
+                              computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement);
+                              setOpenVariantMenuId(variant.id);
+                            }, VARIANT_LONG_PRESS_MS);
+                            // riusa lo stesso ref del timer dei giorni per evitare duplicazioni non necessarie nell'ambiente
+                            dayPressTimerRef.current = t as unknown as number;
+                          }}
+                          onPointerMove={(e) => {
+                            const start = variantPressStartPosRef.current;
+                            if (!start) return;
+                            const dx = Math.abs(e.clientX - start.x);
+                            const dy = Math.abs(e.clientY - start.y);
+                            if (dx > 5 || dy > 5) {
+                              if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
+                            }
+                          }}
+                          onPointerUp={() => {
+                            if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
+                          }}
+                          onPointerCancel={() => {
+                            if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
+                          }}
+                          onPointerLeave={() => {
+                            if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
+                          }}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement);
+                            setOpenVariantMenuId(variant.id);
+                          }}
+                          className={`${variant.isActive ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-10 w-10 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
+                          title={variant.name}
+                          aria-label={`Variante: ${variant.name}`}
+                        >
+                          <Copy size={18} className={variant.isActive ? 'text-red-600' : 'text-gray-500'} />
+                        </button>
+                        {(() => {
+                          const match = (variant.name || '').match(/Variante\s+(\d+)/i);
+                          const num = match ? parseInt(match[1], 10) : index + 1;
+                          return (
+                            <span className="absolute bottom-[2px] left-1/2 -translate-x-1/2 text-[11px] leading-none font-bold text-red-600 pointer-events-none">{num}</span>
+                          );
+                        })()}
+                        {openVariantMenuId === variant.id && variantMenuPosition && (
+                          <Portal>
+                            <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeVariantMenu} />
+                            <div
+                              ref={variantMenuRef}
+                              style={{ position: 'fixed', top: variantMenuPosition.top, left: variantMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }}
+                              className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-36 relative"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {variantMenuPlacement === 'bottom' ? (
+                                <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                              ) : (
+                                <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                              )}
+                              <button
+                                onClick={() => { handleRemoveVariant(variant.id); closeVariantMenu(); }}
+                                className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 flex items-center gap-2"
+                              >
+                                <Trash2 size={14} className="text-red-600" />
+                                <span>Elimina</span>
+                              </button>
+                            </div>
+                          </Portal>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Portal>
           </div>
           <div className="flex justify-end">
             {/* Placeholder invisibile per mantenere il titolo perfettamente centrato rispetto al contenitore */}
@@ -3429,6 +3585,7 @@ useEffect(() => {
                           setOpenDayKeyMenu(dk);
                         }}
                         className={`day-tab-button ${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
+                        data-day-key={dk}
                         title={label}
                         aria-label={label}
                       >
@@ -3436,7 +3593,7 @@ useEffect(() => {
                       </button>
                       {openDayKeyMenu === dk && dayMenuPosition && (
                         <Portal>
-                          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeDayMenu} onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); closeDayMenu(); }} />
+                          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeDayMenu} />
                           <div
                             ref={dayMenuRef}
                             style={{ position: 'fixed', top: dayMenuPosition.top, left: dayMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }}
@@ -3455,12 +3612,13 @@ useEffect(() => {
                               <Edit3 size={14} />
                               <span>Modifica</span>
                             </button>
+                            <div className="my-1 border-t border-gray-200" />
                             <button
                               onClick={() => { handleRemoveDay(dk); closeDayMenu(); }}
                               disabled={dk === 'G1'}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 disabled:opacity-50 flex items-center gap-2"
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-50 flex items-center gap-2"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={14} className="text-red-600" />
                               <span>Elimina</span>
                             </button>
                           </div>
