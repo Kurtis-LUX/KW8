@@ -33,6 +33,8 @@ const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 // Origini consentite
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
+  "http://localhost:5177",
+  "http://localhost:5178",
   "http://localhost:5174",
   "https://palestra-kw8.web.app"
 ];
@@ -74,8 +76,13 @@ export const apiAuthGoogleSignin = onRequest({
     res.set("Access-Control-Allow-Origin", origin);
     res.set("Access-Control-Allow-Credentials", "true");
     res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    const requestedHeaders = req.headers['access-control-request-headers'] || "Content-Type, Authorization, X-Requested-With";
+    res.set("Access-Control-Allow-Headers", Array.isArray(requestedHeaders) ? requestedHeaders.join(', ') : (requestedHeaders as string));
     res.set("Access-Control-Max-Age", "86400"); // Cache preflight per 24 ore
+    res.set("Vary", "Origin");
+    // Riduci warning COOP in flussi popup Google
+    res.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+    res.set("Cross-Origin-Embedder-Policy", "unsafe-none");
   } else {
     logger.warn("Origin not allowed", { origin, allowedOrigins: ALLOWED_ORIGINS });
   }

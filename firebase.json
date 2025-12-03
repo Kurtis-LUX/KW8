@@ -10,7 +10,11 @@
       { "source": "/privacy", "destination": "/index.html" },
       { "source": "/terms", "destination": "/index.html" },
       { "source": "/cookie-policy", "destination": "/index.html" },
-      { "source": "/cookie-settings", "destination": "/index.html" }
+      { "source": "/cookie-settings", "destination": "/index.html" },
+      { "source": "/api/auth/google-signin", "function": { "functionId": "apiAuthGoogleSignin", "region": "us-central1", "codebase": "default" } },
+      { "source": "/api/auth/google-signup", "function": { "functionId": "apiAuthGoogleSignup", "region": "us-central1", "codebase": "default" } },
+      { "source": "/api/auth/firebase-exchange", "function": { "functionId": "apiAuthFirebaseExchange", "region": "us-central1", "codebase": "default" } },
+      { "source": "/api/auth/verify", "function": { "functionId": "authVerify", "region": "us-central1", "codebase": "default" } }
     ]
   },
   "functions": [

@@ -7,9 +7,23 @@ const path = require('path');
 const app = express();
 const PORT = 3001;
 
+// Origini consentite per CORS in sviluppo
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:5177',
+  'http://localhost:5178',
+  'http://localhost:3000'
+];
+
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: (origin, callback) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '1mb' })); // Limita la dimensione del payload
@@ -275,7 +289,10 @@ function checkGoogleRateLimit(ip) {
 // Route per Google Sign-In (compatibile con Firebase Functions)
 app.post('/apiAuthGoogleSignin', (req, res) => {
   // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -438,19 +455,192 @@ app.post('/apiAuthGoogleSignin', (req, res) => {
 });
 
 // CORS preflight per Google Sign-In
-app.options('/api/auth/google-signin', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
+// Alias route per mantenere coerenza con il frontend (/api/auth/*)
+app.post('/api/auth/google-signin', (req, res) => {
+  // CORS headers
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Aggiungi header Cross-Origin-Opener-Policy per risolvere l'errore COOP
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none');
+
+  try {
+    console.log('🔍 Richiesta Google Sign-In ricevuta [alias /api/auth/google-signin]');
+
+    // Prima validazione: controllo parametri richiesti
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Credential Google richiesto'
+      });
+    }
+
+    if (typeof credential !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: 'Credential deve essere una stringa'
+      });
+    }
+
+    // Validazione formato token JWT (deve avere 3 parti separate da punti)
+    const tokenParts = credential.split('.');
+    if (tokenParts.length !== 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'Formato credential non valido'
+      });
+    }
+
+    // Validazione lunghezza token (più rigorosa)
+    if (credential.length < 200 || credential.length > 2048) {
+      return res.status(400).json({
+        success: false,
+        message: 'Formato credential non valido'
+      });
+    }
+
+    // Validazione che ogni parte del JWT non sia vuota
+    if (tokenParts.some(part => !part || part.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Formato credential non valido'
+      });
+    }
+
+    // Rate limiting (dopo validazione formato)
+    const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket?.remoteAddress || 'unknown';
+    const ip = Array.isArray(clientIP) ? clientIP[0] : clientIP;
+
+    if (!checkGoogleRateLimit(ip)) {
+      console.log(`🚫 Rate limit superato per IP: ${ip}`);
+      return res.status(429).json({
+        success: false,
+        message: 'Troppi tentativi di accesso. Riprova tra 15 minuti.'
+      });
+    }
+
+    // Verifica il token Google
+    validateGoogleToken(credential)
+      .then(payload => {
+        if (!payload || !payload.email) {
+          return res.status(400).json({
+            success: false,
+            message: 'Impossibile ottenere informazioni dall\'account Google'
+          });
+        }
+
+        const email = payload.email;
+
+        // Validazioni email
+        if (typeof email !== 'string' || !email.includes('@') || email.length > 254) {
+          return res.status(400).json({
+            success: false,
+            message: 'Formato email non valido'
+          });
+        }
+
+        if (!payload.email_verified) {
+          console.log(`❌ Email non verificata: ${email}`);
+          return res.status(403).json({
+            success: false,
+            message: 'Account Google non verificato'
+          });
+        }
+
+        console.log(`🔐 Tentativo di accesso Google: ${email}`);
+        console.log(`📋 Email autorizzate: ${authorizedEmailsList.join(', ')}`);
+
+        // Controlla autorizzazione (supporta più email)
+        if (!authorizedEmailsList.includes(email.toLowerCase().trim())) {
+          console.log(`❌ Email non autorizzata: ${email}`);
+          return res.status(403).json({
+            success: false,
+            message: 'Accesso non autorizzato per questo account'
+          });
+        }
+
+        console.log(`✅ Email autorizzata: ${email}`);
+
+        // Genera JWT token
+        const jwtSecret = process.env.JWT_SECRET || 'dev-secret-key';
+
+        const user = {
+          userId: email,
+          email: email,
+          role: 'coach',
+          name: payload.name || 'Coach',
+          picture: payload.picture
+        };
+
+        const token = jwt.sign(
+          user,
+          jwtSecret,
+          {
+            expiresIn: '24h',
+            issuer: 'kw8-fitness',
+            audience: 'kw8-app'
+          }
+        );
+
+        // Risposta di successo
+        res.status(200).json({
+          success: true,
+          message: 'Autenticazione Google completata con successo',
+          data: {
+            token,
+            user: {
+              id: user.userId,
+              email: user.email,
+              role: user.role,
+              name: user.name,
+              picture: user.picture
+            },
+            expiresIn: '24h'
+          }
+        });
+      })
+      .catch(error => {
+        console.error('Errore nella verifica del token Google:', error);
+        return res.status(401).json({
+          success: false,
+          message: 'Token Google non valido o scaduto'
+        });
+      });
+  } catch (error) {
+    console.error('Errore durante l\'autenticazione Google:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Errore interno del server durante l\'autenticazione'
+    });
+  }
+});
+app.options('/api/auth/google-signin', (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.status(200).end();
 });
 
 // CORS preflight per apiAuthGoogleSignin (compatibile con Firebase Functions)
 app.options('/apiAuthGoogleSignin', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   
   // Aggiungi header Cross-Origin-Opener-Policy anche per preflight
@@ -462,9 +652,12 @@ app.options('/apiAuthGoogleSignin', (req, res) => {
 
 // Users endpoints
 app.all('/api/users', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   
   if (req.method === 'OPTIONS') {
@@ -509,9 +702,12 @@ app.get('/api/health', (req, res) => {
 // Auth verify endpoint
 app.post('/authVerify', (req, res) => {
   // Imposta header CORS
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Content-Type', 'application/json');
   
@@ -593,9 +789,12 @@ module.exports = app;
 
 // CORS preflight per apiAuthFirebaseExchange (compatibile con Firebase Functions)
 app.options('/apiAuthFirebaseExchange', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5173');
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.status(200).end();
 });

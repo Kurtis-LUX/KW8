@@ -98,16 +98,17 @@ class AuthService {
 
   // Usa sempre Firebase Functions per gli endpoint di autenticazione critici
   private get FUNCTIONS_BASE_URL(): string {
-    // In sviluppo usa il server API locale (proxy), in produzione usa Cloud Functions
-    return envConfig.apiBaseUrl;
+    // In sviluppo utilizza il dev server locale (proxy) sullo stesso origin del frontend
+    // In produzione instrada tramite Firebase Hosting per mantenere stessa origin
+    return `${envConfig.frontendUrl}/api/auth`;
   }
 
   // Autenticazione con Google Identity Services
   async googleSignIn(credential: string): Promise<GoogleSignInResponse> {
     try {
-      console.log('🔍 Inizio Google Sign-In, URL:', `${this.FUNCTIONS_BASE_URL}/apiAuthGoogleSignin`);
+      console.log('🔍 Inizio Google Sign-In, URL:', `${this.FUNCTIONS_BASE_URL}/google-signin`);
       
-      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/apiAuthGoogleSignin`, {
+      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/google-signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,9 +189,9 @@ class AuthService {
   // Registrazione con Google Identity Services (Atleta)
   async googleSignup(credential: string): Promise<GoogleSignupResponse> {
     try {
-      console.log('🔍 Inizio Google Sign-Up, URL:', `${this.FUNCTIONS_BASE_URL}/apiAuthGoogleSignup`);
+      console.log('🔍 Inizio Google Sign-Up, URL:', `${this.FUNCTIONS_BASE_URL}/google-signup`);
 
-      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/apiAuthGoogleSignup`, {
+      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/google-signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -285,7 +286,7 @@ class AuthService {
       }
 
       // 3) Scambia l'ID token per un JWT applicativo
-      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/apiAuthFirebaseExchange`, {
+      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/firebase-exchange`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
