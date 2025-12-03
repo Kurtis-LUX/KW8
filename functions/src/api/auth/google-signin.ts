@@ -59,7 +59,13 @@ const ALLOWED_ORIGINS = [
 
 export const apiAuthGoogleSignin = onRequest({ 
   cors: false,
-  invoker: "public" // Permette invocazioni pubbliche non autenticate
+  invoker: "public", // Permette invocazioni pubbliche non autenticate
+  region: 'us-central1',
+  minInstances: 1,
+  maxInstances: 10,
+  concurrency: 10,
+  timeoutSeconds: 60,
+  memory: '256MiB'
 }, async (req, res) => {
   // Imposta header CORS immediatamente per tutte le richieste
   const origin = req.headers.origin;

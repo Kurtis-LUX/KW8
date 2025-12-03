@@ -12,8 +12,12 @@ import { apiAuthDevCreateUser } from "./api/auth/dev-create-user";
 
 // Imposta opzioni globali per Functions Gen2
 setGlobalOptions({ 
+  region: 'us-central1',
   maxInstances: 10,
-  region: 'us-central1' // Regione predefinita Firebase
+  minInstances: 1,
+  concurrency: 10,
+  timeoutSeconds: 60,
+  memory: '256MiB'
 });
 
 // Esporta le funzioni
