@@ -80,9 +80,6 @@ export const apiAuthGoogleSignin = onRequest({
     res.set("Access-Control-Allow-Headers", Array.isArray(requestedHeaders) ? requestedHeaders.join(', ') : (requestedHeaders as string));
     res.set("Access-Control-Max-Age", "86400"); // Cache preflight per 24 ore
     res.set("Vary", "Origin");
-    // Riduci warning COOP in flussi popup Google
-    res.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-    res.set("Cross-Origin-Embedder-Policy", "unsafe-none");
   } else {
     logger.warn("Origin not allowed", { origin, allowedOrigins: ALLOWED_ORIGINS });
   }
