@@ -58,7 +58,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   
   // Hook Firestore per gestire i piani di allenamento e gli utenti
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
-  const { users: athletes, loading: athletesLoading } = useUsers();
+  const { users: athletes, loading: athletesLoading, updateUser } = useUsers();
   
   // Gestione tempo scheda
   const [isEditingDates, setIsEditingDates] = useState(false);
@@ -815,6 +815,16 @@ useEffect(() => {
   // Athletes management
   const [associatedAthletes, setAssociatedAthletes] = useState<string[]>([]);
   const [showAthletesList, setShowAthletesList] = useState(false);
+  const [athleteSearchQuery, setAthleteSearchQuery] = useState('');
+  // Filtra solo atleti, con ricerca per nome/email
+  const filteredAthletes = athletes.filter(u => (
+    (u.role === 'athlete' || u.role === 'atleta') &&
+    (
+      athleteSearchQuery.trim() === '' ||
+      (u.name || '').toLowerCase().includes(athleteSearchQuery.toLowerCase()) ||
+      (u.email || '').toLowerCase().includes(athleteSearchQuery.toLowerCase())
+    )
+  ));
   
   // Confirmation dialogs
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -2252,23 +2262,58 @@ useEffect(() => {
     setShowConfirmDialog(false);
   };
   
-  const handleAssociateAthlete = (athlete: string) => {
-    if (!associatedAthletes.includes(athlete)) {
-      const updatedAthletes = [...associatedAthletes, athlete];
+  const handleAssociateAthlete = async (athleteId: string) => {
+    if (!workoutId) return;
+    if (!associatedAthletes.includes(athleteId)) {
+      const updatedAthletes = [...associatedAthletes, athleteId];
       setAssociatedAthletes(updatedAthletes);
       setShowAthleteDropdown(false);
-      
+
+      const targetUser = athletes.find(u => u.id === athleteId);
+      setSaveMessage(`Scheda associata a ${targetUser?.name || 'atleta'}`);
+
       // Trigger auto-save immediately for athlete association
       triggerAutoSave();
+
+      // Notifica la pagina "Le tue schede" di aggiornare la lista
+      try { window.dispatchEvent(new Event('kw8:user-workouts:update')); } catch {}
+
+      // Aggiorna il profilo utente con la scheda assegnata
+      try {
+        const targetUser = athletes.find(u => u.id === athleteId);
+        if (targetUser) {
+          const uniquePlans = Array.from(new Set([...(targetUser.workoutPlans || []), workoutId]));
+          await updateUser(athleteId, { workoutPlans: uniquePlans } as any);
+        }
+      } catch (e) {
+        console.error('Errore aggiornando i piani utente:', e);
+      }
     }
   };
   
-  const handleRemoveAthlete = (athlete: string) => {
-    const updatedAthletes = associatedAthletes.filter(a => a !== athlete);
+  const handleRemoveAthlete = async (athleteId: string) => {
+    if (!workoutId) return;
+    const updatedAthletes = associatedAthletes.filter(a => a !== athleteId);
     setAssociatedAthletes(updatedAthletes);
-    
+
     // Trigger auto-save immediately for athlete removal
     triggerAutoSave();
+
+    // Notifica la pagina "Le tue schede" di aggiornare la lista
+    try { window.dispatchEvent(new Event('kw8:user-workouts:update')); } catch {}
+
+    // Aggiorna il profilo utente rimuovendo la scheda
+    try {
+      const targetUser = athletes.find(u => u.id === athleteId);
+      if (targetUser) {
+        const filteredPlans = (targetUser.workoutPlans || []).filter(pid => pid !== workoutId);
+        await updateUser(athleteId, { workoutPlans: filteredPlans } as any);
+      }
+      const removedUser = athletes.find(u => u.id === athleteId);
+      setSaveMessage(`Associazione rimossa da ${removedUser?.name || 'atleta'}`);
+    } catch (e) {
+      console.error('Errore aggiornando i piani utente (rimozione):', e);
+    }
   };
   
   const handleEditExercise = (exercise: Exercise) => {
@@ -2976,26 +3021,61 @@ useEffect(() => {
               type="text"
               placeholder="Cerca atleta..."
               className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+              value={athleteSearchQuery}
+              onChange={(e) => setAthleteSearchQuery(e.target.value)}
             />
           </div>
           <div className="max-h-40 overflow-y-auto">
             {athletesLoading ? (
               <div className="p-4 text-gray-500 text-center">Caricamento atleti...</div>
-            ) : athletes.length === 0 ? (
+            ) : filteredAthletes.length === 0 ? (
               <div className="p-4 text-gray-500 text-center">Nessun atleta disponibile</div>
             ) : (
-              athletes.map((athlete) => (
-                <button
-                  key={athlete.id}
-                  onClick={() => handleAssociateAthlete(athlete.name)}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-100 transition-colors"
-                >
-                  <div>
-                    <div className="font-medium">{athlete.name}</div>
-                    <div className="text-sm text-gray-500">{athlete.email}</div>
+              filteredAthletes.map((athlete) => {
+                const isAssociated = associatedAthletes.includes(athlete.id);
+                return (
+                  <div
+                    key={athlete.id}
+                    className={`flex items-center justify-between px-4 py-2 transition-colors ${isAssociated ? 'bg-green-50' : 'hover:bg-gray-100'}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => isAssociated ? handleRemoveAthlete(athlete.id) : handleAssociateAthlete(athlete.id)}
+                      className="flex-1 text-left"
+                    >
+                      <div>
+                        <div className={`font-medium ${isAssociated ? 'text-green-700' : ''}`}>{athlete.name}</div>
+                        <div className="text-sm text-gray-500">{athlete.email}</div>
+                      </div>
+                    </button>
+                    {isAssociated ? (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 ring-1 ring-green-200">
+                          <CheckCircle size={14} />
+                          Associato
+                        </span>
+                        <button
+                          onClick={() => handleRemoveAthlete(athlete.id)}
+                          className="p-1 text-red-500 hover:text-red-700 transition-colors"
+                          title="Rimuovi associazione"
+                          aria-label="Rimuovi associazione"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleAssociateAthlete(athlete.id)}
+                        className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200"
+                        title="Associa scheda"
+                        aria-label="Associa scheda"
+                      >
+                        Associa
+                      </button>
+                    )}
                   </div>
-                </button>
-              ))
+                );
+              })
             )}
           </div>
         </Modal>
@@ -3012,17 +3092,21 @@ useEffect(() => {
             </div>
           ) : (
             <div className="max-h-40 overflow-y-auto">
-              {associatedAthletes.map((athlete) => (
-                <div key={athlete} className="flex items-center justify-between px-4 py-2 hover:bg-gray-100">
-                  <span>{athlete}</span>
+              {associatedAthletes.map((athleteIdOrName) => {
+                const found = athletes.find(u => u.id === athleteIdOrName || u.name === athleteIdOrName);
+                const displayName = found ? found.name : athleteIdOrName;
+                const idForActions = found ? found.id : athleteIdOrName;
+                return (
+                <div key={athleteIdOrName} className="flex items-center justify-between px-4 py-2 hover:bg-gray-100">
+                  <span>{displayName}</span>
                   <button
-                    onClick={() => handleRemoveAthlete(athlete)}
+                    onClick={() => handleRemoveAthlete(idForActions)}
                     className="p-1 text-red-500 hover:text-red-700 transition-colors"
                   >
                     <X size={14} />
                   </button>
                 </div>
-              ))}
+              )})}
             </div>
           )}
         </Modal>

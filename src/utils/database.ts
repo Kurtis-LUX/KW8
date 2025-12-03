@@ -49,6 +49,8 @@ export interface WorkoutPlan {
   activeVariantId?: string;
   // Durata in settimane (derivata o esplicita)
   durationWeeks?: number;
+  // Elenco degli ID degli atleti associati alla scheda
+  associatedAthletes?: string[];
 }
 
 export interface WorkoutVariant {
@@ -215,9 +217,34 @@ const DB = {
   
   // Piani di allenamento con Firestore
   getWorkoutPlans: async (): Promise<WorkoutPlan[]> => {
+    // Se Firestore è abilitato, prova a leggere e normalizza i campi;
+    // se vuoto, effettua fallback ai dati locali.
     if (useFirestore) {
       try {
-        return await firestoreService.getWorkoutPlans();
+        const remotePlans = await firestoreService.getWorkoutPlans();
+        const now = new Date().toISOString();
+        const normalizedRemote = (remotePlans || []).map((plan: any, index: number) => ({
+          ...plan,
+          category: plan.category || 'strength',
+          status: plan.status || 'published',
+          mediaFiles: plan.mediaFiles || { images: [], videos: [], audio: [] },
+          tags: plan.tags || [],
+          order: plan.order !== undefined ? plan.order : index,
+          createdAt: plan.createdAt || now,
+          updatedAt: plan.updatedAt || now,
+          difficulty: plan.difficulty || 'beginner',
+          targetMuscles: plan.targetMuscles || [],
+          days: plan.days || {},
+          activeVariantId: plan.activeVariantId || 'original',
+          durationWeeks: plan.durationWeeks || (plan.duration ? Math.max(1, Math.ceil(plan.duration / 7)) : 1),
+          associatedAthletes: Array.isArray(plan.associatedAthletes) ? plan.associatedAthletes : []
+        }));
+
+        // Se Firestore ha dati, restituisci quelli normalizzati
+        if (normalizedRemote.length > 0) {
+          return normalizedRemote as WorkoutPlan[];
+        }
+        // Altrimenti prosegui con il fallback locale
       } catch (error) {
         console.error('Error fetching from Firestore, falling back to localStorage:', error);
         disableFirestoreOnError(error);
@@ -248,6 +275,7 @@ const DB = {
           days: plan.days || {},
           activeVariantId: plan.activeVariantId || 'original',
           durationWeeks: plan.durationWeeks || (plan.duration ? Math.max(1, Math.ceil(plan.duration / 7)) : 1),
+          associatedAthletes: Array.isArray(plan.associatedAthletes) ? plan.associatedAthletes : []
         };
       });
       

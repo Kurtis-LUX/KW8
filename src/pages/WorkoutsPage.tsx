@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Header from '../components/Header';
 import DB, { User, WorkoutPlan } from '../utils/database';
 // Rileva modalità standalone PWA su mobile (senza dipendenze esterne)
@@ -47,29 +47,45 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
     };
   }, []);
 
-  // Carica le schede assegnate al corrente atleta e le mappa a ProgramItem
-  useEffect(() => {
-    const loadAssigned = async () => {
-      if (!currentUser) {
-        onNavigate('home');
-        return;
-      }
-      if (!currentUser.workoutPlans || currentUser.workoutPlans.length === 0) {
-        setAssignedPrograms([]);
-        return;
-      }
-      try {
-        const allPlans = await DB.getWorkoutPlans();
-        const userPlans = allPlans.filter(p => currentUser.workoutPlans.includes(p.id));
-        const mapped: ProgramItem[] = userPlans.map(mapPlanToProgramItem);
-        setAssignedPrograms(mapped);
-      } catch (e) {
-        console.error('Errore caricando le schede assegnate:', e);
-        setAssignedPrograms([]);
-      }
-    };
-    loadAssigned();
+  // Carica/aggiorna le schede assegnate al corrente atleta e le mappa a ProgramItem
+  const refreshAssigned = useCallback(async () => {
+    if (!currentUser) {
+      onNavigate('home');
+      return;
+    }
+    try {
+      const allPlans = await DB.getWorkoutPlans();
+      const assignedByUserField = new Set(currentUser.workoutPlans || []);
+      const assignedByPlanAssociation = new Set(
+        allPlans
+          .filter(p => Array.isArray((p as any).associatedAthletes))
+          .filter(p => ((p as any).associatedAthletes || []).some((val: string) => val === currentUser.id || val === currentUser.name))
+          .map(p => p.id)
+      );
+      const allAssignedIds = new Set<string>([...assignedByUserField, ...assignedByPlanAssociation]);
+
+      const userPlans = allPlans.filter(p => allAssignedIds.has(p.id));
+      const mapped: ProgramItem[] = userPlans.map(mapPlanToProgramItem);
+      setAssignedPrograms(mapped);
+    } catch (e) {
+      console.error('Errore caricando le schede assegnate:', e);
+      setAssignedPrograms([]);
+    }
   }, [currentUser, onNavigate]);
+
+  // Aggiorna all'avvio e quando cambia l'utente corrente
+  useEffect(() => {
+    refreshAssigned();
+  }, [refreshAssigned]);
+
+  // Ascolta eventi globali per aggiornare la pagina "Le tue schede" in tempo reale
+  useEffect(() => {
+    const handler = () => { refreshAssigned(); };
+    window.addEventListener('kw8:user-workouts:update', handler as EventListener);
+    return () => {
+      window.removeEventListener('kw8:user-workouts:update', handler as EventListener);
+    };
+  }, [refreshAssigned]);
 
   // Mappa WorkoutPlan -> ProgramItem (coerenza visiva con Gestione schede)
   const mapPlanToProgramItem = (plan: WorkoutPlan): ProgramItem => ({

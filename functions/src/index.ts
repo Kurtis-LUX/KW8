@@ -14,7 +14,6 @@ import { apiAuthDevCreateUser } from "./api/auth/dev-create-user";
 setGlobalOptions({ 
   region: 'us-central1',
   maxInstances: 10,
-  minInstances: 1,
   concurrency: 10,
   timeoutSeconds: 60,
   memory: '256MiB'

@@ -5,7 +5,8 @@ import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 import AthleteForm from '../components/AthleteForm';
 import AthleteImport from '../components/AthleteImport';
 import { User } from '../utils/database';
-import { useUsers } from '../hooks/useFirestore';
+import { useUsers, useWorkoutPlans } from '../hooks/useFirestore';
+import { WorkoutPlan } from '../utils/database';
 import type { User as FirestoreUser } from '../services/firestoreService';
 
 interface AthleteManagerPageProps {
@@ -36,6 +37,7 @@ interface Athlete {
 
 const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, currentUser, onLogout }) => {
   const { users, loading, error, createUser, updateUser, deleteUser } = useUsers();
+  const { workoutPlans, loading: plansLoading, error: plansError, refetch: refetchPlans } = useWorkoutPlans();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [filteredAthletes, setFilteredAthletes] = useState<Athlete[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,30 +53,43 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
   const [showCompactTitle, setShowCompactTitle] = useState(false);
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const isStandaloneMobile = useIsStandaloneMobile();
+  const [assignedByAthlete, setAssignedByAthlete] = useState<Record<string, WorkoutPlan[]>>({});
 
-  // Converti utenti Firestore in atleti
+  // Converte utenti in atleti e calcola le schede assegnate e il conteggio
   useEffect(() => {
-    if (users.length > 0) {
-      const athleteUsers = users
-        .filter(user => user.role === 'athlete')
-        .map(user => ({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          address: '', // Non disponibile nel modello User
-          joinDate: user.createdAt,
-          birthDate: user.birthDate,
-          status: 'active' as const, // Default status
-          activeWorkouts: 0, // Da calcolare con le schede assegnate
-          completedSessions: 0, // Da implementare con tracking sessioni
-          lastActivity: user.updatedAt,
-          notes: '', // Da aggiungere al modello User se necessario
-          emergencyContact: undefined // Da aggiungere al modello User se necessario
-        }));
-      setAthletes(athleteUsers);
-    }
-  }, [users]);
+    const athleteUsers = users
+      .filter(user => user.role === 'athlete')
+      .map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        address: '',
+        joinDate: user.createdAt,
+        birthDate: user.birthDate,
+        status: 'active' as const,
+        activeWorkouts: 0,
+        completedSessions: 0,
+        lastActivity: user.updatedAt,
+        notes: '',
+        emergencyContact: undefined
+      }));
+
+    // Mappatura schede assegnate per atleta (id o nome)
+    const mapping: Record<string, WorkoutPlan[]> = {};
+    athleteUsers.forEach(a => {
+      const plans = workoutPlans.filter(p => Array.isArray((p as any).associatedAthletes) && ((p as any).associatedAthletes || []).some((val: string) => val === a.id || val === a.name));
+      mapping[a.id] = plans;
+    });
+    setAssignedByAthlete(mapping);
+
+    // Aggiorna conteggi nelle card atleti
+    const withCounts = athleteUsers.map(a => ({
+      ...a,
+      activeWorkouts: (mapping[a.id]?.length) || 0
+    }));
+    setAthletes(withCounts);
+  }, [users, workoutPlans]);
 
   // Filtri e ordinamento
   useEffect(() => {
@@ -146,6 +161,17 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
       default: return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Aggiorna elenco quando cambiano associazioni (evento globale)
+  useEffect(() => {
+    const handler = () => {
+      try { refetchPlans(); } catch {}
+    };
+    window.addEventListener('kw8:user-workouts:update', handler as EventListener);
+    return () => {
+      window.removeEventListener('kw8:user-workouts:update', handler as EventListener);
+    };
+  }, [refetchPlans]);
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -339,82 +365,28 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                 <div className="text-center">
                   <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">Gestione atleti</h1>
                   <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">Gestisci i profili e le informazioni dei tuoi atleti</p>
+                  {/* Barra di ricerca sotto il titolo, nello stesso contenitore */}
+                  <div className="mt-3 max-w-md mx-auto">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                      <input
+                        type="text"
+                        placeholder="Cerca atleti..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none placeholder:text-gray-400"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setShowImportModal(true)}
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-white/70 hover:bg-white/80 rounded-2xl ring-1 ring-black/10 shadow-sm text-navy-900"
-                  title="Importa atleti"
-                >
-                  <Upload size={18} />
-                  <span className="hidden sm:block text-sm">Importa</span>
-                </button>
-                <button
-                  onClick={() => setShowAddModal(true)}
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-white/70 hover:bg-white/80 rounded-2xl ring-1 ring-black/10 shadow-sm text-red-600"
-                  title="Nuovo atleta"
-                >
-                  <Plus size={18} />
-                  <span className="hidden sm:block text-sm">Nuovo</span>
-                </button>
-              </div>
+              
           </div>
           </div>
 
           )}
-          {/* Filtri e ricerca */}
-          <div className="bg-white/70 backdrop-blur rounded-2xl shadow-sm p-6 mb-8 border border-gray-200">
-            {/* Prima riga: Ricerca e Filtro Stato nella stessa riga */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
-              {/* Ricerca */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Cerca atleti..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none placeholder:text-gray-400"
-                />
-              </div>
-
-              {/* Filtro Stato (Segmented Control) */}
-              <div className="sm:w-auto">
-                <div className="inline-flex rounded-full bg-gray-100 p-1 shadow-inner">
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-full text-sm ${statusFilter === 'all' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
-                    onClick={() => setStatusFilter('all' as any)}
-                  >
-                    Tutti
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-full text-sm ${statusFilter === 'active' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
-                    onClick={() => setStatusFilter('active' as any)}
-                  >
-                    Attivi
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-full text-sm ${statusFilter === 'inactive' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
-                    onClick={() => setStatusFilter('inactive' as any)}
-                  >
-                    Inattivi
-                  </button>
-                  <button
-                    type="button"
-                    className={`px-4 py-2 rounded-full text-sm ${statusFilter === 'suspended' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
-                    onClick={() => setStatusFilter('suspended' as any)}
-                  >
-                    Sospesi
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          
 
 
 
@@ -444,9 +416,30 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                         <div className="mt-1 text-xs text-gray-600">
                           {athlete.email}{athlete.phone ? ` • ${athlete.phone}` : ''}
                         </div>
+                        {/* Schede assegnate: conteggio e elenco */}
+                        <div className="mt-1">
+                          <div className="text-[11px] text-gray-700">
+                            Schede assegnate: {assignedByAthlete[athlete.id]?.length || 0}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {(assignedByAthlete[athlete.id] && assignedByAthlete[athlete.id].length > 0)
+                              ? assignedByAthlete[athlete.id].map((plan) => (
+                                  <span key={plan.id} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] ring-1 ring-black/10">
+                                    {plan.name}
+                                  </span>
+                                ))
+                              : (
+                                  <span className="text-[11px] text-gray-400">Nessuna scheda</span>
+                                )
+                            }
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        Schede: {athlete.activeWorkouts || 0}
+                      </span>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(athlete.status)}`}>
                         {getStatusText(athlete.status)}
                       </span>

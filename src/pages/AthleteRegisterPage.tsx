@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/
 import firestoreService from '../services/firestoreService';
 import { authService } from '../services/authService';
 import zxcvbn from 'zxcvbn'
+import DB, { isFirestoreEnabled } from '../utils/database';
 
 interface AthleteRegisterPageProps {
   onAuthSuccess?: () => void;
@@ -138,8 +139,19 @@ const AthleteRegisterPage: React.FC<AthleteRegisterPageProps> = ({ onAuthSuccess
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      if (uid) {
+      const firestoreEnabled = isFirestoreEnabled();
+      if (uid && firestoreEnabled) {
         await setDoc(doc(db, 'users', uid), baseProfile);
+      } else if (!firestoreEnabled) {
+        // Firestore disabilitato: salva anche in localStorage per mostrare subito l'atleta in Gestione atleti
+        const localId = uid || Date.now().toString();
+        DB.saveUser({
+          id: localId,
+          email: safeEmail,
+          name: baseProfile.name,
+          role: 'atleta',
+          workoutPlans: []
+        });
       } else {
         console.warn('⚠️ UID non disponibile dopo la registrazione, salto sincronizzazione profilo');
       }

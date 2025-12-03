@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import firestoreService from '../services/firestoreService';
 import DB, { isFirestoreEnabled } from '../utils/database';
+import type { User as LocalUser } from '../utils/database';
 import type {
   User,
   Ranking,
@@ -23,8 +24,29 @@ export const useUsers = () => {
     try {
       setLoading(true);
       setError(null);
-      const fetchedUsers = await firestoreService.getUsers();
-      setUsers(fetchedUsers);
+      const firestoreEnabled = isFirestoreEnabled();
+      if (firestoreEnabled) {
+        const fetchedUsers = await firestoreService.getUsers();
+        setUsers(fetchedUsers);
+      } else {
+        // Fallback: usa localStorage e normalizza i ruoli a 'athlete'
+        const localUsers: LocalUser[] = DB.getUsers();
+        const now = new Date().toISOString();
+        const normalized = localUsers.map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          // campi opzionali non presenti nel modello local: lasciali undefined
+          phone: (u as any).phone,
+          birthDate: u.birthDate,
+          certificatoMedicoStato: 'non_presente' as const,
+          notes: '',
+          role: (u.role === 'athlete' || u.role === 'atleta') ? 'athlete' : (u.role === 'coach' ? 'coach' : 'admin'),
+          createdAt: now,
+          updatedAt: now
+        }));
+        setUsers(normalized);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nel caricamento utenti');
       console.error('Error fetching users:', err);
@@ -36,9 +58,26 @@ export const useUsers = () => {
   const createUser = useCallback(async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       setError(null);
-      const userId = await firestoreService.createUser(userData);
-      await fetchUsers(); // Ricarica la lista
-      return userId;
+      const firestoreEnabled = isFirestoreEnabled();
+      if (firestoreEnabled) {
+        const userId = await firestoreService.createUser(userData);
+        await fetchUsers(); // Ricarica la lista
+        return userId;
+      } else {
+        const now = new Date().toISOString();
+        const localId = Date.now().toString();
+        const localUser: LocalUser = {
+          id: localId,
+          email: userData.email,
+          name: userData.name,
+          role: 'atleta',
+          workoutPlans: [],
+          birthDate: userData.birthDate
+        };
+        DB.saveUser(localUser);
+        await fetchUsers();
+        return localId;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nella creazione utente');
       throw err;
@@ -48,7 +87,21 @@ export const useUsers = () => {
   const updateUser = useCallback(async (id: string, userData: Partial<User>) => {
     try {
       setError(null);
-      await firestoreService.updateUser(id, userData);
+      const firestoreEnabled = isFirestoreEnabled();
+      if (firestoreEnabled) {
+        await firestoreService.updateUser(id, userData);
+      } else {
+        const users = DB.getUsers();
+        const idx = users.findIndex(u => u.id === id);
+        if (idx >= 0) {
+          const updated: LocalUser = {
+            ...users[idx],
+            // Applica qualunque campo passato, inclusi workoutPlans
+            ...(userData as any)
+          };
+          DB.saveUser(updated);
+        }
+      }
       await fetchUsers(); // Ricarica la lista
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nell\'aggiornamento utente');
@@ -59,7 +112,13 @@ export const useUsers = () => {
   const deleteUser = useCallback(async (id: string) => {
     try {
       setError(null);
-      await firestoreService.deleteUser(id);
+      const firestoreEnabled = isFirestoreEnabled();
+      if (firestoreEnabled) {
+        await firestoreService.deleteUser(id);
+      } else {
+        const remaining = DB.getUsers().filter(u => u.id !== id);
+        DB.setItem('kw8_users', JSON.stringify(remaining));
+      }
       await fetchUsers(); // Ricarica la lista
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nell\'eliminazione utente');
@@ -70,7 +129,23 @@ export const useUsers = () => {
   const batchCreateUsers = useCallback(async (usersData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>[]) => {
     try {
       setError(null);
-      await firestoreService.batchCreateUsers(usersData);
+      const firestoreEnabled = isFirestoreEnabled();
+      if (firestoreEnabled) {
+        await firestoreService.batchCreateUsers(usersData);
+      } else {
+        const now = new Date().toISOString();
+        usersData.forEach(u => {
+          const localUser: LocalUser = {
+            id: Date.now().toString() + Math.random().toString(36).slice(2),
+            email: u.email,
+            name: u.name,
+            role: 'atleta',
+            workoutPlans: [],
+            birthDate: u.birthDate
+          };
+          DB.saveUser(localUser);
+        });
+      }
       await fetchUsers(); // Ricarica la lista
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nella creazione batch utenti');

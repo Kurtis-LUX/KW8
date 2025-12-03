@@ -49,6 +49,7 @@ class AuthService {
   private readonly TOKEN_KEY = 'kw8_auth_token';
   private readonly USER_KEY = 'kw8_current_user';
   private readonly SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 giorni in millisecondi
+  private googleSigninInFlight: boolean = false;
   
   constructor() {
     // Verifica che le variabili d'ambiente critiche siano configurate
@@ -106,6 +107,11 @@ class AuthService {
   // Autenticazione con Google Identity Services
   async googleSignIn(credential: string): Promise<GoogleSignInResponse> {
     try {
+      // Evita richieste duplicate in rapida successione
+      if (this.googleSigninInFlight) {
+        throw new Error('Login già in corso, attendi qualche secondo...');
+      }
+      this.googleSigninInFlight = true;
       console.log('🔍 Inizio Google Sign-In, URL:', `${this.FUNCTIONS_BASE_URL}/google-signin`);
       
       const response = await fetch(`${this.FUNCTIONS_BASE_URL}/google-signin`, {
@@ -120,10 +126,28 @@ class AuthService {
       console.log('📡 Risposta ricevuta - Status:', response.status, 'StatusText:', response.statusText);
       
       // Verifica Content-Type della risposta
-      const contentType = response.headers.get('content-type');
+      let contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        console.error('❌ Content-Type non valido:', contentType);
-        throw new Error('Il server non ha restituito una risposta JSON valida');
+        if (response.status === 429) {
+          console.warn('⚠️ 429 ricevuto, applico breve backoff e riprovo una volta');
+          await new Promise(r => setTimeout(r, 1500));
+          const retry = await fetch(`${this.FUNCTIONS_BASE_URL}/google-signin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ credential }),
+          });
+          contentType = retry.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            console.error('❌ Content-Type non valido anche al retry:', contentType);
+            throw new Error('Il server non ha restituito una risposta JSON valida');
+          }
+          // Sostituisci response con il retry riuscito
+          (response as any) = retry;
+        } else {
+          console.error('❌ Content-Type non valido:', contentType);
+          throw new Error('Il server non ha restituito una risposta JSON valida');
+        }
       }
 
       // Usa response.json() direttamente per evitare problemi di parsing
@@ -183,6 +207,8 @@ class AuthService {
     } catch (error) {
       console.error('❌ Errore Google Sign-In:', error);
       throw error;
+    } finally {
+      this.googleSigninInFlight = false;
     }
   }
 
@@ -434,11 +460,11 @@ class AuthService {
       return null;
     }
 
-    console.log('🔐 Starting token verification with URL:', `${this.FUNCTIONS_BASE_URL}/authVerify`);
+    console.log('🔐 Starting token verification with URL:', `${this.FUNCTIONS_BASE_URL}/verify`);
     console.log('🔐 Token exists, length:', token.length);
 
     try {
-      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/authVerify`, {
+      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/verify`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

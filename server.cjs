@@ -774,6 +774,87 @@ app.post('/authVerify', (req, res) => {
   }
 });
 
+// Compat: endpoint per sviluppo allineato a Hosting rewrite
+app.post('/api/auth/verify', (req, res) => {
+  // Imposta header CORS
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Content-Type', 'application/json');
+  
+  try {
+    // Estrai il token dal cookie, dal body o dall'header Authorization
+    let token = req.cookies?.session || req.body?.token;
+    
+    // Se non trovato, controlla l'header Authorization
+    if (!token && req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+
+    if (!token) {
+      console.log('❌ No token provided for verification');
+      return res.status(401).json({ 
+        valid: false,
+        error: "No token provided" 
+      });
+    }
+
+    // Verifica il JWT
+    console.log('🔐 Verifying JWT token');
+    
+    if (!process.env.JWT_SECRET) {
+      console.log('❌ Token verification error: JWT_SECRET is not defined');
+      return res.status(500).json({ 
+        valid: false,
+        error: "Server configuration error" 
+      });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (!decoded || !decoded.email) {
+        return res.status(401).json({ valid: false, error: 'Invalid token' });
+      }
+
+      return res.status(200).json({
+        valid: true,
+        user: {
+          id: decoded.email,
+          email: decoded.email,
+          name: decoded.name,
+          picture: decoded.picture,
+          role: decoded.role || 'user'
+        },
+        message: 'Token verified successfully'
+      });
+    } catch (e) {
+      return res.status(401).json({ valid: false, error: 'Invalid or expired token' });
+    }
+  } catch (error) {
+    console.error('❌ Verify endpoint error:', error);
+    return res.status(500).json({ valid: false, error: 'Internal server error' });
+  }
+});
+
+// Preflight per verify
+app.options('/api/auth/verify', (req, res) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', req.headers['access-control-request-headers'] || 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
+});
+
 // Catch all per altre API routes
 app.all('/api/*', (req, res) => {
   res.status(404).json({ error: 'API endpoint not found' });
