@@ -31,10 +31,7 @@ export default defineConfig({
     hmr: true,
     port: 5173,
     strictPort: true,
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
-      'Cross-Origin-Embedder-Policy': 'unsafe-none'
-    },
+    // Rimuovo header COOP/COEP in sviluppo per evitare warning su postMessage
     proxy: {
       '/api/auth': {
         target: 'http://localhost:3001',
