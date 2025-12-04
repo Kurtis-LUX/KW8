@@ -4359,8 +4359,10 @@ useEffect(() => {
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
-              <p>Nessun esercizio aggiunto ancora.</p>
-              <p className="text-sm mt-2">Clicca su "Aggiungi Esercizio" per iniziare.</p>
+              <p>{readOnly ? 'Nessun esercizio disponibile.' : 'Nessun esercizio aggiunto ancora.'}</p>
+              {!readOnly && (
+                <p className="text-sm mt-2">Clicca su "Aggiungi Esercizio" per iniziare.</p>
+              )}
             </div>
           )}
         </div>
