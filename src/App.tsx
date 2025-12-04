@@ -23,6 +23,7 @@ import RankingsPage from './pages/RankingsPage';
 
 import MembershipCardsPage from './pages/MembershipCardsPage';
 import WorkoutCardPage from './pages/WorkoutCardPage';
+import WorkoutDetailPage from './components/WorkoutDetailPage';
 import CoachAuthPage from './components/auth/CoachAuthPage';
 import PrivacyPage from './pages/PrivacyPage';
 import CookiePolicyPage from './pages/CookiePolicyPage';
@@ -64,6 +65,7 @@ function App() {
   const [initError, setInitError] = useState<string | null>(null);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
   const [workoutsDefaultTab, setWorkoutsDefaultTab] = useState<string>('current');
+  const [workoutDetailActiveVariantId, setWorkoutDetailActiveVariantId] = useState<string | undefined>(undefined);
   // Stato per la barra titolo compatta della Dashboard Coach
   const [dashboardShowCompactTitle, setDashboardShowCompactTitle] = useState(false);
   const [dashboardHeaderHeight, setDashboardHeaderHeight] = useState<number>(0);
@@ -81,6 +83,12 @@ function App() {
       if (clean === '/workout-card' && linkId) {
         setWorkoutLinkId(linkId);
         setCurrentPage('workout-card');
+        return;
+      }
+      if (clean === '/workout-detail') {
+        const idParam = urlParams.get('id');
+        if (idParam) setSelectedPlan(idParam);
+        setCurrentPage('workout-detail');
         return;
       }
 
@@ -251,6 +259,23 @@ function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  // Prepara variante attiva quando si apre la pagina dettaglio scheda
+  useEffect(() => {
+    const run = async () => {
+      if (currentPage === 'workout-detail' && selectedPlan) {
+        try {
+          const plan = await DB.getWorkoutPlanById(selectedPlan);
+          setWorkoutDetailActiveVariantId(plan?.activeVariantId || undefined);
+        } catch {
+          setWorkoutDetailActiveVariantId(undefined);
+        }
+      } else {
+        setWorkoutDetailActiveVariantId(undefined);
+      }
+    };
+    run();
+  }, [currentPage, selectedPlan]);
+
   // Gestione titolo compatto sticky per la Dashboard Coach
   useEffect(() => {
     if (currentPage !== 'coach-dashboard') {
@@ -316,6 +341,10 @@ function App() {
       setWorkoutLinkId(linkId);
       setCurrentPage('workout-card');
       window.history.pushState({}, '', `/workout-card?workout=${linkId}`);
+    } else if (page === 'workout-detail' && plan) {
+      setSelectedPlan(plan);
+      setCurrentPage('workout-detail');
+      window.history.pushState({}, '', `/workout-detail?id=${plan}`);
     } else if (page === 'coach-home') {
       // Alias: Home Coach indirizza alla Home principale
       setCurrentPage('home');
@@ -679,6 +708,38 @@ function App() {
             </button>
           </div>
         }
+      </LanguageProvider>
+    );
+  }
+
+  if (currentPage === 'workout-detail') {
+    return (
+      <LanguageProvider>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
+          <div className="min-h-screen bg-gray-100">
+            <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} currentPage={currentPage} />
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+              {selectedPlan ? (
+                <WorkoutDetailPage
+                  workoutId={selectedPlan}
+                  initialActiveVariantId={workoutDetailActiveVariantId}
+                  onClose={() => handleNavigation('workouts')}
+                  readOnly={currentUser?.role === 'atleta'}
+                />
+              ) : (
+                <div className="bg-white rounded-xl ring-1 ring-black/10 p-6">
+                  <h2 className="text-xl font-semibold text-navy-900 mb-2">Scheda non trovata</h2>
+                  <button
+                    className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
+                    onClick={() => handleNavigation('workouts')}
+                  >
+                    Torna alle schede
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </ProtectedRoute>
       </LanguageProvider>
     );
   }

@@ -310,11 +310,19 @@ const DB = {
   saveWorkoutPlan: async (plan: WorkoutPlan): Promise<void> => {
     if (useFirestore) {
       try {
-        const existingPlan = await firestoreService.getWorkoutPlanById(plan.id);
+        const now = new Date().toISOString();
+        const normalizedPlan: WorkoutPlan = {
+          ...plan,
+          updatedAt: now,
+          associatedAthletes: Array.isArray(plan.associatedAthletes)
+            ? Array.from(new Set(plan.associatedAthletes.map(a => String(a).trim()).filter(Boolean)))
+            : []
+        } as WorkoutPlan;
+        const existingPlan = await firestoreService.getWorkoutPlanById(normalizedPlan.id);
         if (existingPlan) {
-          await firestoreService.updateWorkoutPlan(plan.id, plan);
+          await firestoreService.updateWorkoutPlan(normalizedPlan.id, normalizedPlan);
         } else {
-          const { id, ...planData } = plan;
+          const { id, ...planData } = normalizedPlan;
           await firestoreService.createWorkoutPlan(planData);
         }
         console.log('✅ Workout plan saved successfully to Firestore:', plan.name);
@@ -327,17 +335,25 @@ const DB = {
     
     // Fallback localStorage
     try {
+      const now = new Date().toISOString();
+      const normalizedPlan: WorkoutPlan = {
+        ...plan,
+        updatedAt: now,
+        associatedAthletes: Array.isArray(plan.associatedAthletes)
+          ? Array.from(new Set(plan.associatedAthletes.map(a => String(a).trim()).filter(Boolean)))
+          : []
+      } as WorkoutPlan;
       const plans = await DB.getWorkoutPlans();
-      const existingPlanIndex = plans.findIndex(p => p.id === plan.id);
+      const existingPlanIndex = plans.findIndex(p => p.id === normalizedPlan.id);
       
       if (existingPlanIndex >= 0) {
-        plans[existingPlanIndex] = plan;
+        plans[existingPlanIndex] = normalizedPlan;
       } else {
-        plans.push(plan);
+        plans.push(normalizedPlan);
       }
       
       DB.setItem('kw8_workoutPlans', JSON.stringify(plans));
-      console.log('✅ Workout plan saved successfully:', plan.name);
+      console.log('✅ Workout plan saved successfully:', normalizedPlan.name);
     } catch (e) {
       console.error('❌ Error saving workout plan:', e);
     }
@@ -534,16 +550,29 @@ const DB = {
   saveUser: (user: User): void => {
     try {
       const users = DB.getUsers();
-      const existingIndex = users.findIndex(u => u.id === user.id);
+      const normalizedUser: User = {
+        ...user,
+        name: (user.name || '').trim(),
+        role: ((): User['role'] => {
+          const r = String(user.role || '').toLowerCase();
+          if (r === 'atleta' || r === 'athlete') return 'athlete';
+          if (r === 'coach') return 'coach';
+          return 'admin';
+        })(),
+        workoutPlans: Array.isArray(user.workoutPlans)
+          ? Array.from(new Set(user.workoutPlans.map(id => String(id).trim()).filter(Boolean)))
+          : []
+      } as User;
+      const existingIndex = users.findIndex(u => u.id === normalizedUser.id);
       
       if (existingIndex >= 0) {
-        users[existingIndex] = user;
+        users[existingIndex] = normalizedUser;
       } else {
-        users.push(user);
+        users.push(normalizedUser);
       }
       
       DB.setItem('kw8_users', JSON.stringify(users));
-      console.log('✅ User saved successfully:', user.name);
+      console.log('✅ User saved successfully:', normalizedUser.name);
     } catch (e) {
       console.error('❌ Error saving user:', e);
     }

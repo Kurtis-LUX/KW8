@@ -3,10 +3,9 @@ import Header from '../components/Header';
 import DB, { User, WorkoutPlan } from '../utils/database';
 // Rileva modalità standalone PWA su mobile (senza dipendenze esterne)
 import ProgramCard, { ProgramItem } from '../components/ProgramCard';
-import WorkoutDetailPage from '../components/WorkoutDetailPage';
 
 interface WorkoutsPageProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string, plan?: string) => void;
   currentUser: User | null;
 }
 
@@ -29,8 +28,6 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
   const isStandaloneMobile = detectStandaloneMobile();
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const [assignedPrograms, setAssignedPrograms] = useState<ProgramItem[]>([]);
-  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
-  const [initialActiveVariantId, setInitialActiveVariantId] = useState<string | undefined>(undefined);
 
   // Aggiorna altezza header per padding top coerente con Gestione schede
   useEffect(() => {
@@ -59,13 +56,23 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
       const assignedByPlanAssociation = new Set(
         allPlans
           .filter(p => Array.isArray((p as any).associatedAthletes))
-          .filter(p => ((p as any).associatedAthletes || []).some((val: string) => val === currentUser.id || val === currentUser.name))
+          .filter(p => ((p as any).associatedAthletes || []).some((val: string) => val === currentUser?.id || val === currentUser?.email))
           .map(p => p.id)
       );
       const allAssignedIds = new Set<string>([...assignedByUserField, ...assignedByPlanAssociation]);
 
       const userPlans = allPlans.filter(p => allAssignedIds.has(p.id));
-      const mapped: ProgramItem[] = userPlans.map(mapPlanToProgramItem);
+      // Recupera dettagli cartella per icona/colore corretti
+      const folderIds = Array.from(new Set(userPlans.map(p => p.folderId).filter(Boolean))) as string[];
+      const folderMap = new Map<string, any>();
+      if (folderIds.length > 0) {
+        const folders = await Promise.all(
+          folderIds.map(async (id) => ({ id, folder: await DB.getWorkoutFolderById(id) }))
+        );
+        folders.forEach(({ id, folder }) => { if (folder) folderMap.set(id, folder); });
+      }
+
+      const mapped: ProgramItem[] = userPlans.map(plan => mapPlanToProgramItem(plan, folderMap));
       setAssignedPrograms(mapped);
     } catch (e) {
       console.error('Errore caricando le schede assegnate:', e);
@@ -88,7 +95,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
   }, [refreshAssigned]);
 
   // Mappa WorkoutPlan -> ProgramItem (coerenza visiva con Gestione schede)
-  const mapPlanToProgramItem = (plan: WorkoutPlan): ProgramItem => ({
+  const mapPlanToProgramItem = (plan: WorkoutPlan, folderMap: Map<string, any>): ProgramItem => ({
     id: plan.id,
     title: plan.name,
     type: 'program',
@@ -105,26 +112,15 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
     exercises: plan.exercises,
     userId: undefined,
     category: plan.category,
+    // UI extra per anteprima lato atleta
+    durationWeeks: plan.durationWeeks || (plan.duration ? Math.max(1, Math.ceil(plan.duration / 7)) : undefined),
+    trainingDays: plan.days ? Object.keys(plan.days).filter(k => (plan.days![k] || []).length > 0).length : undefined,
+    color: plan.color || (plan.folderId ? folderMap.get(plan.folderId)?.color : undefined),
+    icon: plan.folderId ? folderMap.get(plan.folderId)?.icon : undefined,
   });
 
   const handleOpenWorkout = (program: ProgramItem) => {
-    setSelectedWorkoutId(program.id);
-    // Trova la variante attiva iniziale dal piano
-    // Nota: recuperiamo i piani per trovare la variante attiva associata
-    (async () => {
-      try {
-        const plans = await DB.getWorkoutPlans();
-        const plan = plans.find(p => p.id === program.id);
-        setInitialActiveVariantId(plan?.activeVariantId || undefined);
-      } catch {}
-    })();
-    try { window.dispatchEvent(new Event('kw8:workout-detail:open')); } catch {}
-  };
-
-  const handleCloseWorkout = () => {
-    setSelectedWorkoutId(null);
-    setInitialActiveVariantId(undefined);
-    try { window.dispatchEvent(new Event('kw8:workout-detail:close')); } catch {}
+    onNavigate('workout-detail', program.id);
   };
 
   return (
@@ -166,13 +162,7 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
         </div>
       </div>
 
-      {selectedWorkoutId && (
-        <WorkoutDetailPage
-          workoutId={selectedWorkoutId}
-          initialActiveVariantId={initialActiveVariantId}
-          onClose={handleCloseWorkout}
-        />
-      )}
+      {/* Apertura dettagliata spostata su pagina dedicata */}
     </div>
   );
 };

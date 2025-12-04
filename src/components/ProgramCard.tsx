@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { 
-  Book, 
+  Book,
+  Folder as FolderIcon,
+  FolderOpen,
+  Home,
+  Briefcase,
+  Heart,
+  Zap,
+  Shield,
+  Award,
+  Users,
+  Activity,
   Edit, 
   Trash2, 
   GripVertical, 
@@ -11,7 +21,8 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Play
+  Play,
+  Calendar
 } from 'lucide-react';
 import { createDragProps } from '../hooks/useDragAndDrop';
 
@@ -34,6 +45,11 @@ export interface ProgramItem {
   category?: string;
   targetMuscles?: string[];
   exercises?: any[];
+  // UI arricchimento lato atleta
+  color?: string;
+  icon?: string;
+  durationWeeks?: number;
+  trainingDays?: number;
 }
 
 interface ProgramCardProps {
@@ -76,6 +92,26 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
   onOpen
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  
+  // Mappa delle icone disponibili (coerente con gestione cartelle)
+  const iconMap: { [key: string]: React.ComponentType<any> } = {
+    Folder: FolderIcon,
+    FolderOpen: FolderOpen,
+    Home: Home,
+    Briefcase: Briefcase,
+    Heart: Heart,
+    Zap: Zap,
+    Shield: Shield,
+    Award: Award,
+    Book: Book,
+    Users: Users,
+    Activity: Activity,
+    Target: Target,
+    Star: Star
+  };
+  const IconComp = program.icon && iconMap[program.icon] ? iconMap[program.icon] : Book;
+  const accentColor = program.color || '#3B82F6';
+  const accentBg = `${accentColor}20`;
   
   const dragProps = role === 'coach' ? createDragProps(program, onDragStart, onDragEnd) : {};
   
@@ -151,8 +187,8 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
             <GripVertical size={16} className="text-gray-400 group-hover:text-gray-600" />
           )}
           
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Book size={20} className="text-blue-600" />
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: accentBg }}>
+            <IconComp size={20} style={{ color: accentColor }} />
           </div>
           
           <div className="flex-1">
@@ -165,10 +201,16 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
                     <span>{program.coach}</span>
                   </div>
                 )}
-                {program.duration && (
+                {program.durationWeeks && (
                   <div className="flex items-center space-x-1">
                     <Clock size={14} />
-                    <span>{program.duration} min</span>
+                    <span>{program.durationWeeks} {program.durationWeeks === 1 ? 'settimana' : 'settimane'}</span>
+                  </div>
+                )}
+                {typeof program.trainingDays === 'number' && (
+                  <div className="flex items-center space-x-1">
+                    <Calendar size={14} />
+                    <span>{program.trainingDays} {program.trainingDays === 1 ? 'giorno' : 'giorni'}</span>
                   </div>
                 )}
                 {program.difficulty && (
@@ -259,8 +301,8 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
       {/* Header della card */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-            <Book size={24} className="text-blue-600" />
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: accentBg }}>
+            <IconComp size={24} style={{ color: accentColor }} />
           </div>
           
           <div className="flex-1">
@@ -282,10 +324,16 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
             </div>
           )}
           
-          {program.duration && (
+          {program.durationWeeks && (
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <Clock size={14} />
-              <span>Durata: {program.duration} minuti</span>
+              <span>Durata: {program.durationWeeks} {program.durationWeeks === 1 ? 'settimana' : 'settimane'}</span>
+            </div>
+          )}
+          {typeof program.trainingDays === 'number' && (
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <Calendar size={14} />
+              <span>Giorni di allenamento: {program.trainingDays}</span>
             </div>
           )}
           
