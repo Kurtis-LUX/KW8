@@ -832,12 +832,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 </div>
               )}
 
-              {/* Barra varianti: spostata sotto il titolo "Gestione schede" quando la scheda è aperta */}
-              {(currentPage === 'workout-manager' || currentPage === 'workouts') && isWorkoutDetailOpen && (
-                <div className="pt-2">
-                  <div id="workout-variant-tabs" className="w-full"></div>
-                </div>
-              )}
+              {/* Barra varianti rimossa: ora renderizzata inline in WorkoutDetailPage */}
             </div>
           </div>
         )}
