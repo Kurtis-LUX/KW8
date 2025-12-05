@@ -3853,6 +3853,75 @@ useEffect(() => {
           </div>
         </Modal>
         
+        {/* Barra Settimane: sopra le giornate */}
+        <div className="mb-6">
+          <div className="flex justify-center items-center gap-2">
+            <div className={`inline-flex items-center gap-2 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-2 overflow-x-auto no-scrollbar select-none max-w-[85vw]`}>
+              {(() => {
+                const weekKeysToRender = weeks.slice().sort((a, b) => {
+                  const na = parseInt(a.replace(/^W/, ''), 10);
+                  const nb = parseInt(b.replace(/^W/, ''), 10);
+                  return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                });
+                return weekKeysToRender.map((wk) => (
+                  <div key={wk} className="group relative flex-shrink-0 overflow-visible">
+                    <button
+                      onClick={() => handleSwitchWeek(wk)}
+                      onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenWeekKeyMenu(wk); setWeekActionsPosition({ x: e.clientX, y: e.clientY }); }}
+                      className={`${activeWeekKey === wk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
+                      title={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
+                      aria-label={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
+                    >
+                      {`Settimana ${parseInt(wk.replace('W',''), 10)}`}
+                    </button>
+                    {canEdit && openWeekKeyMenu === wk && weekActionsPosition && (
+                      <Portal>
+                        <div>
+                          {/* Overlay per chiudere cliccando fuori */}
+                          <div className="fixed inset-0 z-[999]" onClick={() => { setOpenWeekKeyMenu(null); setWeekActionsPosition(null); }} />
+                          {/* Menu contestuale settimane */}
+                          <div
+                            className="fixed z-[1000] bg-white rounded-xl shadow-lg ring-1 ring-black/10 p-2 min-w-[200px]"
+                            style={{ left: weekActionsPosition.x + 8, top: weekActionsPosition.y + 8 }}
+                          >
+                            <button
+                              onClick={() => { setOpenWeekKeyMenu(null); handleSwitchWeek(wk); }}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            >
+                              <Eye size={16} className="text-gray-600" />
+                              <span>Apri</span>
+                            </button>
+                            {/* Separatore stile Apple */}
+                            <div className="my-1 mx-2 h-px bg-gray-200" />
+                            <button
+                              onClick={() => { setOpenWeekKeyMenu(null); handleRemoveWeek(wk); }}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 flex items-center gap-2"
+                            >
+                              <Trash2 size={16} className="text-red-600" />
+                              <span>Elimina</span>
+                            </button>
+                          </div>
+                        </div>
+                      </Portal>
+                    )}
+                  </div>
+                ));
+              })()}
+            </div>
+            {canEdit && (
+              <button
+                onClick={handleAddWeek}
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Aggiungi settimana"
+                aria-label="Aggiungi settimana"
+                disabled={weeks.length >= 12}
+              >
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Sezione Giorni: sotto la toolbar varianti, sopra "Esercizi" */}
         <div className="mb-6">
           <div className="flex justify-center items-center gap-2">
@@ -3982,75 +4051,7 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Barra Settimane: sotto le giornate, prima degli esercizi */}
-        <div className="mb-6">
-          <div className="flex justify-center items-center gap-2">
-            <div className={`inline-flex items-center gap-2 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-2 overflow-x-auto no-scrollbar select-none max-w-[85vw]`}>
-              {(() => {
-                const weekKeysToRender = weeks.slice().sort((a, b) => {
-                  const na = parseInt(a.replace(/^W/, ''), 10);
-                  const nb = parseInt(b.replace(/^W/, ''), 10);
-                  return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
-                });
-                return weekKeysToRender.map((wk) => (
-                  <div key={wk} className="group relative flex-shrink-0 overflow-visible">
-                    <button
-                      onClick={() => handleSwitchWeek(wk)}
-                      onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenWeekKeyMenu(wk); setWeekActionsPosition({ x: e.clientX, y: e.clientY }); }}
-                      className={`${activeWeekKey === wk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
-                      title={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
-                      aria-label={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
-                    >
-                      {`Settimana ${parseInt(wk.replace('W',''), 10)}`}
-                    </button>
-                    {canEdit && openWeekKeyMenu === wk && weekActionsPosition && (
-                      <Portal>
-                        <div>
-                          {/* Overlay per chiudere cliccando fuori */}
-                          <div className="fixed inset-0 z-[999]" onClick={() => { setOpenWeekKeyMenu(null); setWeekActionsPosition(null); }} />
-                          {/* Menu contestuale settimane */}
-                          <div
-                            className="fixed z-[1000] bg-white rounded-xl shadow-lg ring-1 ring-black/10 p-2 min-w-[200px]"
-                            style={{ left: weekActionsPosition.x + 8, top: weekActionsPosition.y + 8 }}
-                          >
-                            <button
-                              onClick={() => { setOpenWeekKeyMenu(null); handleSwitchWeek(wk); }}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
-                            >
-                              <Eye size={16} className="text-gray-600" />
-                              <span>Apri</span>
-                            </button>
-                            {/* Separatore stile Apple */}
-                            <div className="my-1 mx-2 h-px bg-gray-200" />
-                            <button
-                              onClick={() => { setOpenWeekKeyMenu(null); handleRemoveWeek(wk); }}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 flex items-center gap-2"
-                            >
-                              <Trash2 size={16} className="text-red-600" />
-                              <span>Elimina</span>
-                            </button>
-                          </div>
-                        </div>
-                      </Portal>
-                    )}
-                  </div>
-                ));
-              })()}
-            </div>
-            {canEdit && (
-              <button
-                onClick={handleAddWeek}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Aggiungi settimana"
-                aria-label="Aggiungi settimana"
-                disabled={weeks.length >= 12}
-              >
-                <Plus size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-
+        
         {/* Exercises List */}
         <div className="mb-8">
           <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight">Esercizi</h3>
