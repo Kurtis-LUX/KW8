@@ -40,10 +40,9 @@ interface WorkoutDetailPageProps {
   onClose: () => void;
   folderPath?: string;
   initialActiveVariantId?: string;
-  readOnly?: boolean;
 }
 
-const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClose, folderPath, initialActiveVariantId, readOnly = false }) => {
+const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClose, folderPath, initialActiveVariantId }) => {
   const [workoutTitle, setWorkoutTitle] = useState('Nuova scheda');
   const [workoutDescription, setWorkoutDescription] = useState('');
   const [originalWorkoutDescription, setOriginalWorkoutDescription] = useState('');
@@ -56,16 +55,6 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const titleInputRef = useRef<HTMLInputElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const isStandaloneMobile = useIsStandaloneMobile();
-  
-  // Disabilita stati di editing in modalità sola lettura
-  useEffect(() => {
-    if (readOnly) {
-      setIsEditingTitle(false);
-      setIsEditingDescription(false);
-      setShowExerciseForm(false);
-      setIsSupersetMode(false);
-    }
-  }, [readOnly]);
   
   // Hook Firestore per gestire i piani di allenamento e gli utenti
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
@@ -2553,7 +2542,7 @@ useEffect(() => {
             </button>
           </div>
           <div className="min-w-0 flex justify-center flex-col items-center">
-            {(!readOnly && isEditingTitle) ? (
+            {isEditingTitle ? (
               <input
                 ref={titleInputRef}
                 type="text"
@@ -2573,8 +2562,8 @@ useEffect(() => {
             ) : (
               <h1
                 className={`text-2xl font-bold cursor-pointer transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-navy-900 hover:text-navy-800' : 'text-red-700 hover:text-red-800'}`}
-                onClick={() => { if (readOnly) return; setIsEditingTitle(true); setTimeout(() => { if (titleInputRef.current) { const input = titleInputRef.current; try { const len = input.value.length; input.setSelectionRange(len, len); } catch {} input.focus(); } }, 0); }}
-                title={readOnly ? undefined : "Clicca per modificare il titolo"}
+                onClick={() => { setIsEditingTitle(true); setTimeout(() => { if (titleInputRef.current) { const input = titleInputRef.current; try { const len = input.value.length; input.setSelectionRange(len, len); } catch {} input.focus(); } }, 0); }}
+                title="Clicca per modificare il titolo"
               >
                 {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
               </h1>
@@ -2670,7 +2659,7 @@ useEffect(() => {
                             <span className="absolute bottom-[2px] left-1/2 -translate-x-1/2 text-[11px] leading-none font-bold text-red-600 pointer-events-none">{num}</span>
                           );
                         })()}
-                        {openVariantMenuId === variant.id && variantMenuPosition && !readOnly && (
+                        {openVariantMenuId === variant.id && variantMenuPosition && (
                           <Portal>
                             <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeVariantMenu} />
                             <div
@@ -2709,9 +2698,9 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Editable Description (disabilitata in sola lettura) */}
+        {/* Editable Description */}
         <div className="flex justify-center items-center mb-6">
-          {(!readOnly && isEditingDescription) ? (
+          {isEditingDescription ? (
             <textarea
               ref={descriptionInputRef}
               value={workoutDescription}
@@ -2724,7 +2713,7 @@ useEffect(() => {
               rows={2}
             />
           ) : (
-            <div className="flex items-center gap-2 justify-center group" onClick={() => { if (readOnly) return; if (isEditingTitle) { handleSaveTitle(); } setIsEditingDescription(true); setTimeout(() => { if (descriptionInputRef.current) { const ta = descriptionInputRef.current; try { const len = ta.value.length; ta.setSelectionRange(len, len); } catch {} ta.focus(); } }, 0); }} title={readOnly ? undefined : "Clicca per modificare la descrizione"}>
+            <div className="flex items-center gap-2 justify-center group" onClick={() => { if (isEditingTitle) { handleSaveTitle(); } setIsEditingDescription(true); setTimeout(() => { if (descriptionInputRef.current) { const ta = descriptionInputRef.current; try { const len = ta.value.length; ta.setSelectionRange(len, len); } catch {} ta.focus(); } }, 0); }} title="Clicca per modificare la descrizione">
               {workoutDescription ? (
                 <p className="text-gray-600 max-w-2xl text-center break-words transition-colors group-hover:text-blue-600">{workoutDescription}</p>
               ) : (
@@ -2744,13 +2733,13 @@ useEffect(() => {
                 <div key={idx} className="relative inline-flex items-center">
                   <button
                     type="button"
-                    onClick={() => { if (readOnly) return; setSelectedTagUnderDesc(tag); }}
+                    onClick={() => setSelectedTagUnderDesc(tag)}
                     className="px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-700 text-xs shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition"
-                    title={readOnly ? undefined : "Seleziona tag"}
+                    title="Seleziona tag"
                   >
                     {tag}
                   </button>
-                  {!readOnly && selectedTagUnderDesc === tag && (
+                  {selectedTagUnderDesc === tag && (
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); setSelectedTagUnderDesc(null); }}
@@ -2767,8 +2756,7 @@ useEffect(() => {
           </div>
         )}
         
-        {/* Toolbar - Moved below title (nascosta per atleta) */}
-        {!readOnly && (
+        {/* Toolbar - Moved below title */}
         <div className="flex justify-center mb-8">
           <div ref={toolbarRef} className="relative w-full flex justify-center px-0 -mx-6 sm:mx-0">
             <div className="flex flex-nowrap justify-center gap-2 p-2.5 bg-white/90 rounded-xl shadow-sm border border-gray-200 backdrop-blur-sm w-full">
@@ -2982,7 +2970,6 @@ useEffect(() => {
             </div>
           </div>
         </div>
-        )}
         
         {/* Duration Modal */}
         <Modal
@@ -3689,7 +3676,7 @@ useEffect(() => {
                       >
                         {label}
                       </button>
-                      {openDayKeyMenu === dk && dayMenuPosition && !readOnly && (
+                      {openDayKeyMenu === dk && dayMenuPosition && (
                         <Portal>
                           <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeDayMenu} />
                           <div
@@ -3727,21 +3714,19 @@ useEffect(() => {
                 });
               })()}
             </div>
-            {!readOnly && (
-              <button
-                onClick={handleAddDay}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Aggiungi giorno"
-                aria-label="Aggiungi giorno"
-                disabled={(() => {
-                  const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
-                  const count = keys.length > 0 ? keys.length : 1; // fallback G1
-                  return count >= 10;
-                })()}
-              >
-                <Plus size={16} />
-              </button>
-            )}
+            <button
+              onClick={handleAddDay}
+              className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Aggiungi giorno"
+              aria-label="Aggiungi giorno"
+              disabled={(() => {
+                const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                const count = keys.length > 0 ? keys.length : 1; // fallback G1
+                return count >= 10;
+              })()}
+            >
+              <Plus size={16} />
+            </button>
           </div>
         </div>
 
@@ -3777,11 +3762,11 @@ useEffect(() => {
                         key={`superset-${leader.id}`}
                         className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-purple-300 shadow-sm hover:shadow-md transition hover:translate-y-px`}
                         data-leader-index={i}
-                        draggable={!readOnly}
-                        onDragStart={!readOnly ? () => handleDragStartIndex(i) : undefined}
-                        onDragOver={!readOnly ? (e) => handleDragOverIndex(e, i) : undefined}
-                        onDrop={!readOnly ? (e) => { e.stopPropagation(); handleDropOnSupersetContainer(String(leader.id), i); } : undefined}
-                        onDragEnd={!readOnly ? handleDragEndIndex : undefined}
+                        draggable
+                        onDragStart={() => handleDragStartIndex(i)}
+                        onDragOver={(e) => handleDragOverIndex(e, i)}
+                        onDrop={(e) => { e.stopPropagation(); handleDropOnSupersetContainer(String(leader.id), i); }}
+                        onDragEnd={handleDragEndIndex}
                       >
                         <div className="flex justify-center items-center mb-2">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 font-bold">Superset</span>
@@ -3789,12 +3774,12 @@ useEffect(() => {
                         <div
                             className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader ? (supersetSelection.includes(leader.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === leader.id || openCloneActionsId === leader.id ? 'z-50' : ''}`}
                           onClick={() => { const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectable) handleToggleSupersetSelection(leader.id); }}
-                          onDoubleClick={!readOnly ? () => handleEditExercise(leader) : undefined}
-                          draggable={!readOnly}
-                          onDragStart={!readOnly ? () => handleDragStartIndex(i) : undefined}
-                          onDragOver={!readOnly ? (e) => handleDragOverIndex(e, i) : undefined}
-                          onDrop={!readOnly ? (e) => { e.stopPropagation(); handleDropOnCard(i); } : undefined}
-                          onDragEnd={!readOnly ? handleDragEndIndex : undefined}
+                          onDoubleClick={() => handleEditExercise(leader)}
+                          draggable
+                          onDragStart={() => handleDragStartIndex(i)}
+                          onDragOver={(e) => handleDragOverIndex(e, i)}
+                          onDrop={(e) => { e.stopPropagation(); handleDropOnCard(i); }}
+                          onDragEnd={handleDragEndIndex}
                         >
                           <div className="flex justify-center items-center gap-2 mb-1">
                             <span className="font-semibold text-lg text-purple-700">{leader.name}</span>
@@ -3846,7 +3831,6 @@ useEffect(() => {
                               </p>
                             )}
                           </div>
-                          {!readOnly && (
                           <div className="mt-4 flex justify-center items-center gap-2">
                             <button
                               onClick={() => handleEditExercise(leader)}
@@ -3967,7 +3951,6 @@ useEffect(() => {
                               <Trash2 size={14} />
                             </button>
                           </div>
-                          )}
                         </div>
 
                         {followers.map((follower, fi) => (
@@ -3976,7 +3959,7 @@ useEffect(() => {
                             <div
                                 className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === (i + 1 + fi) ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === (i + 1 + fi) ? 'opacity-80' : ''} ${selectedSwapIndex === (i + 1 + fi) ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader ? (supersetSelection.includes(follower.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === follower.id || openCloneActionsId === follower.id ? 'z-50' : ''}`}
                               onClick={() => { const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; if (selectable) handleToggleSupersetSelection(follower.id); }}
-                              onDoubleClick={!readOnly ? () => handleEditExercise(follower) : undefined}
+                              onDoubleClick={() => handleEditExercise(follower)}
                             >
                               <div className="flex justify-center items-center gap-2 mb-1">
                                 <span className="font-semibold text-lg text-purple-700">{follower.name}</span>
@@ -4027,7 +4010,6 @@ useEffect(() => {
                                   </p>
                                 )}
                               </div>
-                              {!readOnly && (
                               <div className="mt-4 flex justify-center items-center gap-2">
                                 <button
                                   onClick={() => handleEditExercise(follower)}
@@ -4153,7 +4135,6 @@ useEffect(() => {
                                   <Trash2 size={14} />
                                 </button>
                               </div>
-                              )}
                             </div>
                           </div>
                         ))}
@@ -4170,12 +4151,12 @@ useEffect(() => {
                         key={exercise.id || `exercise-${i}`}
                         className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === exercise.id || openCloneActionsId === exercise.id ? 'z-50' : ''}`}
                         onClick={() => { const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectable) handleToggleSupersetSelection(exercise.id); }}
-                        onDoubleClick={!readOnly ? () => handleEditExercise(exercise) : undefined}
-                        draggable={!readOnly}
-                        onDragStart={!readOnly ? () => handleDragStartIndex(i) : undefined}
-                        onDragOver={!readOnly ? (e) => handleDragOverIndex(e, i) : undefined}
-                        onDrop={!readOnly ? () => handleDropOnCard(i) : undefined}
-                        onDragEnd={!readOnly ? handleDragEndIndex : undefined}
+                        onDoubleClick={() => handleEditExercise(exercise)}
+                        draggable
+                        onDragStart={() => handleDragStartIndex(i)}
+                        onDragOver={(e) => handleDragOverIndex(e, i)}
+                        onDrop={() => handleDropOnCard(i)}
+                        onDragEnd={handleDragEndIndex}
                       >
                         <div className="flex justify-center items-center gap-2 mb-1">
                           <span className={`font-semibold text-lg ${isSupersetMode && supersetSelection.includes(exercise.id) ? 'text-purple-700' : ''}`}>{exercise.name}</span>
@@ -4226,7 +4207,6 @@ useEffect(() => {
                             </p>
                           )}
                         </div>
-                        {!readOnly && (
                         <div className="mt-4 flex justify-center items-center gap-2">
                           <button
                             onClick={() => handleEditExercise(exercise)}
@@ -4348,7 +4328,6 @@ useEffect(() => {
                             <Trash2 size={14} />
                           </button>
                         </div>
-                        )}
                       </div>
                     );
                     continue;
@@ -4359,10 +4338,8 @@ useEffect(() => {
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
-              <p>{readOnly ? 'Nessun esercizio disponibile.' : 'Nessun esercizio aggiunto ancora.'}</p>
-              {!readOnly && (
-                <p className="text-sm mt-2">Clicca su "Aggiungi Esercizio" per iniziare.</p>
-              )}
+              <p>Nessun esercizio aggiunto ancora.</p>
+              <p className="text-sm mt-2">Clicca su "Aggiungi Esercizio" per iniziare.</p>
             </div>
           )}
         </div>

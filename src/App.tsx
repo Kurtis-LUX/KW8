@@ -724,7 +724,6 @@ function App() {
                   workoutId={selectedPlan}
                   initialActiveVariantId={workoutDetailActiveVariantId}
                   onClose={() => handleNavigation('workouts')}
-                  readOnly={currentUser?.role === 'atleta'}
                 />
               ) : (
                 <div className="bg-white rounded-xl ring-1 ring-black/10 p-6">
