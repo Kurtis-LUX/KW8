@@ -5,24 +5,22 @@ interface SectionSeparatorProps {
 }
 
 const SectionSeparator: React.FC<SectionSeparatorProps> = ({ variant = 'default' }) => {
-  const getVariantClasses = () => {
+  const bg = (() => {
     switch (variant) {
       case 'red':
-        return 'border-red-600';
+        return 'bg-red-200';
       case 'navy':
-        return 'border-navy-900';
+        return 'bg-gray-300';
       case 'black':
-        return 'border-black';
+        return 'bg-gray-300';
       default:
-        return 'border-gray-300';
+        return 'bg-gray-200';
     }
-  };
+  })();
 
   return (
-    <div className="py-6">
-      <div className="container mx-auto px-4">
-        <div className={`w-full h-px ${getVariantClasses()} border-t`}></div>
-      </div>
+    <div className="my-2">
+      <div className={`mx-2 h-px ${bg}`} />
     </div>
   );
 };

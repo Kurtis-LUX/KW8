@@ -8,6 +8,7 @@ import Modal from './Modal';
 import { useDropdownPosition } from '../hooks/useDropdownPosition';
 import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 import { authService } from '../services/authService';
+import SectionSeparator from './SectionSeparator';
 
 interface Exercise {
   id: string;
@@ -49,6 +50,8 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [originalWorkoutDescription, setOriginalWorkoutDescription] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  // Stato di caricamento per evitare auto-save durante l'inizializzazione
+  const [isLoadingWorkout, setIsLoadingWorkout] = useState<boolean>(true);
   
   // Refs
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
@@ -141,48 +144,89 @@ const handleAddWeek = () => {
     return updated;
   });
   setSaveMessage('Settimana aggiunta');
+  // Seleziona automaticamente la nuova settimana
+  setActiveWeekKey(nextWeekKey);
+  handleSwitchWeek(nextWeekKey);
+  // Scorri la barra settimane verso destra per mostrare la nuova settimana (post-render)
+  window.setTimeout(() => {
+    const container = weekTabsRef.current;
+    if (!container) return;
+    const newTab = container.querySelector<HTMLButtonElement>(`button[data-week-key="${nextWeekKey}"]`);
+    if (newTab && newTab.scrollIntoView) {
+      try {
+        newTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'end' });
+      } catch {
+        newTab.scrollIntoView();
+      }
+    } else {
+      try {
+        container.scrollTo({ left: container.scrollWidth, behavior: 'smooth' });
+      } catch {
+        container.scrollLeft = container.scrollWidth;
+      }
+    }
+  }, 0);
 };
 
-// Rimuovi una settimana (non consentito rimuovere l’ultima)
+// Rimuovi una settimana (non consentito rimuovere l’ultima) con conferma stile Apple
 const handleRemoveWeek = (weekKey: string) => {
   if (weeks.length <= 1) {
     setSaveMessage('Deve esistere almeno una settimana');
     return;
   }
-  const newWeeks = weeks.filter(w => w !== weekKey);
-  setWeeks(newWeeks);
-  setOriginalWeeksStore(prev => {
-    const { [weekKey]: _omit, ...rest } = prev;
-    return rest;
-  });
-  setVariantWeeksStoreById(prev => {
-    const updated = { ...prev };
-    Object.keys(updated).forEach(vid => {
-      const weeksMap = { ...updated[vid] };
-      delete weeksMap[weekKey];
-      updated[vid] = weeksMap;
-    });
-    return updated;
-  });
-  // Se abbiamo rimosso la settimana attiva, passa alla più bassa
-  if (weekKey === activeWeekKey) {
-    const sorted = newWeeks.slice().sort((a, b) => parseInt(a.replace('W','')) - parseInt(b.replace('W','')));
-    const next = sorted[0] || 'W1';
-    // Carica giorni per la nuova settimana
-    const newOriginal = originalWeeksStore[next] || { G1: [] };
-    const newVariantById: { [variantId: string]: { [dayKey: string]: Exercise[] } } = {};
-    variants.forEach(v => {
-      const store = variantWeeksStoreById[v.id] || {};
-      newVariantById[v.id] = store[next] || { G1: [] };
-    });
-    setActiveWeekKey(next);
-    setOriginalDays(newOriginal);
-    setVariantDaysById(newVariantById);
-    const list = activeVariantId === 'original' ? (newOriginal[activeDayKey] || []) : ((newVariantById[activeVariantId] || {})[activeDayKey] || []);
-    setExercises([...list]);
-    if (activeVariantId === 'original' && activeDayKey === 'G1') setOriginalExercises([...list]);
-  }
-  setSaveMessage('Settimana rimossa');
+  const weekNumber = parseInt(String(weekKey).replace(/^W/, ''), 10);
+  showConfirmation(
+    `Vuoi davvero eliminare Settimana ${isNaN(weekNumber) ? '' : weekNumber}? Tutti i giorni e gli esercizi collegati verranno rimossi.`,
+    () => {
+      const newWeeks = weeks.filter(w => w !== weekKey);
+      setWeeks(newWeeks);
+      setOriginalWeeksStore(prev => {
+        const { [weekKey]: _omit, ...rest } = prev;
+        return rest;
+      });
+      setVariantWeeksStoreById(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(vid => {
+          const weeksMap = { ...updated[vid] };
+          delete weeksMap[weekKey];
+          updated[vid] = weeksMap;
+        });
+        return updated;
+      });
+      // Se abbiamo rimosso la settimana attiva, passa alla più bassa
+      if (weekKey === activeWeekKey) {
+        const sorted = newWeeks.slice().sort((a, b) => parseInt(a.replace('W','')) - parseInt(b.replace('W','')));
+        const next = sorted[0] || 'W1';
+        // Carica giorni per la nuova settimana
+        const newOriginal = originalWeeksStore[next] || { G1: [] };
+        const newVariantById: { [variantId: string]: { [dayKey: string]: Exercise[] } } = {};
+        variants.forEach(v => {
+          const store = variantWeeksStoreById[v.id] || {};
+          newVariantById[v.id] = store[next] || { G1: [] };
+        });
+        setActiveWeekKey(next);
+        setOriginalDays(newOriginal);
+        setVariantDaysById(newVariantById);
+        // Imposta una giornata valida (di default G1) per la nuova settimana
+        const availableKeys = activeVariantId === 'original'
+          ? Object.keys(newOriginal)
+          : Object.keys(newVariantById[activeVariantId] || {});
+        const sortedDayKeys = (availableKeys.length ? availableKeys : ['G1']).slice().sort((a, b) => {
+          const na = parseInt(String(a).replace(/^G/, ''), 10);
+          const nb = parseInt(String(b).replace(/^G/, ''), 10);
+          return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+        });
+        const nextDayKey = sortedDayKeys.includes(activeDayKey) ? activeDayKey : sortedDayKeys[0];
+        setActiveDayKey(nextDayKey);
+        const list = activeVariantId === 'original' ? (newOriginal[nextDayKey] || []) : ((newVariantById[activeVariantId] || {})[nextDayKey] || []);
+        setExercises([...list]);
+        if (activeVariantId === 'original' && nextDayKey === 'G1') setOriginalExercises([...list]);
+      }
+      setSaveMessage('Settimana rimossa');
+      // Persisti subito la rimozione della settimana
+      triggerAutoSave();
+    }
+  );
 };
 
 // Switch settimana (carica giorni/esercizi della settimana selezionata)
@@ -198,9 +242,22 @@ const handleSwitchWeek = (weekKey: string) => {
   setActiveWeekKey(weekKey);
   setOriginalDays(newOriginal);
   setVariantDaysById(newVariantById);
-  const list = activeVariantId === 'original' ? (newOriginal[activeDayKey] || []) : ((newVariantById[activeVariantId] || {})[activeDayKey] || []);
+  // Imposta una giornata valida (di default G1) per la settimana selezionata
+  const availableKeys = activeVariantId === 'original'
+    ? Object.keys(newOriginal)
+    : Object.keys(newVariantById[activeVariantId] || {});
+  const sortedDayKeys = (availableKeys.length ? availableKeys : ['G1']).slice().sort((a, b) => {
+    const na = parseInt(String(a).replace(/^G/, ''), 10);
+    const nb = parseInt(String(b).replace(/^G/, ''), 10);
+    return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+  });
+  const nextDayKey = sortedDayKeys.includes(activeDayKey) ? activeDayKey : sortedDayKeys[0];
+  setActiveDayKey(nextDayKey);
+  const list = activeVariantId === 'original' ? (newOriginal[nextDayKey] || []) : ((newVariantById[activeVariantId] || {})[nextDayKey] || []);
   setExercises([...list]);
-  if (activeVariantId === 'original' && activeDayKey === 'G1') setOriginalExercises([...list]);
+  if (activeVariantId === 'original' && nextDayKey === 'G1') setOriginalExercises([...list]);
+  // Persisti subito il cambio settimana
+  triggerAutoSave();
 };
 
 // Aggiungi un nuovo giorno alla scheda corrente (indipendente dalle varianti), con limite massimo a 10
@@ -232,6 +289,8 @@ const handleAddDay = () => {
   if (activeVariantId === 'original') {
     const newOriginalDays = { ...originalDays, [nextKey]: [] };
     setOriginalDays(newOriginalDays);
+    // Aggiorna subito lo store settimane -> giorni per riflettere la nuova giornata
+    setOriginalWeeksStore({ ...originalWeeksStore, [activeWeekKey]: newOriginalDays });
     // Nessun nome personalizzato di default: fallback numerico
     // Seleziona automaticamente la nuova giornata e mostra lista vuota
     setActiveDayKey(nextKey);
@@ -243,6 +302,10 @@ const handleAddDay = () => {
     // Aggiorna il modello variante per coerenza
     const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, days: newVariantDays, updatedAt: new Date().toISOString() } : v);
     setVariants(updatedVariants);
+    // Aggiorna subito lo store settimane -> giorni della variante
+    const prevWeeksStore = variantWeeksStoreById[activeVariantId] || {};
+    const newWeeksStoreForVariant = { ...prevWeeksStore, [activeWeekKey]: newVariantDays };
+    setVariantWeeksStoreById({ ...variantWeeksStoreById, [activeVariantId]: newWeeksStoreForVariant });
     // Seleziona automaticamente la nuova giornata e mostra lista vuota
     setActiveDayKey(nextKey);
     setExercises([]);
@@ -482,6 +545,14 @@ const dayDragStartXRef = useRef(0);
 const dayScrollStartLeftRef = useRef(0);
 const dayDragInitiatedRef = useRef(false);
 const dayPointerIdRef = useRef<number | null>(null);
+
+// Scorrimento orizzontale dei tab settimane via drag/swipe (stile giorni)
+const weekTabsRef = useRef<HTMLDivElement>(null);
+const [isDraggingWeeks, setIsDraggingWeeks] = useState(false);
+const weekDragStartXRef = useRef(0);
+const weekScrollStartLeftRef = useRef(0);
+const weekDragInitiatedRef = useRef(false);
+const weekPointerIdRef = useRef<number | null>(null);
 // Long‑press context menu for day tabs
 const DAY_LONG_PRESS_MS = 400;
 const dayLongPressTriggeredRef = useRef(false);
@@ -492,6 +563,21 @@ const dayMenuRef = useRef<HTMLDivElement | null>(null);
 const [dayMenuPosition, setDayMenuPosition] = useState<{ top: number; left: number } | null>(null);
 const [dayMenuPlacement, setDayMenuPlacement] = useState<'bottom' | 'top'>('bottom');
 const DAY_MENU_WIDTH = 160; // w-40
+// Clipboard per copia/incolla giornate (tra giorni e settimane)
+const [dayClipboard, setDayClipboard] = useState<{
+  exercises: Exercise[];
+  name?: string;
+  sourceVariantId: string;
+  sourceWeekKey: string;
+  sourceDayKey: string;
+} | null>(null);
+
+// Clipboard per copia/incolla settimane
+const [weekClipboard, setWeekClipboard] = useState<{
+  sourceVariantId: string;
+  sourceWeekKey: string;
+  data: { [dayKey: string]: Exercise[] };
+} | null>(null);
 
 // Long‑press context menu for variant tabs
 const VARIANT_LONG_PRESS_MS = 400;
@@ -611,6 +697,20 @@ const handleDayTabsWindowPointerUp = (_e: PointerEvent) => {
   window.removeEventListener('pointercancel', handleDayTabsWindowPointerUp);
 };
 
+// Fallback: rilascia lo scroll anche se il puntatore esce dal contenitore (settimane)
+const handleWeekTabsWindowPointerUp = (_e: PointerEvent) => {
+  setIsDraggingWeeks(false);
+  weekDragInitiatedRef.current = false;
+  try {
+    const id = (_e as any).pointerId;
+    if (weekTabsRef.current && typeof (weekTabsRef.current as any).releasePointerCapture === 'function') {
+      (weekTabsRef.current as any).releasePointerCapture(id);
+    }
+  } catch {}
+  window.removeEventListener('pointerup', handleWeekTabsWindowPointerUp);
+  window.removeEventListener('pointercancel', handleWeekTabsWindowPointerUp);
+};
+
 const handleDayTabsPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
   if (!dayTabsRef.current) return;
   setIsDraggingDays(false);
@@ -622,6 +722,57 @@ const handleDayTabsPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
   // Fallback globale per rilascio
   window.addEventListener('pointerup', handleDayTabsWindowPointerUp, { once: true });
   window.addEventListener('pointercancel', handleDayTabsWindowPointerUp, { once: true });
+};
+
+const handleWeekTabsPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  if (!weekTabsRef.current) return;
+  setIsDraggingWeeks(false);
+  weekDragInitiatedRef.current = true;
+  weekPointerIdRef.current = (e as any).pointerId ?? null;
+  weekDragStartXRef.current = e.clientX;
+  weekScrollStartLeftRef.current = weekTabsRef.current.scrollLeft;
+  window.addEventListener('pointerup', handleWeekTabsWindowPointerUp, { once: true });
+  window.addEventListener('pointercancel', handleWeekTabsWindowPointerUp, { once: true });
+};
+
+const handleWeekTabsPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  if (!weekTabsRef.current || !weekDragInitiatedRef.current) return;
+  const deltaX = e.clientX - weekDragStartXRef.current;
+  if (Math.abs(deltaX) > 5) {
+    if (!isDraggingWeeks) {
+      setIsDraggingWeeks(true);
+      try { (weekTabsRef.current as any).setPointerCapture?.(weekPointerIdRef.current as any); } catch {}
+    }
+    weekTabsRef.current.scrollLeft = weekScrollStartLeftRef.current - deltaX;
+    e.preventDefault();
+  }
+};
+
+const handleWeekTabsPointerUp = (_e: React.PointerEvent<HTMLDivElement>) => {
+  setIsDraggingWeeks(false);
+  weekDragInitiatedRef.current = false;
+  try { (weekTabsRef.current as any).releasePointerCapture?.((_e as any).pointerId); } catch {}
+  weekPointerIdRef.current = null;
+  window.removeEventListener('pointerup', handleWeekTabsWindowPointerUp);
+  window.removeEventListener('pointercancel', handleWeekTabsWindowPointerUp);
+};
+
+const handleWeekTabsPointerCancel = (_e: React.PointerEvent<HTMLDivElement>) => {
+  setIsDraggingWeeks(false);
+  weekDragInitiatedRef.current = false;
+  try { (weekTabsRef.current as any).releasePointerCapture?.((_e as any).pointerId); } catch {}
+  weekPointerIdRef.current = null;
+  window.removeEventListener('pointerup', handleWeekTabsWindowPointerUp);
+  window.removeEventListener('pointercancel', handleWeekTabsWindowPointerUp);
+};
+
+const handleWeekTabsPointerLeave = (_e: React.PointerEvent<HTMLDivElement>) => {
+  setIsDraggingWeeks(false);
+  weekDragInitiatedRef.current = false;
+  try { (weekTabsRef.current as any).releasePointerCapture?.((_e as any).pointerId); } catch {}
+  weekPointerIdRef.current = null;
+  window.removeEventListener('pointerup', handleWeekTabsWindowPointerUp);
+  window.removeEventListener('pointercancel', handleWeekTabsWindowPointerUp);
 };
 
 const handleDayTabsPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -702,6 +853,139 @@ const handleSaveDayName = () => {
   triggerAutoSave();
   setRenamingDayKey(null);
   setRenamingDayName('');
+};
+
+// Copia/Incolla giornata
+const handleCopyDay = (dayKey: string) => {
+  const sourceDays = activeVariantId === 'original' ? originalDays : (variantDaysById[activeVariantId] || {});
+  const copiedExercises: Exercise[] = [...(sourceDays[dayKey] || [])];
+  const copiedName = activeVariantId === 'original' ? originalDayNames[dayKey] : (variantDayNamesById[activeVariantId] || {})[dayKey];
+  setDayClipboard({
+    exercises: copiedExercises,
+    name: copiedName,
+    sourceVariantId: activeVariantId,
+    sourceWeekKey: activeWeekKey,
+    sourceDayKey: dayKey,
+  });
+  setSaveMessage('Giornata copiata');
+  closeDayMenu();
+};
+
+const handlePasteDay = (targetDayKey: string) => {
+  if (!dayClipboard) {
+    setSaveMessage('Nessuna giornata copiata');
+    closeDayMenu();
+    return;
+  }
+  // Impedisci incolla sulla stessa giornata (stessa variante, settimana e giorno)
+  if (
+    dayClipboard.sourceVariantId === activeVariantId &&
+    dayClipboard.sourceWeekKey === activeWeekKey &&
+    dayClipboard.sourceDayKey === targetDayKey
+  ) {
+    setSaveMessage('Non puoi incollare nella stessa giornata');
+    closeDayMenu();
+    return;
+  }
+
+  const cloned = deepCloneExercises(dayClipboard.exercises || []);
+  if (activeVariantId === 'original') {
+    const newDays = { ...originalDays, [targetDayKey]: cloned };
+    setOriginalDays(newDays);
+    setOriginalWeeksStore({ ...originalWeeksStore, [activeWeekKey]: newDays });
+  } else {
+    const prevVarDays = variantDaysById[activeVariantId] || {};
+    const newVarDays = { ...prevVarDays, [targetDayKey]: cloned };
+    setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVarDays });
+    const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, days: newVarDays, updatedAt: new Date().toISOString() } : v);
+    setVariants(updatedVariants);
+    const prevWeeksStore = variantWeeksStoreById[activeVariantId] || {};
+    const newWeeksStoreForVariant = { ...prevWeeksStore, [activeWeekKey]: newVarDays };
+    setVariantWeeksStoreById({ ...variantWeeksStoreById, [activeVariantId]: newWeeksStoreForVariant });
+  }
+  // Seleziona la giornata incollata e applica gli esercizi
+  setActiveDayKey(targetDayKey);
+  applyExercisesUpdate(cloned);
+  setSaveMessage('Giornata incollata');
+  closeDayMenu();
+};
+
+// Copia/Incolla settimana
+const handleCopyWeek = (weekKey: string) => {
+  // Preleva i giorni della settimana dal relativo store (originale o variante)
+  const sourceWeekDays = activeVariantId === 'original'
+    ? (originalWeeksStore[weekKey] || {})
+    : ((variantWeeksStoreById[activeVariantId] || {})[weekKey] || {});
+
+  // Clona profondamente tutti gli esercizi di ogni giorno della settimana
+  const clonedWeekData: { [dayKey: string]: Exercise[] } = {};
+  Object.keys(sourceWeekDays).forEach((dk) => {
+    const list = sourceWeekDays[dk] || [];
+    clonedWeekData[dk] = deepCloneExercises(list);
+  });
+
+  setWeekClipboard({
+    sourceVariantId: activeVariantId,
+    sourceWeekKey: weekKey,
+    data: clonedWeekData,
+  });
+  setSaveMessage('Settimana copiata');
+};
+
+const handlePasteWeek = (targetWeekKey: string) => {
+  if (!weekClipboard) {
+    setSaveMessage('Nessuna settimana copiata');
+    return;
+  }
+  // Impedisci incolla sulla stessa settimana nel medesimo contesto
+  if (weekClipboard.sourceVariantId === activeVariantId && weekClipboard.sourceWeekKey === targetWeekKey) {
+    setSaveMessage('Non puoi incollare nella stessa settimana');
+    return;
+  }
+
+  // Applica i giorni clonati alla settimana di destinazione
+  if (activeVariantId === 'original') {
+    const newOriginalWeeksStore = { ...originalWeeksStore, [targetWeekKey]: weekClipboard.data };
+    setOriginalWeeksStore(newOriginalWeeksStore);
+    // Se stiamo incollando sulla settimana attiva, sincronizza anche lo stato locale dei giorni
+    if (targetWeekKey === activeWeekKey) {
+      setOriginalDays(weekClipboard.data);
+      // Mantieni gli esercizi attivi coerenti con la giornata attiva corrente
+      const activeList = weekClipboard.data[activeDayKey] || [];
+      applyExercisesUpdate(activeList);
+    }
+  } else {
+    const prevWeeksStoreForVariant = variantWeeksStoreById[activeVariantId] || {};
+    const newWeeksStoreForVariant = { ...prevWeeksStoreForVariant, [targetWeekKey]: weekClipboard.data };
+    setVariantWeeksStoreById({ ...variantWeeksStoreById, [activeVariantId]: newWeeksStoreForVariant });
+    // Aggiorna anche lo stato locale dei giorni se incolliamo sulla settimana attiva
+    if (targetWeekKey === activeWeekKey) {
+      setVariantDaysById({ ...variantDaysById, [activeVariantId]: weekClipboard.data });
+      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, days: weekClipboard.data, updatedAt: new Date().toISOString() } : v);
+      setVariants(updatedVariants);
+      const activeList = weekClipboard.data[activeDayKey] || [];
+      applyExercisesUpdate(activeList);
+    }
+  }
+
+  setSaveMessage('Settimana incollata');
+  // Seleziona e porta in vista la settimana di destinazione
+  try {
+    handleSwitchWeek(targetWeekKey);
+  } catch {}
+  // Scroll: prova a portare il tab in vista
+  window.setTimeout(() => {
+    const container = weekTabsRef.current;
+    if (!container) return;
+    const tab = container.querySelector<HTMLButtonElement>(`button[data-week-key="${targetWeekKey}"]`);
+    if (tab && tab.scrollIntoView) {
+      try {
+        tab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      } catch {
+        tab.scrollIntoView();
+      }
+    }
+  }, 0);
 };
 
 // Drag & Drop intelligente per esercizi e superset
@@ -1279,21 +1563,36 @@ useEffect(() => {
         let exercisesToSave = exercises;
         let updatedVariants = variants;
         let updatedOriginalDays = originalDays;
+        let updatedOriginalWeeksStore = { ...originalWeeksStore };
 
         if (activeVariantId === 'original' || !variants.length || !variants.find(v => v.id === activeVariantId)) {
           // Se siamo nell'originale, salva gli esercizi nell'originale
-          const newOriginalDays = { ...originalDays, [activeDayKey]: [...exercises] };
+          // Unisce i giorni della settimana attiva da weeksStore e dallo stato locale,
+          // poi applica l'override del giorno attivo con gli esercizi correnti.
+          const baseDaysForWeek = originalWeeksStore[activeWeekKey] || {};
+          const newOriginalDays = { ...baseDaysForWeek, ...originalDays, [activeDayKey]: [...exercises] };
           updatedOriginalDays = newOriginalDays;
           setOriginalDays(newOriginalDays);
           exercisesToSave = newOriginalDays['G1'] || [];
+          // Aggiorna weeksStore per la settimana attiva con i giorni uniti
+          updatedOriginalWeeksStore = { ...originalWeeksStore, [activeWeekKey]: newOriginalDays };
+          setOriginalWeeksStore(updatedOriginalWeeksStore);
           // Mantieni le varianti esistenti senza modificarle
           updatedVariants = variants.map(v => ({ ...v, days: (variantDaysById[v.id] || (v as any).days || {}) }));
           console.log('💾 Saving original workout exercises:', exercisesToSave.length);
         } else {
           // Se siamo in una variante esistente, salva gli esercizi nella variante
           const prevVariantDays = variantDaysById[activeVariantId] || {};
-          const newVariantDays = { ...prevVariantDays, [activeDayKey]: [...exercises] };
+          const prevWeeksStore = variantWeeksStoreById[activeVariantId] || {};
+          const baseVariantDaysForWeek = prevWeeksStore[activeWeekKey] || {};
+          // Unione di giorni già presenti nello store della settimana e nello stato locale,
+          // con override del giorno attivo.
+          const newVariantDays = { ...baseVariantDaysForWeek, ...prevVariantDays, [activeDayKey]: [...exercises] };
           setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
+          // Aggiorna weeksStore della variante per la settimana attiva usando i giorni uniti
+          const newWeeksStoreForVariant = { ...prevWeeksStore, [activeWeekKey]: newVariantDays };
+          const newVariantWeeksStoreById = { ...variantWeeksStoreById, [activeVariantId]: newWeeksStoreForVariant };
+          setVariantWeeksStoreById(newVariantWeeksStoreById);
           updatedVariants = variants.map(v => 
             v.id === activeVariantId 
               ? { ...v, exercises: newVariantDays['G1'] || (v.exercises || []), days: newVariantDays, updatedAt: new Date().toISOString() }
@@ -1305,6 +1604,7 @@ useEffect(() => {
           if (!safeOriginalDays['G1']) safeOriginalDays['G1'] = originalExercises || [];
           updatedOriginalDays = safeOriginalDays;
           exercisesToSave = safeOriginalDays['G1'] || [];
+          updatedOriginalWeeksStore = { ...originalWeeksStore, [activeWeekKey]: updatedOriginalDays };
           console.log('🔄 Saving variant exercises to variant, keeping original intact');
           console.log('📊 Variant exercises count:', exercises.length);
           console.log('📊 Original exercises count (unchanged):', exercisesToSave.length);
@@ -1321,11 +1621,14 @@ useEffect(() => {
           exercises: exercisesToSave,
           days: updatedOriginalDays,
           dayNames: originalDayNames,
+          weeks: weeks,
+          weeksStore: updatedOriginalWeeksStore,
           associatedAthletes,
           status: workoutStatus,
           variants: updatedVariants.map(v => ({
             ...v,
             dayNames: variantDayNamesById[v.id] || (v as any).dayNames || {}
+            , weeksStore: (variantWeeksStoreById[v.id] || (v as any).weeksStore || {})
           })),
           activeVariantId,
           tags,
@@ -1347,7 +1650,7 @@ useEffect(() => {
         console.error('Error saving workout:', error);
       }
     }
-  }, [workoutId, workoutTitle, workoutDescription, durationWeeks, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, originalWorkoutTitle, tags, updateWorkoutPlan]);
+  }, [workoutId, workoutTitle, workoutDescription, durationWeeks, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, originalWorkoutTitle, tags, updateWorkoutPlan, weeks, originalWeeksStore, variantWeeksStoreById, activeWeekKey, activeDayKey, originalDays, variantDaysById]);
   
   // Trigger auto-save immediately
   const triggerAutoSave = useCallback(() => {
@@ -1461,6 +1764,7 @@ useEffect(() => {
     const loadWorkoutData = async () => {
       if (workoutId) {
         try {
+          setIsLoadingWorkout(true);
           console.log('🔄 Loading workout data for ID:', workoutId);
           const workoutData = await DB.getWorkoutPlanById(workoutId);
           console.log('📊 Workout data loaded:', workoutData);
@@ -1497,41 +1801,67 @@ useEffect(() => {
                   console.error('Error updating exercise IDs:', error);
                 });
               }
-              
-            // Inizializza mappa giorni originale in modo dinamico (inizialmente solo G1)
-            const incomingDays = (workoutData as any).days || {};
-            const incomingDayNames = (workoutData as any).dayNames || {};
-            const incomingKeys = Object.keys(incomingDays);
-            const sortedKeys = incomingKeys.length
-              ? incomingKeys.slice().sort((a, b) => {
-                  const na = parseInt(String(a).replace(/^G/, ''), 10);
-                  const nb = parseInt(String(b).replace(/^G/, ''), 10);
-                  return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
-                })
-              : ['G1'];
-            const initializedOriginalDays: { [key: string]: Exercise[] } = {};
-            sortedKeys.forEach((dk) => {
-              const list = dk === 'G1' ? (incomingDays[dk] || exercisesWithValidIds) : (incomingDays[dk] || []);
-              initializedOriginalDays[dk] = list;
-            });
-            // Se non c'erano giorni, assicurati che G1 esista
-            if (!initializedOriginalDays['G1']) initializedOriginalDays['G1'] = exercisesWithValidIds;
-            setOriginalDays(initializedOriginalDays);
-            setOriginalDayNames(incomingDayNames);
+              // Inizializza settimane e store settimane -> giorni
+              const incomingDayNames = (workoutData as any).dayNames || {};
+              const incomingWeeks: string[] = (workoutData as any).weeks || ['W1'];
+              let incomingWeeksStore: { [weekKey: string]: { [dayKey: string]: Exercise[] } } = (workoutData as any).weeksStore || {};
+              const incomingDays = (workoutData as any).days || {};
+              if (!incomingWeeksStore || Object.keys(incomingWeeksStore).length === 0) {
+                // Backward-compatibility: usa days come W1
+                incomingWeeksStore = {
+                  W1: Object.keys(incomingDays).length ? incomingDays : { G1: exercisesWithValidIds }
+                };
+              }
+
+              // Imposta weeks e weeksStore
+              const finalWeeks = incomingWeeks && incomingWeeks.length ? incomingWeeks : ['W1'];
+              setWeeks(finalWeeks);
+              setOriginalWeeksStore(incomingWeeksStore);
+
+              // Determina la settimana iniziale da visualizzare
+              const availableWeekKeys = Object.keys(incomingWeeksStore);
+              const defaultWeekKey = availableWeekKeys.length ? availableWeekKeys.slice().sort((a, b) => parseInt(a.replace(/^W/, ''), 10) - parseInt(b.replace(/^W/, ''), 10))[0] : 'W1';
+              const selectedWeekKey = incomingWeeksStore[activeWeekKey] ? activeWeekKey : defaultWeekKey;
+              setActiveWeekKey(selectedWeekKey);
+
+              // Prepara i giorni per la settimana selezionata
+              const currentWeekDays = incomingWeeksStore[selectedWeekKey] || { G1: exercisesWithValidIds };
+              const currentDayKeys = Object.keys(currentWeekDays);
+              const sortedKeys = currentDayKeys.length
+                ? currentDayKeys.slice().sort((a, b) => {
+                    const na = parseInt(String(a).replace(/^G/, ''), 10);
+                    const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                    return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                  })
+                : ['G1'];
+              const initializedOriginalDays: { [key: string]: Exercise[] } = {};
+              sortedKeys.forEach((dk) => {
+                const list = dk === 'G1' ? (currentWeekDays[dk] || exercisesWithValidIds) : (currentWeekDays[dk] || []);
+                initializedOriginalDays[dk] = list;
+              });
+              if (!initializedOriginalDays['G1']) initializedOriginalDays['G1'] = exercisesWithValidIds;
+              setOriginalDays(initializedOriginalDays);
+              setOriginalDayNames(incomingDayNames);
 
               // Gli originalExercises corrispondono sempre a G1
               setOriginalExercises(initializedOriginalDays['G1']);
               console.log('🔒 Original exercises set (G1):', initializedOriginalDays['G1'].length, 'exercises');
 
               // Carica gli esercizi del giorno attivo (default G1) all'ingresso
-              const entryList = initializedOriginalDays[activeDayKey] || [];
-              console.log('📥 Loading original day', activeDayKey, 'exercises:', entryList.length);
+              const preferredDayKey = initializedOriginalDays[activeDayKey] ? activeDayKey : 'G1';
+              const entryList = initializedOriginalDays[preferredDayKey] || [];
+              console.log('📥 Loading original day', preferredDayKey, 'exercises:', entryList.length);
+              setActiveDayKey(preferredDayKey);
               setExercises(entryList);
-              console.log('✅ Exercises loaded from database for day', activeDayKey, ':', entryList.length);
+              console.log('✅ Exercises loaded from database for day', preferredDayKey, ':', entryList.length);
             } else {
               // Resetta sempre a array vuoto per nuove schede
               setOriginalExercises([]);
               setExercises([]);
+              // Inizializza weeks e weeksStore vuoti
+              const incomingWeeks: string[] = (workoutData as any).weeks || ['W1'];
+              setWeeks(incomingWeeks && incomingWeeks.length ? incomingWeeks : ['W1']);
+              setOriginalWeeksStore((workoutData as any).weeksStore || { W1: { G1: [] } });
               console.log('📝 No exercises found, setting empty array for workout:', workoutId);
             }
             
@@ -1550,7 +1880,7 @@ useEffect(() => {
               setDurationWeeks(workoutData.durationWeeks);
             }
             
-            // Carica le varianti se esistono, ma all'ingresso forziamo la scheda originale attiva
+            // Carica le varianti se esistono, includendo weeksStore; all'ingresso forziamo la scheda originale attiva
               if (workoutData.variants && workoutData.variants.length > 0) {
                 // Normalizza gli ID degli esercizi e inizializza giorni per ciascuna variante
                 const normalizedVariants = workoutData.variants.map(v => {
@@ -1562,45 +1892,64 @@ useEffect(() => {
                     }
                     return ex;
                   });
+                  // Weeks store per variante
                   const incomingVariantDays = (v as any).days || {};
+                  let incomingVariantWeeksStore: { [weekKey: string]: { [dayKey: string]: Exercise[] } } = (v as any).weeksStore || {};
+                  if (!incomingVariantWeeksStore || Object.keys(incomingVariantWeeksStore).length === 0) {
+                    incomingVariantWeeksStore = {
+                      W1: Object.keys(incomingVariantDays).length ? incomingVariantDays : { G1: fixedExercises }
+                    };
+                  }
                   const incomingVariantDayNames = (v as any).dayNames || {};
+                  // Usa i giorni della settimana attiva (o W1) per popolare la vista iniziale della variante
+                  const selectedWeekKey = activeWeekKey && incomingVariantWeeksStore[activeWeekKey] ? activeWeekKey : 'W1';
+                  const variantCurrentWeekDays = incomingVariantWeeksStore[selectedWeekKey] || { G1: fixedExercises };
                   const initializedVariantDays: { [key: string]: Exercise[] } = {};
-                  const variantKeys = Object.keys(incomingVariantDays).length
-                    ? Object.keys(incomingVariantDays)
-                    : Object.keys(initializedOriginalDays);
+                  const variantKeys = Object.keys(variantCurrentWeekDays);
                   const sortedVariantKeys = variantKeys.slice().sort((a, b) => {
                     const na = parseInt(String(a).replace(/^G/, ''), 10);
                     const nb = parseInt(String(b).replace(/^G/, ''), 10);
                     return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
                   });
                   sortedVariantKeys.forEach((dk) => {
-                    const list = dk === 'G1' ? (incomingVariantDays[dk] || fixedExercises) : (incomingVariantDays[dk] || []);
+                    const list = dk === 'G1' ? (variantCurrentWeekDays[dk] || fixedExercises) : (variantCurrentWeekDays[dk] || []);
                     initializedVariantDays[dk] = list;
                   });
                   if (!initializedVariantDays['G1']) initializedVariantDays['G1'] = fixedExercises;
-                  return { ...v, isActive: false, exercises: initializedVariantDays['G1'], days: initializedVariantDays, dayNames: incomingVariantDayNames };
+                  return { ...v, isActive: false, exercises: initializedVariantDays['G1'], days: initializedVariantDays, dayNames: incomingVariantDayNames, weeksStore: incomingVariantWeeksStore };
                 });
                 const getNumAsc = (name: string) => { const m = name.match(/Variante (\d+)/); return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER; };
                 const sortedVariants = normalizedVariants.slice().sort((a, b) => getNumAsc(a.name) - getNumAsc(b.name));
                 setVariants(sortedVariants);
                 // Inizializza mappa giorni locali per le varianti
                 const initialVariantDaysById: { [variantId: string]: { [key: string]: Exercise[] } } = {};
-                sortedVariants.forEach(v => { if ((v as any).days) initialVariantDaysById[v.id] = (v as any).days as any; });
+                const initialVariantWeeksStoreById: { [variantId: string]: { [weekKey: string]: { [dayKey: string]: Exercise[] } } } = {};
+                sortedVariants.forEach(v => {
+                  const wStore = (v as any).weeksStore || {};
+                  initialVariantWeeksStoreById[v.id] = wStore;
+                  const selectedWeekKey = activeWeekKey && wStore[activeWeekKey] ? activeWeekKey : 'W1';
+                  initialVariantDaysById[v.id] = (wStore[selectedWeekKey] || (v as any).days || {}) as any;
+                });
                 setVariantDaysById(initialVariantDaysById);
                 const initialVariantDayNamesById: { [variantId: string]: { [key: string]: string } } = {};
                 sortedVariants.forEach(v => { if ((v as any).dayNames) initialVariantDayNamesById[v.id] = (v as any).dayNames as any; });
                 setVariantDayNamesById(initialVariantDayNamesById);
+                setVariantWeeksStoreById(initialVariantWeeksStoreById);
                 setActiveVariantId('original');
                 setWorkoutDescription(workoutData.description || '');
               } else {
                 // Non inizializzare varianti di default - lascia l'array vuoto e mantieni l'originale attiva
                 setVariants([]);
                 setActiveVariantId('original');
-                setWorkoutDescription(workoutData.description || '');
-              }
+              setWorkoutDescription(workoutData.description || '');
+              
+            }
           }
         } catch (error) {
           console.error('❌ Error loading workout data:', error);
+        }
+        finally {
+          setIsLoadingWorkout(false);
         }
       }
     };
@@ -1613,13 +1962,16 @@ useEffect(() => {
   // Debounced auto-save effect - ora istantaneo
   useEffect(() => {
     // Solo salva se i dati sono stati caricati (evita di salvare durante il caricamento iniziale)
-    if (workoutId && originalExercises !== null) {
+    if (workoutId && originalExercises !== null && !isLoadingWorkout) {
       console.log('🔄 Auto-save effect triggered - data loaded, proceeding with save');
       autoSave();
     } else {
       console.log('⏳ Auto-save effect triggered - waiting for data to load');
     }
-  }, [workoutTitle, workoutDescription, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, autoSave, originalExercises]);
+    // Nota: evitiamo di includere "autoSave" nelle dipendenze per prevenire cicli di re-render
+    // dovuti alla ricreazione della callback.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workoutTitle, workoutDescription, exercises, associatedAthletes, workoutStatus, activeVariantId, originalExercises, isLoadingWorkout]);
 
   
   const handleAddExercise = () => {
@@ -1661,6 +2013,7 @@ useEffect(() => {
           finalExercises = reorderSupersetGroup(updatedExercises, newExercise.supersetGroupId);
         }
         
+        const wasEmptyBefore = exercises.length === 0;
         setExercises(finalExercises);
         
         // IMPORTANTE: Gestione corretta dell'isolamento tra variante e originale
@@ -1687,6 +2040,12 @@ useEffect(() => {
           if (activeDayKey === 'G1') setOriginalExercises(finalExercises);
           console.log('🔄 Updated ONLY original day', activeDayKey, 'exercises:', finalExercises.length);
           console.log('🔍 Original day exercises content:', finalExercises.map(ex => ex.name));
+        }
+
+        // Se è il primo esercizio del giorno, salva subito per non perdere il primo allenamento
+        if (wasEmptyBefore) {
+          console.log('💾 First exercise added for the day. Triggering immediate save.');
+          triggerAutoSave();
         }
 
         // ➕ Aggiunge automaticamente il nome alla libreria personalizzata se non presente
@@ -2370,6 +2729,8 @@ useEffect(() => {
           }
           setOriginalDays(newOriginalDays);
           setOriginalDayNames(newOriginalDayNames);
+          // Sincronizza immediatamente lo store settimane -> giorni per la settimana attiva
+          setOriginalWeeksStore(prev => ({ ...prev, [activeWeekKey]: newOriginalDays }));
           setActiveDayKey(nextDay);
           const nextList = newOriginalDays[nextDay] || [];
           setExercises([...nextList]);
@@ -2393,6 +2754,10 @@ useEffect(() => {
           }
           setVariantDaysById({ ...variantDaysById, [activeVariantId]: newVariantDays });
           setVariantDayNamesById({ ...variantDayNamesById, [activeVariantId]: newVariantNames });
+          // Sincronizza immediatamente lo store settimane della variante -> giorni per la settimana attiva
+          const prevWeeksStore = variantWeeksStoreById[activeVariantId] || {};
+          const updatedWeeksStore = { ...prevWeeksStore, [activeWeekKey]: newVariantDays };
+          setVariantWeeksStoreById({ ...variantWeeksStoreById, [activeVariantId]: updatedWeeksStore });
           const list = newVariantDays[nextDay] || [];
           setActiveDayKey(nextDay);
           setExercises([...list]);
@@ -2738,7 +3103,7 @@ useEffect(() => {
   };
   
   return (
-    <div>
+    <div className="bg-white min-h-screen">
       {/* Notifica stile Apple (pill) */}
       {saveMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50" role="status" aria-live="polite">
@@ -2752,7 +3117,7 @@ useEffect(() => {
 
       {/* Sezione giorni verrà posizionata dentro il contenitore, sopra "Esercizi" */}
 
-      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] border border-gray-200 ${variants.length > 0 ? '' : '-mt-px'} transition-shadow backdrop-blur-sm bg-white/95 ring-1 ring-black/10 shadow-md`} style={{ marginTop: headerOffsetTop }}>
+      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] ${variants.length > 0 ? '' : '-mt-px'} transition-shadow bg-white shadow-md`} style={{ marginTop: headerOffsetTop }}>
 
         
         {/* Header Row: Back button + centered Title within card container */}
@@ -2767,8 +3132,8 @@ useEffect(() => {
             </button>
           </div>
           <div className="min-w-0 flex justify-center flex-col items-center">
-            {/* Barra varianti: ora posizionata sopra il titolo */}
-            <div className="mb-2">
+            {/* Barra varianti: ora posizionata sopra il titolo, allineata al tasto indietro */}
+            <div>
               <div className="flex justify-center">
                 <div
                   ref={variantTabsRef}
@@ -2893,47 +3258,9 @@ useEffect(() => {
                       )}
                     </div>
                   ))}
-                  {/* Aggiungi Variante */}
-                  <div className="relative h-10 w-10 flex-shrink-0">
-                    <button
-                      onClick={handleAddVariant}
-                      className={`h-10 w-10 rounded-full flex items-center justify-center ${canEdit ? 'bg-blue-50 text-blue-600 hover:bg-blue-100 ring-1 ring-blue-300' : 'bg-white text-gray-400 ring-1 ring-gray-200'} transition-colors`}
-                      title={canEdit ? 'Aggiungi variante' : 'Solo visualizzazione'}
-                      aria-label={canEdit ? 'Aggiungi variante' : 'Solo visualizzazione'}
-                      disabled={!canEdit}
-                    >
-                      {React.createElement(Plus, { size: 18 })}
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
-            {isEditingTitle && canEdit ? (
-              <input
-                ref={titleInputRef}
-                type="text"
-                value={activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
-                onChange={(e) => {
-                  const newTitle = e.target.value;
-                  if (activeVariantId === 'original') {
-                    setWorkoutTitle(newTitle);
-                  } else {
-                    setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: newTitle } : v));
-                  }
-                }}
-                onBlur={handleSaveTitle}
-                onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
-                className={`w-full text-2xl font-bold border-b-2 ${activeVariantId === 'original' ? 'border-blue-500 text-navy-900' : 'border-red-500 text-red-700'} bg-transparent outline-none text-center`}
-              />
-            ) : (
-              <h1
-                className={`text-2xl font-bold ${canEdit ? 'cursor-pointer' : 'cursor-default'} transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-navy-900 hover:text-navy-800' : 'text-red-700 hover:text-red-800'}`}
-                onClick={() => { if (!canEdit) return; setIsEditingTitle(true); setTimeout(() => { if (titleInputRef.current) { const input = titleInputRef.current; try { const len = input.value.length; input.setSelectionRange(len, len); } catch {} input.focus(); } }, 0); }}
-                title={canEdit ? "Clicca per modificare il titolo" : "Solo visualizzazione"}
-              >
-                {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
-              </h1>
-            )}
             {/* Barra varianti inline: Portal rimosso */}
           </div>
           <div className="flex justify-end">
@@ -2944,69 +3271,10 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Editable Description (read-only per atleti) */}
-        <div className="flex justify-center items-center mb-6">
-          {isEditingDescription && canEdit ? (
-            <textarea
-              ref={descriptionInputRef}
-              value={workoutDescription}
-              onChange={(e) => setWorkoutDescription(e.target.value)}
-              onFocus={() => { if (isEditingTitle) { handleSaveTitle(); } }}
-              onBlur={handleSaveDescription}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
-              placeholder="Aggiungi una descrizione..."
-              className="w-full max-w-2xl border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600 text-center"
-              rows={2}
-            />
-          ) : (
-        <div className={`flex items-center gap-2 justify-center ${canEdit ? 'group' : ''}`} onClick={() => { if (!canEdit) return; if (isEditingTitle) { handleSaveTitle(); } setIsEditingDescription(true); setTimeout(() => { if (descriptionInputRef.current) { const ta = descriptionInputRef.current; try { const len = ta.value.length; ta.setSelectionRange(len, len); } catch {} ta.focus(); } }, 0); }} title={canEdit ? "Clicca per modificare la descrizione" : "Solo visualizzazione"}>
-              {workoutDescription ? (
-          <p className={`text-gray-600 max-w-2xl text-center break-words ${canEdit ? 'transition-colors group-hover:text-blue-600' : ''}`}>{workoutDescription}</p>
-              ) : (
-                <p className="text-gray-400 italic text-center transition-colors group-hover:text-blue-600">Clicca per aggiungere una descrizione</p>
-              )}
-              {/* Icona modifica descrizione rimossa: il testo è già cliccabile per modificare */}
-            </div>
-          )}
-        </div>
-
-        {/* Tags sotto la descrizione */}
-        {tags && tags.length > 0 && (
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Tag size={16} className="text-purple-600" />
-            <div ref={tagsUnderDescContainerRef as React.RefObject<HTMLDivElement>} className="flex flex-wrap items-center gap-2 max-w-2xl justify-center">
-              {tags.map((tag, idx) => (
-                <div key={idx} className="relative inline-flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedTagUnderDesc(tag)}
-                    className="px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-700 text-xs shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition"
-                    title="Seleziona tag"
-                  >
-                    {tag}
-                  </button>
-                  {selectedTagUnderDesc === tag && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); setSelectedTagUnderDesc(null); }}
-                      className="absolute -top-1 -right-1 p-1 rounded-full bg-white border border-gray-200 text-red-500 hover:text-red-700 shadow-sm"
-                      aria-label="Rimuovi"
-                      title="Rimuovi"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {/* Toolbar - visibile solo per coach/admin */}
+        {/* Toolbar: posizionata sotto la barra varianti e sopra il titolo */}
         {canEdit && (
-        <div className="flex justify-center mb-8">
-          <div ref={toolbarRef} className="relative w-full flex justify-center px-0 -mx-6 sm:mx-0">
-            <div className="flex flex-nowrap justify-center gap-2 p-2.5 bg-white/90 rounded-xl shadow-sm border border-gray-200 backdrop-blur-sm w-full">
+          <div ref={toolbarRef} className="relative w-full flex justify-center mt-2 mb-3">
+            <div className="flex flex-nowrap justify-center gap-2 p-2.5 bg-white rounded-xl shadow-sm">
               {/* Create Exercise */}
               <button
                   onClick={() => {
@@ -3034,17 +3302,17 @@ useEffect(() => {
                   }}
                   title="Crea"
                   aria-label="Crea"
-                  className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                  className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
                 >
                   <Plus size={18} className="text-green-600" />
                 </button>
-              
+
               {/* Duration Selector */}
               <button
                 onClick={() => setIsEditingDates(!isEditingDates)}
                 title="Durata"
                 aria-label="Durata"
-                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Calendar size={18} className="text-blue-600" />
               </button>
@@ -3055,7 +3323,7 @@ useEffect(() => {
                   onClick={(e) => toggleTagsMenu(e)}
                   title="Tag"
                   aria-label="Tag"
-                  className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                  className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
                 >
                   <Tag size={18} className="text-purple-600" />
                 </button>
@@ -3064,7 +3332,6 @@ useEffect(() => {
                   onClose={() => { closeTagsMenu(); setShowGymTagsList(false); setShowTagsDropdown(false); }}
                   title="Gestisci Tag"
                 >
-                  {/* Contenuto diretto del Modal senza contenitori aggiuntivi */}
                   <div className="mb-2">
                     <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
                     <div className="relative flex items-center gap-2">
@@ -3166,7 +3433,7 @@ useEffect(() => {
                 onClick={handleCloneWorkout}
                 title="Clona"
                 aria-label="Clona"
-                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Copy size={18} className="text-red-600" />
               </button>
@@ -3188,7 +3455,7 @@ useEffect(() => {
                 }}
                 title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <div className={`w-3 h-3 rounded-full ${
                   workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
@@ -3200,7 +3467,7 @@ useEffect(() => {
                 onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
                 title="Associa"
                 aria-label="Associa"
-                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Users size={18} className="text-purple-600" />
               </button>
@@ -3210,14 +3477,101 @@ useEffect(() => {
                 onClick={() => setShowAthletesList(!showAthletesList)}
                 title="Visualizza"
                 aria-label="Visualizza"
-                className="bg-white/95 rounded-md shadow-sm ring-1 ring-gray-200 w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
               >
                 <Eye size={18} className="text-indigo-600" />
               </button>
             </div>
           </div>
-        </div>
         )}
+        {/* Separatore stile Apple tra toolbar e titolo */}
+        <div className="my-1 mx-2 h-px bg-gray-200" />
+        {isEditingTitle && canEdit ? (
+          <input
+            ref={titleInputRef}
+            type="text"
+            value={activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+            onChange={(e) => {
+              const newTitle = e.target.value;
+              if (activeVariantId === 'original') {
+                setWorkoutTitle(newTitle);
+              } else {
+                setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: newTitle } : v));
+              }
+            }}
+            onBlur={handleSaveTitle}
+            onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
+            className={`w-full text-2xl font-bold border-b-2 ${activeVariantId === 'original' ? 'border-blue-500 text-navy-900' : 'border-red-500 text-red-700'} bg-transparent outline-none text-center`}
+          />
+        ) : (
+          <h1
+            className={`text-2xl font-bold ${canEdit ? 'cursor-pointer' : 'cursor-default'} transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-navy-900 hover:text-navy-800' : 'text-red-700 hover:text-red-800'}`}
+            onClick={() => { if (!canEdit) return; setIsEditingTitle(true); setTimeout(() => { if (titleInputRef.current) { const input = titleInputRef.current; try { const len = input.value.length; input.setSelectionRange(len, len); } catch {} input.focus(); } }, 0); }}
+            title={canEdit ? "Clicca per modificare il titolo" : "Solo visualizzazione"}
+          >
+            {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+          </h1>
+        )}
+
+        {/* Editable Description (read-only per atleti) */}
+        <div className="flex justify-center items-center mb-6">
+          {isEditingDescription && canEdit ? (
+            <textarea
+              ref={descriptionInputRef}
+              value={workoutDescription}
+              onChange={(e) => setWorkoutDescription(e.target.value)}
+              onFocus={() => { if (isEditingTitle) { handleSaveTitle(); } }}
+              onBlur={handleSaveDescription}
+              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
+              placeholder="Aggiungi una descrizione..."
+              className="w-full max-w-2xl border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600 text-center"
+              rows={2}
+            />
+          ) : (
+        <div className={`flex items-center gap-2 justify-center ${canEdit ? 'group' : ''}`} onClick={() => { if (!canEdit) return; if (isEditingTitle) { handleSaveTitle(); } setIsEditingDescription(true); setTimeout(() => { if (descriptionInputRef.current) { const ta = descriptionInputRef.current; try { const len = ta.value.length; ta.setSelectionRange(len, len); } catch {} ta.focus(); } }, 0); }} title={canEdit ? "Clicca per modificare la descrizione" : "Solo visualizzazione"}>
+              {workoutDescription ? (
+          <p className={`text-gray-600 max-w-2xl text-center break-words ${canEdit ? 'transition-colors group-hover:text-blue-600' : ''}`}>{workoutDescription}</p>
+              ) : (
+                <p className="text-gray-400 italic text-center transition-colors group-hover:text-blue-600">Clicca per aggiungere una descrizione</p>
+              )}
+              {/* Icona modifica descrizione rimossa: il testo è già cliccabile per modificare */}
+            </div>
+          )}
+        </div>
+
+        {/* Tags sotto la descrizione */}
+        {tags && tags.length > 0 && (
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Tag size={16} className="text-purple-600" />
+            <div ref={tagsUnderDescContainerRef as React.RefObject<HTMLDivElement>} className="flex flex-wrap items-center gap-2 max-w-2xl justify-center">
+              {tags.map((tag, idx) => (
+                <div key={idx} className="relative inline-flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTagUnderDesc(tag)}
+                    className="px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-700 text-xs shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition"
+                    title="Seleziona tag"
+                  >
+                    {tag}
+                  </button>
+                  {selectedTagUnderDesc === tag && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); setSelectedTagUnderDesc(null); }}
+                      className="absolute -top-1 -right-1 p-1 rounded-full bg-white border border-gray-200 text-red-500 hover:text-red-700 shadow-sm"
+                      aria-label="Rimuovi"
+                      title="Rimuovi"
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {/* Toolbar rimossa da qui: ora posizionata sotto la barra varianti */}
         
         {/* Duration Modal */}
         <Modal
@@ -3853,10 +4207,23 @@ useEffect(() => {
           </div>
         </Modal>
         
+        {/* Separatore tra toolbar/descrizione/tag e barra settimane */}
+        <SectionSeparator variant="navy" />
+        
         {/* Barra Settimane: sopra le giornate */}
         <div className="mb-6">
           <div className="flex justify-center items-center gap-2">
-            <div className={`inline-flex items-center gap-2 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-2 overflow-x-auto no-scrollbar select-none max-w-[85vw]`}>
+            <Calendar size={16} className="text-gray-600" />
+            <div
+              ref={weekTabsRef}
+              onPointerDown={handleWeekTabsPointerDown}
+              onPointerMove={handleWeekTabsPointerMove}
+              onPointerUp={handleWeekTabsPointerUp}
+              onPointerCancel={handleWeekTabsPointerCancel}
+              onPointerLeave={handleWeekTabsPointerLeave}
+              className={`inline-flex items-center gap-2 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-2 overflow-x-auto no-scrollbar select-none ${isDraggingWeeks ? 'cursor-grabbing' : 'cursor-grab'} max-w-[85vw]`}
+              style={{ touchAction: 'pan-x' }}
+            >
               {(() => {
                 const weekKeysToRender = weeks.slice().sort((a, b) => {
                   const na = parseInt(a.replace(/^W/, ''), 10);
@@ -3871,6 +4238,7 @@ useEffect(() => {
                       className={`${activeWeekKey === wk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
                       title={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
                       aria-label={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
+                      data-week-key={wk}
                     >
                       {`Settimana ${parseInt(wk.replace('W',''), 10)}`}
                     </button>
@@ -3894,6 +4262,22 @@ useEffect(() => {
                             {/* Separatore stile Apple */}
                             <div className="my-1 mx-2 h-px bg-gray-200" />
                             <button
+                              onClick={() => { setOpenWeekKeyMenu(null); handleCopyWeek(wk); }}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            >
+                              <Copy size={16} className="text-gray-700" />
+                              <span>Copia</span>
+                            </button>
+                            <button
+                              onClick={() => { setOpenWeekKeyMenu(null); handlePasteWeek(wk); }}
+                              disabled={!weekClipboard || (weekClipboard && weekClipboard.sourceVariantId === activeVariantId && weekClipboard.sourceWeekKey === wk)}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 disabled:opacity-50 flex items-center gap-2"
+                            >
+                              <Copy size={16} className="text-gray-700" />
+                              <span>Incolla qui</span>
+                            </button>
+                            <div className="my-1 mx-2 h-px bg-gray-200" />
+                            <button
                               onClick={() => { setOpenWeekKeyMenu(null); handleRemoveWeek(wk); }}
                               className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 flex items-center gap-2"
                             >
@@ -3908,13 +4292,12 @@ useEffect(() => {
                 ));
               })()}
             </div>
-            {canEdit && (
+            {canEdit && weeks.length < 12 && (
               <button
                 onClick={handleAddWeek}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300"
                 title="Aggiungi settimana"
                 aria-label="Aggiungi settimana"
-                disabled={weeks.length >= 12}
               >
                 <Plus size={16} />
               </button>
@@ -3922,9 +4305,12 @@ useEffect(() => {
           </div>
         </div>
 
+        {/* Separatore tra settimane e giorni rimosso su richiesta */}
+
         {/* Sezione Giorni: sotto la toolbar varianti, sopra "Esercizi" */}
         <div className="mb-6">
           <div className="flex justify-center items-center gap-2">
+            <Clock size={16} className="text-gray-600" />
             <div
               ref={dayTabsRef}
               onPointerDown={handleDayTabsPointerDown}
@@ -4018,6 +4404,22 @@ useEffect(() => {
                             </button>
                             <div className="my-1 border-t border-gray-200" />
                             <button
+                              onClick={() => { handleCopyDay(dk); }}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            >
+                              <Copy size={14} />
+                              <span>Copia</span>
+                            </button>
+                            <button
+                              onClick={() => { handlePasteDay(dk); }}
+                              disabled={!dayClipboard || (dayClipboard && dayClipboard.sourceVariantId === activeVariantId && dayClipboard.sourceWeekKey === activeWeekKey && dayClipboard.sourceDayKey === dk)}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 disabled:opacity-50 flex items-center gap-2"
+                            >
+                              <Copy size={14} />
+                              <span>Incolla qui</span>
+                            </button>
+                            <div className="my-1 border-t border-gray-200" />
+                            <button
                               onClick={() => { handleRemoveDay(dk); closeDayMenu(); }}
                               disabled={dk === 'G1'}
                               className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-50 flex items-center gap-2"
@@ -4033,17 +4435,16 @@ useEffect(() => {
                 });
               })()}
             </div>
-            {canEdit && (
+            {canEdit && (() => {
+              const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+              const count = keys.length > 0 ? keys.length : 1; // fallback G1
+              return count < 10;
+            })() && (
               <button
                 onClick={handleAddDay}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300"
                 title="Aggiungi giorno"
                 aria-label="Aggiungi giorno"
-                disabled={(() => {
-                  const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
-                  const count = keys.length > 0 ? keys.length : 1; // fallback G1
-                  return count >= 10;
-                })()}
               >
                 <Plus size={16} />
               </button>
@@ -4051,10 +4452,15 @@ useEffect(() => {
           </div>
         </div>
 
+        {/* Separatore tra giorni e lista esercizi */}
+        <SectionSeparator variant="black" />
         
         {/* Exercises List */}
         <div className="mb-8">
-          <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight">Esercizi</h3>
+          <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight flex items-center">
+            <Dumbbell size={22} className="mr-2 text-gray-700" />
+            Esercizi
+          </h3>
           {exercises.length > 0 ? (
             <div className="space-y-4">
               {isSupersetMode && supersetAnchorExerciseId && (
@@ -4710,20 +5116,22 @@ useEffect(() => {
         onClose={() => setShowConfirmDialog(false)}
         title="Conferma Azione"
       >
-        <p className="text-gray-700 mb-6 font-sfpro">{confirmMessage}</p>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleConfirmAction}
-            className="px-4 py-2 rounded-full bg-red-500 text-white ring-1 ring-black/10 shadow-sm hover:bg-red-600 transition-all"
-          >
-            Conferma
-          </button>
-          <button
-            onClick={() => setShowConfirmDialog(false)}
-            className="px-4 py-2 rounded-full bg-white text-gray-800 ring-1 ring-black/10 shadow-sm hover:bg-gray-100 transition-all"
-          >
-            Annulla
-          </button>
+        <div className="space-y-4">
+          <p className="text-gray-700">{confirmMessage}</p>
+          <div className="flex space-x-4">
+            <button
+              onClick={handleConfirmAction}
+              className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            >
+              Conferma
+            </button>
+            <button
+              onClick={() => setShowConfirmDialog(false)}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Annulla
+            </button>
+          </div>
         </div>
       </Modal>
 

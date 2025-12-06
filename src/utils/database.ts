@@ -28,6 +28,11 @@ export interface WorkoutPlan {
   days?: { [key: string]: Exercise[] };
   // Nomi personalizzati per i giorni (chiavi corrispondono a days: es. "G1")
   dayNames?: { [key: string]: string };
+  // Elenco delle settimane (es. ["W1", "W2", ...])
+  weeks?: string[];
+  // Mappa settimana -> mappa giornate per quella settimana
+  // Esempio: { W1: { G1: [...], G2: [...] }, W2: { G1: [...]} }
+  weeksStore?: { [weekKey: string]: { [dayKey: string]: Exercise[] } };
   category?: string;
   status: 'draft' | 'published' | 'archived';
   mediaFiles?: {
@@ -63,6 +68,8 @@ export interface WorkoutVariant {
   days?: { [key: string]: Exercise[] };
   // Nomi personalizzati per i giorni di questa variante
   dayNames?: { [key: string]: string };
+  // Mappa settimana -> mappa giornate per questa variante
+  weeksStore?: { [weekKey: string]: { [dayKey: string]: Exercise[] } };
   modifications: {
     exerciseId: string;
     changes: {
