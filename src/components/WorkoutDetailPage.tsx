@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Edit3, Plus, Save, Copy, Users, ArrowLeft, ChevronLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText, ChevronUp, ChevronDown, Tag, Search, Link2, Dumbbell, Zap, Timer, Clock, Video } from 'lucide-react';
+import { Edit3, Plus, Save, Copy, Users, ArrowLeft, ChevronLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText, ChevronUp, ChevronDown, Tag, Search, Link2, Dumbbell, Zap, Timer, Clock, Video, Eraser } from 'lucide-react';
 import { AVAILABLE_ICONS } from './FolderCustomizer';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
 import DB from '../utils/database';
@@ -68,11 +68,10 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
   const { users: athletes, loading: athletesLoading, updateUser } = useUsers();
   
-  // Gestione tempo scheda
+  // Durata scheda (sincronizzata automaticamente con il numero di settimane)
+  const [durationWeeks, setDurationWeeks] = useState(1);
   const [isEditingDates, setIsEditingDates] = useState(false);
-  const [durationWeeks, setDurationWeeks] = useState(4);
-  // Stato temporaneo per consentire editing libero (compresa cancellazione)
-  const [durationWeeksTemp, setDurationWeeksTemp] = useState('');
+  const [durationWeeksTemp, setDurationWeeksTemp] = useState<string>('');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [originalExercises, setOriginalExercises] = useState<Exercise[] | null>(null); // Esercizi originali - null indica che non sono ancora stati caricati
 // Gestione giorni (G1–G10)
@@ -92,15 +91,20 @@ const [weeks, setWeeks] = useState<string[]>(['W1']);
 // Store delle settimane: mappa settimana -> giorni per l'originale
 const [originalWeeksStore, setOriginalWeeksStore] = useState<{ [weekKey: string]: { [dayKey: string]: Exercise[] } }>({ W1: { G1: [] } });
 // Store delle settimane: mappa variante -> (mappa settimana -> giorni)
-const [variantWeeksStoreById, setVariantWeeksStoreById] = useState<{ [variantId: string]: { [weekKey: string]: { [dayKey: string]: Exercise[] } } }>({});
-// Menu e posizione per azioni sulle settimane
-const [openWeekKeyMenu, setOpenWeekKeyMenu] = useState<string | null>(null);
-const [weekActionsPosition, setWeekActionsPosition] = useState<{ x: number, y: number } | null>(null);
+  const [variantWeeksStoreById, setVariantWeeksStoreById] = useState<{ [variantId: string]: { [weekKey: string]: { [dayKey: string]: Exercise[] } } }>({});
+  // Menu e posizione per azioni sulle settimane
+  const [openWeekKeyMenu, setOpenWeekKeyMenu] = useState<string | null>(null);
+  const [weekActionsPosition, setWeekActionsPosition] = useState<{ x: number, y: number } | null>(null);
 
-// Sincronizza automaticamente i cambiamenti dei giorni con lo store della settimana corrente
-useEffect(() => {
-  setOriginalWeeksStore(prev => ({ ...prev, [activeWeekKey]: originalDays }));
-}, [originalDays, activeWeekKey]);
+  // Sincronizza durata con numero di settimane
+  useEffect(() => {
+    setDurationWeeks(Math.max(1, weeks.length));
+  }, [weeks]);
+
+  // Sincronizza automaticamente i cambiamenti dei giorni con lo store della settimana corrente
+  useEffect(() => {
+    setOriginalWeeksStore(prev => ({ ...prev, [activeWeekKey]: originalDays }));
+  }, [originalDays, activeWeekKey]);
 
 useEffect(() => {
   setVariantWeeksStoreById(prev => {
@@ -168,8 +172,108 @@ const handleAddWeek = () => {
   }, 0);
 };
 
+// Copia/Incolla variante (tutta la variante: settimane e nomi giorni)
+const handleCopyVariant = (variantId: string) => {
+  // Supporta copia anche dalla scheda originale
+  const sourceWeeksStore = variantId === 'original' ? (originalWeeksStore || {}) : (variantWeeksStoreById[variantId] || {});
+  const clonedWeeksStore: { [weekKey: string]: { [dayKey: string]: Exercise[] } } = {};
+  Object.keys(sourceWeeksStore).forEach((wk) => {
+    const days = sourceWeeksStore[wk] || {};
+    const clonedDays: { [dayKey: string]: Exercise[] } = {};
+    Object.keys(days).forEach((dk) => {
+      clonedDays[dk] = deepCloneExercises(days[dk] || []);
+    });
+    clonedWeeksStore[wk] = clonedDays;
+  });
+
+  const sourceDayNames = variantId === 'original' ? (originalDayNames || {}) : (variantDayNamesById[variantId] || {});
+  setVariantClipboard({
+    sourceVariantId: variantId,
+    data: { weeksStore: clonedWeeksStore, dayNames: { ...sourceDayNames } },
+  });
+  setSaveMessage('Variante copiata');
+};
+
+const handlePasteVariant = (targetVariantId: string) => {
+  if (!variantClipboard) {
+    setSaveMessage('Nessuna variante copiata');
+    return;
+  }
+  if (variantClipboard.sourceVariantId === targetVariantId) {
+    setSaveMessage('Non puoi incollare nella stessa variante');
+    return;
+  }
+  // Unisci i week keys del clipboard con i week tabs globali
+  const clipboardWeekKeys = Object.keys(variantClipboard.data.weeksStore || {});
+  if (clipboardWeekKeys.length) {
+    const unionWeeks = Array.from(new Set([...(weeks || []), ...clipboardWeekKeys])).sort((a, b) => {
+      const na = parseInt(String(a).replace(/^W/, ''), 10);
+      const nb = parseInt(String(b).replace(/^W/, ''), 10);
+      return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+    }).slice(0, 12); // Rispetta limite a 12 settimane
+    setWeeks(unionWeeks);
+  }
+
+  // Applica settimane e nomi giorni alla destinazione (originale o variante)
+  if (targetVariantId === 'original') {
+    // Aggiorna store e dayNames dell'originale
+    const newOriginalWeeksStore = { ...(originalWeeksStore || {}), ...variantClipboard.data.weeksStore };
+    setOriginalWeeksStore(newOriginalWeeksStore);
+    const newOriginalDayNames = { ...variantClipboard.data.dayNames };
+    setOriginalDayNames(newOriginalDayNames);
+    // Sincronizza anche i giorni per la settimana attiva
+    const daysForActiveWeek = newOriginalWeeksStore[activeWeekKey] || {};
+    setOriginalDays(daysForActiveWeek);
+    // Carica esercizi del giorno attivo
+    const activeList = (daysForActiveWeek[activeDayKey] || []).map(ex => ({ ...ex }));
+    setExercises(activeList);
+    if (activeDayKey === 'G1') setOriginalExercises(activeList);
+    // Attiva l'originale
+    setVariants(variants.map(v => ({ ...v, isActive: false })));
+    setActiveVariantId('original');
+    setSaveMessage('Variante incollata sull\'originale e attivata');
+  } else {
+    // Aggiorna store e dayNames della variante di destinazione
+    const newWeeksStoreForVariant = { ...(variantWeeksStoreById[targetVariantId] || {}), ...variantClipboard.data.weeksStore };
+    setVariantWeeksStoreById({ ...variantWeeksStoreById, [targetVariantId]: newWeeksStoreForVariant });
+
+    const newDayNamesForVariant = { ...variantClipboard.data.dayNames };
+    setVariantDayNamesById({ ...variantDayNamesById, [targetVariantId]: newDayNamesForVariant });
+
+    // Sincronizza anche i giorni per la settimana attiva
+    const daysForActiveWeek = newWeeksStoreForVariant[activeWeekKey] || {};
+    setVariantDaysById({ ...variantDaysById, [targetVariantId]: daysForActiveWeek });
+
+    // Aggiorna record variante nell'array varianti e attivala
+    const updatedVariants = variants.map(v => {
+      if (v.id !== targetVariantId) return { ...v, isActive: false };
+      return {
+        ...v,
+        isActive: true,
+        days: daysForActiveWeek,
+        dayNames: newDayNamesForVariant,
+        exercises: daysForActiveWeek[activeDayKey] || v.exercises || [],
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    setVariants(updatedVariants);
+
+    // Cambia variante attiva e carica esercizi
+    setActiveVariantId(targetVariantId);
+    const activeList = (daysForActiveWeek[activeDayKey] || []).map(ex => ({ ...ex }));
+    setExercises(activeList);
+    setSaveMessage('Variante incollata e attivata');
+  }
+
+  triggerAutoSave();
+};
+
 // Rimuovi una settimana (non consentito rimuovere l’ultima) con conferma stile Apple
 const handleRemoveWeek = (weekKey: string) => {
+  if (weekKey === 'W1') {
+    setSaveMessage('La prima settimana non può essere eliminata');
+    return;
+  }
   if (weeks.length <= 1) {
     setSaveMessage('Deve esistere almeno una settimana');
     return;
@@ -227,6 +331,44 @@ const handleRemoveWeek = (weekKey: string) => {
       triggerAutoSave();
     }
   );
+};
+
+// Svuota tutti i giorni della settimana selezionata (originale o variante attiva)
+const handleClearWeek = (weekKey: string) => {
+  const isOriginal = activeVariantId === 'original';
+  if (isOriginal) {
+    const existingDaysMap = originalWeeksStore[weekKey] || {};
+    const clearedDaysMap = Object.keys(existingDaysMap).reduce((acc: { [dayKey: string]: Exercise[] }, dk) => {
+      acc[dk] = [];
+      return acc;
+    }, {} as { [dayKey: string]: Exercise[] });
+    setOriginalWeeksStore(prev => ({ ...prev, [weekKey]: clearedDaysMap }));
+    if (weekKey === activeWeekKey) {
+      setOriginalDays(clearedDaysMap);
+      if (activeDayKey in clearedDaysMap) {
+        setExercises([]);
+        if (activeDayKey === 'G1') setOriginalExercises([]);
+      }
+    }
+  } else {
+    const variantStoreForId = variantWeeksStoreById[activeVariantId] || {};
+    const existingDaysMap = variantStoreForId[weekKey] || {};
+    const clearedDaysMap = Object.keys(existingDaysMap).reduce((acc: { [dayKey: string]: Exercise[] }, dk) => {
+      acc[dk] = [];
+      return acc;
+    }, {} as { [dayKey: string]: Exercise[] });
+    setVariantWeeksStoreById(prev => {
+      const updated = { ...prev } as typeof prev;
+      updated[activeVariantId] = { ...(updated[activeVariantId] || {}), [weekKey]: clearedDaysMap };
+      return updated;
+    });
+    if (weekKey === activeWeekKey) {
+      setVariantDaysById(prev => ({ ...prev, [activeVariantId]: clearedDaysMap }));
+      if (activeDayKey in clearedDaysMap) setExercises([]);
+    }
+  }
+  setSaveMessage('Settimana svuotata');
+  triggerAutoSave();
 };
 
 // Switch settimana (carica giorni/esercizi della settimana selezionata)
@@ -345,8 +487,9 @@ const [supersetAnchorExerciseId, setSupersetAnchorExerciseId] = useState<string 
 const [supersetSelection, setSupersetSelection] = useState<string[]>([]);
 const [openSupersetActionsId, setOpenSupersetActionsId] = useState<string | null>(null);
 const [openCloneActionsId, setOpenCloneActionsId] = useState<string | null>(null);
+const [openExerciseContextId, setOpenExerciseContextId] = useState<string | null>(null);
 const [actionsMenuPosition, setActionsMenuPosition] = useState<{ top: number; left: number } | null>(null);
-const [actionsMenuType, setActionsMenuType] = useState<'clone' | 'superset' | null>(null);
+const [actionsMenuType, setActionsMenuType] = useState<'clone' | 'superset' | 'exercise' | null>(null);
 // Riferimenti e configurazioni per posizionamento dinamico e rifiniture UI
 const actionsMenuAnchorElRef = useRef<HTMLElement | null>(null);
 const actionsMenuRef = useRef<HTMLDivElement | null>(null);
@@ -355,22 +498,29 @@ const MENU_OFFSET_Y = 8;
 const MENU_MARGIN = 8;
 const CLONE_MENU_WIDTH = 176; // w-44
 const SUPERSET_MENU_WIDTH = 160; // w-40
+const EXERCISE_MENU_WIDTH = 192; // w-48
+
+// Long‑press per aprire il menu azioni esercizio (mobile)
+const exerciseLongPressTriggeredRef = useRef(false);
+const exercisePressStartPosRef = useRef<{ x: number; y: number } | null>(null);
+const exerciseLongPressTimeoutRef = useRef<number | null>(null);
 
 const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
 const closeActionsMenu = () => {
   setOpenCloneActionsId(null);
   setOpenSupersetActionsId(null);
+  setOpenExerciseContextId(null);
   setActionsMenuPosition(null);
   setActionsMenuType(null);
   actionsMenuAnchorElRef.current = null;
 };
 
-const computeAndSetMenuPosition = (anchor: HTMLElement, type: 'clone' | 'superset') => {
+const computeAndSetMenuPosition = (anchor: HTMLElement, type: 'clone' | 'superset' | 'exercise') => {
   actionsMenuAnchorElRef.current = anchor;
   const rect = anchor.getBoundingClientRect();
   const vw = window.innerWidth;
-  const menuWidth = type === 'clone' ? CLONE_MENU_WIDTH : SUPERSET_MENU_WIDTH;
+  const menuWidth = type === 'clone' ? CLONE_MENU_WIDTH : type === 'superset' ? SUPERSET_MENU_WIDTH : EXERCISE_MENU_WIDTH;
   const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + menuWidth / 2, vw - MENU_MARGIN - menuWidth / 2);
   const top = rect.bottom + MENU_OFFSET_Y;
   setActionsMenuPlacement('bottom');
@@ -383,7 +533,7 @@ const updateMenuPosition = useCallback(() => {
   if (!anchor || !actionsMenuType) return;
   const rect = anchor.getBoundingClientRect();
   const vw = window.innerWidth;
-  const menuWidth = actionsMenuType === 'clone' ? CLONE_MENU_WIDTH : SUPERSET_MENU_WIDTH;
+  const menuWidth = actionsMenuType === 'clone' ? CLONE_MENU_WIDTH : actionsMenuType === 'superset' ? SUPERSET_MENU_WIDTH : EXERCISE_MENU_WIDTH;
   const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + menuWidth / 2, vw - MENU_MARGIN - menuWidth / 2);
   let top = rect.bottom + MENU_OFFSET_Y;
   let placement: 'bottom' | 'top' = 'bottom';
@@ -457,12 +607,24 @@ useEffect(() => {
   const handleRemoveTag = async (tagToRemove: string) => {
     const updated = tags.filter(t => t !== tagToRemove);
     setTags(updated);
+    // Notifica rimozione tag
+    setSaveMessage('Tag rimosso dalla scheda');
     if (workoutId) {
       try {
         await updateWorkoutPlan(workoutId, { tags: updated, updatedAt: new Date().toISOString() });
       } catch (e) {
         console.error('Errore nel salvataggio dei tag:', e);
       }
+    }
+  };
+
+  // Toggle tag: se presente rimuove, altrimenti aggiunge (rispettando limite 10)
+  const handleToggleTag = async (tagName: string) => {
+    if (tags.includes(tagName)) {
+      await handleRemoveTag(tagName);
+    } else {
+      if (tags.length >= 10) return;
+      await handleAddTag(tagName);
     }
   };
 
@@ -563,6 +725,8 @@ const dayMenuRef = useRef<HTMLDivElement | null>(null);
 const [dayMenuPosition, setDayMenuPosition] = useState<{ top: number; left: number } | null>(null);
 const [dayMenuPlacement, setDayMenuPlacement] = useState<'bottom' | 'top'>('bottom');
 const DAY_MENU_WIDTH = 160; // w-40
+// Timeout per long‑press giorni
+const dayLongPressTimeoutRef = useRef<number | null>(null);
 // Clipboard per copia/incolla giornate (tra giorni e settimane)
 const [dayClipboard, setDayClipboard] = useState<{
   exercises: Exercise[];
@@ -579,6 +743,15 @@ const [weekClipboard, setWeekClipboard] = useState<{
   data: { [dayKey: string]: Exercise[] };
 } | null>(null);
 
+// Clipboard per copia/incolla varianti (tutta la variante: settimane e nomi giorni)
+const [variantClipboard, setVariantClipboard] = useState<{
+  sourceVariantId: string;
+  data: {
+    weeksStore: { [weekKey: string]: { [dayKey: string]: Exercise[] } };
+    dayNames: { [key: string]: string };
+  };
+} | null>(null);
+
 // Long‑press context menu for variant tabs
 const VARIANT_LONG_PRESS_MS = 400;
 const variantLongPressTriggeredRef = useRef(false);
@@ -589,6 +762,68 @@ const variantMenuRef = useRef<HTMLDivElement | null>(null);
 const [variantMenuPosition, setVariantMenuPosition] = useState<{ top: number; left: number } | null>(null);
 const [variantMenuPlacement, setVariantMenuPlacement] = useState<'bottom' | 'top'>('bottom');
 const VARIANT_MENU_WIDTH = 140; // w-36
+// Timeout per long‑press varianti
+const variantLongPressTimeoutRef = useRef<number | null>(null);
+
+// Settimane: anchor/posizionamento per menu azioni
+const weekMenuAnchorElRef = useRef<HTMLElement | null>(null);
+const weekMenuRef = useRef<HTMLDivElement | null>(null);
+const [weekMenuPosition, setWeekMenuPosition] = useState<{ top: number; left: number } | null>(null);
+const [weekMenuPlacement, setWeekMenuPlacement] = useState<'bottom' | 'top'>('bottom');
+const WEEK_MENU_WIDTH = 160; // w-40
+// Long‑press context menu per settimane
+const weekLongPressTriggeredRef = useRef(false);
+const weekPressStartPosRef = useRef<{ x: number; y: number } | null>(null);
+const weekLongPressTimeoutRef = useRef<number | null>(null);
+
+const closeWeekMenu = () => {
+  setOpenWeekKeyMenu(null);
+  setWeekMenuPosition(null);
+  weekMenuAnchorElRef.current = null;
+};
+
+const computeAndSetWeekMenuPosition = (anchor: HTMLElement) => {
+  weekMenuAnchorElRef.current = anchor;
+  const rect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + WEEK_MENU_WIDTH / 2, vw - MENU_MARGIN - WEEK_MENU_WIDTH / 2);
+  let top = rect.bottom + MENU_OFFSET_Y;
+  setWeekMenuPlacement('bottom');
+  setWeekMenuPosition({ top, left });
+};
+
+const updateWeekMenuPosition = useCallback(() => {
+  const anchor = weekMenuAnchorElRef.current;
+  if (!anchor || !openWeekKeyMenu) return;
+  const rect = anchor.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const left = clamp(rect.left + rect.width / 2, MENU_MARGIN + WEEK_MENU_WIDTH / 2, vw - MENU_MARGIN - WEEK_MENU_WIDTH / 2);
+  let top = rect.bottom + MENU_OFFSET_Y;
+  const menuEl = weekMenuRef.current;
+  let placement: 'bottom' | 'top' = 'bottom';
+  if (menuEl) {
+    const mh = menuEl.offsetHeight || 0;
+    if (top + mh + MENU_MARGIN > window.innerHeight) {
+      top = rect.top - MENU_OFFSET_Y - mh;
+      placement = 'top';
+    }
+  }
+  setWeekMenuPlacement(placement);
+  setWeekMenuPosition({ top, left });
+}, [openWeekKeyMenu]);
+
+useEffect(() => {
+  if (!openWeekKeyMenu) return;
+  const handler = () => updateWeekMenuPosition();
+  window.addEventListener('resize', handler);
+  window.addEventListener('scroll', handler, true);
+  // aggiornamento iniziale
+  setTimeout(handler, 0);
+  return () => {
+    window.removeEventListener('resize', handler);
+    window.removeEventListener('scroll', handler, true);
+  };
+}, [openWeekKeyMenu, updateWeekMenuPosition]);
 
 const closeDayMenu = () => {
   setOpenDayKeyMenu(null);
@@ -683,6 +918,44 @@ useEffect(() => {
     window.removeEventListener('scroll', handler, true);
   };
 }, [openVariantMenuId, updateVariantMenuPosition]);
+
+// Chiusura automatica dei menu Varianti/Settimane/Giornate quando si clicca fuori
+useEffect(() => {
+  if (!openVariantMenuId && !openWeekKeyMenu && !openDayKeyMenu) return;
+
+  const handlePointerDown = (e: PointerEvent) => {
+    const target = e.target as Node | null;
+    if (!target) return;
+
+    // Se clicco dentro uno dei menu, non chiudo
+    const isInsideVariantMenu = !!(variantMenuRef.current && variantMenuRef.current.contains(target));
+    const isInsideWeekMenu = !!(weekMenuRef.current && weekMenuRef.current.contains(target));
+    const isInsideDayMenu = !!(dayMenuRef.current && dayMenuRef.current.contains(target));
+
+    if (isInsideVariantMenu || isInsideWeekMenu || isInsideDayMenu) return;
+
+    // Clic ovunque fuori: chiudo tutti i menu aperti
+    if (openVariantMenuId) closeVariantMenu();
+    if (openWeekKeyMenu) closeWeekMenu();
+    if (openDayKeyMenu) closeDayMenu();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      if (openVariantMenuId) closeVariantMenu();
+      if (openWeekKeyMenu) closeWeekMenu();
+      if (openDayKeyMenu) closeDayMenu();
+    }
+  };
+
+  // Usa cattura per intercettare il click prima che altri handler lo consumino
+  window.addEventListener('pointerdown', handlePointerDown, true);
+  window.addEventListener('keydown', handleKeyDown);
+  return () => {
+    window.removeEventListener('pointerdown', handlePointerDown, true);
+    window.removeEventListener('keydown', handleKeyDown);
+  };
+}, [openVariantMenuId, openWeekKeyMenu, openDayKeyMenu]);
 // Fallback: rilascia lo scroll anche se il puntatore esce dal contenitore
 const handleDayTabsWindowPointerUp = (_e: PointerEvent) => {
   setIsDraggingDays(false);
@@ -1196,12 +1469,7 @@ useEffect(() => {
   }
 }, [activeVariantId, variants.length]);
 
-// Inizializza input temporaneo quando si apre il modal
-useEffect(() => {
-  if (isEditingDates) {
-    setDurationWeeksTemp(String(durationWeeks));
-  }
-}, [isEditingDates, durationWeeks]);
+// Rimosso: editing manuale della durata. Ora la durata segue il numero di settimane.
 
 // Recupera icona della cartella per la scheda corrente
 useEffect(() => {
@@ -1327,11 +1595,72 @@ useEffect(() => {
 
   // Posizionamento e stato del menù tag (Apple-style) con chiusura on outside click
   const { 
+    position: tagsMenuPosition,
     isOpen: isTagsMenuOpen, 
+    triggerRef: tagsTriggerRef,
+    dropdownRef: tagsDropdownRef,
     openDropdown: openTagsMenu, 
     closeDropdown: closeTagsMenu, 
     toggleDropdown: toggleTagsMenu 
-  } = useDropdownPosition({ offset: 0, preferredPosition: 'bottom-left', autoAdjust: true });
+  } = useDropdownPosition({ offset: 8, preferredPosition: 'bottom-left', autoAdjust: true });
+
+  // Dropdown toolbar: Varianti, Settimane, Giorni (stile Apple)
+  const {
+    position: variantsDropdownPosition,
+    isOpen: isVariantsDropdownOpen,
+    triggerRef: variantsDropdownTriggerRef,
+    dropdownRef: variantsDropdownRef,
+    toggleDropdown: toggleVariantsDropdown,
+    closeDropdown: closeVariantsDropdown
+  } = useDropdownPosition({ offset: 8, preferredPosition: 'bottom-left', autoAdjust: true });
+
+  const {
+    position: weeksDropdownPosition,
+    isOpen: isWeeksDropdownOpen,
+    triggerRef: weeksDropdownTriggerRef,
+    dropdownRef: weeksDropdownRef,
+    toggleDropdown: toggleWeeksDropdown,
+    closeDropdown: closeWeeksDropdown
+  } = useDropdownPosition({ offset: 8, preferredPosition: 'bottom-left', autoAdjust: true });
+
+  const {
+    position: daysDropdownPosition,
+    isOpen: isDaysDropdownOpen,
+    triggerRef: daysDropdownTriggerRef,
+    dropdownRef: daysDropdownRef,
+    toggleDropdown: toggleDaysDropdown,
+    closeDropdown: closeDaysDropdown
+  } = useDropdownPosition({ offset: 8, preferredPosition: 'bottom-left', autoAdjust: true });
+
+  // Blocca lo scroll della pagina quando un menu della toolbar è aperto
+  useEffect(() => {
+    const anyOpen = isVariantsDropdownOpen || isWeeksDropdownOpen || isDaysDropdownOpen || isTagsMenuOpen;
+    const prev = document.body.style.overflow;
+    if (anyOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = prev; };
+  }, [isVariantsDropdownOpen, isWeeksDropdownOpen, isDaysDropdownOpen, isTagsMenuOpen]);
+
+  // Menu azioni per i tag sotto descrizione (Modifica/Elimina)
+  const [openTagActionsFor, setOpenTagActionsFor] = useState<string | null>(null);
+  const [tagActionsPosition, setTagActionsPosition] = useState<{ top: number; left: number } | null>(null);
+  const [tagRenameDraft, setTagRenameDraft] = useState<string>('');
+  const [showTagRename, setShowTagRename] = useState<boolean>(false);
+  const tagActionsDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const handleRenameTag = (oldName: string, newName: string) => {
+    const trimmed = (newName || '').trim();
+    if (!trimmed) return;
+    setTags((prev) => {
+      const withoutOld = prev.filter((t) => t !== oldName);
+      // Evita duplicati
+      return withoutOld.includes(trimmed) ? withoutOld : withoutOld.concat(trimmed);
+    });
+    try { autoSave(); } catch {}
+  };
 
   // Persistenza libreria esercizi personalizzati - salvataggio su storage quando la libreria cambia
   useEffect(() => {
@@ -1367,6 +1696,7 @@ useEffect(() => {
     setShowGymTagsList(false);
     if (!isTagsMenuOpen) {
       setNewTag('');
+      setShowTagsDropdown(false);
     }
   }, [isTagsMenuOpen]);
 
@@ -2170,6 +2500,27 @@ useEffect(() => {
     // Trigger auto-save to update link generation timestamp
     triggerAutoSave();
   };
+
+  // Svuota gli esercizi della giornata selezionata (originale o variante attiva)
+  const handleClearDay = (dayKey: string) => {
+    if (activeVariantId === 'original') {
+      const newOriginal = { ...originalDays, [dayKey]: [] };
+      setOriginalDays(newOriginal);
+      if (dayKey === activeDayKey) {
+        setExercises([]);
+        if (dayKey === 'G1') setOriginalExercises([]);
+      } else if (dayKey === 'G1') {
+        setOriginalExercises([]);
+      }
+    } else {
+      const prevVariantDays = variantDaysById[activeVariantId] || {};
+      const updatedVariantDays = { ...prevVariantDays, [dayKey]: [] };
+      setVariantDaysById({ ...variantDaysById, [activeVariantId]: updatedVariantDays });
+      if (dayKey === activeDayKey) setExercises([]);
+    }
+    setSaveMessage('Giornata svuotata');
+    triggerAutoSave();
+  };
   
   const handleCopyLink = () => {
     navigator.clipboard.writeText(generatedLink);
@@ -2491,6 +2842,92 @@ useEffect(() => {
     await handleCloneWorkout();
   };
 
+  // Clona esplicitamente dalla scheda originale, indipendentemente dalla variante attiva
+  const handleCloneFromOriginal = async () => {
+    if (!canEdit) return;
+    // Calcola prossimo numero
+    const existingVariantNumbers = variants
+      .map(v => {
+        const match = (v.name || '').match(/Variante\s+(\d+)/i);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(num => num > 0);
+
+    const nextVariantNumber = existingVariantNumbers.length > 0
+      ? Math.max(...existingVariantNumbers) + 1
+      : 1;
+
+    // Clona giorni e nomi giorni dall'originale (usa weeksStore per allineamento settimana attiva)
+    const sourceDaysRaw: { [key: string]: Exercise[] } = originalWeeksStore[activeWeekKey] || originalDays || {};
+    const sourceDayNamesRaw: { [key: string]: string } = originalDayNames || {};
+
+    const sourceDayKeys = Object.keys(sourceDaysRaw);
+    const clonedDays: { [key: string]: Exercise[] } = {};
+    const clonedDayNames: { [key: string]: string } = {};
+    if (sourceDayKeys.length === 0) {
+      const fallbackG1 = originalExercises || [];
+      clonedDays['G1'] = deepCloneExercises(fallbackG1);
+    } else {
+      sourceDayKeys.forEach(dk => {
+        clonedDays[dk] = deepCloneExercises(sourceDaysRaw[dk] || []);
+        if (sourceDayNamesRaw[dk] && String(sourceDayNamesRaw[dk]).trim()) {
+          clonedDayNames[dk] = String(sourceDayNamesRaw[dk]).trim();
+        }
+      });
+    }
+
+    const newVariantExercises = deepCloneExercises(
+      (sourceDayKeys.includes('G1') ? sourceDaysRaw['G1'] : clonedDays[sourceDayKeys[0]]) || []
+    );
+
+    const newVariant: WorkoutVariant = {
+      id: Date.now().toString(),
+      name: `Variante ${nextVariantNumber} di ${workoutTitle}`,
+      isActive: true,
+      exercises: newVariantExercises,
+      days: clonedDays,
+      dayNames: clonedDayNames,
+      parentWorkoutId: workoutId,
+      modifications: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const updatedVariants = [...variants.map(v => ({ ...v, isActive: false })), newVariant].sort((a, b) => {
+      const ma = (a.name || '').match(/Variante\s+(\d+)/i);
+      const mb = (b.name || '').match(/Variante\s+(\d+)/i);
+      const na = ma ? parseInt(ma[1], 10) : Number.MAX_SAFE_INTEGER;
+      const nb = mb ? parseInt(mb[1], 10) : Number.MAX_SAFE_INTEGER;
+      return na - nb;
+    });
+    setVariants(updatedVariants);
+    setActiveVariantId(newVariant.id);
+    setVariantDaysById({ ...variantDaysById, [newVariant.id]: newVariant.days || {} });
+    setVariantDayNamesById({ ...variantDayNamesById, [newVariant.id]: newVariant.dayNames || {} });
+
+    const clonedDayKeys = Object.keys(newVariant.days || {});
+    const targetDayKey = clonedDayKeys.includes(activeDayKey) ? activeDayKey : (clonedDayKeys[0] || 'G1');
+    if (targetDayKey !== activeDayKey) setActiveDayKey(targetDayKey);
+    const nextList = (newVariant.days || {})[targetDayKey] || [];
+    setExercises(deepCloneExercises(nextList));
+
+    setSaveMessage(`Nuova variante creata: ${newVariant.name}`);
+    try {
+      const workoutData = await DB.getWorkoutPlanById(workoutId);
+      if (workoutData) {
+        const updatedWorkout = {
+          ...workoutData,
+          variants: updatedVariants,
+          activeVariantId: newVariant.id,
+          updatedAt: new Date().toISOString()
+        };
+        await updateWorkoutPlan(workoutId, updatedWorkout);
+      }
+    } catch (error) {
+      console.error('Error saving new variant:', error);
+    }
+  };
+
   // Clona esplicitamente una variante selezionata dal menu contestuale
   const handleCloneVariant = async (variantId: string) => {
     if (!canEdit) return;
@@ -2699,8 +3136,8 @@ useEffect(() => {
       setExercises([...nextList]);
     }
     // Salvataggio veloce dello stato
-    triggerAutoSave();
-  };
+  triggerAutoSave();
+};
 
   // Rimozione giorno corrente (solo per variante/scheda attiva). Non consente rimozione di G1
   const handleRemoveDay = (dayKey: string) => {
@@ -2769,6 +3206,26 @@ useEffect(() => {
         triggerAutoSave();
       }
     );
+  };
+
+  // Svuota completamente la scheda originale (tutte le settimane/giorni/esercizi)
+  const handleClearOriginal = () => {
+    const clearedStore = Object.keys(originalWeeksStore).reduce((acc: { [weekKey: string]: { [dayKey: string]: Exercise[] } }, wk) => {
+      const dayMap = originalWeeksStore[wk] || {};
+      const clearedDayMap = Object.keys(dayMap).reduce((inner: { [dayKey: string]: Exercise[] }, dk) => {
+        inner[dk] = [];
+        return inner;
+      }, {} as { [dayKey: string]: Exercise[] });
+      acc[wk] = clearedDayMap;
+      return acc;
+    }, {} as { [weekKey: string]: { [dayKey: string]: Exercise[] } });
+    setOriginalWeeksStore(clearedStore);
+    const activeClearedDays = clearedStore[activeWeekKey] || {};
+    setOriginalDays(activeClearedDays);
+    if (activeDayKey === 'G1') setOriginalExercises([]);
+    setExercises([]);
+    setSaveMessage('Scheda originale svuotata');
+    triggerAutoSave();
   };
   
   const handleRemoveVariant = (variantId: string) => {
@@ -3103,7 +3560,7 @@ useEffect(() => {
   };
   
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-gray-100 min-h-screen">
       {/* Notifica stile Apple (pill) */}
       {saveMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50" role="status" aria-live="polite">
@@ -3117,164 +3574,498 @@ useEffect(() => {
 
       {/* Sezione giorni verrà posizionata dentro il contenitore, sopra "Esercizi" */}
 
-      <div className={`relative left-1/2 -translate-x-1/2 w-screen rounded-2xl px-4 sm:px-6 lg:px-8 pt-2 pb-6 min-h-[calc(100vh-300px)] ${variants.length > 0 ? '' : '-mt-px'} transition-shadow bg-white shadow-md`} style={{ marginTop: headerOffsetTop }}>
+      <div className={`relative mx-auto w-full rounded-2xl px-4 sm:px-6 lg:px-8 pt-0 pb-6 min-h-[calc(100vh-300px)] ${variants.length > 0 ? '' : '-mt-px'} bg-gray-100`}>
 
         
-        {/* Header Row: Back button + centered Title within card container */}
-        <div className="grid grid-cols-[auto_1fr_auto] items-center mb-4">
-          <div className="flex justify-start">
-            <button
-              onClick={onClose}
-              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98] shrink-0"
-              title="Torna alla Cartella"
-            >
-              <ChevronLeft size={24} />
-            </button>
+        {/* Header Row: Back button + centered Toolbar in the same row */}
+        <div className="grid grid-cols-[auto_1fr_auto] items-center mb-2">
+          <div className="flex justify-start items-center">
+            {!isStandaloneMobile && (
+              <button
+                onClick={onClose}
+                className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm hover:bg-white/80 active:scale-[0.98] shrink-0"
+                title="Torna alla Cartella"
+              >
+                <ChevronLeft size={24} />
+              </button>
+            )}
           </div>
-          <div className="min-w-0 flex justify-center flex-col items-center">
-            {/* Barra varianti: ora posizionata sopra il titolo, allineata al tasto indietro */}
-            <div>
-              <div className="flex justify-center">
-                <div
-                  ref={variantTabsRef}
-                  onPointerDown={handleVariantTabsPointerDown}
-                  onPointerMove={handleVariantTabsPointerMove}
-                  onPointerUp={handleVariantTabsPointerUp}
-                  className={`inline-flex items-center gap-3 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-4 ${isStandaloneMobile ? 'py-2' : 'py-2.5'} overflow-x-auto overflow-y-visible no-scrollbar select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-                  style={{ touchAction: 'pan-x' }}
+          <div className="min-w-0 flex justify-center items-center">
+            {canEdit && !isStandaloneMobile && (
+              <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full overflow-x-auto touch-pan-x">
+                <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+                  {/* Varianti dropdown */}
+                  <div className="relative">
+                <button
+                  ref={variantsDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleVariantsDropdown(e)}
+                  title="Varianti"
+                  aria-label="Varianti"
+                  className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
                 >
-                  <div className="relative h-10 w-10 flex-shrink-0">
-                    <button
-                      onClick={(e) => {
-                        if (activeVariantId !== 'original') {
-                          const currentVariantIndex = variants.findIndex(v => v.id === activeVariantId);
-                          if (currentVariantIndex !== -1) {
-                            const updatedVariants = [...variants];
-                            updatedVariants[currentVariantIndex] = {
-                              ...updatedVariants[currentVariantIndex],
-                              exercises: [...exercises],
-                              updatedAt: new Date().toISOString()
-                            };
-                            setVariants(updatedVariants.map(v => ({ ...v, isActive: false })));
-                          }
-                        }
-                        setActiveVariantId('original');
-                        setExercises(originalExercises ? [...originalExercises] : []);
-                      }}
-                      className={`${activeVariantId === 'original' ? 'bg-gray-100 text-blue-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-10 w-10 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
-                      title={`Scheda originale: ${workoutTitle}`}
-                      aria-label={`Scheda originale: ${workoutTitle}`}
-                    >
-                      {React.createElement(FileText, { size: 18, className: activeVariantId === 'original' ? 'text-blue-600' : 'text-gray-500' })}
+                      {activeVariantId === 'original' ? (
+                        <>
+                          <FileText size={18} className="text-blue-600" />
+                          <Star size={10} className="absolute -top-0.5 -right-0.5 text-blue-600" />
+                        </>
+                      ) : (
+                        <>
+                          <FileText size={18} className="text-red-600" />
+                          {(() => { const idx = variants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
+                        </>
+                      )}
                     </button>
-                  </div>
-                  {variants.map((variant, index) => (
-                    <div key={variant.id} className="group relative h-10 w-10 flex-shrink-0 overflow-visible">
-                      <button
-                        onClick={() => { if (!variantLongPressTriggeredRef.current) handleSwitchVariant(variant.id); }}
-                        onPointerDown={(e) => {
-                          if (!canEdit) return;
-                          variantLongPressTriggeredRef.current = false;
-                          variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
-                          clearTimeout(variantLongPressTimeoutRef.current!);
-                          variantLongPressTimeoutRef.current = setTimeout(() => {
-                            variantLongPressTriggeredRef.current = true;
-                            setOpenVariantMenuId(variant.id);
-                            setActionsMenuPosition({ x: e.clientX, y: e.clientY });
-                          }, 450);
-                        }}
-                        onPointerUp={() => {
-                          if (!canEdit) return;
-                          clearTimeout(variantLongPressTimeoutRef.current!);
-                          variantLongPressTriggeredRef.current = false;
-                        }}
-                        onPointerMove={(e) => {
-                          if (!canEdit) return;
-                          const startPos = variantPressStartPosRef.current;
-                          if (!startPos) return;
-                          const dx = Math.abs(e.clientX - startPos.x);
-                          const dy = Math.abs(e.clientY - startPos.y);
-                          if (dx > 6 || dy > 6) {
-                            clearTimeout(variantLongPressTimeoutRef.current!);
+                    {isVariantsDropdownOpen && (
+                      <Portal>
+                        <div
+                          ref={variantsDropdownRef as React.RefObject<HTMLDivElement>}
+                          style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? 0, left: variantsDropdownPosition?.left ?? 0 }}
+                          className="z-50 w-64 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                        >
+                      <div className="mb-1 px-2 text-xs text-gray-500">Seleziona variante</div>
+                      <div className="space-y-1">
+                        {/* Originale */}
+                        <button
+                          onClick={() => { handleSwitchVariant('original'); closeVariantsDropdown(); }}
+                          onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId('original'); }}
+                          onPointerDown={(e) => {
+                            if (!canEdit) return;
                             variantLongPressTriggeredRef.current = false;
-                          }
-                        }}
-                        onContextMenu={(e) => {
-                          if (!canEdit) return;
-                          e.preventDefault();
-                          setOpenVariantMenuId(variant.id);
-                          setActionsMenuPosition({ x: e.clientX, y: e.clientY });
-                        }}
-                        className={`${activeVariantId === variant.id ? 'bg-gray-100 text-red-600 scale-105 ring-1 ring-gray-300' : 'bg-white text-gray-500 hover:bg-gray-50'} h-10 w-10 rounded-full flex items-center justify-center transition-colors transition-transform duration-300 ease-out`}
-                        title={`Variante ${index + 1}: ${variant.name || 'Senza titolo'}`}
-                        aria-label={`Variante ${index + 1}: ${variant.name || 'Senza titolo'}`}
-                      >
-                        {React.createElement(Copy, { size: 18, className: activeVariantId === variant.id ? 'text-red-600' : 'text-gray-500' })}
-                      </button>
-                      {/* Numero variante sotto icona (più vicino e in grassetto) */}
-                      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-red-600 text-xs">
-                        {index + 1}
+                            variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                            const anchor = e.currentTarget as HTMLElement;
+                            if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current);
+                            variantLongPressTimeoutRef.current = window.setTimeout(() => {
+                              variantLongPressTriggeredRef.current = true;
+                              computeAndSetVariantMenuPosition(anchor);
+                              setOpenVariantMenuId('original');
+                            }, VARIANT_LONG_PRESS_MS);
+                          }}
+                          onPointerUp={() => { if (!canEdit) return; if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }}
+                          onPointerMove={(e) => {
+                            if (!canEdit) return;
+                            const startPos = variantPressStartPosRef.current; if (!startPos) return;
+                            const dx = Math.abs(e.clientX - startPos.x); const dy = Math.abs(e.clientY - startPos.y);
+                            if (dx > 6 || dy > 6) { if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }
+                          }}
+                          className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeVariantId === 'original' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                          title={`Scheda: ${workoutTitle}`}
+                        >
+                          <FileText size={16} className={activeVariantId === 'original' ? 'text-blue-700' : 'text-gray-600'} />
+                          <span>{workoutTitle}</span>
+                        </button>
+                        {/* Varianti */}
+                        {variants.map((variant, index) => (
+                          <button
+                            key={variant.id}
+                            onClick={() => { handleSwitchVariant(variant.id); closeVariantsDropdown(); }}
+                            onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId(variant.id); }}
+                            onPointerDown={(e) => {
+                              if (!canEdit) return;
+                              variantLongPressTriggeredRef.current = false;
+                              variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                              const anchor = e.currentTarget as HTMLElement;
+                              if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current);
+                              variantLongPressTimeoutRef.current = window.setTimeout(() => {
+                                variantLongPressTriggeredRef.current = true;
+                                computeAndSetVariantMenuPosition(anchor);
+                                setOpenVariantMenuId(variant.id);
+                              }, VARIANT_LONG_PRESS_MS);
+                            }}
+                            onPointerUp={() => { if (!canEdit) return; if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }}
+                            onPointerMove={(e) => {
+                              if (!canEdit) return;
+                              const startPos = variantPressStartPosRef.current; if (!startPos) return;
+                              const dx = Math.abs(e.clientX - startPos.x); const dy = Math.abs(e.clientY - startPos.y);
+                              if (dx > 6 || dy > 6) { if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeVariantId === variant.id ? 'bg-red-50 text-red-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                            title={`Variante ${index + 1}: ${variant.name || 'Senza titolo'}`}
+                          >
+                            <FileText size={16} className={activeVariantId === variant.id ? 'text-red-700' : 'text-red-600'} />
+                            <span>Variante {index + 1}{variant.name ? ` — ${variant.name}` : ''}</span>
+                          </button>
+                        ))}
                       </div>
-                      {/* Menu variante */}
-                      {openVariantMenuId === variant.id && actionsMenuPosition && (
-                        <Portal>
-                          <div>
-                            {/* Overlay per chiudere il menu cliccando fuori */}
-                            <div
-                              className="fixed inset-0 z-[999]"
-                              onClick={() => { setOpenVariantMenuId(null); setActionsMenuPosition(null); }}
-                            />
-                            {/* Menu contestuale */}
-                            <div
-                              className="fixed z-[1000] bg-white rounded-xl shadow-lg ring-1 ring-black/10 p-2 min-w-[200px]"
-                              style={{ left: actionsMenuPosition.x + 8, top: actionsMenuPosition.y + 8 }}
-                            >
-                              <button
-                                onClick={() => { setOpenVariantMenuId(null); handleSwitchVariant(variant.id); }}
-                                className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
-                              >
-                                <Eye size={16} className="text-gray-600" />
-                                <span>Apri</span>
-                              </button>
-                              <button
-                                onClick={() => { setOpenVariantMenuId(null); handleCloneVariant(variant.id); }}
-                                className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
-                              >
-                                <Copy size={16} className="text-gray-700" />
-                                <span>Clona</span>
-                              </button>
-                              {/* Separatore stile Apple */}
-                              <div className="my-1 mx-2 h-px bg-gray-200" />
-                              <button
-                                onClick={() => { setOpenVariantMenuId(null); handleRemoveVariant(variant.id); }}
-                                className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 flex items-center gap-2"
-                              >
-                                <Trash2 size={16} className="text-red-600" />
-                                <span>Elimina</span>
-                              </button>
-                            </div>
-                          </div>
-                        </Portal>
+                      {canEdit && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => { handleAddVariant(); }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            title="Crea nuova variante"
+                          >
+                            <Plus size={16} className="text-red-600" />
+                            <span>Nuova variante</span>
+                          </button>
+                        </div>
                       )}
                     </div>
-                  ))}
-                </div>
+                  </Portal>
+                )}
               </div>
-            </div>
-            {/* Barra varianti inline: Portal rimosso */}
-          </div>
-          <div className="flex justify-end">
-            {/* Placeholder invisibile per mantenere il titolo perfettamente centrato rispetto al contenitore */}
-            <div className="p-2 opacity-0 pointer-events-none">
-              <ChevronLeft size={20} />
-            </div>
-          </div>
-        </div>
+              {/* Separatore Apple dopo Varianti */}
+              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
 
-        {/* Toolbar: posizionata sotto la barra varianti e sopra il titolo */}
-        {canEdit && (
-          <div ref={toolbarRef} className="relative w-full flex justify-center mt-2 mb-3">
-            <div className="flex flex-nowrap justify-center gap-2 p-2.5 bg-white rounded-xl shadow-sm">
+              {/* Settimane dropdown */}
+              <div className="relative">
+                <button
+                  ref={weeksDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleWeeksDropdown(e)}
+                  title="Settimane"
+                  aria-label="Settimane"
+                  className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                >
+                  <Calendar size={18} className="text-cyan-600" />
+                  <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
+                </button>
+                {isWeeksDropdownOpen && (
+                  <Portal>
+                    <div
+                      ref={weeksDropdownRef as React.RefObject<HTMLDivElement>}
+                      style={{ position: 'fixed', top: weeksDropdownPosition?.top ?? 0, left: weeksDropdownPosition?.left ?? 0 }}
+                      className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                    >
+                      <div className="mb-1 px-2 text-xs text-gray-500">Seleziona settimana</div>
+                      <div className="space-y-1">
+                        {weeks.slice().sort((a, b) => {
+                          const na = parseInt(a.replace(/^W/, ''), 10);
+                          const nb = parseInt(b.replace(/^W/, ''), 10);
+                          return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                        }).map((wk) => (
+                          <button
+                            key={wk}
+                            onClick={() => { if (weekLongPressTriggeredRef.current) return; handleSwitchWeek(wk); closeWeeksDropdown(); }}
+                            onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetWeekMenuPosition(e.currentTarget as HTMLElement); setOpenWeekKeyMenu(wk); }}
+                            onPointerDown={(e) => {
+                              if (!canEdit) return;
+                              weekLongPressTriggeredRef.current = false;
+                              weekPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                              const anchor = e.currentTarget as HTMLElement;
+                              if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current);
+                              weekLongPressTimeoutRef.current = window.setTimeout(() => {
+                                weekLongPressTriggeredRef.current = true;
+                                computeAndSetWeekMenuPosition(anchor);
+                                setOpenWeekKeyMenu(wk);
+                              }, VARIANT_LONG_PRESS_MS);
+                            }}
+                            onPointerUp={() => { if (!canEdit) return; if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current); weekLongPressTriggeredRef.current = false; }}
+                            onPointerMove={(e) => {
+                              if (!canEdit) return;
+                              const start = weekPressStartPosRef.current; if (!start) return;
+                              const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                              if (dx > 6 || dy > 6) { if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current); weekLongPressTriggeredRef.current = false; }
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeWeekKey === wk ? 'bg-cyan-50 text-cyan-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                            title={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
+                          >
+                            <Calendar size={16} className={activeWeekKey === wk ? 'text-cyan-700' : 'text-gray-600'} />
+                            <span>Settimana {parseInt(wk.replace('W',''), 10)}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {canEdit && weeks.length < 12 && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => { handleAddWeek(); }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            title="Aggiungi settimana"
+                          >
+                            <Plus size={16} className="text-cyan-600" />
+                            <span>Aggiungi settimana</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </Portal>
+                )}
+              </div>
+              {/* Separatore Apple dopo Settimane */}
+              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+              {/* Giorni dropdown */}
+              <div className="relative">
+                <button
+                  ref={daysDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleDaysDropdown(e)}
+                  title="Allenamenti"
+                  aria-label="Allenamenti"
+                  className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                >
+                  <Dumbbell size={18} className="text-orange-500" />
+                  {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
+                </button>
+                {isDaysDropdownOpen && (
+                  <Portal>
+                    <div
+                      ref={daysDropdownRef as React.RefObject<HTMLDivElement>}
+                      style={{ position: 'fixed', top: daysDropdownPosition?.top ?? 0, left: daysDropdownPosition?.left ?? 0 }}
+                      className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                    >
+                      <div className="mb-1 px-2 text-xs text-gray-500">Seleziona allenamento</div>
+                      <div className="space-y-1">
+                        {(() => {
+                          const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                          const sorted = (keys.length ? keys : ['G1']).slice().sort((a, b) => {
+                            const na = parseInt(String(a).replace(/^G/, ''), 10);
+                            const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                            return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                          });
+                          return sorted.map((dk) => {
+                            const label = getDayDisplayName(dk);
+                              return (
+                                <button
+                                  key={dk}
+                                  onClick={() => { if (dayLongPressTriggeredRef.current) return; handleSwitchDay(dk); closeDaysDropdown(); }}
+                                  onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetDayMenuPosition(e.currentTarget as HTMLElement); setOpenDayKeyMenu(dk); }}
+                                  onPointerDown={(e) => {
+                                    if (!canEdit) return;
+                                    dayLongPressTriggeredRef.current = false;
+                                    dayPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                                    const anchor = e.currentTarget as HTMLElement;
+                                    if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current);
+                                    dayLongPressTimeoutRef.current = window.setTimeout(() => {
+                                      dayLongPressTriggeredRef.current = true;
+                                      computeAndSetDayMenuPosition(anchor);
+                                      setOpenDayKeyMenu(dk);
+                                    }, VARIANT_LONG_PRESS_MS);
+                                  }}
+                                  onPointerUp={() => { if (!canEdit) return; if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current); dayLongPressTriggeredRef.current = false; }}
+                                  onPointerMove={(e) => {
+                                    if (!canEdit) return;
+                                    const start = dayPressStartPosRef.current; if (!start) return;
+                                    const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                                    if (dx > 6 || dy > 6) { if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current); dayLongPressTriggeredRef.current = false; }
+                                  }}
+                                  className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeDayKey === dk ? 'bg-orange-50 text-orange-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                                  title={label}
+                                >
+                                  <Dumbbell size={16} className={activeDayKey === dk ? 'text-orange-700' : 'text-orange-500'} />
+                                  <span>{label}</span>
+                                </button>
+                              );
+                          });
+                        })()}
+                      </div>
+                      {canEdit && (() => {
+                        const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                        const count = keys.length > 0 ? keys.length : 1;
+                        return count < 10;
+                      })() && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => { handleAddDay(); }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            title="Aggiungi allenamento"
+                          >
+                            <Plus size={16} className="text-orange-600" />
+                            <span>Aggiungi allenamento</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </Portal>
+                )}
+              </div>
+              {/* Separatore Apple dopo Allenamenti */}
+              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+              {/* Menù azioni Varianti/Settimane/Giornate via Portal */}
+              {canEdit && openVariantMenuId && variantMenuPosition && (
+                <Portal>
+                  <div
+                    ref={variantMenuRef as React.RefObject<HTMLDivElement>}
+                    style={{ position: 'fixed', top: variantMenuPosition.top!, left: variantMenuPosition.left!, transform: 'translateX(-50%)' }}
+                    className="z-[9999] bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative"
+                    onClick={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  >
+                    <div className="px-2 pb-2 text-xs text-gray-500">Azioni variante</div>
+                    {openVariantMenuId === 'original' ? (
+                      <>
+                        <button
+                          onClick={() => { handleCloneFromOriginal(); closeVariantMenu(); }}
+                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                          title="Clona in nuova variante"
+                        >
+                          <Copy size={16} className="text-gray-700" />
+                          <span>Clona come nuova</span>
+                        </button>
+                        <button
+                          onClick={() => { handleCopyVariant('original'); closeVariantMenu(); }}
+                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                          title="Copia variante"
+                        >
+                          <Copy size={16} className="text-gray-700" />
+                          <span>Copia variante</span>
+                        </button>
+                        <button
+                          onClick={() => { handlePasteVariant('original'); closeVariantMenu(); }}
+                          disabled={!variantClipboard || variantClipboard.sourceVariantId === 'original'}
+                          className={`w-full text-left px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 ${(!variantClipboard || variantClipboard.sourceVariantId === 'original') ? 'opacity-50 cursor-not-allowed bg-white text-gray-400' : 'hover:bg-gray-50 text-gray-800'}`}
+                          title="Incolla variante"
+                        >
+                          <Save size={16} className="text-gray-700" />
+                          <span>Incolla variante</span>
+                        </button>
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => { handleClearOriginal(); closeVariantMenu(); }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                            title="Svuota originale"
+                          >
+                            <Eraser size={16} className="text-red-600" />
+                            <span>Svuota originale</span>
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => { handleCopyVariant(openVariantMenuId!); closeVariantMenu(); }}
+                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                          title="Copia variante"
+                        >
+                          <Copy size={16} className="text-gray-700" />
+                          <span>Copia variante</span>
+                        </button>
+                        <button
+                          onClick={() => { handlePasteVariant(openVariantMenuId!); closeVariantMenu(); }}
+                          disabled={!variantClipboard || variantClipboard.sourceVariantId === openVariantMenuId}
+                          className={`w-full text-left px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 ${(!variantClipboard || variantClipboard.sourceVariantId === openVariantMenuId) ? 'opacity-50 cursor-not-allowed bg-white text-gray-400' : 'hover:bg-gray-50 text-gray-800'}`}
+                          title="Incolla variante"
+                        >
+                          <Save size={16} className="text-gray-700" />
+                          <span>Incolla variante</span>
+                        </button>
+                        <button
+                          onClick={() => { handleCloneVariant(openVariantMenuId!); closeVariantMenu(); }}
+                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                          title="Clona variante"
+                        >
+                          <Copy size={16} className="text-gray-700" />
+                          <span>Clona variante</span>
+                        </button>
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => { handleRemoveVariant(openVariantMenuId!); closeVariantMenu(); }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                            title="Rimuovi variante"
+                          >
+                            <Trash2 size={16} className="text-red-600" />
+                            <span>Rimuovi variante</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </Portal>
+              )}
+
+              {canEdit && openWeekKeyMenu && weekMenuPosition && (
+                <Portal>
+                  <div
+                    ref={weekMenuRef as React.RefObject<HTMLDivElement>}
+                    style={{ position: 'fixed', top: weekMenuPosition.top!, left: weekMenuPosition.left!, transform: 'translateX(-50%)' }}
+                    className="z-[9999] bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative"
+                    onClick={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  >
+                    <div className="px-2 pb-2 text-xs text-gray-500">Azioni settimana</div>
+                    <button
+                      onClick={() => { handleCopyWeek(openWeekKeyMenu!); closeWeekMenu(); }}
+                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                      title="Copia settimana"
+                    >
+                      <Copy size={16} className="text-gray-700" />
+                      <span>Copia settimana</span>
+                    </button>
+                    <button
+                      onClick={() => { handlePasteWeek(openWeekKeyMenu!); closeWeekMenu(); }}
+                      disabled={!weekClipboard || (weekClipboard.sourceVariantId === activeVariantId && weekClipboard.sourceWeekKey === openWeekKeyMenu)}
+                      className={`w-full text-left px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 ${(!weekClipboard || (weekClipboard.sourceVariantId === activeVariantId && weekClipboard.sourceWeekKey === openWeekKeyMenu)) ? 'opacity-50 cursor-not-allowed bg-white text-gray-400' : 'hover:bg-gray-50 text-gray-800'}`}
+                      title="Incolla settimana"
+                    >
+                      <Save size={16} className="text-gray-700" />
+                      <span>Incolla settimana</span>
+                    </button>
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { handleClearWeek(openWeekKeyMenu!); closeWeekMenu(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Svuota settimana"
+                      >
+                        <Eraser size={16} className="text-gray-700" />
+                        <span>Svuota settimana</span>
+                      </button>
+                      <button
+                        onClick={() => { handleRemoveWeek(openWeekKeyMenu!); closeWeekMenu(); }}
+                        className="mt-1 w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                        title="Rimuovi settimana"
+                      >
+                        <Trash2 size={16} className="text-red-600" />
+                        <span>Rimuovi settimana</span>
+                      </button>
+                    </div>
+                  </div>
+                </Portal>
+              )}
+
+              {canEdit && openDayKeyMenu && dayMenuPosition && (
+                <Portal>
+                  <div
+                    ref={dayMenuRef as React.RefObject<HTMLDivElement>}
+                    style={{ position: 'fixed', top: dayMenuPosition.top!, left: dayMenuPosition.left!, transform: 'translateX(-50%)' }}
+                    className="z-[9999] bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative"
+                    onClick={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  >
+                    <div className="px-2 pb-2 text-xs text-gray-500">Azioni giornata</div>
+                    <button
+                      onClick={() => { handleStartRenameDay(openDayKeyMenu!); closeDayMenu(); }}
+                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                      title="Rinomina giornata"
+                    >
+                      <Edit3 size={16} className="text-gray-700" />
+                      <span>Rinomina giornata</span>
+                    </button>
+                    <button
+                      onClick={() => { handleCopyDay(openDayKeyMenu!); closeDayMenu(); }}
+                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                      title="Copia giornata"
+                    >
+                      <Copy size={16} className="text-gray-700" />
+                      <span>Copia giornata</span>
+                    </button>
+                    <button
+                      onClick={() => { handlePasteDay(openDayKeyMenu!); }}
+                      disabled={!dayClipboard || (dayClipboard.sourceVariantId === activeVariantId && dayClipboard.sourceWeekKey === activeWeekKey && dayClipboard.sourceDayKey === openDayKeyMenu)}
+                      className={`w-full text-left px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 ${(!dayClipboard || (dayClipboard.sourceVariantId === activeVariantId && dayClipboard.sourceWeekKey === activeWeekKey && dayClipboard.sourceDayKey === openDayKeyMenu)) ? 'opacity-50 cursor-not-allowed bg-white text-gray-400' : 'hover:bg-gray-50 text-gray-800'}`}
+                      title="Incolla giornata"
+                    >
+                      <Save size={16} className="text-gray-700" />
+                      <span>Incolla giornata</span>
+                    </button>
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { handleClearDay(openDayKeyMenu!); closeDayMenu(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Svuota giornata"
+                      >
+                        <Eraser size={16} className="text-gray-700" />
+                        <span>Svuota giornata</span>
+                      </button>
+                      <button
+                        onClick={() => { handleRemoveDay(openDayKeyMenu!); closeDayMenu(); }}
+                        className="mt-1 w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                        title="Rimuovi giornata"
+                      >
+                        <Trash2 size={16} className="text-red-600" />
+                        <span>Rimuovi giornata</span>
+                      </button>
+                    </div>
+                  </div>
+                </Portal>
+              )}
+
               {/* Create Exercise */}
               <button
                   onClick={() => {
@@ -3302,142 +4093,130 @@ useEffect(() => {
                   }}
                   title="Crea"
                   aria-label="Crea"
-                  className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                  className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
                 >
                   <Plus size={18} className="text-green-600" />
-                </button>
-
-              {/* Duration Selector */}
-              <button
-                onClick={() => setIsEditingDates(!isEditingDates)}
-                title="Durata"
-                aria-label="Durata"
-                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
-              >
-                <Calendar size={18} className="text-blue-600" />
               </button>
+              {/* Separatore Apple dopo Crea */}
+              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+            {/* Duration Selector rimosso: la durata è sincronizzata con le settimane */}
 
               {/* Tags button */}
               <div className="relative">
                 <button
+                  ref={tagsTriggerRef as React.RefObject<HTMLButtonElement>}
                   onClick={(e) => toggleTagsMenu(e)}
                   title="Tag"
                   aria-label="Tag"
-                  className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                  className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
                 >
                   <Tag size={18} className="text-purple-600" />
                 </button>
-                <Modal
-                  isOpen={isTagsMenuOpen}
-                  onClose={() => { closeTagsMenu(); setShowGymTagsList(false); setShowTagsDropdown(false); }}
-                  title="Gestisci Tag"
-                >
-                  <div className="mb-2">
-                    <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
-                    <div className="relative flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          value={newTag}
-                          onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
-                          className="w-full pl-8 pr-7 py-1.5 border border-white/30 rounded-full text-xs bg-white/60 backdrop-blur-sm shadow-inner focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-200"
-                          placeholder="Es. forza, mobilità"
-                          maxLength={20}
-                          onFocus={() => setShowTagsDropdown(false)}
-                        />
-                        {newTag.trim() && tags.includes(newTag.trim()) && (
-                          <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
-                        )}
-                        <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                        {newTag && (
+                {isTagsMenuOpen && (
+                  <Portal>
+                    <div
+                      ref={tagsDropdownRef as React.RefObject<HTMLDivElement>}
+                      style={{ position: 'fixed', top: tagsMenuPosition?.top ?? 0, left: tagsMenuPosition?.left ?? 0 }}
+                      className="z-50 w-80 max-w-[85vw] bg-white/70 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-3"
+                    >
+                      <div className="mb-2">
+                        <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
+                        <div className="relative flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              value={newTag}
+                              onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
+                              className="w-full pl-8 pr-7 py-1.5 border border-white/30 rounded-full text-xs bg-white/60 backdrop-blur-sm shadow-inner focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-200"
+                              placeholder="Es. forza, mobilità"
+                              maxLength={20}
+                              onFocus={() => setShowTagsDropdown(false)}
+                            />
+                            {newTag.trim() && tags.includes(newTag.trim()) && (
+                              <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
+                            )}
+                            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                            {newTag && (
+                              <button
+                                type="button"
+                                aria-label="Pulisci"
+                                onClick={() => setNewTag('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                          <div className="relative" ref={gymTagsGroupRef}>
+                            <button
+                              type="button"
+                              onClick={() => setShowGymTagsList(!showGymTagsList)}
+                              className="flex items-center justify-between text-xs text-gray-700 bg-white/50 backdrop-blur-sm ring-1 ring-white/30 rounded-full px-2.5 py-1.5 shadow-sm hover:bg-white/60 hover:shadow-md hover:text-purple-700 transition-all duration-200"
+                            >
+                              {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                            {showGymTagsList && (
+                              <div className="absolute top-full right-0 z-50 mt-1 bg-white/60 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl ring-1 ring-white/20 w-44 max-h-40 overflow-auto transition-all duration-200">
+                                {PREDEFINED_GYM_TAGS.map((t) => (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => handleToggleTag(t)}
+                                    className={`w-full text-left px-3 py-1.5 rounded-full transition-all duration-150 text-xs ${tags.includes(t) ? 'bg-white/70 text-purple-700 hover:bg-white/80' : 'hover:bg-white/70 hover:text-purple-700'}`}
+                                  >
+                                    <span>{t}</span>
+                                    {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                           <button
                             type="button"
-                            aria-label="Pulisci"
-                            onClick={() => setNewTag('')}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            onClick={() => handleAddTag()}
+                            className="text-xs bg-gradient-to-b from-purple-600 to-purple-700 text-white px-2.5 py-1.5 rounded-full shadow-md hover:from-purple-600 hover:to-purple-800 transition-all duration-200 disabled:opacity-50"
+                            disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
+                            title="Aggiungi tag"
+                            aria-label="Aggiungi tag"
                           >
-                            <X size={14} />
+                            +
                           </button>
-                        )}
-                      </div>
-                      <div className="relative" ref={gymTagsGroupRef}>
-                        <button
-                          type="button"
-                          onClick={() => setShowGymTagsList(!showGymTagsList)}
-                          className="flex items-center justify-between text-xs text-gray-700 bg-white/50 backdrop-blur-sm ring-1 ring-white/30 rounded-full px-2.5 py-1.5 shadow-sm hover:bg-white/60 hover:shadow-md hover:text-purple-700 transition-all duration-200"
-                        >
-                          {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </button>
-                        {showGymTagsList && (
-                          <div className="absolute top-full right-0 z-50 mt-1 bg-white/60 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl ring-1 ring-white/20 w-44 max-h-40 overflow-auto transition-all duration-200">
-                            {PREDEFINED_GYM_TAGS.map((t) => (
-                              <button
-                                key={t}
-                                type="button"
-                                onClick={() => handleAddTag(t)}
-                                className="w-full text-left px-3 py-1.5 rounded-full hover:bg-white/70 hover:text-purple-700 transition-all duration-150 text-xs"
-                                disabled={tags.includes(t) || tags.length >= 10}
-                              >
-                                <span>{t}</span>
-                                {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleAddTag()}
-                        className="text-xs bg-gradient-to-b from-purple-600 to-purple-700 text-white px-2.5 py-1.5 rounded-full shadow-md hover:from-purple-600 hover:to-purple-800 transition-all duration-200 disabled:opacity-50"
-                        disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
-                        title="Aggiungi tag"
-                        aria-label="Aggiungi tag"
-                      >
-                        +
-                      </button>
-                    </div>
-                    {(() => {
-                      const ALL_TAGS = Array.from(new Set([...PREDEFINED_GYM_TAGS, ...tags]));
-                      const queryActive = newTag.trim().length > 0;
-                      if (!queryActive) return null;
-                      const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
-                      return (
-                        <div className="mt-2 bg-white/60 backdrop-blur-sm border border-white/30 ring-1 ring-white/20 rounded-2xl h-[120px] overflow-auto transition-all duration-200">
-                          {filtered.length > 0 ? (
-                            filtered.map(t => (
-                              <button
-                                key={t}
-                                type="button"
-                                onClick={() => handleAddTag(t)}
-                                className={`w-full text-left px-3 py-1.5 text-xs rounded-full hover:bg-white/70 hover:text-purple-700 transition-all duration-150 ${tags.includes(t) ? 'opacity-60 cursor-not-allowed flex justify-between' : ''}`}
-                                disabled={tags.includes(t) || tags.length >= 10}
-                              >
-                                <span>{t}</span>
-                                {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-3 py-2 text-xs text-gray-400">Nessun risultato</div>
-                          )}
                         </div>
-                      );
-                    })()}
-
-                  </div>
-                </Modal>
+                        {(() => {
+                          const ALL_TAGS = Array.from(new Set([...PREDEFINED_GYM_TAGS, ...tags]));
+                          const queryActive = newTag.trim().length > 0;
+                          if (!queryActive) return null;
+                          const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
+                          return (
+                            <div className="mt-2 bg-white/60 backdrop-blur-sm border border-white/30 ring-1 ring-white/20 rounded-2xl h-[120px] overflow-auto transition-all duration-200">
+                              {filtered.length > 0 ? (
+                                filtered.map(t => (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => handleToggleTag(t)}
+                                    className={`w-full text-left px-3 py-1.5 text-xs rounded-full transition-all duration-150 ${tags.includes(t) ? 'bg-white/70 text-purple-700 flex justify-between hover:bg-white/80' : 'hover:bg-white/70 hover:text-purple-700'}`}
+                                  >
+                                    <span>{t}</span>
+                                    {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-xs text-gray-400">Nessun risultato</div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </Portal>
+                )}
               </div>
-              
-              {/* Clone Workout */}
-              <button
-                onClick={handleCloneWorkout}
-                title="Clona"
-                aria-label="Clona"
-                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
-              >
-                <Copy size={18} className="text-red-600" />
-              </button>
-              
+              {/* Separatore Apple dopo Tag */}
+              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+              {/* Clone Workout rimosso */}
               {/* Workout Status */}
               <button
                 onClick={() => {
@@ -3455,86 +4234,280 @@ useEffect(() => {
                 }}
                 title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
               >
                 <div className={`w-3 h-3 rounded-full ${
                   workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
                 }`}></div>
               </button>
-              
-              {/* Associate Athlete */}
+              {/* Separatore Apple dopo Stato */}
+              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+              {/* Associate Athletes */}
               <button
-                onClick={() => setShowAthleteDropdown(!showAthleteDropdown)}
+                onClick={() => setShowAthleteDropdown(true)}
                 title="Associa"
                 aria-label="Associa"
-                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
+                className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
               >
-                <Users size={18} className="text-purple-600" />
-              </button>
-              
-              {/* View Associated Athletes */}
-              <button
-                onClick={() => setShowAthletesList(!showAthletesList)}
-                title="Visualizza"
-                aria-label="Visualizza"
-                className="bg-white rounded-md shadow-sm w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 hover:shadow-md shrink-0"
-              >
-                <Eye size={18} className="text-indigo-600" />
+                <Users size={18} className="text-indigo-600" />
               </button>
             </div>
           </div>
+          )}
+        </div>
+        <div className="flex justify-end items-center">
+            {/* Placeholder invisibile per bilanciare la centratura */}
+            <div className="p-2 opacity-0 pointer-events-none">
+              <ChevronLeft size={20} />
+            </div>
+          </div>
+        </div>
+
+        {isStandaloneMobile && canEdit && (
+          <Portal containerId="pwa-workout-toolbar">
+            <div className="relative w-full flex justify-center max-w-full">
+              <div className="flex flex-wrap whitespace-normal justify-center items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+                {/* Varianti trigger */}
+                <div className="relative">
+                  <button
+                    ref={variantsDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                    onClick={(e) => toggleVariantsDropdown(e)}
+                    title="Varianti"
+                    aria-label="Varianti"
+                    className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  >
+                    {activeVariantId === 'original' ? (
+                      <>
+                        <FileText size={18} className="text-blue-600" />
+                        <Star size={10} className="absolute -top-0.5 -right-0.5 text-blue-600" />
+                      </>
+                    ) : (
+                      <>
+                        <FileText size={18} className="text-red-600" />
+                        {(() => { const idx = variants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+                {/* Settimane trigger */}
+                <div className="relative">
+                  <button
+                    ref={weeksDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                    onClick={(e) => toggleWeeksDropdown(e)}
+                    title="Settimane"
+                    aria-label="Settimane"
+                    className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  >
+                    <Calendar size={18} className="text-cyan-600" />
+                    <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
+                  </button>
+                </div>
+
+                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+                {/* Giorni trigger */}
+                <div className="relative">
+                  <button
+                    ref={daysDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                    onClick={(e) => toggleDaysDropdown(e)}
+                    title="Allenamenti"
+                    aria-label="Allenamenti"
+                    className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  >
+                    <Dumbbell size={18} className="text-orange-500" />
+                    {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
+                  </button>
+                </div>
+
+                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+                {/* Crea esercizio */}
+                <button
+                  onClick={() => {
+                    if (showExerciseForm) {
+                      setShowExerciseForm(false);
+                      setEditingExerciseId(null);
+                      setEditingExercise(null);
+                      setCurrentExercise({
+                        id: '',
+                        name: '',
+                        notes: '',
+                        sets: '',
+                        intensity: '',
+                        tut: '',
+                        recovery: '',
+                        videoLink: ''
+                      });
+                      setCurrentSets('');
+                      setCurrentReps('');
+                      setEditingSets('');
+                      setEditingReps('');
+                    } else {
+                      setShowExerciseForm(true);
+                    }
+                  }}
+                  title="Crea"
+                  aria-label="Crea"
+                  className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                >
+                  <Plus size={18} className="text-green-600" />
+                </button>
+
+                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+                {/* Tag trigger */}
+                <div className="relative">
+                  <button
+                    ref={tagsTriggerRef as React.RefObject<HTMLButtonElement>}
+                    onClick={(e) => toggleTagsMenu(e)}
+                    title="Tag"
+                    aria-label="Tag"
+                    className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  >
+                    <Tag size={18} className="text-purple-600" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Portal>
         )}
-        {/* Separatore stile Apple tra toolbar e titolo */}
-        <div className="my-1 mx-2 h-px bg-gray-200" />
         {isEditingTitle && canEdit ? (
-          <input
-            ref={titleInputRef}
-            type="text"
-            value={activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
-            onChange={(e) => {
-              const newTitle = e.target.value;
-              if (activeVariantId === 'original') {
-                setWorkoutTitle(newTitle);
-              } else {
-                setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: newTitle } : v));
-              }
-            }}
-            onBlur={handleSaveTitle}
-            onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
-            className={`w-full text-2xl font-bold border-b-2 ${activeVariantId === 'original' ? 'border-blue-500 text-navy-900' : 'border-red-500 text-red-700'} bg-transparent outline-none text-center`}
-          />
+          <div className="relative w-full">
+            <input
+              ref={titleInputRef}
+              type="text"
+              value={activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+              onChange={(e) => {
+                const newTitle = e.target.value;
+                if (activeVariantId === 'original') {
+                  setWorkoutTitle(newTitle);
+                } else {
+                  setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: newTitle } : v));
+                }
+              }}
+              onBlur={handleSaveTitle}
+              onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
+              className={`w-full text-2xl font-bold border-b-2 ${activeVariantId === 'original' ? 'border-blue-500 text-navy-900' : 'border-red-500 text-red-700'} bg-transparent outline-none text-center`}
+            />
+            {(() => {
+              const timeRegex = /\b(\d{1,2}:\d{2}|\d+\s*(min|minuti|m|sec|secondi|s|h|ore))\b/i;
+              const currentTitle = activeVariantId === 'original' ? (workoutTitle || '') : ((variants.find(v => v.id === activeVariantId)?.name) || '');
+              const hasTime = timeRegex.test(currentTitle);
+              if (!hasTime) return null;
+              return (
+                <button
+                  type="button"
+                  aria-label="Cancella contenuto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (activeVariantId === 'original') {
+                      setWorkoutTitle('');
+                    } else {
+                      setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: '' } : v));
+                    }
+                    setTimeout(() => { try { handleSaveTitle(); } catch {} }, 0);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-white/70 text-red-600 hover:bg-white hover:shadow-sm"
+                >
+                  <X size={14} />
+                </button>
+              );
+            })()}
+          </div>
         ) : (
-          <h1
-            className={`text-2xl font-bold ${canEdit ? 'cursor-pointer' : 'cursor-default'} transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-navy-900 hover:text-navy-800' : 'text-red-700 hover:text-red-800'}`}
-            onClick={() => { if (!canEdit) return; setIsEditingTitle(true); setTimeout(() => { if (titleInputRef.current) { const input = titleInputRef.current; try { const len = input.value.length; input.setSelectionRange(len, len); } catch {} input.focus(); } }, 0); }}
-            title={canEdit ? "Clicca per modificare il titolo" : "Solo visualizzazione"}
-          >
-            {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
-          </h1>
+          <div className="relative w-full flex justify-center">
+            <h1
+              className={`text-2xl font-bold ${canEdit ? 'cursor-pointer' : 'cursor-default'} transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-navy-900 hover:text-navy-800' : 'text-red-700 hover:text-red-800'}`}
+              onClick={() => { if (!canEdit) return; setIsEditingTitle(true); setTimeout(() => { if (titleInputRef.current) { const input = titleInputRef.current; try { const len = input.value.length; input.setSelectionRange(len, len); } catch {} input.focus(); } }, 0); }}
+              title={canEdit ? "Clicca per modificare il titolo" : "Solo visualizzazione"}
+            >
+              {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+            </h1>
+            {(() => {
+              const timeRegex = /\b(\d{1,2}:\d{2}|\d+\s*(min|minuti|m|sec|secondi|s|h|ore))\b/i;
+              const currentTitle = activeVariantId === 'original' ? (workoutTitle || '') : ((variants.find(v => v.id === activeVariantId)?.name) || '');
+              const hasTime = timeRegex.test(currentTitle);
+              if (!hasTime || !canEdit) return null;
+              return (
+                <button
+                  type="button"
+                  aria-label="Cancella contenuto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (activeVariantId === 'original') {
+                      setWorkoutTitle('');
+                    } else {
+                      setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: '' } : v));
+                    }
+                    setTimeout(() => { try { handleSaveTitle(); } catch {} }, 0);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-white/70 text-red-600 hover:bg-white hover:shadow-sm"
+                >
+                  <X size={14} />
+                </button>
+              );
+            })()}
+          </div>
         )}
 
         {/* Editable Description (read-only per atleti) */}
         <div className="flex justify-center items-center mb-6">
           {isEditingDescription && canEdit ? (
-            <textarea
-              ref={descriptionInputRef}
-              value={workoutDescription}
-              onChange={(e) => setWorkoutDescription(e.target.value)}
-              onFocus={() => { if (isEditingTitle) { handleSaveTitle(); } }}
-              onBlur={handleSaveDescription}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
-              placeholder="Aggiungi una descrizione..."
-              className="w-full max-w-2xl border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600 text-center"
-              rows={2}
-            />
+            <div className="relative w-full max-w-2xl">
+              <textarea
+                ref={descriptionInputRef}
+                value={workoutDescription}
+                onChange={(e) => setWorkoutDescription(e.target.value)}
+                onFocus={() => { if (isEditingTitle) { handleSaveTitle(); } }}
+                onBlur={handleSaveDescription}
+                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
+                placeholder="Aggiungi una descrizione..."
+                className="w-full border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600 text-center"
+                rows={2}
+              />
+              {(() => {
+                const timeRegex = /\b(\d{1,2}:\d{2}|\d+\s*(min|minuti|m|sec|secondi|s|h|ore))\b/i;
+                const hasTime = timeRegex.test(workoutDescription || '');
+                if (!hasTime) return null;
+                return (
+                  <button
+                    type="button"
+                    aria-label="Cancella contenuto"
+                    onClick={(e) => { e.stopPropagation(); setWorkoutDescription(''); setTimeout(() => { try { handleSaveDescription(); } catch {} }, 0); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-white/70 text-red-600 hover:bg-white hover:shadow-sm"
+                  >
+                    <X size={14} />
+                  </button>
+                );
+              })()}
+            </div>
           ) : (
-        <div className={`flex items-center gap-2 justify-center ${canEdit ? 'group' : ''}`} onClick={() => { if (!canEdit) return; if (isEditingTitle) { handleSaveTitle(); } setIsEditingDescription(true); setTimeout(() => { if (descriptionInputRef.current) { const ta = descriptionInputRef.current; try { const len = ta.value.length; ta.setSelectionRange(len, len); } catch {} ta.focus(); } }, 0); }} title={canEdit ? "Clicca per modificare la descrizione" : "Solo visualizzazione"}>
-              {workoutDescription ? (
-          <p className={`text-gray-600 max-w-2xl text-center break-words ${canEdit ? 'transition-colors group-hover:text-blue-600' : ''}`}>{workoutDescription}</p>
-              ) : (
-                <p className="text-gray-400 italic text-center transition-colors group-hover:text-blue-600">Clicca per aggiungere una descrizione</p>
-              )}
-              {/* Icona modifica descrizione rimossa: il testo è già cliccabile per modificare */}
+            <div className={`relative w-full max-w-2xl mx-auto ${canEdit ? 'group' : ''}`} onClick={() => { if (!canEdit) return; if (isEditingTitle) { handleSaveTitle(); } setIsEditingDescription(true); setTimeout(() => { if (descriptionInputRef.current) { const ta = descriptionInputRef.current; try { const len = ta.value.length; ta.setSelectionRange(len, len); } catch {} ta.focus(); } }, 0); }} title={canEdit ? "Clicca per modificare la descrizione" : "Solo visualizzazione"}>
+              <div className="flex items-center gap-2 justify-center">
+                {workoutDescription ? (
+                  <p className={`text-gray-600 max-w-2xl text-center break-words ${canEdit ? 'transition-colors group-hover:text-blue-600' : ''}`}>{workoutDescription}</p>
+                ) : (
+                  <p className="text-gray-400 italic text-center transition-colors group-hover:text-blue-600">Clicca per aggiungere una descrizione</p>
+                )}
+              </div>
+              {(() => {
+                const timeRegex = /\b(\d{1,2}:\d{2}|\d+\s*(min|minuti|m|sec|secondi|s|h|ore))\b/i;
+                const hasTime = timeRegex.test(workoutDescription || '');
+                if (!hasTime || !canEdit) return null;
+                return (
+                  <button
+                    type="button"
+                    aria-label="Cancella contenuto"
+                    onClick={(e) => { e.stopPropagation(); setWorkoutDescription(''); setTimeout(() => { try { handleSaveDescription(); } catch {} }, 0); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-white/70 text-red-600 hover:bg-white hover:shadow-sm"
+                  >
+                    <X size={14} />
+                  </button>
+                );
+              })()}
             </div>
           )}
         </div>
@@ -3548,27 +4521,86 @@ useEffect(() => {
                 <div key={idx} className="relative inline-flex items-center">
                   <button
                     type="button"
-                    onClick={() => setSelectedTagUnderDesc(tag)}
+                    onClick={(e) => {
+                      const el = e.currentTarget as HTMLElement;
+                      const rect = el.getBoundingClientRect();
+                      setOpenTagActionsFor(tag);
+                      setTagRenameDraft(tag);
+                      setTagActionsPosition({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+                    }}
                     className="px-3 py-1 rounded-full border border-gray-200 bg-gray-50 text-gray-700 text-xs shadow-sm hover:border-purple-300 hover:bg-purple-50 hover:text-purple-700 transition"
-                    title="Seleziona tag"
+                    title="Azioni tag"
                   >
                     {tag}
                   </button>
-                  {selectedTagUnderDesc === tag && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleRemoveTag(tag); setSelectedTagUnderDesc(null); }}
-                      className="absolute -top-1 -right-1 p-1 rounded-full bg-white border border-gray-200 text-red-500 hover:text-red-700 shadow-sm"
-                      aria-label="Rimuovi"
-                      title="Rimuovi"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
           </div>
+        )}
+
+        {/* Menu contestuale per tag sotto descrizione */}
+        {canEdit && openTagActionsFor && tagActionsPosition && (
+          <Portal>
+            <>
+              <div
+                ref={tagActionsDropdownRef as React.RefObject<HTMLDivElement>}
+                style={{ position: 'fixed', top: tagActionsPosition.top, left: tagActionsPosition.left, transform: 'translateX(-50%)' }}
+                className="z-[9999] bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-56"
+                onClick={(e) => e.stopPropagation()}
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              >
+                <div className="px-2 pb-2 text-xs text-gray-500">Azioni tag</div>
+                <button
+                  onClick={() => setShowTagRename(true)}
+                  className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                  title="Modifica tag"
+                >
+                  <Edit3 size={16} className="text-gray-700" />
+                  <span>Modifica</span>
+                </button>
+                <button
+                  onClick={() => { handleRemoveTag(openTagActionsFor!); setOpenTagActionsFor(null); }}
+                  className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                  title="Elimina tag"
+                >
+                  <Trash2 size={16} className="text-red-600" />
+                  <span>Elimina</span>
+                </button>
+                {showTagRename && (
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <label className="block text-xs text-gray-600 mb-1">Rinomina o seleziona</label>
+                    <input
+                      type="text"
+                      value={tagRenameDraft}
+                      onChange={(e) => setTagRenameDraft(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs rounded-md border border-gray-200 bg-white focus:ring-2 focus:ring-purple-300"
+                      maxLength={20}
+                    />
+                    <div className="mt-2 max-h-24 overflow-auto">
+                      {PREDEFINED_GYM_TAGS.map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => { handleRenameTag(openTagActionsFor!, t); setOpenTagActionsFor(null); setShowTagRename(false); }}
+                          className={`w-full text-left px-3 py-1.5 text-xs rounded-lg hover:bg-white/70 ${tags.includes(t) ? 'opacity-60 cursor-not-allowed' : ''}`}
+                          disabled={tags.includes(t)}
+                        >
+                          <span>{t}</span>
+                          {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già presente</span>}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex justify-end gap-2 mt-2">
+                      <button type="button" onClick={() => { setShowTagRename(false); setOpenTagActionsFor(null); }} className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">Annulla</button>
+                      <button type="button" onClick={() => { const newName = tagRenameDraft.trim(); if (newName) { handleRenameTag(openTagActionsFor!, newName); } setOpenTagActionsFor(null); setShowTagRename(false); }} className="text-xs px-2 py-1 rounded-full bg-purple-600 text-white disabled:opacity-50" disabled={!tagRenameDraft.trim()}>Salva</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div style={{ position: 'fixed', inset: 0 }} onClick={() => { setOpenTagActionsFor(null); setShowTagRename(false); }} className="z-[9998] bg-black/10" />
+            </>
+          </Portal>
         )}
         
         {/* Toolbar rimossa da qui: ora posizionata sotto la barra varianti */}
@@ -3814,7 +4846,7 @@ useEffect(() => {
                   
                   {/* Search Suggestions */}
                   {showSearchSuggestions && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-gray-300 shadow-md z-10 max-h-48 overflow-y-auto backdrop-blur-sm">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white/95 rounded-xl shadow-md z-10 max-h-48 overflow-y-auto backdrop-blur-sm">
                       {getFilteredExercises().length > 0 ? (
                         getFilteredExercises().map((exercise, index) => {
                           const isCustomExercise = customExercises.includes(exercise);
@@ -4207,253 +5239,7 @@ useEffect(() => {
           </div>
         </Modal>
         
-        {/* Separatore tra toolbar/descrizione/tag e barra settimane */}
-        <SectionSeparator variant="navy" />
-        
-        {/* Barra Settimane: sopra le giornate */}
-        <div className="mb-6">
-          <div className="flex justify-center items-center gap-2">
-            <Calendar size={16} className="text-gray-600" />
-            <div
-              ref={weekTabsRef}
-              onPointerDown={handleWeekTabsPointerDown}
-              onPointerMove={handleWeekTabsPointerMove}
-              onPointerUp={handleWeekTabsPointerUp}
-              onPointerCancel={handleWeekTabsPointerCancel}
-              onPointerLeave={handleWeekTabsPointerLeave}
-              className={`inline-flex items-center gap-2 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-2 overflow-x-auto no-scrollbar select-none ${isDraggingWeeks ? 'cursor-grabbing' : 'cursor-grab'} max-w-[85vw]`}
-              style={{ touchAction: 'pan-x' }}
-            >
-              {(() => {
-                const weekKeysToRender = weeks.slice().sort((a, b) => {
-                  const na = parseInt(a.replace(/^W/, ''), 10);
-                  const nb = parseInt(b.replace(/^W/, ''), 10);
-                  return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
-                });
-                return weekKeysToRender.map((wk) => (
-                  <div key={wk} className="group relative flex-shrink-0 overflow-visible">
-                    <button
-                      onClick={() => handleSwitchWeek(wk)}
-                      onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenWeekKeyMenu(wk); setWeekActionsPosition({ x: e.clientX, y: e.clientY }); }}
-                      className={`${activeWeekKey === wk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
-                      title={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
-                      aria-label={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
-                      data-week-key={wk}
-                    >
-                      {`Settimana ${parseInt(wk.replace('W',''), 10)}`}
-                    </button>
-                    {canEdit && openWeekKeyMenu === wk && weekActionsPosition && (
-                      <Portal>
-                        <div>
-                          {/* Overlay per chiudere cliccando fuori */}
-                          <div className="fixed inset-0 z-[999]" onClick={() => { setOpenWeekKeyMenu(null); setWeekActionsPosition(null); }} />
-                          {/* Menu contestuale settimane */}
-                          <div
-                            className="fixed z-[1000] bg-white rounded-xl shadow-lg ring-1 ring-black/10 p-2 min-w-[200px]"
-                            style={{ left: weekActionsPosition.x + 8, top: weekActionsPosition.y + 8 }}
-                          >
-                            <button
-                              onClick={() => { setOpenWeekKeyMenu(null); handleSwitchWeek(wk); }}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
-                            >
-                              <Eye size={16} className="text-gray-600" />
-                              <span>Apri</span>
-                            </button>
-                            {/* Separatore stile Apple */}
-                            <div className="my-1 mx-2 h-px bg-gray-200" />
-                            <button
-                              onClick={() => { setOpenWeekKeyMenu(null); handleCopyWeek(wk); }}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
-                            >
-                              <Copy size={16} className="text-gray-700" />
-                              <span>Copia</span>
-                            </button>
-                            <button
-                              onClick={() => { setOpenWeekKeyMenu(null); handlePasteWeek(wk); }}
-                              disabled={!weekClipboard || (weekClipboard && weekClipboard.sourceVariantId === activeVariantId && weekClipboard.sourceWeekKey === wk)}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 disabled:opacity-50 flex items-center gap-2"
-                            >
-                              <Copy size={16} className="text-gray-700" />
-                              <span>Incolla qui</span>
-                            </button>
-                            <div className="my-1 mx-2 h-px bg-gray-200" />
-                            <button
-                              onClick={() => { setOpenWeekKeyMenu(null); handleRemoveWeek(wk); }}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 flex items-center gap-2"
-                            >
-                              <Trash2 size={16} className="text-red-600" />
-                              <span>Elimina</span>
-                            </button>
-                          </div>
-                        </div>
-                      </Portal>
-                    )}
-                  </div>
-                ));
-              })()}
-            </div>
-            {canEdit && weeks.length < 12 && (
-              <button
-                onClick={handleAddWeek}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300"
-                title="Aggiungi settimana"
-                aria-label="Aggiungi settimana"
-              >
-                <Plus size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Separatore tra settimane e giorni rimosso su richiesta */}
-
-        {/* Sezione Giorni: sotto la toolbar varianti, sopra "Esercizi" */}
-        <div className="mb-6">
-          <div className="flex justify-center items-center gap-2">
-            <Clock size={16} className="text-gray-600" />
-            <div
-              ref={dayTabsRef}
-              onPointerDown={handleDayTabsPointerDown}
-              onPointerMove={handleDayTabsPointerMove}
-              onPointerUp={handleDayTabsPointerUp}
-              onPointerCancel={handleDayTabsPointerCancel}
-              onPointerLeave={handleDayTabsPointerLeave}
-              className={`inline-flex items-center gap-2 bg-white rounded-full shadow-sm ring-1 ring-gray-200 px-5 py-2.5 overflow-x-auto no-scrollbar select-none ${isDraggingDays ? 'cursor-grabbing' : 'cursor-grab'} max-w-[85vw]`}
-              style={{ touchAction: 'pan-x' }}
-            >
-              {(() => {
-                const dayKeysToRender = (() => {
-                  const keys = activeVariantId === 'original'
-                    ? Object.keys(originalDays)
-                    : Object.keys(variantDaysById[activeVariantId] || {});
-                  const sorted = (keys.length ? keys : ['G1']).slice().sort((a, b) => {
-                    const na = parseInt(String(a).replace(/^G/, ''), 10);
-                    const nb = parseInt(String(b).replace(/^G/, ''), 10);
-                    return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
-                  });
-                  return sorted;
-                })();
-                return dayKeysToRender.map((dk, idx) => {
-                  const label = getDayDisplayName(dk);
-                  return (
-                    <div key={dk} className="group relative flex-shrink-0 overflow-visible">
-                      <button
-                        onClick={() => { if (!dayLongPressTriggeredRef.current) handleSwitchDay(dk); }}
-                        onPointerDown={(e) => {
-                          if (!canEdit) return;
-                          dayLongPressTriggeredRef.current = false;
-                          dayPressStartPosRef.current = { x: e.clientX, y: e.clientY };
-                          if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); }
-                          dayPressTimerRef.current = window.setTimeout(() => {
-                            dayLongPressTriggeredRef.current = true;
-                            computeAndSetDayMenuPosition(e.currentTarget as HTMLElement);
-                            setOpenDayKeyMenu(dk);
-                          }, DAY_LONG_PRESS_MS);
-                        }}
-                        onPointerMove={(e) => {
-                          const start = dayPressStartPosRef.current;
-                          if (!start) return;
-                          const dx = Math.abs(e.clientX - start.x);
-                          const dy = Math.abs(e.clientY - start.y);
-                          if (dx > 5 || dy > 5) {
-                            if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
-                          }
-                        }}
-                        onPointerUp={() => {
-                          if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
-                        }}
-                        onPointerCancel={() => {
-                          if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
-                        }}
-                        onPointerLeave={() => {
-                          if (dayPressTimerRef.current) { window.clearTimeout(dayPressTimerRef.current); dayPressTimerRef.current = null; }
-                        }}
-                        onContextMenu={(e) => {
-                          e.preventDefault();
-                          if (!canEdit) return;
-                          computeAndSetDayMenuPosition(e.currentTarget as HTMLElement);
-                          setOpenDayKeyMenu(dk);
-                        }}
-                        className={`day-tab-button ${activeDayKey === dk ? 'bg-gray-100 text-blue-600 ring-1 ring-gray-300' : 'bg-white text-gray-600 hover:bg-gray-50'} h-8 px-3 rounded-full text-sm font-medium transition-colors`}
-                        data-day-key={dk}
-                        title={label}
-                        aria-label={label}
-                      >
-                        {label}
-                      </button>
-                      {canEdit && openDayKeyMenu === dk && dayMenuPosition && (
-                        <Portal>
-                          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeDayMenu} />
-                          <div
-                            ref={dayMenuRef}
-                            style={{ position: 'fixed', top: dayMenuPosition.top, left: dayMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }}
-                            className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40 relative"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {dayMenuPlacement === 'bottom' ? (
-                              <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                            ) : (
-                              <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                            )}
-                            <button
-                              onClick={() => { handleStartRenameDay(dk); }}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
-                            >
-                              <Edit3 size={14} />
-                              <span>Modifica</span>
-                            </button>
-                            <div className="my-1 border-t border-gray-200" />
-                            <button
-                              onClick={() => { handleCopyDay(dk); }}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
-                            >
-                              <Copy size={14} />
-                              <span>Copia</span>
-                            </button>
-                            <button
-                              onClick={() => { handlePasteDay(dk); }}
-                              disabled={!dayClipboard || (dayClipboard && dayClipboard.sourceVariantId === activeVariantId && dayClipboard.sourceWeekKey === activeWeekKey && dayClipboard.sourceDayKey === dk)}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 disabled:opacity-50 flex items-center gap-2"
-                            >
-                              <Copy size={14} />
-                              <span>Incolla qui</span>
-                            </button>
-                            <div className="my-1 border-t border-gray-200" />
-                            <button
-                              onClick={() => { handleRemoveDay(dk); closeDayMenu(); }}
-                              disabled={dk === 'G1'}
-                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-50 flex items-center gap-2"
-                            >
-                              <Trash2 size={14} className="text-red-600" />
-                              <span>Elimina</span>
-                            </button>
-                          </div>
-                        </Portal>
-                      )}
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-            {canEdit && (() => {
-              const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
-              const count = keys.length > 0 ? keys.length : 1; // fallback G1
-              return count < 10;
-            })() && (
-              <button
-                onClick={handleAddDay}
-                className="h-8 w-8 flex items-center justify-center rounded-full bg-white text-gray-600 hover:bg-gray-50 ring-1 ring-gray-300"
-                title="Aggiungi giorno"
-                aria-label="Aggiungi giorno"
-              >
-                <Plus size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Separatore tra giorni e lista esercizi */}
-        <SectionSeparator variant="black" />
+        {/* Liste di selezione spostate nella toolbar: varianti, settimane, giornate */}
         
         {/* Exercises List */}
         <div className="mb-8">
@@ -4488,7 +5274,7 @@ useEffect(() => {
                     rendered.push(
                       <div
                         key={`superset-${leader.id}`}
-                        className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-purple-300 shadow-sm hover:shadow-md transition hover:translate-y-px`}
+                        className={`relative p-4 rounded-2xl bg-white backdrop-blur-md ring-1 ring-purple-300 shadow-sm hover:shadow-md transition hover:translate-y-px`}
                         data-leader-index={i}
                         draggable={canEdit}
                         onDragStart={canEdit ? () => handleDragStartIndex(i) : undefined}
@@ -4500,9 +5286,29 @@ useEffect(() => {
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 font-bold">Superset</span>
                         </div>
                         <div
-                            className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader ? (supersetSelection.includes(leader.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === leader.id || openCloneActionsId === leader.id ? 'z-50' : ''}`}
-                          onClick={() => { const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectable) handleToggleSupersetSelection(leader.id); }}
+                            className={`relative p-3 rounded-xl bg-white backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader ? (supersetSelection.includes(leader.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === leader.id || openCloneActionsId === leader.id ? 'z-50' : ''}`}
+                          onClick={() => { if (exerciseLongPressTriggeredRef.current) return; const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectable) handleToggleSupersetSelection(leader.id); }}
                             onDoubleClick={() => { if (canEdit) handleEditExercise(leader); }}
+                          onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(leader.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
+                          onPointerDown={(e) => {
+                            if (!canEdit) return;
+                            exerciseLongPressTriggeredRef.current = false;
+                            exercisePressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                            const anchor = e.currentTarget as HTMLElement;
+                            if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current);
+                            exerciseLongPressTimeoutRef.current = window.setTimeout(() => {
+                              exerciseLongPressTriggeredRef.current = true;
+                              setOpenExerciseContextId(leader.id);
+                              computeAndSetMenuPosition(anchor, 'exercise');
+                            }, VARIANT_LONG_PRESS_MS);
+                          }}
+                          onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }}
+                          onPointerMove={(e) => {
+                            if (!canEdit) return;
+                            const start = exercisePressStartPosRef.current; if (!start) return;
+                            const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                            if (dx > 6 || dy > 6) { if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }
+                          }}
                           draggable={canEdit}
                           onDragStart={canEdit ? () => handleDragStartIndex(i) : undefined}
                           onDragOver={canEdit ? (e) => handleDragOverIndex(e, i) : undefined}
@@ -4559,127 +5365,57 @@ useEffect(() => {
                               </p>
                             )}
                           </div>
-                          {canEdit && (
-                          <div className="mt-4 flex justify-center items-center gap-2">
-                            <button
-                              onClick={() => handleEditExercise(leader)}
-                              className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
-                              title="Modifica"
-                              aria-label="Modifica"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                            <div className="relative">
-                              <button
-                                onClick={(e) => {
-                                const newId = openCloneActionsId === leader.id ? null : leader.id;
-                                setOpenCloneActionsId(newId);
-                                if (newId) {
-                                  computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'clone');
-                                } else {
-                                  closeActionsMenu();
-                                }
-                              }}
-                                className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                                title="Clona"
-                                aria-label="Clona"
-                              >
-                                <Copy size={14} />
-                              </button>
-                              {canEdit && openCloneActionsId === leader.id && actionsMenuType === 'clone' && actionsMenuPosition && (
-                                <Portal>
-                                  <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
-                                  <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative" onClick={(e) => e.stopPropagation()}>
-                                    {actionsMenuPlacement === 'bottom' ? (
-                                      <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                                    ) : (
-                                      <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                                    )}
-                                    <button
-                                      onClick={() => { handleCloneExercise(leader.id); closeActionsMenu(); }}
-                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                    >
-                                      Clona esercizio
-                                    </button>
-                                    <button
-                                      onClick={() => { handleCloneSuperset(leader.id); closeActionsMenu(); }}
-                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                    >
-                                      Clona superset
-                                    </button>
-                                  </div>
-                                </Portal>
-                              )}
-                            </div>
-                            <div className="relative">
-                              <button
-                                onClick={(e) => {
-                                  if (leader.supersetGroupId) {
-                                    const newId = openSupersetActionsId === leader.id ? null : leader.id;
-                                    setOpenSupersetActionsId(newId);
-                                    if (newId) {
-                                      computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'superset');
-                                    } else {
+                          {canEdit && openExerciseContextId === leader.id && actionsMenuType === 'exercise' && actionsMenuPosition && (
+                            <Portal>
+                              <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                              <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2 relative" onClick={(e) => e.stopPropagation()}>
+                                {actionsMenuPlacement === 'bottom' ? (
+                                  <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.8)' }} />
+                                ) : (
+                                  <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.8)' }} />
+                                )}
+                                <div className="mb-1 px-2 text-xs text-gray-500">Azioni esercizio</div>
+                                <div className="space-y-1">
+                                  <button onClick={() => { handleEditExercise(leader); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 inline-flex items-center gap-2">
+                                    <Edit3 size={14} className="text-gray-700" /> <span>Modifica</span>
+                                  </button>
+                                  <button onClick={() => { handleCloneExercise(leader.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 inline-flex items-center gap-2">
+                                    <Copy size={14} className="text-gray-700" /> <span>Clona esercizio</span>
+                                  </button>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
+                                  <button onClick={() => { handleCloneSuperset(leader.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                    <Copy size={14} className="text-purple-700" /> <span>Clona superset</span>
+                                  </button>
+                                  {leader.supersetGroupId ? (
+                                    <button onClick={() => {
+                                      const updatedExercises = exercises.map(ex => ex.id === leader.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                      const normalized = normalizeSupersets(updatedExercises);
+                                      setExercises(normalized);
+                                      if (activeVariantId !== 'original') {
+                                        const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                        setVariants(updatedVariants);
+                                      } else {
+                                        setOriginalExercises(normalized);
+                                      }
+                                      triggerAutoSave();
                                       closeActionsMenu();
-                                    }
-                                  } else {
-                                    handleStartSuperset(leader.id);
-                                  }
-                                }}
-                                className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === leader.id ? 'text-purple-700' : 'text-purple-600'} hover:text-purple-700 transition-colors`}
-                                title="Superset"
-                                aria-label="Superset"
-                              >
-                                <Link2 size={14} />
-                              </button>
-                              {canEdit && openSupersetActionsId === leader.id && actionsMenuType === 'superset' && actionsMenuPosition && (
-                                <Portal>
-                                  <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
-                                  <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40 relative" onClick={(e) => e.stopPropagation()}>
-                                    {actionsMenuPlacement === 'bottom' ? (
-                                      <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                                    ) : (
-                                      <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                                    )}
-                                    <button
-                                      onClick={() => { setIsSupersetMode(true); setSupersetAnchorExerciseId(leader.id); setSupersetSelection([]); closeActionsMenu(); }}
-                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                    >
-                                      Collega un esercizio al superset
+                                    }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                      <Link2 size={14} className="text-purple-700" /> <span>Rimuovi dal superset</span>
                                     </button>
-                                    <button
-                                      onClick={() => {
-                                        const updatedExercises = exercises.map(ex => ex.id === leader.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
-                                        const normalized = normalizeSupersets(updatedExercises);
-                                        setExercises(normalized);
-                                        if (activeVariantId !== 'original') {
-                                          const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
-                                          setVariants(updatedVariants);
-                                        } else {
-                                          setOriginalExercises(normalized);
-                                        }
-                                        triggerAutoSave();
-                                        setOpenSupersetActionsId(null);
-                                        setActionsMenuPosition(null);
-                                        setActionsMenuType(null);
-                                      }}
-                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                    >
-                                      Rimuovi dal superset
+                                  ) : (
+                                    <button onClick={() => { handleStartSuperset(leader.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                      <Link2 size={14} className="text-purple-700" /> <span>Avvia modalità superset</span>
                                     </button>
-                                  </div>
-                                </Portal>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => handleRemoveExercise(leader.id)}
-                              className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                              title="Elimina"
-                              aria-label="Elimina"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
+                                  )}
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                  <button onClick={() => { handleRemoveExercise(leader.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 inline-flex items-center gap-2">
+                                    <Trash2 size={14} className="text-red-700" /> <span>Elimina</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </Portal>
                           )}
                         </div>
 
@@ -4687,9 +5423,29 @@ useEffect(() => {
                           <div key={follower.id || `follower-${fi}`}>
                             <div className="my-3 h-px bg-gradient-to-r from-transparent via-purple-200 to-transparent" />
                             <div
-                                className={`relative p-3 rounded-xl bg-white/80 backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === (i + 1 + fi) ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === (i + 1 + fi) ? 'opacity-80' : ''} ${selectedSwapIndex === (i + 1 + fi) ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader ? (supersetSelection.includes(follower.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === follower.id || openCloneActionsId === follower.id ? 'z-50' : ''}`}
-                              onClick={() => { const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; if (selectable) handleToggleSupersetSelection(follower.id); }}
+                                className={`relative p-3 rounded-xl bg-white backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === (i + 1 + fi) ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === (i + 1 + fi) ? 'opacity-80' : ''} ${selectedSwapIndex === (i + 1 + fi) ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader ? (supersetSelection.includes(follower.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === follower.id || openCloneActionsId === follower.id ? 'z-50' : ''}`}
+                              onClick={() => { if (exerciseLongPressTriggeredRef.current) return; const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; if (selectable) handleToggleSupersetSelection(follower.id); }}
                               onDoubleClick={() => { if (canEdit) handleEditExercise(follower); }}
+                              onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(follower.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
+                              onPointerDown={(e) => {
+                                if (!canEdit) return;
+                                exerciseLongPressTriggeredRef.current = false;
+                                exercisePressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                                const anchor = e.currentTarget as HTMLElement;
+                                if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current);
+                                exerciseLongPressTimeoutRef.current = window.setTimeout(() => {
+                                  exerciseLongPressTriggeredRef.current = true;
+                                  setOpenExerciseContextId(follower.id);
+                                  computeAndSetMenuPosition(anchor, 'exercise');
+                                }, VARIANT_LONG_PRESS_MS);
+                              }}
+                              onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }}
+                              onPointerMove={(e) => {
+                                if (!canEdit) return;
+                                const start = exercisePressStartPosRef.current; if (!start) return;
+                                const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                                if (dx > 6 || dy > 6) { if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }
+                              }}
                             >
                               <div className="flex justify-center items-center gap-2 mb-1">
                                 <span className="font-semibold text-lg text-purple-700">{follower.name}</span>
@@ -4740,132 +5496,57 @@ useEffect(() => {
                                   </p>
                                 )}
                               </div>
-                              {canEdit && (
-                              <div className="mt-4 flex justify-center items-center gap-2">
-                                <button
-                                  onClick={() => handleEditExercise(follower)}
-                                  className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
-                                  title="Modifica"
-                                  aria-label="Modifica"
-                                >
-                                  <Edit3 size={14} />
-                                </button>
-                                <div className="relative">
-                                  <button
-                                    onClick={(e) => {
-                                      if (!follower.supersetGroupId && !follower.isSupersetLeader) {
-                                        handleCloneExercise(follower.id);
-                                        closeActionsMenu();
-                                        return;
-                                      }
-                                      const newId = openCloneActionsId === follower.id ? null : follower.id;
-                                      setOpenCloneActionsId(newId);
-                                      if (newId) {
-                                        computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'clone');
-                                      } else {
-                                        closeActionsMenu();
-                                      }
-                                    }}
-                                    className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                                    title="Clona"
-                                    aria-label="Clona"
-                                  >
-                                    <Copy size={14} />
+                          {canEdit && openExerciseContextId === follower.id && actionsMenuType === 'exercise' && actionsMenuPosition && (
+                            <Portal>
+                              <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                              <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2 relative" onClick={(e) => e.stopPropagation()}>
+                                {actionsMenuPlacement === 'bottom' ? (
+                                  <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.8)' }} />
+                                ) : (
+                                  <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.8)' }} />
+                                )}
+                                <div className="mb-1 px-2 text-xs text-gray-500">Azioni esercizio</div>
+                                <div className="space-y-1">
+                                  <button onClick={() => { handleEditExercise(follower); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 inline-flex items-center gap-2">
+                                    <Edit3 size={14} className="text-gray-700" /> <span>Modifica</span>
                                   </button>
-                                  {canEdit && openCloneActionsId === follower.id && actionsMenuType === 'clone' && actionsMenuPosition && (
-                                    <Portal>
-                                      <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
-                                      <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative" onClick={(e) => e.stopPropagation()}>
-                                        {actionsMenuPlacement === 'bottom' ? (
-                                          <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                                        ) : (
-                                          <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                                        )}
-                                        <button
-                                          onClick={() => { handleCloneExercise(follower.id); closeActionsMenu(); }}
-                                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                        >
-                                          Clona esercizio
-                                        </button>
-                                        <button
-                                          onClick={() => { handleCloneSuperset(follower.id); closeActionsMenu(); }}
-                                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                        >
-                                          Clona superset
-                                        </button>
-                                      </div>
-                                    </Portal>
+                                  <button onClick={() => { handleCloneExercise(follower.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 inline-flex items-center gap-2">
+                                    <Copy size={14} className="text-gray-700" /> <span>Clona esercizio</span>
+                                  </button>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
+                                  <button onClick={() => { handleCloneSuperset(follower.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                    <Copy size={14} className="text-purple-700" /> <span>Clona superset</span>
+                                  </button>
+                                  {follower.supersetGroupId ? (
+                                    <button onClick={() => {
+                                      const updatedExercises = exercises.map(ex => ex.id === follower.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                      const normalized = normalizeSupersets(updatedExercises);
+                                      setExercises(normalized);
+                                      if (activeVariantId !== 'original') {
+                                        const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                        setVariants(updatedVariants);
+                                      } else {
+                                        setOriginalExercises(normalized);
+                                      }
+                                      triggerAutoSave();
+                                      closeActionsMenu();
+                                    }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                      <Link2 size={14} className="text-purple-700" /> <span>Rimuovi dal superset</span>
+                                    </button>
+                                  ) : (
+                                    <button onClick={() => { handleStartSuperset(follower.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                      <Link2 size={14} className="text-purple-700" /> <span>Avvia modalità superset</span>
+                                    </button>
                                   )}
                                 </div>
-                                <div className="relative">
-                                  <button
-                                    onClick={(e) => {
-                                      if (follower.supersetGroupId) {
-                                        const newId = openSupersetActionsId === follower.id ? null : follower.id;
-                                        setOpenSupersetActionsId(newId);
-                                        if (newId) {
-                                          computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'superset');
-                                        } else {
-                                          closeActionsMenu();
-                                        }
-                                      } else {
-                                        handleStartSuperset(follower.id);
-                                      }
-                                    }}
-                                    className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === follower.id ? 'text-purple-700' : 'text-purple-600'} hover:text-purple-700 transition-colors`}
-                                    title="Superset"
-                                    aria-label="Superset"
-                                  >
-                                    <Link2 size={14} />
+                                <div className="mt-2 pt-2 border-t border-gray-200">
+                                  <button onClick={() => { handleRemoveExercise(follower.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 inline-flex items-center gap-2">
+                                    <Trash2 size={14} className="text-red-700" /> <span>Elimina</span>
                                   </button>
-                                  {canEdit && openSupersetActionsId === follower.id && actionsMenuType === 'superset' && actionsMenuPosition && (
-                                    <Portal>
-                                      <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
-                                      <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40 relative" onClick={(e) => e.stopPropagation()}>
-                                        {actionsMenuPlacement === 'bottom' ? (
-                                          <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                                        ) : (
-                                          <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                                        )}
-                                        <button
-                                          onClick={() => { if (follower.supersetGroupId) { setIsSupersetMode(true); setSupersetAnchorExerciseId(follower.supersetGroupId); setSupersetSelection([]); closeActionsMenu(); } }}
-                                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                        >
-                                          Collega un esercizio al superset
-                                        </button>
-                                        <button
-                                          onClick={() => {
-                                            const updatedExercises = exercises.map(ex => ex.id === follower.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
-                                            const normalized = normalizeSupersets(updatedExercises);
-                                            setExercises(normalized);
-                                            if (activeVariantId !== 'original') {
-                                              const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
-                                              setVariants(updatedVariants);
-                                            } else {
-                                              setOriginalExercises(normalized);
-                                            }
-                                            triggerAutoSave();
-                                            setOpenSupersetActionsId(null);
-                                            setActionsMenuPosition(null);
-                                            setActionsMenuType(null);
-                                          }}
-                                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                        >
-                                          Rimuovi dal superset
-                                        </button>
-                                      </div>
-                                    </Portal>
-                                  )}
                                 </div>
-                                <button
-                                  onClick={() => handleRemoveExercise(follower.id)}
-                                  className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                                  title="Elimina"
-                                  aria-label="Elimina"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
+                                  </div>
+                                </Portal>
                               )}
                             </div>
                           </div>
@@ -4881,9 +5562,13 @@ useEffect(() => {
                     rendered.push(
                       <div
                         key={exercise.id || `exercise-${i}`}
-                        className={`relative p-4 rounded-2xl bg-gradient-to-br from-white/70 to-white/50 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === exercise.id || openCloneActionsId === exercise.id ? 'z-50' : ''}`}
-                        onClick={() => { const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectable) handleToggleSupersetSelection(exercise.id); }}
+                        className={`relative p-4 rounded-2xl bg-white backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === exercise.id || openCloneActionsId === exercise.id ? 'z-50' : ''}`}
+                        onClick={() => { if (exerciseLongPressTriggeredRef.current) return; const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectable) handleToggleSupersetSelection(exercise.id); }}
                         onDoubleClick={() => { if (canEdit) handleEditExercise(exercise); }}
+                        onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(exercise.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
+                        onPointerDown={(e) => { if (!canEdit) return; exerciseLongPressTriggeredRef.current = false; exercisePressStartPosRef.current = { x: e.clientX, y: e.clientY }; const anchor = e.currentTarget as HTMLElement; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTimeoutRef.current = window.setTimeout(() => { exerciseLongPressTriggeredRef.current = true; setOpenExerciseContextId(exercise.id); computeAndSetMenuPosition(anchor, 'exercise'); }, VARIANT_LONG_PRESS_MS); }}
+                        onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }}
+                        onPointerMove={(e) => { if (!canEdit) return; const start = exercisePressStartPosRef.current; if (!start) return; const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y); if (dx > 6 || dy > 6) { if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; } }}
                         draggable={canEdit}
                         onDragStart={canEdit ? () => handleDragStartIndex(i) : undefined}
                         onDragOver={canEdit ? (e) => handleDragOverIndex(e, i) : undefined}
@@ -4939,128 +5624,59 @@ useEffect(() => {
                             </p>
                           )}
                         </div>
-                        {canEdit && (
-                        <div className="mt-4 flex justify-center items-center gap-2">
-                          <button
-                            onClick={() => handleEditExercise(exercise)}
-                            className="p-1 text-blue-600 hover:text-blue-700 transition-colors"
-                            title="Modifica"
-                            aria-label="Modifica"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <div className="relative">
-                            <button
-                              onClick={(e) => {
-                              if (!exercise.supersetGroupId && !exercise.isSupersetLeader) {
-                                handleCloneExercise(exercise.id);
-                                closeActionsMenu();
-                                return;
-                              }
-                              const newId = openCloneActionsId === exercise.id ? null : exercise.id;
-                              setOpenCloneActionsId(newId);
-                              if (newId) {
-                                computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'clone');
-                              } else {
-                                closeActionsMenu();
-                              }
-                            }}
-                              className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                              title="Clona"
-                              aria-label="Clona"
-                            >
-                              <Copy size={14} />
-                            </button>
-                            {canEdit && openCloneActionsId === exercise.id && actionsMenuType === 'clone' && actionsMenuPosition && (
-                              <Portal>
-                                <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
-                                <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative" onClick={(e) => e.stopPropagation()}>
-                                  {actionsMenuPlacement === 'bottom' ? (
-                                    <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                                  ) : (
-                                    <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                                  )}
-                                  <button
-                                    onClick={() => { handleCloneExercise(exercise.id); closeActionsMenu(); }}
-                                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                  >
-                                    Clona esercizio
+                        {canEdit && openExerciseContextId === exercise.id && actionsMenuType === 'exercise' && actionsMenuPosition && (
+                          <Portal>
+                            <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
+                            <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2 relative" onClick={(e) => e.stopPropagation()}>
+                              {actionsMenuPlacement === 'bottom' ? (
+                                <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.8)' }} />
+                              ) : (
+                                <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.8)' }} />
+                              )}
+                              <div className="mb-1 px-2 text-xs text-gray-500">Azioni esercizio</div>
+                              <div className="space-y-1">
+                                <button onClick={() => { handleEditExercise(exercise); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 inline-flex items-center gap-2">
+                                  <Edit3 size={14} className="text-gray-700" /> <span>Modifica</span>
+                                </button>
+                                <button onClick={() => { handleCloneExercise(exercise.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 inline-flex items-center gap-2">
+                                  <Copy size={14} className="text-gray-700" /> <span>Clona esercizio</span>
+                                </button>
+                              </div>
+                              <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
+                                {exercise.isSupersetLeader && (
+                                  <button onClick={() => { handleCloneSuperset(exercise.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                    <Copy size={14} className="text-purple-700" /> <span>Clona superset</span>
                                   </button>
-                                  {exercise.isSupersetLeader && (
-                                    <button
-                                      onClick={() => { handleCloneSuperset(exercise.id); closeActionsMenu(); }}
-                                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                    >
-                                      Clona superset
-                                    </button>
-                                  )}
-                                </div>
-                              </Portal>
-                            )}
-                          </div>
-                          <div className="relative">
-                            <button
-                              onClick={(e) => {
-                                if (exercise.supersetGroupId) {
-                                  const newId = openSupersetActionsId === exercise.id ? null : exercise.id;
-                                  setOpenSupersetActionsId(newId);
-                                  if (newId) {
-                                    computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'superset');
-                                  } else {
+                                )}
+                                {exercise.supersetGroupId ? (
+                                  <button onClick={() => {
+                                    const updatedExercises = exercises.map(ex => ex.id === exercise.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
+                                    const normalized = normalizeSupersets(updatedExercises);
+                                    setExercises(normalized);
+                                    if (activeVariantId !== 'original') {
+                                      const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
+                                      setVariants(updatedVariants);
+                                    } else {
+                                      setOriginalExercises(normalized);
+                                    }
+                                    triggerAutoSave();
                                     closeActionsMenu();
-                                  }
-                                } else {
-                                  handleStartSuperset(exercise.id);
-                                }
-                              }}
-                              className={`p-1 ${isSupersetMode && supersetAnchorExerciseId === exercise.id ? 'text-purple-700' : 'text-purple-600'} hover:text-purple-700 transition-colors`}
-                              title="Superset"
-                              aria-label="Superset"
-                            >
-                              <Link2 size={14} />
-                            </button>
-                            {canEdit && openSupersetActionsId === exercise.id && actionsMenuType === 'superset' && actionsMenuPosition && (
-                              <Portal>
-                                <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
-                                <div ref={actionsMenuRef} style={{ position: 'fixed', top: actionsMenuPosition.top, left: actionsMenuPosition.left, transform: 'translateX(-50%)', zIndex: 9999 }} className="bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-40 relative" onClick={(e) => e.stopPropagation()}>
-                                  {actionsMenuPlacement === 'bottom' ? (
-                                    <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
-                                  ) : (
-                                    <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
-                                  )}
-                                  <button
-                                    onClick={() => {
-                                      const updatedExercises = exercises.map(ex => ex.id === exercise.id ? { ...ex, supersetGroupId: undefined, isSupersetLeader: false } : ex);
-                                      const normalized = normalizeSupersets(updatedExercises);
-                                      setExercises(normalized);
-                                      if (activeVariantId !== 'original') {
-                                        const updatedVariants = variants.map(v => v.id === activeVariantId ? { ...v, exercises: normalized, updatedAt: new Date().toISOString() } : v);
-                                        setVariants(updatedVariants);
-                                      } else {
-                                        setOriginalExercises(normalized);
-                                      }
-                                      triggerAutoSave();
-                                      setOpenSupersetActionsId(null);
-                                      setActionsMenuPosition(null);
-                                      setActionsMenuType(null);
-                                    }}
-                                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800"
-                                  >
-                                    Rimuovi dal superset
+                                  }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                    <Link2 size={14} className="text-purple-700" /> <span>Rimuovi dal superset</span>
                                   </button>
-                                </div>
-                              </Portal>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleRemoveExercise(exercise.id)}
-                            className="p-1 text-red-600 hover:text-red-700 transition-colors"
-                            title="Elimina"
-                            aria-label="Elimina"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                                ) : (
+                                  <button onClick={() => { handleStartSuperset(exercise.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
+                                    <Link2 size={14} className="text-purple-700" /> <span>Avvia modalità superset</span>
+                                  </button>
+                                )}
+                              </div>
+                              <div className="mt-2 pt-2 border-t border-gray-200">
+                                <button onClick={() => { handleRemoveExercise(exercise.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 inline-flex items-center gap-2">
+                                  <Trash2 size={14} className="text-red-700" /> <span>Elimina</span>
+                                </button>
+                              </div>
+                            </div>
+                          </Portal>
                         )}
                       </div>
                     );
@@ -5073,7 +5689,6 @@ useEffect(() => {
           ) : (
             <div className="text-gray-500 text-center py-8">
               <p>Nessun esercizio aggiunto ancora.</p>
-              <p className="text-sm mt-2">Clicca su "Aggiungi Esercizio" per iniziare.</p>
             </div>
           )}
         </div>

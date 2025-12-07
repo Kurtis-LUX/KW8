@@ -378,6 +378,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   }, []);
 
   const handleBack = () => {
+    // In PWA Gestione Schede: se il dettaglio scheda è aperto, chiudilo e torna alla cartella
+    if (isStandaloneMobile && currentPage === 'workout-manager' && isWorkoutDetailOpen) {
+      window.dispatchEvent(new Event('kw8:workout-detail:close'));
+      return;
+    }
     try {
       if (window.history.length > 1) {
         window.history.back();
@@ -829,6 +834,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 <div className="pt-2 space-y-2">
                   <div id="pwa-fileexplorer-search" className="w-full"></div>
                   <div id="pwa-folder-breadcrumb" className="w-full"></div>
+                </div>
+              )}
+
+              {/* Contenitore PWA per toolbar della scheda, visibile quando il dettaglio è aperto */}
+              {currentPage === 'workout-manager' && isWorkoutDetailOpen && (
+                <div className="pt-2">
+                  <div id="pwa-workout-toolbar" className="w-full"></div>
                 </div>
               )}
 
