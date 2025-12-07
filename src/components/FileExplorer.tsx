@@ -314,6 +314,38 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     };
   }, [searchTerm]);
 
+  // Gestione back dalla header mobile/PWA: chiude il dettaglio e torna alla cartella
+  useEffect(() => {
+    const onClose = async () => {
+      try {
+        setShowWorkoutDetail(false);
+        setSelectedWorkoutId(null);
+        setInitialActiveVariantId(undefined);
+        console.log('🔄 FileExplorer: Reloading data after workout detail close...');
+        await refetch();
+      } catch {}
+    };
+    const onState = (e: Event) => {
+      try {
+        const ce = e as CustomEvent;
+        if (ce && ce.detail && typeof ce.detail.open !== 'undefined') {
+          const open = !!ce.detail.open;
+          setShowWorkoutDetail(open);
+          if (!open) {
+            setSelectedWorkoutId(null);
+            setInitialActiveVariantId(undefined);
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('kw8:workout-detail:close', onClose as EventListener);
+    window.addEventListener('kw8:workout-detail:state', onState as EventListener);
+    return () => {
+      window.removeEventListener('kw8:workout-detail:close', onClose as EventListener);
+      window.removeEventListener('kw8:workout-detail:state', onState as EventListener);
+    };
+  }, []);
+
   // Funzione per contare schede e sottocartelle
   const getFolderCounts = (folderId: string, allFolders: WorkoutFolder[], allWorkouts: WorkoutPlan[]) => {
     const subfolders = allFolders.filter(folder => folder.parentId === folderId);
@@ -701,6 +733,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     console.log('🔄 FileExplorer: Reloading data after workout detail close...');
     await refetch();
   };
+
+  
 
 
   const generateUniqueName = async (baseName: string, type: 'folder' | 'workout', parentId?: string): Promise<string> => {

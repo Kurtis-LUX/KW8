@@ -839,7 +839,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
 
               {/* Contenitore PWA per toolbar della scheda, visibile quando il dettaglio è aperto */}
               {currentPage === 'workout-manager' && isWorkoutDetailOpen && (
-                <div className="pt-2">
+                <div className="pt-0">
                   <div id="pwa-workout-toolbar" className="w-full"></div>
                 </div>
               )}

@@ -3588,11 +3588,13 @@ useEffect(() => {
 
       {/* Sezione giorni verrà posizionata dentro il contenitore, sopra "Esercizi" */}
 
-      <div className={`relative mx-auto w-full rounded-2xl px-4 sm:px-6 lg:px-8 pt-0 pb-6 min-h-[calc(100vh-300px)] ${variants.length > 0 ? '' : '-mt-px'} bg-gray-100`}>
+      <div
+        className={`relative mx-auto w-full rounded-2xl px-4 sm:px-6 lg:px-8 pt-0 pb-6 min-h-[calc(100vh-300px)] ${variants.length > 0 ? '' : '-mt-px'} bg-gray-100`}
+      >
 
         
         {/* Header Row: Back button + centered Toolbar in the same row */}
-        <div className="grid grid-cols-[auto_1fr_auto] items-center mb-2">
+        <div className="grid grid-cols-[auto_1fr_auto] items-center mb-6">
           <div className="flex justify-start items-center">
             {!isStandaloneMobile && (
               <button
@@ -5831,7 +5833,7 @@ useEffect(() => {
         {/* Liste di selezione spostate nella toolbar: varianti, settimane, giornate */}
         
         {/* Exercises List */}
-        <div className="mb-8">
+        <div className="mt-6 mb-8">
           <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight flex items-center">
             <Dumbbell size={22} className="mr-2 text-gray-700" />
             Esercizi
