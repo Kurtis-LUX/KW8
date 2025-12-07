@@ -1634,15 +1634,29 @@ useEffect(() => {
 
   // Blocca lo scroll della pagina quando un menu della toolbar è aperto
   useEffect(() => {
-    const anyOpen = isVariantsDropdownOpen || isWeeksDropdownOpen || isDaysDropdownOpen || isTagsMenuOpen;
+    const anyOpen = !!(isVariantsDropdownOpen || isWeeksDropdownOpen || isDaysDropdownOpen || isTagsMenuOpen || openVariantMenuId || openWeekKeyMenu || openDayKeyMenu);
     const prev = document.body.style.overflow;
+    const prevSelect = document.body.style.userSelect;
+    const prevWebkitSelect = (document.body.style as any).webkitUserSelect;
+    const prevTouchCallout = (document.body.style as any).webkitTouchCallout;
     if (anyOpen) {
       document.body.style.overflow = 'hidden';
+      document.body.style.userSelect = 'none';
+      (document.body.style as any).webkitUserSelect = 'none';
+      (document.body.style as any).webkitTouchCallout = 'none';
     } else {
       document.body.style.overflow = '';
+      document.body.style.userSelect = '';
+      (document.body.style as any).webkitUserSelect = '';
+      (document.body.style as any).webkitTouchCallout = '';
     }
-    return () => { document.body.style.overflow = prev; };
-  }, [isVariantsDropdownOpen, isWeeksDropdownOpen, isDaysDropdownOpen, isTagsMenuOpen]);
+    return () => {
+      document.body.style.overflow = prev;
+      document.body.style.userSelect = prevSelect;
+      (document.body.style as any).webkitUserSelect = prevWebkitSelect;
+      (document.body.style as any).webkitTouchCallout = prevTouchCallout;
+    };
+  }, [isVariantsDropdownOpen, isWeeksDropdownOpen, isDaysDropdownOpen, isTagsMenuOpen, openVariantMenuId, openWeekKeyMenu, openDayKeyMenu]);
 
   // Menu azioni per i tag sotto descrizione (Modifica/Elimina)
   const [openTagActionsFor, setOpenTagActionsFor] = useState<string | null>(null);
@@ -3601,7 +3615,8 @@ useEffect(() => {
                   onClick={(e) => toggleVariantsDropdown(e)}
                   title="Varianti"
                   aria-label="Varianti"
-                  className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                       {activeVariantId === 'original' ? (
                         <>
@@ -3629,6 +3644,7 @@ useEffect(() => {
                           onClick={() => { handleSwitchVariant('original'); closeVariantsDropdown(); }}
                           onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId('original'); }}
                           onPointerDown={(e) => {
+                            e.preventDefault();
                             if (!canEdit) return;
                             variantLongPressTriggeredRef.current = false;
                             variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -3660,6 +3676,7 @@ useEffect(() => {
                             onClick={() => { handleSwitchVariant(variant.id); closeVariantsDropdown(); }}
                             onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId(variant.id); }}
                             onPointerDown={(e) => {
+                              e.preventDefault();
                               if (!canEdit) return;
                               variantLongPressTriggeredRef.current = false;
                               variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -3712,7 +3729,8 @@ useEffect(() => {
                   onClick={(e) => toggleWeeksDropdown(e)}
                   title="Settimane"
                   aria-label="Settimane"
-                  className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Calendar size={18} className="text-cyan-600" />
                   <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
@@ -3736,6 +3754,7 @@ useEffect(() => {
                             onClick={() => { if (weekLongPressTriggeredRef.current) return; handleSwitchWeek(wk); closeWeeksDropdown(); }}
                             onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetWeekMenuPosition(e.currentTarget as HTMLElement); setOpenWeekKeyMenu(wk); }}
                             onPointerDown={(e) => {
+                              e.preventDefault();
                               if (!canEdit) return;
                               weekLongPressTriggeredRef.current = false;
                               weekPressStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -3788,7 +3807,8 @@ useEffect(() => {
                   onClick={(e) => toggleDaysDropdown(e)}
                   title="Allenamenti"
                   aria-label="Allenamenti"
-                  className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Dumbbell size={18} className="text-orange-500" />
                   {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
@@ -3817,6 +3837,7 @@ useEffect(() => {
                                   onClick={() => { if (dayLongPressTriggeredRef.current) return; handleSwitchDay(dk); closeDaysDropdown(); }}
                                   onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetDayMenuPosition(e.currentTarget as HTMLElement); setOpenDayKeyMenu(dk); }}
                                   onPointerDown={(e) => {
+                                    e.preventDefault();
                                     if (!canEdit) return;
                                     dayLongPressTriggeredRef.current = false;
                                     dayPressStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -4068,11 +4089,11 @@ useEffect(() => {
 
               {/* Create Exercise */}
               <button
-                  onClick={() => {
-                    if (showExerciseForm) {
-                      setShowExerciseForm(false);
-                      setEditingExerciseId(null);
-                      setEditingExercise(null);
+                onClick={() => {
+                  if (showExerciseForm) {
+                    setShowExerciseForm(false);
+                    setEditingExerciseId(null);
+                    setEditingExercise(null);
                       setCurrentExercise({
                         id: '',
                         name: '',
@@ -4090,11 +4111,12 @@ useEffect(() => {
                     } else {
                       setShowExerciseForm(true);
                     }
-                  }}
-                  title="Crea"
-                  aria-label="Crea"
-                  className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                >
+                }}
+                title="Crea"
+                aria-label="Crea"
+                className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+              >
                   <Plus size={18} className="text-green-600" />
               </button>
               {/* Separatore Apple dopo Crea */}
@@ -4109,7 +4131,8 @@ useEffect(() => {
                   onClick={(e) => toggleTagsMenu(e)}
                   title="Tag"
                   aria-label="Tag"
-                  className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Tag size={18} className="text-purple-600" />
                 </button>
@@ -4235,6 +4258,7 @@ useEffect(() => {
                 title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                style={{ userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
               >
                 <div className={`w-3 h-3 rounded-full ${
                   workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
@@ -4248,6 +4272,7 @@ useEffect(() => {
                 title="Associa"
                 aria-label="Associa"
                 className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                style={{ userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
               >
                 <Users size={18} className="text-indigo-600" />
               </button>
@@ -4274,16 +4299,17 @@ useEffect(() => {
                     onClick={(e) => toggleVariantsDropdown(e)}
                     title="Varianti"
                     aria-label="Varianti"
-                    className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                    className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                    style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     {activeVariantId === 'original' ? (
                       <>
-                        <FileText size={18} className="text-blue-600" />
+                        <FileText size={16} className="text-blue-600" />
                         <Star size={10} className="absolute -top-0.5 -right-0.5 text-blue-600" />
                       </>
                     ) : (
                       <>
-                        <FileText size={18} className="text-red-600" />
+                        <FileText size={16} className="text-red-600" />
                         {(() => { const idx = variants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
                       </>
                     )}
@@ -4299,9 +4325,10 @@ useEffect(() => {
                     onClick={(e) => toggleWeeksDropdown(e)}
                     title="Settimane"
                     aria-label="Settimane"
-                    className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                    className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                    style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
-                    <Calendar size={18} className="text-cyan-600" />
+                    <Calendar size={16} className="text-cyan-600" />
                     <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
                   </button>
                 </div>
@@ -4315,9 +4342,10 @@ useEffect(() => {
                     onClick={(e) => toggleDaysDropdown(e)}
                     title="Allenamenti"
                     aria-label="Allenamenti"
-                    className="relative bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                    className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                    style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
-                    <Dumbbell size={18} className="text-orange-500" />
+                    <Dumbbell size={16} className="text-orange-500" />
                     {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
                   </button>
                 </div>
@@ -4351,9 +4379,10 @@ useEffect(() => {
                   }}
                   title="Crea"
                   aria-label="Crea"
-                  className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
-                  <Plus size={18} className="text-green-600" />
+                  <Plus size={16} className="text-green-600" />
                 </button>
 
                 <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
@@ -4365,12 +4394,572 @@ useEffect(() => {
                     onClick={(e) => toggleTagsMenu(e)}
                     title="Tag"
                     aria-label="Tag"
-                    className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                    className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                    style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
-                    <Tag size={18} className="text-purple-600" />
+                    <Tag size={16} className="text-purple-600" />
+                  </button>
+                </div>
+
+                {/* Separatore Apple */}
+                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+                {/* Stato scheda */}
+                <button
+                  onClick={() => {
+                    const prev = workoutStatus;
+                    const next = prev === 'published' ? 'draft' : 'published';
+                    setWorkoutStatus(next);
+                    updateWorkoutPlan(workoutId, { status: next })
+                      .then(() => {
+                        setSaveMessage(next === 'published' ? 'Scheda pubblicata' : 'Scheda impostata in bozza');
+                      })
+                      .catch((err) => {
+                        console.error('Errore aggiornando lo status:', err);
+                        setWorkoutStatus(prev);
+                      });
+                  }}
+                  title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
+                  aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
+                  className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                >
+                  <div className={`w-3 h-3 rounded-full ${
+                    workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
+                  }`}></div>
+                </button>
+
+                {/* Separatore Apple */}
+                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+
+                {/* Associa atleti */}
+                <button
+                  onClick={() => setShowAthleteDropdown(true)}
+                  title="Associa"
+                  aria-label="Associa"
+                  className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                >
+                  <Users size={16} className="text-indigo-600" />
+                </button>
+              </div>
+            </div>
+            {/* Dropdown PWA: Varianti */}
+            {isVariantsDropdownOpen && (
+              <Portal>
+                <div
+                  ref={variantsDropdownRef as React.RefObject<HTMLDivElement>}
+                  style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? 0, left: variantsDropdownPosition?.left ?? 0 }}
+                  className="z-50 w-64 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                >
+                  <div className="mb-1 px-2 text-xs text-gray-500">Seleziona variante</div>
+                  <div className="space-y-1">
+                    {/* Originale */}
+                    <button
+                      onClick={() => { handleSwitchVariant('original'); closeVariantsDropdown(); }}
+                      onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId('original'); }}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        if (!canEdit) return;
+                        variantLongPressTriggeredRef.current = false;
+                        variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                        const anchor = e.currentTarget as HTMLElement;
+                        if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current);
+                        variantLongPressTimeoutRef.current = window.setTimeout(() => {
+                          variantLongPressTriggeredRef.current = true;
+                          computeAndSetVariantMenuPosition(anchor);
+                          setOpenVariantMenuId('original');
+                        }, VARIANT_LONG_PRESS_MS);
+                      }}
+                      onPointerUp={() => { if (!canEdit) return; if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }}
+                      onPointerMove={(e) => {
+                        if (!canEdit) return;
+                        const startPos = variantPressStartPosRef.current; if (!startPos) return;
+                        const dx = Math.abs(e.clientX - startPos.x); const dy = Math.abs(e.clientY - startPos.y);
+                        if (dx > 6 || dy > 6) { if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeVariantId === 'original' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                      title={`Scheda: ${workoutTitle}`}
+                      style={{ WebkitUserSelect: 'none' as any, userSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                    >
+                      <FileText size={16} className={activeVariantId === 'original' ? 'text-blue-700' : 'text-gray-600'} />
+                      <span>{workoutTitle}</span>
+                    </button>
+                    {/* Varianti */}
+                    {variants.map((variant, index) => (
+                      <button
+                        key={variant.id}
+                        onClick={() => { handleSwitchVariant(variant.id); closeVariantsDropdown(); }}
+                        onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId(variant.id); }}
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          if (!canEdit) return;
+                          variantLongPressTriggeredRef.current = false;
+                          variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                          const anchor = e.currentTarget as HTMLElement;
+                          if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current);
+                          variantLongPressTimeoutRef.current = window.setTimeout(() => {
+                            variantLongPressTriggeredRef.current = true;
+                            computeAndSetVariantMenuPosition(anchor);
+                            setOpenVariantMenuId(variant.id);
+                          }, VARIANT_LONG_PRESS_MS);
+                        }}
+                        onPointerUp={() => { if (!canEdit) return; if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }}
+                        onPointerMove={(e) => {
+                          if (!canEdit) return;
+                          const startPos = variantPressStartPosRef.current; if (!startPos) return;
+                          const dx = Math.abs(e.clientX - startPos.x); const dy = Math.abs(e.clientY - startPos.y);
+                          if (dx > 6 || dy > 6) { if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }
+                        }}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeVariantId === variant.id ? 'bg-red-50 text-red-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                        title={`Variante ${index + 1}: ${variant.name || 'Senza titolo'}`}
+                        style={{ WebkitUserSelect: 'none' as any, userSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                      >
+                        <FileText size={16} className={activeVariantId === variant.id ? 'text-red-700' : 'text-red-600'} />
+                        <span>Variante {index + 1}{variant.name ? ` — ${variant.name}` : ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {canEdit && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { handleAddVariant(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Crea nuova variante"
+                      >
+                        <Plus size={16} className="text-red-600" />
+                        <span>Nuova variante</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Portal>
+            )}
+
+            {/* Dropdown PWA: Settimane */}
+            {isWeeksDropdownOpen && (
+              <Portal>
+                <div
+                  ref={weeksDropdownRef as React.RefObject<HTMLDivElement>}
+                  style={{ position: 'fixed', top: weeksDropdownPosition?.top ?? 0, left: weeksDropdownPosition?.left ?? 0 }}
+                  className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                >
+                  <div className="mb-1 px-2 text-xs text-gray-500">Seleziona settimana</div>
+                  <div className="space-y-1">
+                    {weeks.slice().sort((a, b) => {
+                      const na = parseInt(a.replace(/^W/, ''), 10);
+                      const nb = parseInt(b.replace(/^W/, ''), 10);
+                      return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                    }).map((wk) => (
+                      <button
+                        key={wk}
+                        onClick={() => { if (weekLongPressTriggeredRef.current) return; handleSwitchWeek(wk); closeWeeksDropdown(); }}
+                        onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetWeekMenuPosition(e.currentTarget as HTMLElement); setOpenWeekKeyMenu(wk); }}
+                        onPointerDown={(e) => {
+                          e.preventDefault();
+                          if (!canEdit) return;
+                          weekLongPressTriggeredRef.current = false;
+                          weekPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                          const anchor = e.currentTarget as HTMLElement;
+                          if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current);
+                          weekLongPressTimeoutRef.current = window.setTimeout(() => {
+                            weekLongPressTriggeredRef.current = true;
+                            computeAndSetWeekMenuPosition(anchor);
+                            setOpenWeekKeyMenu(wk);
+                          }, VARIANT_LONG_PRESS_MS);
+                        }}
+                        onPointerUp={() => { if (!canEdit) return; if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current); weekLongPressTriggeredRef.current = false; }}
+                        onPointerMove={(e) => {
+                          if (!canEdit) return;
+                          const start = weekPressStartPosRef.current; if (!start) return;
+                          const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                          if (dx > 6 || dy > 6) { if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current); weekLongPressTriggeredRef.current = false; }
+                        }}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeWeekKey === wk ? 'bg-cyan-50 text-cyan-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                        title={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
+                        style={{ WebkitUserSelect: 'none' as any, userSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                      >
+                        <Calendar size={16} className={activeWeekKey === wk ? 'text-cyan-700' : 'text-gray-600'} />
+                        <span>Settimana {parseInt(wk.replace('W',''), 10)}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {canEdit && weeks.length < 12 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { handleAddWeek(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Aggiungi settimana"
+                      >
+                        <Plus size={16} className="text-cyan-600" />
+                        <span>Aggiungi settimana</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Portal>
+            )}
+
+            {/* Dropdown PWA: Giorni */}
+            {isDaysDropdownOpen && (
+              <Portal>
+                <div
+                  ref={daysDropdownRef as React.RefObject<HTMLDivElement>}
+                  style={{ position: 'fixed', top: daysDropdownPosition?.top ?? 0, left: daysDropdownPosition?.left ?? 0 }}
+                  className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                >
+                  <div className="mb-1 px-2 text-xs text-gray-500">Seleziona allenamento</div>
+                  <div className="space-y-1">
+                    {(() => {
+                      const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                      const sorted = (keys.length ? keys : ['G1']).slice().sort((a, b) => {
+                        const na = parseInt(String(a).replace(/^G/, ''), 10);
+                        const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                        return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                      });
+                      return sorted.map((dk) => {
+                        const label = getDayDisplayName(dk);
+                        return (
+                          <button
+                            key={dk}
+                            onClick={() => { if (dayLongPressTriggeredRef.current) return; handleSwitchDay(dk); closeDaysDropdown(); }}
+                            onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetDayMenuPosition(e.currentTarget as HTMLElement); setOpenDayKeyMenu(dk); }}
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              if (!canEdit) return;
+                              dayLongPressTriggeredRef.current = false;
+                              dayPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                              const anchor = e.currentTarget as HTMLElement;
+                              if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current);
+                              dayLongPressTimeoutRef.current = window.setTimeout(() => {
+                                dayLongPressTriggeredRef.current = true;
+                                computeAndSetDayMenuPosition(anchor);
+                                setOpenDayKeyMenu(dk);
+                              }, VARIANT_LONG_PRESS_MS);
+                            }}
+                            onPointerUp={() => { if (!canEdit) return; if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current); dayLongPressTriggeredRef.current = false; }}
+                            onPointerMove={(e) => {
+                              if (!canEdit) return;
+                              const start = dayPressStartPosRef.current; if (!start) return;
+                              const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                              if (dx > 6 || dy > 6) { if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current); dayLongPressTriggeredRef.current = false; }
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeDayKey === dk ? 'bg-orange-50 text-orange-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                            title={label}
+                            style={{ WebkitUserSelect: 'none' as any, userSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                          >
+                            <Dumbbell size={16} className={activeDayKey === dk ? 'text-orange-700' : 'text-orange-500'} />
+                            <span>{label}</span>
+                          </button>
+                        );
+                      });
+                    })()}
+                  </div>
+                  {canEdit && (() => {
+                    const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                    const count = keys.length > 0 ? keys.length : 1;
+                    return count < 10;
+                  })() && (
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <button
+                        onClick={() => { handleAddDay(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Aggiungi allenamento"
+                      >
+                        <Plus size={16} className="text-orange-600" />
+                        <span>Aggiungi allenamento</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Portal>
+            )}
+
+            {/* Menù azioni Varianti/Settimane/Giornate in PWA */}
+            {canEdit && openVariantMenuId && variantMenuPosition && (
+              <Portal>
+                <div
+                  ref={variantMenuRef as React.RefObject<HTMLDivElement>}
+                  style={{ position: 'fixed', top: variantMenuPosition.top!, left: variantMenuPosition.left!, transform: 'translateX(-50%)' }}
+                  className="z-[9999] bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative"
+                  onClick={(e) => e.stopPropagation()}
+                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <div className="px-2 pb-2 text-xs text-gray-500">Azioni variante</div>
+                  {openVariantMenuId === 'original' ? (
+                    <>
+                      <button
+                        onClick={() => { handleCloneFromOriginal(); closeVariantMenu(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Clona in nuova variante"
+                      >
+                        <Copy size={16} className="text-gray-700" />
+                        <span>Clona come nuova</span>
+                      </button>
+                      <button
+                        onClick={() => { handleCopyVariant('original'); closeVariantMenu(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Copia variante"
+                      >
+                        <Copy size={16} className="text-gray-700" />
+                        <span>Copia variante</span>
+                      </button>
+                      <button
+                        onClick={() => { handlePasteVariant('original'); closeVariantMenu(); }}
+                        disabled={!variantClipboard || variantClipboard.sourceVariantId === 'original'}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 ${(!variantClipboard || variantClipboard.sourceVariantId === 'original') ? 'opacity-50 cursor-not-allowed bg-white text-gray-400' : 'hover:bg-gray-50 text-gray-800'}`}
+                        title="Incolla variante"
+                      >
+                        <Save size={16} className="text-gray-700" />
+                        <span>Incolla variante</span>
+                      </button>
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <button
+                          onClick={() => { handleClearOriginal(); closeVariantMenu(); }}
+                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                          title="Svuota originale"
+                        >
+                          <Eraser size={16} className="text-red-600" />
+                          <span>Svuota originale</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { handleCopyVariant(openVariantMenuId!); closeVariantMenu(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Copia variante"
+                      >
+                        <Copy size={16} className="text-gray-700" />
+                        <span>Copia variante</span>
+                      </button>
+                      <button
+                        onClick={() => { handlePasteVariant(openVariantMenuId!); closeVariantMenu(); }}
+                        disabled={!variantClipboard || variantClipboard.sourceVariantId === openVariantMenuId}
+                        className={`w-full text-left px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 ${(!variantClipboard || variantClipboard.sourceVariantId === openVariantMenuId) ? 'opacity-50 cursor-not-allowed bg-white text-gray-400' : 'hover:bg-gray-50 text-gray-800'}`}
+                        title="Incolla variante"
+                      >
+                        <Save size={16} className="text-gray-700" />
+                        <span>Incolla variante</span>
+                      </button>
+                      <button
+                        onClick={() => { handleCloneVariant(openVariantMenuId!); closeVariantMenu(); }}
+                        className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                        title="Clona variante"
+                      >
+                        <Copy size={16} className="text-gray-700" />
+                        <span>Clona variante</span>
+                      </button>
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <button
+                          onClick={() => { handleRemoveVariant(openVariantMenuId!); closeVariantMenu(); }}
+                          className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                          title="Rimuovi variante"
+                        >
+                          <Trash2 size={16} className="text-red-600" />
+                          <span>Rimuovi variante</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </Portal>
+            )}
+
+            {canEdit && openWeekKeyMenu && weekMenuPosition && (
+              <Portal>
+                <div
+                  ref={weekMenuRef as React.RefObject<HTMLDivElement>}
+                  style={{ position: 'fixed', top: weekMenuPosition.top!, left: weekMenuPosition.left!, transform: 'translateX(-50%)' }}
+                  className="z-[9999] bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative"
+                  onClick={(e) => e.stopPropagation()}
+                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <div className="px-2 pb-2 text-xs text-gray-500">Azioni settimana</div>
+                  <button
+                    onClick={() => { handleCopyWeek(openWeekKeyMenu!); closeWeekMenu(); }}
+                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                    title="Copia settimana"
+                  >
+                    <Copy size={16} className="text-gray-700" />
+                    <span>Copia settimana</span>
+                  </button>
+                  <button
+                    onClick={() => { handlePasteWeek(openWeekKeyMenu!); closeWeekMenu(); }}
+                    disabled={!weekClipboard || (weekClipboard.sourceVariantId === activeVariantId && weekClipboard.sourceWeekKey === openWeekKeyMenu)}
+                    className={`w-full text-left px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 ${(!weekClipboard || (weekClipboard.sourceVariantId === activeVariantId && weekClipboard.sourceWeekKey === openWeekKeyMenu)) ? 'opacity-50 cursor-not-allowed bg-white text-gray-400' : 'hover:bg-gray-50 text-gray-800'}`}
+                    title="Incolla settimana"
+                  >
+                    <Save size={16} className="text-gray-700" />
+                    <span>Incolla settimana</span>
+                  </button>
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={() => { handleClearWeek(openWeekKeyMenu!); closeWeekMenu(); }}
+                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                      title="Svuota settimana"
+                    >
+                      <Eraser size={16} className="text-gray-700" />
+                      <span>Svuota settimana</span>
+                    </button>
+                    <button
+                      onClick={() => { handleRemoveWeek(openWeekKeyMenu!); closeWeekMenu(); }}
+                      className="mt-1 w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                      title="Rimuovi settimana"
+                    >
+                      <Trash2 size={16} className="text-red-600" />
+                      <span>Rimuovi settimana</span>
+                    </button>
+                  </div>
+                </div>
+              </Portal>
+            )}
+
+            {canEdit && openDayKeyMenu && dayMenuPosition && (
+              <Portal>
+                <div
+                  ref={dayMenuRef as React.RefObject<HTMLDivElement>}
+                  style={{ position: 'fixed', top: dayMenuPosition.top!, left: dayMenuPosition.left!, transform: 'translateX(-50%)' }}
+                  className="z-[9999] bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2 w-44 relative"
+                  onClick={(e) => e.stopPropagation()}
+                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                >
+                  <div className="px-2 pb-2 text-xs text-gray-500">Azioni giornata</div>
+                  <button
+                    onClick={() => { handleStartRenameDay(openDayKeyMenu!); closeDayMenu(); }}
+                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                    title="Rinomina giornata"
+                  >
+                    <Edit3 size={16} className="text-gray-700" />
+                    <span>Rinomina giornata</span>
+                  </button>
+                  <button
+                    onClick={() => { handleCopyDay(openDayKeyMenu!); closeDayMenu(); }}
+                    className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                    title="Copia giornata"
+                  >
+                    <Copy size={16} className="text-gray-700" />
+                    <span>Copia giornata</span>
+                  </button>
+                  <button
+                    onClick={() => { handlePasteDay(openDayKeyMenu!); }}
+                    disabled={!dayClipboard || (dayClipboard.sourceVariantId === activeVariantId && dayClipboard.sourceWeekKey === activeWeekKey && dayClipboard.sourceDayKey === openDayKeyMenu)}
+                    className={`w-full text-left px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 ${(!dayClipboard || (dayClipboard.sourceVariantId === activeVariantId && dayClipboard.sourceWeekKey === activeWeekKey && dayClipboard.sourceDayKey === openDayKeyMenu)) ? 'opacity-50 cursor-not-allowed bg-white text-gray-400' : 'hover:bg-gray-50 text-gray-800'}`}
+                    title="Incolla giornata"
+                  >
+                    <Save size={16} className="text-gray-700" />
+                    <span>Incolla giornata</span>
+                  </button>
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <button
+                      onClick={() => { handleClearDay(openDayKeyMenu!); closeDayMenu(); }}
+                      className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                      title="Svuota giornata"
+                    >
+                      <Eraser size={16} className="text-gray-700" />
+                      <span>Svuota giornata</span>
+                    </button>
+                    <button
+                      onClick={() => { handleRemoveDay(openDayKeyMenu!); closeDayMenu(); }}
+                      className="mt-1 w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-red-50 text-red-700 flex items-center gap-2"
+                      title="Rimuovi giornata"
+                    >
+                      <Trash2 size={16} className="text-red-600" />
+                      <span>Rimuovi giornata</span>
+                    </button>
+                  </div>
+                </div>
+              </Portal>
+            )}
+          </Portal>
+        )}
+        {/* Menu Tag in PWA */}
+        {isStandaloneMobile && canEdit && isTagsMenuOpen && (
+          <Portal>
+            <div
+              ref={tagsDropdownRef as React.RefObject<HTMLDivElement>}
+              style={{ position: 'fixed', top: tagsMenuPosition?.top ?? 0, left: tagsMenuPosition?.left ?? 0 }}
+              className="z-50 w-80 max-w-[85vw] bg-white/70 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-3"
+            >
+              <div className="mb-2">
+                <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
+                <div className="relative flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
+                      className="w-full pl-8 pr-7 py-1.5 border border-white/30 rounded-full text-xs bg-white/60 backdrop-blur-sm shadow-inner focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-200"
+                      placeholder="Es. forza, mobilità"
+                      maxLength={20}
+                      onFocus={() => setShowTagsDropdown(false)}
+                    />
+                    {newTag.trim() && tags.includes(newTag.trim()) && (
+                      <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
+                    )}
+                    <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                    {newTag && (
+                      <button
+                        type="button"
+                        aria-label="Pulisci"
+                        onClick={() => setNewTag('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddTag}
+                    disabled={!newTag.trim() || tags.length >= 10}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium ${!newTag.trim() || tags.length >= 10 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-purple-600 text-white hover:bg-purple-700'} transition`}
+                  >
+                    Aggiungi
                   </button>
                 </div>
               </div>
+              <div className="space-y-1">
+                <div className="text-xs text-gray-500 px-2 mb-1">Tag già aggiunti</div>
+                {tags.length === 0 ? (
+                  <div className="px-3 py-1.5 text-xs text-gray-500">Nessun tag aggiunto</div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 px-2">
+                    {tags.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => handleRemoveTag(t)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ring-1 ring-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
+                        title={`Rimuovi tag ${t}`}
+                      >
+                        <Tag size={12} className="text-purple-700" />
+                        <span>{t}</span>
+                        <X size={12} className="text-purple-700" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {showGymTagsList && (
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <div className="text-xs text-gray-500 px-2 mb-1">Tag suggeriti</div>
+                  <div className="flex flex-wrap gap-2 px-2">
+                    {GYM_TAGS.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => { setNewTag(t); setShowGymTagsList(false); }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ring-1 ring-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100"
+                        title={`Usa tag ${t}`}
+                      >
+                        <Tag size={12} className="text-gray-700" />
+                        <span>{t}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </Portal>
         )}
@@ -5291,6 +5880,8 @@ useEffect(() => {
                             onDoubleClick={() => { if (canEdit) handleEditExercise(leader); }}
                           onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(leader.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
                           onPointerDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             if (!canEdit) return;
                             exerciseLongPressTriggeredRef.current = false;
                             exercisePressStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -5428,6 +6019,8 @@ useEffect(() => {
                               onDoubleClick={() => { if (canEdit) handleEditExercise(follower); }}
                               onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(follower.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
                               onPointerDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 if (!canEdit) return;
                                 exerciseLongPressTriggeredRef.current = false;
                                 exercisePressStartPosRef.current = { x: e.clientX, y: e.clientY };
@@ -5566,7 +6159,7 @@ useEffect(() => {
                         onClick={() => { if (exerciseLongPressTriggeredRef.current) return; const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectable) handleToggleSupersetSelection(exercise.id); }}
                         onDoubleClick={() => { if (canEdit) handleEditExercise(exercise); }}
                         onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(exercise.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
-                        onPointerDown={(e) => { if (!canEdit) return; exerciseLongPressTriggeredRef.current = false; exercisePressStartPosRef.current = { x: e.clientX, y: e.clientY }; const anchor = e.currentTarget as HTMLElement; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTimeoutRef.current = window.setTimeout(() => { exerciseLongPressTriggeredRef.current = true; setOpenExerciseContextId(exercise.id); computeAndSetMenuPosition(anchor, 'exercise'); }, VARIANT_LONG_PRESS_MS); }}
+                        onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); if (!canEdit) return; exerciseLongPressTriggeredRef.current = false; exercisePressStartPosRef.current = { x: e.clientX, y: e.clientY }; const anchor = e.currentTarget as HTMLElement; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTimeoutRef.current = window.setTimeout(() => { exerciseLongPressTriggeredRef.current = true; setOpenExerciseContextId(exercise.id); computeAndSetMenuPosition(anchor, 'exercise'); }, VARIANT_LONG_PRESS_MS); }}
                         onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }}
                         onPointerMove={(e) => { if (!canEdit) return; const start = exercisePressStartPosRef.current; if (!start) return; const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y); if (dx > 6 || dy > 6) { if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; } }}
                         draggable={canEdit}
