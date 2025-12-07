@@ -3593,8 +3593,8 @@ useEffect(() => {
       >
 
         
-        {/* Header Row: Back button + centered Toolbar in the same row */}
-        <div className="grid grid-cols-[auto_1fr_auto] items-center mb-6">
+        {/* Header Row: su telefono la toolbar va sotto il tasto Indietro */}
+        <div className="flex flex-col items-start gap-2 mb-4 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:mb-6">
           <div className="flex justify-start items-center">
             {!isStandaloneMobile && (
               <button
@@ -3608,8 +3608,8 @@ useEffect(() => {
           </div>
           <div className="min-w-0 flex justify-center items-center">
             {canEdit && !isStandaloneMobile && (
-              <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full overflow-x-auto touch-pan-x">
-                <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+              <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full">
+                <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-1.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
                   {/* Varianti dropdown */}
                   <div className="relative">
                 <button
@@ -3617,8 +3617,8 @@ useEffect(() => {
                   onClick={(e) => toggleVariantsDropdown(e)}
                   title="Varianti"
                   aria-label="Varianti"
-                  className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                       {activeVariantId === 'original' ? (
                         <>
@@ -3722,7 +3722,7 @@ useEffect(() => {
                 )}
               </div>
               {/* Separatore Apple dopo Varianti */}
-              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
               {/* Settimane dropdown */}
               <div className="relative">
@@ -3731,8 +3731,8 @@ useEffect(() => {
                   onClick={(e) => toggleWeeksDropdown(e)}
                   title="Settimane"
                   aria-label="Settimane"
-                  className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Calendar size={18} className="text-cyan-600" />
                   <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
@@ -3800,7 +3800,7 @@ useEffect(() => {
                 )}
               </div>
               {/* Separatore Apple dopo Settimane */}
-              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
               {/* Giorni dropdown */}
               <div className="relative">
@@ -3809,8 +3809,8 @@ useEffect(() => {
                   onClick={(e) => toggleDaysDropdown(e)}
                   title="Allenamenti"
                   aria-label="Allenamenti"
-                  className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Dumbbell size={18} className="text-orange-500" />
                   {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
@@ -3889,7 +3889,7 @@ useEffect(() => {
                 )}
               </div>
               {/* Separatore Apple dopo Allenamenti */}
-              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
               {/* Menù azioni Varianti/Settimane/Giornate via Portal */}
               {canEdit && openVariantMenuId && variantMenuPosition && (
@@ -4133,8 +4133,8 @@ useEffect(() => {
                   onClick={(e) => toggleTagsMenu(e)}
                   title="Tag"
                   aria-label="Tag"
-                  className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Tag size={18} className="text-purple-600" />
                 </button>
@@ -4240,7 +4240,7 @@ useEffect(() => {
                 )}
               </div>
               {/* Separatore Apple dopo Tag */}
-              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
               {/* Clone Workout rimosso */}
               {/* Workout Status */}
               <button
@@ -4259,7 +4259,7 @@ useEffect(() => {
                 }}
                 title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                 aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                className="bg-transparent rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition shrink-0"
                 style={{ userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
               >
                 <div className={`w-3 h-3 rounded-full ${
@@ -4273,7 +4273,7 @@ useEffect(() => {
                 onClick={() => setShowAthleteDropdown(true)}
                 title="Associa"
                 aria-label="Associa"
-                className="bg-white rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                className="bg-transparent rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition shrink-0"
                 style={{ userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
               >
                 <Users size={18} className="text-indigo-600" />
@@ -4293,7 +4293,7 @@ useEffect(() => {
         {isStandaloneMobile && canEdit && (
           <Portal containerId="pwa-workout-toolbar">
             <div className="relative w-full flex justify-center max-w-full">
-              <div className="flex flex-wrap whitespace-normal justify-center items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+              <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-1.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
                 {/* Varianti trigger */}
                 <div className="relative">
                   <button
@@ -4301,8 +4301,8 @@ useEffect(() => {
                     onClick={(e) => toggleVariantsDropdown(e)}
                     title="Varianti"
                     aria-label="Varianti"
-                    className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                    style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                    className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     {activeVariantId === 'original' ? (
                       <>
@@ -4318,7 +4318,7 @@ useEffect(() => {
                   </button>
                 </div>
 
-                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
                 {/* Settimane trigger */}
                 <div className="relative">
@@ -4327,15 +4327,15 @@ useEffect(() => {
                     onClick={(e) => toggleWeeksDropdown(e)}
                     title="Settimane"
                     aria-label="Settimane"
-                    className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                    style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                    className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Calendar size={16} className="text-cyan-600" />
                     <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
                   </button>
                 </div>
 
-                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
                 {/* Giorni trigger */}
                 <div className="relative">
@@ -4344,8 +4344,8 @@ useEffect(() => {
                     onClick={(e) => toggleDaysDropdown(e)}
                     title="Allenamenti"
                     aria-label="Allenamenti"
-                    className="relative bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                    style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                    className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Dumbbell size={16} className="text-orange-500" />
                     {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
@@ -4381,8 +4381,8 @@ useEffect(() => {
                   }}
                   title="Crea"
                   aria-label="Crea"
-                  className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Plus size={16} className="text-green-600" />
                 </button>
@@ -4396,15 +4396,15 @@ useEffect(() => {
                     onClick={(e) => toggleTagsMenu(e)}
                     title="Tag"
                     aria-label="Tag"
-                    className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                    style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                    className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Tag size={16} className="text-purple-600" />
                   </button>
                 </div>
 
                 {/* Separatore Apple */}
-                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
                 {/* Stato scheda */}
                 <button
@@ -4423,8 +4423,8 @@ useEffect(() => {
                   }}
                   title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
                   aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                  className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <div className={`w-3 h-3 rounded-full ${
                     workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
@@ -4439,8 +4439,8 @@ useEffect(() => {
                   onClick={() => setShowAthleteDropdown(true)}
                   title="Associa"
                   aria-label="Associa"
-                  className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
-                  style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Users size={16} className="text-indigo-600" />
                 </button>
@@ -5193,6 +5193,9 @@ useEffect(() => {
             </>
           </Portal>
         )}
+
+        {/* Separatore Apple tra descrizione e "Esercizi" */}
+        <SectionSeparator variant="apple" />
         
         {/* Toolbar rimossa da qui: ora posizionata sotto la barra varianti */}
         
@@ -5660,8 +5663,9 @@ useEffect(() => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Serie x Ripetizioni</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2 sr-only">Serie e Ripetizioni</label>
                 <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-700">Serie:</span>
                   <input
                     type="number"
                     value={editingExercise ? editingSets : currentSets}
@@ -5689,7 +5693,8 @@ useEffect(() => {
                     className="w-20 px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                     min="1"
                   />
-                  <span className="text-gray-500 font-medium">x</span>
+                  <div aria-hidden="true" className="mx-1 h-5 w-px bg-gradient-to-b from-transparent via-gray-300/80 to-transparent rounded-full" />
+                  <span className="text-sm text-gray-700">Ripetizioni:</span>
                   <input
                     type="number"
                     value={editingExercise ? editingReps : currentReps}
@@ -5923,8 +5928,26 @@ useEffect(() => {
                             {leader.sets && (
                               <p className="flex items-center gap-2">
                                 <Dumbbell size={14} className="text-gray-500" />
-                                <span className="font-semibold">S x R:</span>
-                                <span>{(() => { const m = (leader.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/); return m ? `${m[1]} x ${m[2]}` : leader.sets; })()}</span>
+                                {(() => {
+                                  const m = (leader.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/);
+                                  if (m) {
+                                    return (
+                                      <>
+                                        <span className="font-semibold">Serie:</span>
+                                        <span>{m[1]}</span>
+                                        <div aria-hidden="true" className="mx-1 h-4 w-px bg-gradient-to-b from-transparent via-gray-300/80 to-transparent rounded-full" />
+                                        <span className="font-semibold">Ripetizioni:</span>
+                                        <span>{m[2]}</span>
+                                      </>
+                                    );
+                                  }
+                                  return (
+                                    <>
+                                      <span className="font-semibold">Serie:</span>
+                                      <span>{leader.sets}</span>
+                                    </>
+                                  );
+                                })()}
                               </p>
                             )}
                             {leader.intensity && (
@@ -6056,8 +6079,26 @@ useEffect(() => {
                                 {follower.sets && (
                                   <p className="flex items-center gap-2">
                                     <Dumbbell size={14} className="text-gray-500" />
-                                    <span className="font-semibold">S x R:</span>
-                                    <span>{(() => { const m = (follower.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/); return m ? `${m[1]} x ${m[2]}` : follower.sets; })()}</span>
+                                    {(() => {
+                                      const m = (follower.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/);
+                                      if (m) {
+                                        return (
+                                          <>
+                                            <span className="font-semibold">Serie:</span>
+                                            <span>{m[1]}</span>
+                                            <div aria-hidden="true" className="mx-1 h-4 w-px bg-gradient-to-b from-transparent via-gray-300/80 to-transparent rounded-full" />
+                                            <span className="font-semibold">Ripetizioni:</span>
+                                            <span>{m[2]}</span>
+                                          </>
+                                        );
+                                      }
+                                      return (
+                                        <>
+                                          <span className="font-semibold">Serie:</span>
+                                          <span>{follower.sets}</span>
+                                        </>
+                                      );
+                                    })()}
                                   </p>
                                 )}
                                 {follower.intensity && (
@@ -6184,8 +6225,26 @@ useEffect(() => {
                           {exercise.sets && (
                             <p className="flex items-center gap-2">
                               <Dumbbell size={14} className="text-gray-500" />
-                              <span className="font-semibold">S x R:</span>
-                              <span>{(() => { const m = (exercise.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/); return m ? `${m[1]} x ${m[2]}` : exercise.sets; })()}</span>
+                              {(() => {
+                                const m = (exercise.sets || '').match(/(\d+)\s*[xX]\s*([^\s]+)/);
+                                if (m) {
+                                  return (
+                                    <>
+                                      <span className="font-semibold">Serie:</span>
+                                      <span>{m[1]}</span>
+                                      <div aria-hidden="true" className="mx-1 h-4 w-px bg-gradient-to-b from-transparent via-gray-300/80 to-transparent rounded-full" />
+                                      <span className="font-semibold">Ripetizioni:</span>
+                                      <span>{m[2]}</span>
+                                    </>
+                                  );
+                                }
+                                return (
+                                  <>
+                                    <span className="font-semibold">Serie:</span>
+                                    <span>{exercise.sets}</span>
+                                  </>
+                                );
+                              })()}
                             </p>
                           )}
                           {exercise.intensity && (

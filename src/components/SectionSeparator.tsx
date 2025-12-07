@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface SectionSeparatorProps {
-  variant?: 'default' | 'red' | 'navy' | 'black';
+  variant?: 'default' | 'red' | 'navy' | 'black' | 'apple';
 }
 
 const SectionSeparator: React.FC<SectionSeparatorProps> = ({ variant = 'default' }) => {
@@ -13,6 +13,8 @@ const SectionSeparator: React.FC<SectionSeparatorProps> = ({ variant = 'default'
         return 'bg-gray-300';
       case 'black':
         return 'bg-gray-300';
+      case 'apple':
+        return 'bg-gradient-to-r from-transparent via-gray-300 to-transparent';
       default:
         return 'bg-gray-200';
     }
