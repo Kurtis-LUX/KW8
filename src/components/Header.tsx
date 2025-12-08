@@ -768,7 +768,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         {isStandaloneMobile && !isHomePage && (currentPage === 'pwa-home' || !!getMobilePageTitle(currentPage)) && (
           <div className="lg:hidden">
             <div className={`container mx-auto px-6 ${currentPage === 'workout-manager' ? 'pb-0' : (((currentPage === 'workout-manager' || currentPage === 'workouts') && isWorkoutDetailOpen) ? 'pb-0' : 'pb-2')}`}>
-              <div className={`w-full rounded-2xl px-3 py-2 flex items-center justify-between ${currentPage === 'workout-manager' ? '' : 'bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm'}`}>
+              <div className={`w-full relative rounded-2xl px-3 py-2 flex items-center justify-between ${currentPage === 'workout-manager' ? '' : 'bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm'}`}>
                 {/* Back button nascosto su PWA Gestione Schede */}
                 <button
                   onClick={handleBack}
@@ -778,7 +778,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 >
                   <ChevronLeft size={20} className="block" />
                 </button>
-                <div className="flex-1 text-center">
+                <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none">
                   {currentPage === 'pwa-home' ? (
                     <h1
                       className={`text-2xl sm:text-3xl font-bold tracking-wider animate-fadeInSlideUp ${isTypingComplete ? 'animate-pulse' : ''}`}
@@ -797,7 +797,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                       {!isTypingComplete && <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>}
                     </h1>
                   ) : (
-                    <span className="font-sfpro text-base font-semibold text-gray-900 tracking-tight">
+                    <span className="font-sfpro text-base font-semibold text-gray-900 tracking-tight whitespace-nowrap overflow-hidden max-w-[calc(100%-140px)]">
                       {getMobilePageTitle(currentPage)}
                     </span>
                   )}

@@ -29,18 +29,21 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const [assignedPrograms, setAssignedPrograms] = useState<ProgramItem[]>([]);
 
-  // Aggiorna altezza header per padding top coerente con Gestione schede
   useEffect(() => {
-    const updateHeaderHeight = () => {
-      const headerEl = document.querySelector('header');
-      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
-    };
-    updateHeaderHeight();
-    window.addEventListener('scroll', updateHeaderHeight, { passive: true });
-    window.addEventListener('resize', updateHeaderHeight);
+    const headerEl = document.querySelector('header');
+    if (!headerEl) return;
+    const update = () => setHeaderHeight(headerEl.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(() => update());
+    ro.observe(headerEl);
+    const mo = new MutationObserver(() => update());
+    mo.observe(headerEl, { childList: true, subtree: true });
+    const onOrientation = () => update();
+    window.addEventListener('orientationchange', onOrientation);
     return () => {
-      window.removeEventListener('scroll', updateHeaderHeight as EventListener);
-      window.removeEventListener('resize', updateHeaderHeight as EventListener);
+      ro.disconnect();
+      mo.disconnect();
+      window.removeEventListener('orientationchange', onOrientation);
     };
   }, []);
 

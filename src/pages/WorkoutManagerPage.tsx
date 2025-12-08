@@ -16,24 +16,21 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
   const PWA_BAR_HEIGHT = 52; // legacy: non più usato, titolo spostato in Header
 
   useEffect(() => {
-    const onScroll = () => {
-      // Aggiorna l'altezza dell'header (può variare con lo scroll)
-      const headerEl = document.querySelector('header');
-      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
+    const headerEl = document.querySelector('header');
+    if (!headerEl) return;
+    const update = () => setHeaderHeight(headerEl.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(() => update());
+    ro.observe(headerEl);
+    const mo = new MutationObserver(() => update());
+    mo.observe(headerEl, { childList: true, subtree: true });
+    const onOrientation = () => update();
+    window.addEventListener('orientationchange', onOrientation);
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+      window.removeEventListener('orientationchange', onOrientation);
     };
-    const onResize = () => {
-      const headerEl = document.querySelector('header');
-      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
-    };
-    // Inizializza altezza header
-    const initHeader = () => {
-      const headerEl = document.querySelector('header');
-      if (headerEl) setHeaderHeight(headerEl.getBoundingClientRect().height);
-    };
-    initHeader();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
