@@ -3639,7 +3639,7 @@ useEffect(() => {
                           style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? 0, left: variantsDropdownPosition?.left ?? 0 }}
                           className="z-50 w-64 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
                         >
-                      <div className="mb-1 px-2 text-xs text-gray-500">Seleziona variante</div>
+                      <div className="mb-1 px-2 text-xs text-gray-500">Seleziona scheda</div>
                       <div className="space-y-1">
                         {/* Originale */}
                         <button
@@ -4454,7 +4454,7 @@ useEffect(() => {
                   style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? 0, left: variantsDropdownPosition?.left ?? 0 }}
                   className="z-50 w-64 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
                 >
-                  <div className="mb-1 px-2 text-xs text-gray-500">Seleziona variante</div>
+                  <div className="mb-1 px-2 text-xs text-gray-500">Seleziona scheda</div>
                   <div className="space-y-1">
                     {/* Originale */}
                     <button
@@ -6163,6 +6163,7 @@ useEffect(() => {
                         <div
                             className={`relative p-3 rounded-xl bg-white backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader ? (supersetSelection.includes(leader.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === leader.id || openCloneActionsId === leader.id ? 'z-50' : ''}`}
                           onClick={() => { if (exerciseLongPressTriggeredRef.current) return; const selectable = isSupersetMode && leader.id !== supersetAnchorExerciseId && !leader.supersetGroupId && !leader.isSupersetLeader; if (selectable) handleToggleSupersetSelection(leader.id); }}
+                          onClickCapture={(e) => { if (exerciseLongPressTriggeredRef.current) { e.preventDefault(); e.stopPropagation(); } }}
                             onDoubleClick={() => { if (canEdit) handleEditExercise(leader); }}
                           onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(leader.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
                           onPointerDown={(e) => {
@@ -6179,7 +6180,7 @@ useEffect(() => {
                               computeAndSetMenuPosition(anchor, 'exercise');
                             }, VARIANT_LONG_PRESS_MS);
                           }}
-                          onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }}
+                          onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); setTimeout(() => { exerciseLongPressTriggeredRef.current = false; }, 250); }}
                           onPointerMove={(e) => {
                             if (!canEdit) return;
                             const start = exercisePressStartPosRef.current; if (!start) return;
@@ -6300,7 +6301,7 @@ useEffect(() => {
                                     </button>
                                   ) : (
                                     <button onClick={() => { handleStartSuperset(leader.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
-                                      <Link2 size={14} className="text-purple-700" /> <span>Avvia modalità superset</span>
+                                      <Link2 size={14} className="text-purple-700" /> <span>Crea superset</span>
                                     </button>
                                   )}
                                 </div>
@@ -6320,6 +6321,7 @@ useEffect(() => {
                             <div
                                 className={`relative p-3 rounded-xl bg-white backdrop-blur-md ring-1 ring-black/10 shadow-sm ${dragOverExerciseIndex === (i + 1 + fi) ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === (i + 1 + fi) ? 'opacity-80' : ''} ${selectedSwapIndex === (i + 1 + fi) ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader ? (supersetSelection.includes(follower.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === follower.id || openCloneActionsId === follower.id ? 'z-50' : ''}`}
                               onClick={() => { if (exerciseLongPressTriggeredRef.current) return; const selectable = isSupersetMode && follower.id !== supersetAnchorExerciseId && !follower.supersetGroupId && !follower.isSupersetLeader; if (selectable) handleToggleSupersetSelection(follower.id); }}
+                              onClickCapture={(e) => { if (exerciseLongPressTriggeredRef.current) { e.preventDefault(); e.stopPropagation(); } }}
                               onDoubleClick={() => { if (canEdit) handleEditExercise(follower); }}
                               onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(follower.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
                               onPointerDown={(e) => {
@@ -6336,7 +6338,7 @@ useEffect(() => {
                                   computeAndSetMenuPosition(anchor, 'exercise');
                                 }, VARIANT_LONG_PRESS_MS);
                               }}
-                              onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }}
+                              onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); setTimeout(() => { exerciseLongPressTriggeredRef.current = false; }, 250); }}
                               onPointerMove={(e) => {
                                 if (!canEdit) return;
                                 const start = exercisePressStartPosRef.current; if (!start) return;
@@ -6451,7 +6453,7 @@ useEffect(() => {
                                     </button>
                                   ) : (
                                     <button onClick={() => { handleStartSuperset(follower.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
-                                      <Link2 size={14} className="text-purple-700" /> <span>Avvia modalità superset</span>
+                                      <Link2 size={14} className="text-purple-700" /> <span>Crea superset</span>
                                     </button>
                                   )}
                                 </div>
@@ -6479,10 +6481,11 @@ useEffect(() => {
                         key={exercise.id || `exercise-${i}`}
                         className={`relative p-4 rounded-2xl bg-white backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:shadow-md transition hover:translate-y-px ${dragOverExerciseIndex === i ? 'ring-2 ring-red-300' : ''} ${draggedExerciseIndex === i ? 'opacity-80' : ''} ${selectedSwapIndex === i ? 'ring-2 ring-blue-300' : ''} ${isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader ? (supersetSelection.includes(exercise.id) ? 'ring-2 ring-purple-400' : 'cursor-pointer') : ''} ${openSupersetActionsId === exercise.id || openCloneActionsId === exercise.id ? 'z-50' : ''}`}
                         onClick={() => { if (exerciseLongPressTriggeredRef.current) return; const selectable = isSupersetMode && exercise.id !== supersetAnchorExerciseId && !exercise.supersetGroupId && !exercise.isSupersetLeader; if (selectable) handleToggleSupersetSelection(exercise.id); }}
+                        onClickCapture={(e) => { if (exerciseLongPressTriggeredRef.current) { e.preventDefault(); e.stopPropagation(); } }}
                         onDoubleClick={() => { if (canEdit) handleEditExercise(exercise); }}
                         onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; setOpenExerciseContextId(exercise.id); computeAndSetMenuPosition(e.currentTarget as HTMLElement, 'exercise'); }}
                         onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); if (!canEdit) return; exerciseLongPressTriggeredRef.current = false; exercisePressStartPosRef.current = { x: e.clientX, y: e.clientY }; const anchor = e.currentTarget as HTMLElement; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTimeoutRef.current = window.setTimeout(() => { exerciseLongPressTriggeredRef.current = true; setOpenExerciseContextId(exercise.id); computeAndSetMenuPosition(anchor, 'exercise'); }, VARIANT_LONG_PRESS_MS); }}
-                        onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; }}
+                        onPointerUp={() => { if (!canEdit) return; if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); setTimeout(() => { exerciseLongPressTriggeredRef.current = false; }, 250); }}
                         onPointerMove={(e) => { if (!canEdit) return; const start = exercisePressStartPosRef.current; if (!start) return; const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y); if (dx > 6 || dy > 6) { if (exerciseLongPressTimeoutRef.current) clearTimeout(exerciseLongPressTimeoutRef.current); exerciseLongPressTriggeredRef.current = false; } }}
                         draggable={canEdit}
                         onDragStart={canEdit ? () => handleDragStartIndex(i) : undefined}
@@ -6599,7 +6602,7 @@ useEffect(() => {
                                   </button>
                                 ) : (
                                   <button onClick={() => { handleStartSuperset(exercise.id); closeActionsMenu(); }} className="w-full text-left px-3 py-1.5 text-sm rounded-lg hover:bg-purple-50 text-purple-700 inline-flex items-center gap-2">
-                                    <Link2 size={14} className="text-purple-700" /> <span>Avvia modalità superset</span>
+                                    <Link2 size={14} className="text-purple-700" /> <span>Crea superset</span>
                                   </button>
                                 )}
                               </div>

@@ -48,7 +48,7 @@ const WorkoutManagerPage: React.FC<WorkoutManagerPageProps> = ({ onNavigate, cur
       {/* Titolo PWA e contenuti correlati spostati in Header */}
       
       <div style={{ paddingTop: isStandaloneMobile ? headerHeight : 80 }}>
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-5">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-2 pb-5">
           {/* Contenitore superfluo sopra cartelle/schede rimosso */}
           <FileExplorer currentUser={currentUser} />
         </div>

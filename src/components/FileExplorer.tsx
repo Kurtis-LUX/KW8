@@ -1622,7 +1622,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   return (
     <div
       className="min-h-[calc(100vh-200px)] flex flex-col"
-      style={{ paddingTop: isStandaloneMobile ? 'calc(64px + env(safe-area-inset-top))' : undefined }}
       onClick={(e) => {
         const t = e.target as HTMLElement;
         if (t.closest('.item-card') || t.closest('.dropdown-menu') || t.closest('.menu-button')) return;

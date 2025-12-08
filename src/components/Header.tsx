@@ -436,7 +436,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           }}
           onClick={handleHeaderClick}
         >
-        {(isStandaloneMobile && currentPage === 'pwa-home') ? null : (
+        {!isStandaloneMobile && (
           <div 
             className="container mx-auto px-6 py-3 flex items-center justify-between relative"
             onClick={(e) => e.stopPropagation()}
@@ -1011,29 +1011,21 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         />
         {/* Side Panel */}
         <div
-          className={`absolute top-0 right-0 h-full w-1/2 max-w-md bg-white ring-1 ring-black/10 shadow-2xl rounded-l-lg transition-transform duration-300 ease-out transform ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'} pointer-events-auto`}
+          className={`absolute top-0 left-0 h-full w-1/2 max-w-md bg-white ring-1 ring-black/10 shadow-2xl rounded-r-lg transition-transform duration-300 ease-out transform ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} pointer-events-auto`}
         >
-          <div className="flex justify-between p-4 items-center border-b border-black/10">
-            <div className="flex items-center">
-              <img 
-                src="/images/logo.png" 
-                alt="KW8 Logo" 
-                className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer"
-                onClick={() => {
-                  if (onNavigate) {
-                    onNavigate('home');
-                  }
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                  setIsMenuOpen(false);
-                }}
-              />
-            </div>
-            <button
-              onClick={toggleMenu}
-              className="inline-flex items-center rounded-full bg-white/70 backdrop-blur-sm px-3 py-2 text-gray-800 hover:bg-white hover:shadow-md shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-black/10"
-            >
-              <X size={20} className="text-gray-700" />
-            </button>
+          <div className="flex justify-center p-4 items-center border-b border-black/10">
+            <img 
+              src="/images/logo.png" 
+              alt="KW8 Logo" 
+              className="h-12 w-auto object-contain transition-transform duration-300 hover:scale-105 cursor-pointer"
+              onClick={() => {
+                if (onNavigate) {
+                  onNavigate('home');
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                setIsMenuOpen(false);
+              }}
+            />
           </div>
       
           <nav className="px-2 sm:px-4 py-2 overflow-y-auto h-[calc(100vh-64px)]">
