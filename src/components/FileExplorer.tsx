@@ -61,8 +61,8 @@ interface FolderTreeItem {
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ currentUser }) => {
 const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  // Colonne griglia PWA: default 3, switchabile a 5 dal menu cartella
-  const [pwaGridColumns, setPwaGridColumns] = useState<3 | 5>(3);
+  // Colonne griglia PWA: default 2, selezionabili 2 o 3
+  const [pwaGridColumns, setPwaGridColumns] = useState<2 | 3>(2);
   const [currentFolderId, setCurrentFolderId] = useState<string | undefined>(undefined);
   const [folderTree, setFolderTree] = useState<FolderTreeItem[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<{ id?: string; name: string }[]>([{ name: 'Home' }]);
@@ -70,7 +70,7 @@ const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const isStandaloneMobile = useIsStandaloneMobile();
 
-  const { position, triggerRef, dropdownRef, openDropdown, closeDropdown, isOpen } = useDropdownPosition({ offset: 6, preferredPosition: 'bottom-left' });
+  const { position, triggerRef, dropdownRef, openDropdown, closeDropdown, isOpen } = useDropdownPosition({ offset: 8, preferredPosition: 'bottom-left', autoAdjust: true });
 
 // Riferimenti e logica per auto-scroll e drag-to-scroll del breadcrumb
 const breadcrumbNavRef = useRef<HTMLElement | null>(null);
@@ -204,7 +204,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       e.stopPropagation();
       return;
     }
+    // Previeni selettore di testo durante long‑press su sfondo
+    e.preventDefault();
     e.stopPropagation();
+    document.documentElement.style.userSelect = 'none';
+    document.body.style.userSelect = 'none';
+    (document.documentElement as any).style.webkitUserSelect = 'none';
+    (document.body as any).style.webkitUserSelect = 'none';
     // Memorizza coordinate del tocco/click sullo sfondo
     lastBgPointerRef.current = { x: e.clientX, y: e.clientY };
     bgLongPressTriggeredRef.current = false;
@@ -220,12 +226,23 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     if (!isStandaloneMobile) return;
     const target = e.target as HTMLElement;
     if (target.closest('.dropdown-menu')) return;
+    e.preventDefault();
     e.stopPropagation();
+    // Ripristina selezione testo
+    document.documentElement.style.userSelect = '';
+    document.body.style.userSelect = '';
+    (document.documentElement as any).style.webkitUserSelect = '';
+    (document.body as any).style.webkitUserSelect = '';
     clearBgPressTimer();
     bgLongPressTriggeredRef.current = false;
   };
   const handleBackgroundPointerLeave = () => {
     if (!isStandaloneMobile) return;
+    // Ripristina selezione testo
+    document.documentElement.style.userSelect = '';
+    document.body.style.userSelect = '';
+    (document.documentElement as any).style.webkitUserSelect = '';
+    (document.body as any).style.webkitUserSelect = '';
     clearBgPressTimer();
     bgLongPressTriggeredRef.current = false;
   };
@@ -296,7 +313,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       if (searchTerm.trim().length > 0) {
         setShowSearchSuggestions(true);
       }
-      (triggerRef.current as any)?.focus?.();
+      const inputEl = searchDropdownRef.current?.querySelector('input[type="text"]') as HTMLInputElement | null;
+      inputEl?.focus();
     };
     const handleOpenMenu = () => {
       setMenuOrigin('header');
@@ -1397,7 +1415,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         e.stopPropagation();
         return;
       }
+      // Previeni selettore di testo durante long‑press sulla tile
+      e.preventDefault();
       e.stopPropagation();
+      document.documentElement.style.userSelect = 'none';
+      document.body.style.userSelect = 'none';
+      (document.documentElement as any).style.webkitUserSelect = 'none';
+      (document.body as any).style.webkitUserSelect = 'none';
       longPressTriggeredRef.current = false;
       clearPressTimer();
       pressTimerRef.current = window.setTimeout(() => {
@@ -1409,7 +1433,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     const handlePointerUp = (e: React.PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.dropdown-menu')) return;
+      e.preventDefault();
       e.stopPropagation();
+      // Ripristina selezione testo
+      document.documentElement.style.userSelect = '';
+      document.body.style.userSelect = '';
+      (document.documentElement as any).style.webkitUserSelect = '';
+      (document.body as any).style.webkitUserSelect = '';
       const wasLongPress = longPressTriggeredRef.current;
       clearPressTimer();
       longPressTriggeredRef.current = false;
@@ -1418,6 +1448,11 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       }
     };
     const handlePointerLeave = () => {
+      // Ripristina selezione testo
+      document.documentElement.style.userSelect = '';
+      document.body.style.userSelect = '';
+      (document.documentElement as any).style.webkitUserSelect = '';
+      (document.body as any).style.webkitUserSelect = '';
       clearPressTimer();
       longPressTriggeredRef.current = false;
     };
@@ -1611,7 +1646,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
             {/* Barra di ricerca: inline su desktop, nel Portal dentro la header su PWA */}
             {isStandaloneMobile ? (
               <Portal containerId="pwa-fileexplorer-search">
-                <div className="relative w-full" ref={searchDropdownRef}>
+                <div
+                  className="relative w-full"
+                  ref={(el) => {
+                    searchDropdownRef.current = el;
+                    (triggerRef as any).current = el;
+                  }}
+                >
                   <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
@@ -1645,7 +1686,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                       }
                     }}
                     className="w-full pl-10 pr-10 py-2 rounded-2xl bg-transparent ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500"
-                    ref={triggerRef as any}
                   />
                   {searchTerm && (
                     <button
@@ -1665,11 +1705,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                   {showSearchSuggestions && searchTerm.trim().length > 0 && isOpen && (
                     <div
                       ref={dropdownRef as any}
-                      className="fixed bg-white/95 border border-gray-200 rounded-xl ring-1 ring-black/10 shadow-md z-[1000] max-h-64 overflow-y-auto backdrop-blur-sm pointer-events-auto"
+                      className="absolute top-full left-0 mt-2 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-black/10 shadow-md z-[1000] max-h-64 overflow-y-auto backdrop-blur-sm pointer-events-auto"
                       style={{
-                        top: position?.top ?? 0,
-                        left: position?.left ?? 0,
                         width: triggerRef.current ? triggerRef.current.getBoundingClientRect().width : undefined,
+                        maxWidth: 'calc(100vw - 32px)'
                       }}
                     >
                       {getSmartSearchSuggestions().length > 0 ? (
@@ -1737,7 +1776,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                 </div>
               </Portal>
             ) : (
-              <div className="relative flex-1 min-w-0" ref={searchDropdownRef}>
+              <div
+                className="relative flex-1 min-w-0"
+                ref={(el) => {
+                  searchDropdownRef.current = el;
+                  (triggerRef as any).current = el;
+                }}
+              >
                 <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
                 <input
                   type="text"
@@ -1771,7 +1816,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                     }
                   }}
                   className="w-full pl-10 pr-10 py-2 rounded-2xl bg-white/60 backdrop-blur-sm ring-1 ring-black/10 shadow-sm focus:outline-none transition-all duration-300 focus:ring-2 focus:ring-red-500 hover:bg-white/70"
-                  ref={triggerRef as any}
                 />
                 {searchTerm && (
                   <button
@@ -1791,11 +1835,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                 {showSearchSuggestions && searchTerm.trim().length > 0 && isOpen && (
                   <div
                     ref={dropdownRef as any}
-                    className="fixed bg-white/95 border border-gray-200 rounded-xl ring-1 ring-black/10 shadow-md z-[1000] max-h-64 overflow-y-auto backdrop-blur-sm pointer-events-auto"
+                    className="absolute top-full left-0 mt-2 bg-white/95 border border-gray-200 rounded-xl ring-1 ring-black/10 shadow-md z-[1000] max-h-64 overflow-y-auto backdrop-blur-sm pointer-events-auto"
                     style={{
-                      top: position?.top ?? 0,
-                      left: position?.left ?? 0,
                       width: triggerRef.current ? triggerRef.current.getBoundingClientRect().width : undefined,
+                      maxWidth: 'calc(100vw - 32px)'
                     }}
                   >
                     {getSmartSearchSuggestions().length > 0 ? (
@@ -1971,16 +2014,16 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                             <p className="text-sm font-medium text-gray-700 mb-2">Colonne (PWA)</p>
                             <div className="grid grid-cols-2 gap-2">
                               <button
+                                onClick={() => setPwaGridColumns(2)}
+                                className={`p-2 rounded-xl text-sm ${pwaGridColumns === 2 ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}
+                              >
+                                2 colonne
+                              </button>
+                              <button
                                 onClick={() => setPwaGridColumns(3)}
                                 className={`p-2 rounded-xl text-sm ${pwaGridColumns === 3 ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}
                               >
                                 3 colonne
-                              </button>
-                              <button
-                                onClick={() => setPwaGridColumns(5)}
-                                className={`p-2 rounded-xl text-sm ${pwaGridColumns === 5 ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}
-                              >
-                                5 colonne
                               </button>
                             </div>
                           </div>
@@ -2233,7 +2276,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       </div>
 
       {/* Contenuto */}
-      <div className="flex-1 p-4 overflow-auto min-h-[calc(100vh-300px)]" style={{ userSelect: isStandaloneMobile ? 'none' as const : undefined }}>
+      <div
+        className={`flex-1 overflow-auto min-h-[calc(100vh-300px)] ${isStandaloneMobile ? 'px-4 pb-4 pt-0' : 'p-4'}`}
+        style={{ userSelect: isStandaloneMobile ? 'none' as const : undefined }}
+      >
         {/* Layout principale con sidebar opzionale */}
         <div className="flex">
           
@@ -2321,9 +2367,9 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                       ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
                       : viewMode === 'grid'
                         ? (isStandaloneMobile
-                          ? (pwaGridColumns === 3
-                            ? 'grid grid-cols-3 gap-5'
-                            : 'grid grid-cols-5 gap-4')
+                          ? (pwaGridColumns === 2
+                            ? 'grid grid-cols-2 gap-5'
+                            : 'grid grid-cols-3 gap-5')
                           : 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-6')
                         : 'space-y-2'
                   }`}

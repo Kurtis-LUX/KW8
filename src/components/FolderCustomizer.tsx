@@ -151,7 +151,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
                 title={icon.label}
               >
                 <IconComponent 
-                  size={20} 
+                  size={28} 
                   className={isSelected ? 'text-red-600' : 'text-gray-600'}
                 />
               </button>
@@ -174,7 +174,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
                   e.stopPropagation();
                   onColorChange(color.value);
                 }}
-                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 ${
+                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 flex items-center justify-center ${
                   isSelected
                     ? 'border-gray-800 ring-2 ring-gray-300'
                     : 'border-gray-200 hover:border-gray-300'
@@ -182,7 +182,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
                 title={color.name}
               >
                 <div 
-                  className={`w-6 h-6 rounded-full ${color.bg} mx-auto`}
+                  className={`w-6 h-6 rounded-full ${color.bg}`}
                   style={{ backgroundColor: color.value }}
                 />
               </button>

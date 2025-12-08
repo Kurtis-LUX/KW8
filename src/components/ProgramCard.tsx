@@ -307,17 +307,19 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
           
           <div className="flex-1">
             <h4 className="font-semibold text-navy-900 mb-1 pr-8">{program.title}</h4>
-            {program.description && showDetails && (
-              <p className="text-sm text-gray-600 line-clamp-2">{program.description}</p>
+            {showDetails && (role === 'athlete' || !!program.description) && (
+              <p className="text-sm text-gray-600 line-clamp-2">
+                {program.description?.trim() || (role === 'athlete' ? 'Nessuna descrizione' : '')}
+              </p>
             )}
           </div>
         </div>
       </div>
       
-      {/* Dettagli del programma */}
+      {/* Dettagli del programma (mostra meta solo lato coach) */}
       {showDetails && (
         <div className="space-y-2 mb-4">
-          {program.coach && (
+          {role === 'coach' && program.coach && (
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <User size={14} />
               <span>Coach: {program.coach}</span>
@@ -330,14 +332,14 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
               <span>Durata: {program.durationWeeks} {program.durationWeeks === 1 ? 'settimana' : 'settimane'}</span>
             </div>
           )}
-          {typeof program.trainingDays === 'number' && (
+          {role === 'coach' && typeof program.trainingDays === 'number' && (
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <Calendar size={14} />
               <span>Giorni di allenamento: {program.trainingDays}</span>
             </div>
           )}
           
-          {program.difficulty && (
+          {role === 'coach' && program.difficulty && (
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <Target size={14} />
               <span>Difficoltà:</span>
@@ -347,7 +349,7 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
             </div>
           )}
           
-          {program.exercises && program.exercises.length > 0 && (
+          {role === 'coach' && program.exercises && program.exercises.length > 0 && (
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <Play size={14} />
               <span>{program.exercises.length} esercizi</span>
@@ -374,9 +376,9 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
         </div>
       )}
       
-      {/* Footer con status e azioni */}
+      {/* Footer con status e azioni (nasconde status lato atleta) */}
       <div className="flex items-center justify-between">
-        {program.status && (
+        {role === 'coach' && program.status && (
           <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(program.status)}`}>
             {getStatusText(program.status)}
           </span>

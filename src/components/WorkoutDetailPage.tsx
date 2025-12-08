@@ -3594,7 +3594,7 @@ useEffect(() => {
 
         
         {/* Header Row: su telefono la toolbar va sotto il tasto Indietro */}
-        <div className="flex flex-col items-start gap-2 mb-4 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:mb-6">
+        <div className={`flex flex-col items-start gap-2 ${isStandaloneMobile ? 'mb-0' : 'mb-4 sm:mb-6'} sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center`}>
           <div className="flex justify-start items-center">
             {!isStandaloneMobile && (
               <button
@@ -4282,7 +4282,7 @@ useEffect(() => {
           </div>
           )}
         </div>
-        <div className="flex justify-end items-center">
+        <div className="hidden sm:flex justify-end items-center">
             {/* Placeholder invisibile per bilanciare la centratura */}
             <div className="p-2 opacity-0 pointer-events-none">
               <ChevronLeft size={20} />
@@ -4965,6 +4965,285 @@ useEffect(() => {
             </div>
           </Portal>
         )}
+        {/* Toolbar sopra il titolo: Varianti / Settimane / Allenamenti (desktop, solo atleta) */}
+        {!isStandaloneMobile && currentUser?.role === 'athlete' && (
+          <div className="flex justify-center items-center mb-3">
+            <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full">
+              <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-1.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+                {/* Varianti dropdown */}
+                <div className="relative">
+                  <button
+                    ref={variantsDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                    onClick={(e) => toggleVariantsDropdown(e)}
+                    title="Varianti"
+                    aria-label="Varianti"
+                    className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                    style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  >
+                    {activeVariantId === 'original' ? (
+                      <>
+                        <FileText size={18} className="text-blue-600" />
+                        <Star size={10} className="absolute -top-0.5 -right-0.5 text-blue-600" />
+                      </>
+                    ) : (
+                      <>
+                        <FileText size={18} className="text-red-600" />
+                        {(() => { const idx = variants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
+                      </>
+                    )}
+                  </button>
+                  {isVariantsDropdownOpen && (
+                    <Portal>
+                      <div
+                        ref={variantsDropdownRef as React.RefObject<HTMLDivElement>}
+                        style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? 0, left: variantsDropdownPosition?.left ?? 0 }}
+                        className="z-50 w-64 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                      >
+                        <div className="mb-1 px-2 text-xs text-gray-500">Seleziona variante</div>
+                        <div className="space-y-1">
+                          {/* Originale */}
+                          <button
+                            onClick={() => { handleSwitchVariant('original'); closeVariantsDropdown(); }}
+                            onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId('original'); }}
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              if (!canEdit) return;
+                              variantLongPressTriggeredRef.current = false;
+                              variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                              const anchor = e.currentTarget as HTMLElement;
+                              if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current);
+                              variantLongPressTimeoutRef.current = window.setTimeout(() => {
+                                variantLongPressTriggeredRef.current = true;
+                                computeAndSetVariantMenuPosition(anchor);
+                                setOpenVariantMenuId('original');
+                              }, VARIANT_LONG_PRESS_MS);
+                            }}
+                            onPointerUp={() => { if (!canEdit) return; if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }}
+                            onPointerMove={(e) => {
+                              if (!canEdit) return;
+                              const startPos = variantPressStartPosRef.current; if (!startPos) return;
+                              const dx = Math.abs(e.clientX - startPos.x); const dy = Math.abs(e.clientY - startPos.y);
+                              if (dx > 6 || dy > 6) { if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeVariantId === 'original' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                            title={`Scheda: ${workoutTitle}`}
+                          >
+                            <FileText size={16} className={activeVariantId === 'original' ? 'text-blue-700' : 'text-gray-600'} />
+                            <span>{workoutTitle}</span>
+                          </button>
+                          {/* Varianti */}
+                          {variants.map((variant, index) => (
+                            <button
+                              key={variant.id}
+                              onClick={() => { handleSwitchVariant(variant.id); closeVariantsDropdown(); }}
+                              onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId(variant.id); }}
+                              onPointerDown={(e) => {
+                                e.preventDefault();
+                                if (!canEdit) return;
+                                variantLongPressTriggeredRef.current = false;
+                                variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                                const anchor = e.currentTarget as HTMLElement;
+                                if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current);
+                                variantLongPressTimeoutRef.current = window.setTimeout(() => {
+                                  variantLongPressTriggeredRef.current = true;
+                                  computeAndSetVariantMenuPosition(anchor);
+                                  setOpenVariantMenuId(variant.id);
+                                }, VARIANT_LONG_PRESS_MS);
+                              }}
+                              onPointerUp={() => { if (!canEdit) return; if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }}
+                              onPointerMove={(e) => {
+                                if (!canEdit) return;
+                                const startPos = variantPressStartPosRef.current; if (!startPos) return;
+                                const dx = Math.abs(e.clientX - startPos.x); const dy = Math.abs(e.clientY - startPos.y);
+                                if (dx > 6 || dy > 6) { if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }
+                              }}
+                              className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeVariantId === variant.id ? 'bg-red-50 text-red-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                              title={`Variante ${index + 1}: ${variant.name || 'Senza titolo'}`}
+                            >
+                              <FileText size={16} className={activeVariantId === variant.id ? 'text-red-700' : 'text-red-600'} />
+                              <span>Variante {index + 1}{variant.name ? ` — ${variant.name}` : ''}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {canEdit && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <button
+                              onClick={() => { handleAddVariant(); }}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                              title="Crea nuova variante"
+                            >
+                              <Plus size={16} className="text-red-600" />
+                              <span>Nuova variante</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </Portal>
+                  )}
+                </div>
+                {/* Separatore Apple dopo Varianti */}
+                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
+                {/* Settimane dropdown */}
+                <div className="relative">
+                  <button
+                    ref={weeksDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                    onClick={(e) => toggleWeeksDropdown(e)}
+                    title="Settimane"
+                    aria-label="Settimane"
+                    className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                    style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  >
+                    <Calendar size={18} className="text-cyan-600" />
+                    <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
+                  </button>
+                  {isWeeksDropdownOpen && (
+                    <Portal>
+                      <div
+                        ref={weeksDropdownRef as React.RefObject<HTMLDivElement>}
+                        style={{ position: 'fixed', top: weeksDropdownPosition?.top ?? 0, left: weeksDropdownPosition?.left ?? 0 }}
+                        className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                      >
+                        <div className="mb-1 px-2 text-xs text-gray-500">Seleziona settimana</div>
+                        <div className="space-y-1">
+                          {weeks.slice().sort((a, b) => {
+                            const na = parseInt(a.replace(/^W/, ''), 10);
+                            const nb = parseInt(b.replace(/^W/, ''), 10);
+                            return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                          }).map((wk) => (
+                            <button
+                              key={wk}
+                              onClick={() => { if (weekLongPressTriggeredRef.current) return; handleSwitchWeek(wk); closeWeeksDropdown(); }}
+                              onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetWeekMenuPosition(e.currentTarget as HTMLElement); setOpenWeekKeyMenu(wk); }}
+                              onPointerDown={(e) => {
+                                e.preventDefault();
+                                if (!canEdit) return;
+                                weekLongPressTriggeredRef.current = false;
+                                weekPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                                const anchor = e.currentTarget as HTMLElement;
+                                if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current);
+                                weekLongPressTimeoutRef.current = window.setTimeout(() => {
+                                  weekLongPressTriggeredRef.current = true;
+                                  computeAndSetWeekMenuPosition(anchor);
+                                  setOpenWeekKeyMenu(wk);
+                                }, VARIANT_LONG_PRESS_MS);
+                              }}
+                              onPointerUp={() => { if (!canEdit) return; if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current); weekLongPressTriggeredRef.current = false; }}
+                              onPointerMove={(e) => {
+                                if (!canEdit) return;
+                                const start = weekPressStartPosRef.current; if (!start) return;
+                                const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                                if (dx > 6 || dy > 6) { if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current); weekLongPressTriggeredRef.current = false; }
+                              }}
+                              className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeWeekKey === wk ? 'bg-cyan-50 text-cyan-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                              title={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
+                            >
+                              <Calendar size={16} className={activeWeekKey === wk ? 'text-cyan-700' : 'text-gray-600'} />
+                              <span>Settimana {parseInt(wk.replace('W',''), 10)}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {canEdit && weeks.length < 12 && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <button
+                              onClick={() => { handleAddWeek(); }}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                              title="Aggiungi settimana"
+                            >
+                              <Plus size={16} className="text-cyan-600" />
+                              <span>Aggiungi settimana</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </Portal>
+                  )}
+                </div>
+                {/* Separatore Apple dopo Settimane */}
+                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
+                {/* Giorni dropdown */}
+                <div className="relative">
+                  <button
+                    ref={daysDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                    onClick={(e) => toggleDaysDropdown(e)}
+                    title="Allenamenti"
+                    aria-label="Allenamenti"
+                    className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                    style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  >
+                    <Dumbbell size={18} className="text-orange-500" />
+                    {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
+                  </button>
+                  {isDaysDropdownOpen && (
+                    <Portal>
+                      <div
+                        ref={daysDropdownRef as React.RefObject<HTMLDivElement>}
+                        style={{ position: 'fixed', top: daysDropdownPosition?.top ?? 0, left: daysDropdownPosition?.left ?? 0 }}
+                        className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                      >
+                        <div className="mb-1 px-2 text-xs text-gray-500">Seleziona allenamento</div>
+                        <div className="space-y-1">
+                          {(() => {
+                            const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                            const sorted = (keys.length ? keys : ['G1']).slice().sort((a, b) => {
+                              const na = parseInt(String(a).replace(/^G/, ''), 10);
+                              const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                              return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                            });
+                            return sorted.map((dk) => (
+                              <button
+                                key={dk}
+                                onClick={() => { if (dayLongPressTriggeredRef.current) return; handleSwitchDay(dk); closeDaysDropdown(); }}
+                                onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetDayMenuPosition(e.currentTarget as HTMLElement); setOpenDayKeyMenu(dk); }}
+                                onPointerDown={(e) => {
+                                  e.preventDefault();
+                                  if (!canEdit) return;
+                                  dayLongPressTriggeredRef.current = false;
+                                  dayPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                                  const anchor = e.currentTarget as HTMLElement;
+                                  if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current);
+                                  dayLongPressTimeoutRef.current = window.setTimeout(() => {
+                                    dayLongPressTriggeredRef.current = true;
+                                    computeAndSetDayMenuPosition(anchor);
+                                    setOpenDayKeyMenu(dk);
+                                  }, VARIANT_LONG_PRESS_MS);
+                                }}
+                                onPointerUp={() => { if (!canEdit) return; if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current); dayLongPressTriggeredRef.current = false; }}
+                                onPointerMove={(e) => {
+                                  if (!canEdit) return;
+                                  const start = dayPressStartPosRef.current; if (!start) return;
+                                  const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                                  if (dx > 6 || dy > 6) { if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current); dayLongPressTriggeredRef.current = false; }
+                                }}
+                                className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeDayKey === dk ? 'bg-orange-50 text-orange-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                                title={`Allenamento ${parseInt(String(dk).replace('G',''), 10)}`}
+                              >
+                                <Dumbbell size={16} className={activeDayKey === dk ? 'text-orange-700' : 'text-gray-600'} />
+                                <span>Allenamento {parseInt(String(dk).replace('G',''), 10)}</span>
+                              </button>
+                            ));
+                          })()}
+                        </div>
+                        {canEdit && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <button
+                              onClick={() => { handleAddDay(); }}
+                              className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                              title="Aggiungi allenamento"
+                            >
+                              <Plus size={16} className="text-orange-600" />
+                              <span>Aggiungi allenamento</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </Portal>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isEditingTitle && canEdit ? (
           <div className="relative w-full">
             <input

@@ -767,7 +767,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         {/* Titolo mobile centrato con back quando è attiva la bottom nav */}
         {isStandaloneMobile && !isHomePage && (currentPage === 'pwa-home' || !!getMobilePageTitle(currentPage)) && (
           <div className="lg:hidden">
-            <div className={`container mx-auto px-6 ${((currentPage === 'workout-manager' || currentPage === 'workouts') && isWorkoutDetailOpen) ? 'pb-0' : 'pb-2'}`}>
+            <div className={`container mx-auto px-6 ${currentPage === 'workout-manager' ? 'pb-0' : (((currentPage === 'workout-manager' || currentPage === 'workouts') && isWorkoutDetailOpen) ? 'pb-0' : 'pb-2')}`}>
               <div className={`w-full rounded-2xl px-3 py-2 flex items-center justify-between ${currentPage === 'workout-manager' ? '' : 'bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm'}`}>
                 {/* Back button nascosto su PWA Gestione Schede */}
                 <button
