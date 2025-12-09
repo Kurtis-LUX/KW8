@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Edit3, Plus, Save, Copy, Users, ArrowLeft, ChevronLeft, Eye, X, Trash2, Calendar, Star, CheckCircle, Folder, FileText, ChevronUp, ChevronDown, Tag, Search, Link2, Dumbbell, Zap, Timer, Clock, Video, Eraser } from 'lucide-react';
 import { AVAILABLE_ICONS } from './FolderCustomizer';
 import { useWorkoutPlans, useUsers } from '../hooks/useFirestore';
@@ -63,10 +63,40 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   // Ruoli utente per gestire permessi di modifica
   const currentUser = authService.getCurrentUser();
   const canEdit = currentUser?.role === 'coach' || currentUser?.role === 'admin';
-  
-  // Hook Firestore per gestire i piani di allenamento e gli utenti
+  const isAthlete = (currentUser?.role === 'athlete' || currentUser?.role === 'atleta');
+  // Hook Firestore per gestire i piani di allenamento e gli utenti (spostato sopra per calcolo permessi varianti)
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
   const { users: athletes, loading: athletesLoading, updateUser } = useUsers();
+  // Varianti consentite per l'atleta corrente (solo quelle assegnate):
+  // Usa i token più aggiornati disponibili: record utente da Firestore/local, sessione corrente e fallback su associatedAthletes del piano.
+  const { allowedVariantIds, canSeeOriginal } = useMemo(() => {
+    // Trova il record utente corrente nella lista utenti caricata
+    const athleteRecord = (athletes || []).find(u => u.id === currentUser?.id || u.email === currentUser?.email);
+    const tokens = ((athleteRecord?.workoutPlans ?? currentUser?.workoutPlans) ?? []) as string[];
+    const set = new Set<string>();
+    let originalAllowed = false;
+
+    for (const t of tokens) {
+      if (t === workoutId) {
+        originalAllowed = true;
+      } else if (typeof t === 'string' && t.startsWith(`${workoutId}|variant:`)) {
+        const vid = t.split('|variant:')[1]?.trim();
+        if (vid) set.add(vid);
+      }
+    }
+
+    // Fallback: se il piano ha l'atleta tra gli associatedAthletes, consenti la scheda originale
+    if (!originalAllowed) {
+      const plan = (workoutPlans || []).find(p => p.id === workoutId);
+      const assoc = (plan && Array.isArray((plan as any).associatedAthletes)) ? (plan as any).associatedAthletes as string[] : [];
+      if (assoc.includes(currentUser?.id || '') || assoc.includes(currentUser?.email || '')) {
+        originalAllowed = true;
+      }
+    }
+
+    return { allowedVariantIds: set, canSeeOriginal: originalAllowed };
+  }, [athletes, currentUser?.id, currentUser?.email, currentUser?.workoutPlans, workoutPlans, workoutId]);
+  
   
   // Durata scheda (sincronizzata automaticamente con il numero di settimane)
   const [durationWeeks, setDurationWeeks] = useState(1);
@@ -561,13 +591,16 @@ useEffect(() => {
     window.removeEventListener('resize', handler);
   };
 }, [actionsMenuType, updateMenuPosition]);
-  const [showAthleteDropdown, setShowAthleteDropdown] = useState(false);
-  const [selectedAthlete, setSelectedAthlete] = useState('');
   const [workoutStatus, setWorkoutStatus] = useState<'published' | 'draft'>('draft');
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [variants, setVariants] = useState<WorkoutVariant[]>([]);
   const [activeVariantId, setActiveVariantId] = useState('original');
+  // Varianti visibili nell'UI di selezione: per l'atleta mostriamo solo quelle assegnate
+  const displayVariants = useMemo(() => {
+    if (!isAthlete) return variants;
+    return variants.filter(v => allowedVariantIds.has(v.id));
+  }, [variants, isAthlete, allowedVariantIds]);
 
   // Tags
   const [tags, setTags] = useState<string[]>([]);
@@ -688,6 +721,25 @@ const [draggedExerciseId, setDraggedExerciseId] = useState<string | null>(null);
       window.clearTimeout(t);
     };
   }, [updateHeaderOffsetTop, isStandaloneMobile, activeVariantId, variants.length]);
+
+  // Se l'utente è atleta, garantisci che la variante attiva sia consentita
+  useEffect(() => {
+    if (!isAthlete) return;
+    // Se l'originale non è consentito e attivo, passa alla prima variante consentita
+    if (activeVariantId === 'original' && !canSeeOriginal) {
+      const firstAllowed = displayVariants[0]?.id;
+      if (firstAllowed && firstAllowed !== activeVariantId) {
+        setActiveVariantId(firstAllowed);
+      }
+    }
+    // Se è attiva una variante non consentita (cambio manuale), rientra in una consentita
+    if (activeVariantId !== 'original' && !allowedVariantIds.has(activeVariantId)) {
+      const firstAllowed = displayVariants[0]?.id || (canSeeOriginal ? 'original' : 'original');
+      if (firstAllowed && firstAllowed !== activeVariantId) {
+        setActiveVariantId(firstAllowed);
+      }
+    }
+  }, [isAthlete, activeVariantId, canSeeOriginal, allowedVariantIds, displayVariants]);
   
   // Scorrimento orizzontale dei tab varianti via drag/swipe
 const variantTabsRef = useRef<HTMLDivElement>(null);
@@ -1493,6 +1545,19 @@ useEffect(() => {
   const [associatedAthletes, setAssociatedAthletes] = useState<string[]>([]);
   const [showAthletesList, setShowAthletesList] = useState(false);
   const [athleteSearchQuery, setAthleteSearchQuery] = useState('');
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
+  const [selectedAssociationVariantIds, setSelectedAssociationVariantIds] = useState<string[]>(['original']);
+  const [isAssociationVariantListOpen, setIsAssociationVariantListOpen] = useState<boolean>(false);
+  const [isAthleteListOpen, setIsAthleteListOpen] = useState<boolean>(false);
+  // Override locale dei piani utente per aggiornamenti ottimistici dell'UI
+  const [localPlansOverrideByUserId, setLocalPlansOverrideByUserId] = useState<Record<string, string[]>>({});
+  // Contatore complessivo degli atleti associati (conteggio unico per atleta)
+  const associatedAthletesCount = athletes.filter(u => (
+    (u.role === 'athlete' || u.role === 'atleta') &&
+    ((localPlansOverrideByUserId[u.id] ?? (u.workoutPlans || [])).some(pid => (
+      pid === workoutId || String(pid).startsWith(`${workoutId}|variant:`)
+    )))
+  )).length;
   // Filtra solo atleti, con ricerca per nome/email
   const filteredAthletes = athletes.filter(u => (
     (u.role === 'athlete' || u.role === 'atleta') &&
@@ -1632,9 +1697,29 @@ useEffect(() => {
     closeDropdown: closeDaysDropdown
   } = useDropdownPosition({ offset: 8, preferredPosition: 'bottom-left', autoAdjust: true });
 
+  // Dropdown Associa (coerente con altri menu)
+  const {
+    position: associateDropdownPosition,
+    isOpen: isAssociateDropdownOpen,
+    triggerRef: associateDropdownTriggerRef,
+    dropdownRef: associateDropdownRef,
+    toggleDropdown: toggleAssociateDropdown,
+    closeDropdown: closeAssociateDropdown
+  } = useDropdownPosition({ offset: 8, preferredPosition: 'bottom-left', autoAdjust: true });
+
+  // Reset stato quando si apre il menu Associa: liste chiuse e nessuna selezione
+  useEffect(() => {
+    if (isAssociateDropdownOpen) {
+      setIsAthleteListOpen(false);
+      setIsAssociationVariantListOpen(false);
+      setSelectedAthleteId(null);
+      setSelectedAssociationVariantIds([]);
+    }
+  }, [isAssociateDropdownOpen]);
+
   // Blocca lo scroll della pagina quando un menu della toolbar è aperto
   useEffect(() => {
-    const anyOpen = !!(isVariantsDropdownOpen || isWeeksDropdownOpen || isDaysDropdownOpen || isTagsMenuOpen || openVariantMenuId || openWeekKeyMenu || openDayKeyMenu);
+    const anyOpen = !!(isVariantsDropdownOpen || isWeeksDropdownOpen || isDaysDropdownOpen || isTagsMenuOpen || isAssociateDropdownOpen || openVariantMenuId || openWeekKeyMenu || openDayKeyMenu);
     const prev = document.body.style.overflow;
     const prevSelect = document.body.style.userSelect;
     const prevWebkitSelect = (document.body.style as any).webkitUserSelect;
@@ -1656,7 +1741,7 @@ useEffect(() => {
       (document.body.style as any).webkitUserSelect = prevWebkitSelect;
       (document.body.style as any).webkitTouchCallout = prevTouchCallout;
     };
-  }, [isVariantsDropdownOpen, isWeeksDropdownOpen, isDaysDropdownOpen, isTagsMenuOpen, openVariantMenuId, openWeekKeyMenu, openDayKeyMenu]);
+  }, [isVariantsDropdownOpen, isWeeksDropdownOpen, isDaysDropdownOpen, isTagsMenuOpen, isAssociateDropdownOpen, openVariantMenuId, openWeekKeyMenu, openDayKeyMenu]);
 
   // Menu azioni per i tag sotto descrizione (Modifica/Elimina)
   const [openTagActionsFor, setOpenTagActionsFor] = useState<string | null>(null);
@@ -3323,14 +3408,13 @@ useEffect(() => {
     setShowConfirmDialog(false);
   };
   
-  const handleAssociateAthlete = async (athleteId: string) => {
+  const handleAssociateAthlete = async (athleteId: string, variantId?: string) => {
     if (!workoutId) return;
     if (!associatedAthletes.includes(athleteId)) {
       const target = athletes.find(u => u.id === athleteId);
       const tokensToAdd = [athleteId, target?.email].filter(Boolean) as string[];
       const updatedAthletes = Array.from(new Set([...associatedAthletes, ...tokensToAdd]));
       setAssociatedAthletes(updatedAthletes);
-      setShowAthleteDropdown(false);
 
       setSaveMessage(`Scheda associata a ${target?.name || 'atleta'}`);
 
@@ -3343,12 +3427,21 @@ useEffect(() => {
       // Aggiorna il profilo utente con la scheda assegnata
       try {
         if (target) {
-          const uniquePlans = Array.from(new Set([...(target.workoutPlans || []), workoutId]));
+          // Assegna in base alla variante selezionata nel menu Associa (fallback: variante attiva)
+          const chosenVariantId = (variantId ?? activeVariantId) || 'original';
+          const isVariant = chosenVariantId !== 'original';
+          const variantToken = isVariant ? `${workoutId}|variant:${chosenVariantId}` : workoutId;
+          // Aggiungi la nuova assegnazione mantenendo eventuali altre (scheda base o varianti già associate)
+          const existingPlans = (target.workoutPlans || []);
+          const uniquePlans = Array.from(new Set([...existingPlans, variantToken]));
           await updateUser(athleteId, { workoutPlans: uniquePlans } as any);
+          // Aggiornamento ottimistico UI
+          setLocalPlansOverrideByUserId(prev => ({ ...prev, [athleteId]: uniquePlans }));
         }
       } catch (e) {
         console.error('Errore aggiornando i piani utente:', e);
       }
+      // Non chiudere il menu dopo l'associazione: resta aperto per altre azioni
     }
   };
   
@@ -3368,13 +3461,80 @@ useEffect(() => {
     // Aggiorna il profilo utente rimuovendo la scheda
     try {
       if (target) {
-        const filteredPlans = (target.workoutPlans || []).filter(pid => pid !== workoutId);
+        // Rimuovi qualsiasi assegnazione relativa a questa scheda (base o varianti)
+        const filteredPlans = (target.workoutPlans || []).filter(pid => !(pid === workoutId || pid.startsWith(`${workoutId}|variant:`)));
         await updateUser(athleteId, { workoutPlans: filteredPlans } as any);
+        // Aggiornamento ottimistico UI
+        setLocalPlansOverrideByUserId(prev => ({ ...prev, [athleteId]: filteredPlans }));
       }
       const removedUser = target || athletes.find(u => u.id === athleteId);
       setSaveMessage(`Associazione rimossa da ${removedUser?.name || 'atleta'}`);
     } catch (e) {
       console.error('Errore aggiornando i piani utente (rimozione):', e);
+    }
+  };
+
+  // Rimuove una singola assegnazione (scheda base o specifica variante) dall'atleta
+  const handleRemoveAthleteAssignment = async (athleteId: string, variantId: string) => {
+    if (!workoutId) return;
+    const target = athletes.find(u => u.id === athleteId);
+    // Aggiorna solo il profilo utente togliendo il token specifico, senza toccare altre varianti
+    try {
+      if (target) {
+        const tokenToRemove = variantId && variantId !== 'original' ? `${workoutId}|variant:${variantId}` : workoutId;
+        const prunedPlans = (target.workoutPlans || []).filter(pid => pid !== tokenToRemove);
+        await updateUser(athleteId, { workoutPlans: prunedPlans } as any);
+        // Aggiornamento ottimistico UI
+        setLocalPlansOverrideByUserId(prev => ({ ...prev, [athleteId]: prunedPlans }));
+        // Se non restano assegnazioni per questa scheda, rimuovi l'atleta dalla lista associata
+        const stillAssigned = prunedPlans.some(pid => pid === workoutId || String(pid).startsWith(`${workoutId}|variant:`));
+        if (!stillAssigned) {
+          // Rimuovi sia l'ID che l'email dal set associato
+          setAssociatedAthletes(prev => prev.filter(a => a !== athleteId && a !== (target?.email ?? '')));
+          triggerAutoSave();
+        }
+      }
+      const removedUser = target || athletes.find(u => u.id === athleteId);
+      const label = variantId && variantId !== 'original' ? 'variante' : 'scheda';
+      setSaveMessage(`Rimossa ${label} da ${removedUser?.name || 'atleta'}`);
+      // Aggiorna UI esterne interessate
+      try { window.dispatchEvent(new Event('kw8:user-workouts:update')); } catch {}
+    } catch (e) {
+      console.error('Errore aggiornando i piani utente (rimozione singola):', e);
+    }
+  };
+
+  // Associa tutte le schede/varianti selezionate al singolo atleta
+  // Accetta opzionalmente una lista di ID varianti esplicita per evitare race con setState
+  const handleAssociateSelected = async (athleteId: string, overrideIds?: string[]) => {
+    if (!workoutId) return;
+    const target = athletes.find(u => u.id === athleteId);
+    const chosenIds = (overrideIds && overrideIds.length > 0)
+      ? overrideIds
+      : ((selectedAssociationVariantIds && selectedAssociationVariantIds.length > 0)
+        ? selectedAssociationVariantIds
+        : ['original']);
+    const tokens = chosenIds.map(id => id !== 'original' ? `${workoutId}|variant:${id}` : workoutId);
+    try {
+      if (target) {
+        const existingPlans = (target.workoutPlans || []);
+        const uniquePlans = Array.from(new Set([...existingPlans, ...tokens]));
+        await updateUser(athleteId, { workoutPlans: uniquePlans } as any);
+        // Aggiornamento ottimistico UI
+        setLocalPlansOverrideByUserId(prev => ({ ...prev, [athleteId]: uniquePlans }));
+        // Assicura che l'atleta compaia nella lista associata a questa scheda
+        setAssociatedAthletes(prev => (
+          prev.includes(athleteId) ? prev : [...prev, athleteId]
+        ));
+        // Persisti subito l'aggiornamento della scheda
+        triggerAutoSave();
+      }
+      const associatedUser = target || athletes.find(u => u.id === athleteId);
+      setSaveMessage(`Schede associate a ${associatedUser?.name || 'atleta'}`);
+      // Notifica aggiornamenti
+      try { window.dispatchEvent(new Event('kw8:user-workouts:update')); } catch {}
+    } catch (e) {
+      console.error('Errore aggiornando i piani utente (associazione multipla):', e);
     }
   };
   
@@ -3628,7 +3788,7 @@ useEffect(() => {
                       ) : (
                         <>
                           <FileText size={18} className="text-red-600" />
-                          {(() => { const idx = variants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
+                          {(() => { const idx = displayVariants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
                         </>
                       )}
                     </button>
@@ -3642,6 +3802,7 @@ useEffect(() => {
                       <div className="mb-1 px-2 text-xs text-gray-500">Seleziona scheda</div>
                       <div className="space-y-1">
                         {/* Originale */}
+                        {(!isAthlete || canSeeOriginal) && (
                         <button
                           onClick={() => { handleSwitchVariant('original'); closeVariantsDropdown(); }}
                           onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId('original'); }}
@@ -3671,8 +3832,9 @@ useEffect(() => {
                           <FileText size={16} className={activeVariantId === 'original' ? 'text-blue-700' : 'text-gray-600'} />
                           <span>{workoutTitle}</span>
                         </button>
+                        )}
                         {/* Varianti */}
-                        {variants.map((variant, index) => (
+                        {displayVariants.map((variant, index) => (
                           <button
                             key={variant.id}
                             onClick={() => { handleSwitchVariant(variant.id); closeVariantsDropdown(); }}
@@ -4268,15 +4430,17 @@ useEffect(() => {
               </button>
               {/* Separatore Apple dopo Stato */}
               <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
-              {/* Associate Athletes */}
+              {/* Associa atleti */}
               <button
-                onClick={() => setShowAthleteDropdown(true)}
+                ref={associateDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                onClick={(e) => toggleAssociateDropdown(e)}
                 title="Associa"
                 aria-label="Associa"
-                className="bg-transparent rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition shrink-0"
+                className="relative bg-transparent rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition shrink-0"
                 style={{ userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
               >
                 <Users size={18} className="text-indigo-600" />
+                <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{associatedAthletesCount}</span>
               </button>
             </div>
           </div>
@@ -4436,13 +4600,15 @@ useEffect(() => {
 
                 {/* Associa atleti */}
                 <button
-                  onClick={() => setShowAthleteDropdown(true)}
+                  ref={associateDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleAssociateDropdown(e)}
                   title="Associa"
                   aria-label="Associa"
-                  className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
                   style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Users size={16} className="text-indigo-600" />
+                  <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{associatedAthletesCount}</span>
                 </button>
               </div>
             </div>
@@ -4457,6 +4623,7 @@ useEffect(() => {
                   <div className="mb-1 px-2 text-xs text-gray-500">Seleziona scheda</div>
                   <div className="space-y-1">
                     {/* Originale */}
+                    {(!isAthlete || canSeeOriginal) && (
                     <button
                       onClick={() => { handleSwitchVariant('original'); closeVariantsDropdown(); }}
                       onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId('original'); }}
@@ -4487,8 +4654,9 @@ useEffect(() => {
                       <FileText size={16} className={activeVariantId === 'original' ? 'text-blue-700' : 'text-gray-600'} />
                       <span>{workoutTitle}</span>
                     </button>
+                    )}
                     {/* Varianti */}
-                    {variants.map((variant, index) => (
+                    {displayVariants.map((variant, index) => (
                       <button
                         key={variant.id}
                         onClick={() => { handleSwitchVariant(variant.id); closeVariantsDropdown(); }}
@@ -4876,6 +5044,189 @@ useEffect(() => {
             )}
           </Portal>
         )}
+        {isAssociateDropdownOpen && (
+          <Portal>
+            <div
+              ref={associateDropdownRef as React.RefObject<HTMLDivElement>}
+              style={{ position: 'fixed', top: associateDropdownPosition?.top ?? 0, left: associateDropdownPosition?.left ?? 0 }}
+              className="z-50 w-[min(320px,85vw)] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+            >
+              {/* Sezione atleti spostata in alto: la lista schede verrà mostrata sotto */}
+              {/* rimosso: pulsante "Dissocia tutte" */}
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                 <div className="px-2">
+                   <button
+                     className="w-full flex items-center justify-between text-xs text-gray-700 bg-white/60 hover:bg-white/80 border border-white/30 ring-1 ring-white/20 rounded-lg px-3 py-1.5"
+                     onClick={() => setIsAthleteListOpen(v => !v)}
+                     title="Apri/chiudi lista atleti"
+                     aria-label="Apri/chiudi lista atleti"
+                   >
+                     <span className="flex items-center gap-2">
+                       <span>Seleziona atleta</span>
+                     </span>
+                     <span className="inline-block w-3 text-center">{isAthleteListOpen ? '▾' : '▸'}</span>
+                   </button>
+                 </div>
+                 {isAthleteListOpen && (
+                 <>
+                 <div className="px-2 pb-2">
+                   <div className="relative">
+                     <input
+                       type="text"
+                       placeholder="Cerca atleta..."
+                       className="w-full pl-8 pr-7 py-1.5 border border-white/30 rounded-full text-xs bg-white/60 backdrop-blur-sm shadow-inner focus:ring-2 focus:ring-blue-300 focus:border-blue-300 transition-all"
+                       value={athleteSearchQuery}
+                       onChange={(e) => setAthleteSearchQuery(e.target.value)}
+                     />
+                     <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                     {athleteSearchQuery && (
+                       <button
+                         type="button"
+                         aria-label="Pulisci"
+                         onClick={() => setAthleteSearchQuery('')}
+                         className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                       >
+                         <X size={14} />
+                       </button>
+                     )}
+                   </div>
+                 </div>
+                <div className="max-h-32 overflow-y-auto rounded-lg border border-gray-200 ring-1 ring-black/10 bg-white/90">
+                  {athletesLoading ? (
+                    <div className="p-3 text-xs text-gray-500 text-center">Caricamento atleti...</div>
+                  ) : filteredAthletes.length === 0 ? (
+                    <div className="p-3 text-xs text-gray-500 text-center">Nessun atleta disponibile</div>
+                  ) : (
+                    <ul className="divide-y divide-gray-100">
+                      {filteredAthletes.map((athlete) => {
+                        const plans = (localPlansOverrideByUserId[athlete.id] ?? (athlete.workoutPlans || [])) as string[];
+                        const isAssociatedWorkout = (plans || []).some(pid => pid === workoutId || String(pid).startsWith(`${workoutId}|variant:`));
+                        const isSelected = selectedAthleteId === athlete.id;
+                        return (
+                          <li key={athlete.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (selectedAthleteId === athlete.id) {
+                                  setSelectedAthleteId(null);
+                                  setSelectedAssociationVariantIds([]);
+                                } else {
+                                  setSelectedAthleteId(athlete.id);
+                                  const plansForUser = (localPlansOverrideByUserId[athlete.id] ?? (athlete.workoutPlans || [])) as string[];
+                                  const assignedTokens = (plansForUser || []).filter(pid => pid === workoutId || String(pid).startsWith(`${workoutId}|variant:`));
+                                  const assignedIds = assignedTokens.map(pid => pid === workoutId ? 'original' : String(pid).split('|variant:')[1]).filter(Boolean);
+                                  const uniqueAssignedIds = Array.from(new Set(assignedIds));
+                                  setSelectedAssociationVariantIds(uniqueAssignedIds);
+                                  setIsAssociationVariantListOpen(true);
+                                }
+                              }}
+                              className={`w-full flex items-center justify-between px-3 py-1.5 text-left ${isSelected ? 'bg-blue-50 ring-1 ring-blue-200' : (isAssociatedWorkout ? 'bg-green-50' : 'hover:bg-gray-50')}`}
+                              aria-pressed={isSelected}
+                            >
+                              <div className="flex-1">
+                                <div className={`text-sm ${isAssociatedWorkout ? 'text-green-700' : 'text-gray-800'}`}>{athlete.name}</div>
+                                <div className="text-[11px] text-gray-500">{athlete.email}</div>
+                              </div>
+                              {isSelected && (
+                                <span className="ml-2 text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200">Selezionato</span>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+                </>
+                )}
+                {/* Bottone Associa sotto la lista atleti */}
+                {/* rimosso: bottone Associa multiplo */}
+                {/* Sezione schede spostata sotto */}
+                <div className="mt-3 px-2">
+                  <button
+                    className="w-full flex items-center justify-between text-xs text-gray-700 bg-white/60 hover:bg-white/80 border border-white/30 ring-1 ring-white/20 rounded-lg px-3 py-1.5"
+                    onClick={() => setIsAssociationVariantListOpen(v => !v)}
+                    title="Apri/chiudi lista: Associa o dissocia scheda"
+                    aria-label="Apri/chiudi lista: Associa o dissocia scheda"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>Associa o dissocia scheda</span>
+                    </span>
+                    <span className="inline-block w-3 text-center">{isAssociationVariantListOpen ? '▾' : '▸'}</span>
+                  </button>
+                  {isAssociationVariantListOpen && (
+                    <div className="mt-1 max-h-32 overflow-y-auto rounded-lg border border-gray-200 ring-1 ring-black/10 bg-white/90">
+                      <ul className="divide-y divide-gray-100">
+                        <li>
+                           <button
+                             type="button"
+                             onClick={async () => {
+                               if (!selectedAthleteId) {
+                                 setSaveMessage('Seleziona prima un atleta');
+                                 return;
+                               }
+                               if (selectedAssociationVariantIds.includes('original')) {
+                                 await handleRemoveAthleteAssignment(selectedAthleteId, 'original');
+                                 setSelectedAssociationVariantIds(prev => prev.filter(id => id !== 'original'));
+                                 setSaveMessage('Scheda dissociata dall\'atleta selezionato');
+                               } else {
+                                 const nextIds = Array.from(new Set([...selectedAssociationVariantIds, 'original']));
+                                 setSelectedAssociationVariantIds(nextIds);
+                                 await handleAssociateSelected(selectedAthleteId, nextIds);
+                                 setSaveMessage('Scheda associata all\'atleta selezionato');
+                               }
+                             }}
+                             className={`w-full flex items-center gap-2 px-3 py-1.5 text-left ${selectedAssociationVariantIds.includes('original') ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 text-gray-800'}`}
+                             title={`Scheda: ${workoutTitle}`}
+                             aria-pressed={selectedAssociationVariantIds.includes('original')}
+                           >
+                            <FileText size={16} className={selectedAssociationVariantIds.includes('original') ? 'text-green-700' : 'text-gray-600'} />
+                            <span>{workoutTitle}</span>
+                            {selectedAssociationVariantIds.includes('original') && (
+                              <span className="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 ring-1 ring-green-200">Selezionata</span>
+                            )}
+                          </button>
+                        </li>
+                        {variants.map((variant) => (
+                          <li key={variant.id}>
+                             <button
+                               type="button"
+                               onClick={async () => {
+                                 if (!selectedAthleteId) {
+                                   setSaveMessage('Seleziona prima un atleta');
+                                   return;
+                                 }
+                                 if (selectedAssociationVariantIds.includes(variant.id)) {
+                                   await handleRemoveAthleteAssignment(selectedAthleteId, variant.id);
+                                   setSelectedAssociationVariantIds(prev => prev.filter(id => id !== variant.id));
+                                   setSaveMessage('Variante dissociata dall\'atleta selezionato');
+                                 } else {
+                                   const nextIds = Array.from(new Set([...selectedAssociationVariantIds, variant.id]));
+                                   setSelectedAssociationVariantIds(nextIds);
+                                   await handleAssociateSelected(selectedAthleteId, nextIds);
+                                   setSaveMessage('Variante associata all\'atleta selezionato');
+                                 }
+                               }}
+                               className={`w-full flex items-center gap-2 px-3 py-1.5 text-left ${selectedAssociationVariantIds.includes(variant.id) ? 'bg-green-50 text-green-700' : 'hover:bg-gray-50 text-gray-800'}`}
+                               title={`${variant.name || 'Senza titolo'}`}
+                               aria-pressed={selectedAssociationVariantIds.includes(variant.id)}
+                             >
+                              <FileText size={16} className={selectedAssociationVariantIds.includes(variant.id) ? 'text-green-700' : 'text-red-600'} />
+                              <span>{variant.name || 'Senza titolo'}</span>
+                              {selectedAssociationVariantIds.includes(variant.id) && (
+                                <span className="ml-auto text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 ring-1 ring-green-200">Selezionata</span>
+                              )}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Portal>
+        )}
         {/* Menu Tag in PWA */}
         {isStandaloneMobile && canEdit && isTagsMenuOpen && (
           <Portal>
@@ -4988,7 +5339,7 @@ useEffect(() => {
                     ) : (
                       <>
                         <FileText size={18} className="text-red-600" />
-                        {(() => { const idx = variants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
+                        {(() => { const idx = displayVariants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
                       </>
                     )}
                   </button>
@@ -5002,6 +5353,7 @@ useEffect(() => {
                         <div className="mb-1 px-2 text-xs text-gray-500">Seleziona variante</div>
                         <div className="space-y-1">
                           {/* Originale */}
+                          {(!isAthlete || canSeeOriginal) && (
                           <button
                             onClick={() => { handleSwitchVariant('original'); closeVariantsDropdown(); }}
                             onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId('original'); }}
@@ -5031,8 +5383,9 @@ useEffect(() => {
                             <FileText size={16} className={activeVariantId === 'original' ? 'text-blue-700' : 'text-gray-600'} />
                             <span>{workoutTitle}</span>
                           </button>
+                          )}
                           {/* Varianti */}
-                          {variants.map((variant, index) => (
+                          {displayVariants.map((variant, index) => (
                             <button
                               key={variant.id}
                               onClick={() => { handleSwitchVariant(variant.id); closeVariantsDropdown(); }}
@@ -5518,75 +5871,7 @@ useEffect(() => {
           </button>
         </Modal>
         
-        {/* Associate Athlete Modal */}
-        <Modal
-          isOpen={showAthleteDropdown}
-          onClose={() => setShowAthleteDropdown(false)}
-          title="Associa atleta"
-        >
-          <div className="p-2">
-            <input
-              type="text"
-              placeholder="Cerca atleta..."
-              className="w-full px-3 py-2 rounded-lg bg-white/80 border border-gray-200 ring-1 ring-black/10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-              value={athleteSearchQuery}
-              onChange={(e) => setAthleteSearchQuery(e.target.value)}
-            />
-          </div>
-          <div className="max-h-40 overflow-y-auto">
-            {athletesLoading ? (
-              <div className="p-4 text-gray-500 text-center">Caricamento atleti...</div>
-            ) : filteredAthletes.length === 0 ? (
-              <div className="p-4 text-gray-500 text-center">Nessun atleta disponibile</div>
-            ) : (
-              filteredAthletes.map((athlete) => {
-                const isAssociated = associatedAthletes.includes(athlete.id);
-                return (
-                  <div
-                    key={athlete.id}
-                    className={`flex items-center justify-between px-4 py-2 transition-colors ${isAssociated ? 'bg-green-50' : 'hover:bg-gray-100'}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => isAssociated ? handleRemoveAthlete(athlete.id) : handleAssociateAthlete(athlete.id)}
-                      className="flex-1 text-left"
-                    >
-                      <div>
-                        <div className={`font-medium ${isAssociated ? 'text-green-700' : ''}`}>{athlete.name}</div>
-                        <div className="text-sm text-gray-500">{athlete.email}</div>
-                      </div>
-                    </button>
-                    {isAssociated ? (
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 ring-1 ring-green-200">
-                          <CheckCircle size={14} />
-                          Associato
-                        </span>
-                        <button
-                          onClick={() => handleRemoveAthlete(athlete.id)}
-                          className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                          title="Rimuovi associazione"
-                          aria-label="Rimuovi associazione"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => handleAssociateAthlete(athlete.id)}
-                        className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 ring-1 ring-blue-200"
-                        title="Associa scheda"
-                        aria-label="Associa scheda"
-                      >
-                        Associa
-                      </button>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </Modal>
+        {/* Modal Associa rimosso: sostituito da dropdown coerente */}
         
         {/* View Athletes Modal */}
         <Modal
@@ -5601,7 +5886,7 @@ useEffect(() => {
           ) : (
             <div className="max-h-40 overflow-y-auto">
               {associatedAthletes.map((athleteIdOrName) => {
-                const found = athletes.find(u => u.id === athleteIdOrName || u.name === athleteIdOrName);
+                const found = athletes.find(u => u.id === athleteIdOrName || u.name === athleteIdOrName || u.email === athleteIdOrName);
                 const displayName = found ? found.name : athleteIdOrName;
                 const idForActions = found ? found.id : athleteIdOrName;
                 return (

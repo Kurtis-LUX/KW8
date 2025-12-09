@@ -11,6 +11,7 @@ interface AuthUser {
   name?: string;
   nome?: string;
   cognome?: string;
+  workoutPlans?: string[];
 }
 
 interface LoginResponse {
@@ -41,6 +42,7 @@ interface VerifyResponse {
     email: string;
     role: string;
     name?: string;
+    workoutPlans?: string[];
   };
   message: string;
 }
@@ -189,15 +191,18 @@ class AuthService {
         console.log('✅ Login riuscito, salvando token e user');
         this.setToken(data.data.token);
         let name: string | undefined;
+        let workoutPlans: string[] = [];
         try {
           const fsUser = await firestoreService.getUserByEmail(data.data.user.email);
           name = fsUser?.name;
+          workoutPlans = Array.isArray(fsUser?.workoutPlans) ? (fsUser!.workoutPlans as string[]) : [];
         } catch {}
         this.setUser({
-          id: data.data.user.email, // Usa email come ID
+          id: data.data.user.email,
           email: data.data.user.email,
           role: data.data.user.role || 'user',
           name,
+          workoutPlans,
         });
       } else {
         console.log('❌ Login fallito:', data.message || 'Autenticazione non riuscita');
@@ -273,15 +278,18 @@ class AuthService {
         console.log('✅ Registrazione riuscita, salvando token e user (athlete)');
         this.setToken(data.data.token);
         let name: string | undefined = data.data.user.name;
+        let workoutPlans: string[] = [];
         try {
           const fsUser = await firestoreService.getUserByEmail(data.data.user.email);
           name = name || fsUser?.name;
+          workoutPlans = Array.isArray(fsUser?.workoutPlans) ? (fsUser!.workoutPlans as string[]) : [];
         } catch {}
         this.setUser({
           id: data.data.user.email,
           email: data.data.user.email,
           role: data.data.user.role || 'athlete',
           name,
+          workoutPlans,
         });
       } else {
         console.log('❌ Registrazione fallita:', data.message || 'Registrazione non riuscita');
@@ -335,11 +343,13 @@ class AuthService {
           this.setToken(localToken);
           const userEmail = (firebaseUser.email || email || 'unknown');
           let name: string | undefined;
+          let workoutPlans: string[] = [];
           try {
             const fsUser = await firestoreService.getUserByEmail(userEmail);
             name = fsUser?.name;
+            workoutPlans = Array.isArray(fsUser?.workoutPlans) ? (fsUser!.workoutPlans as string[]) : [];
           } catch {}
-          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name });
+          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name, workoutPlans });
           const result: LoginResponse = {
             user: { id: userEmail, email: userEmail, role: 'athlete', name },
             token: localToken,
@@ -367,11 +377,13 @@ class AuthService {
           const localToken = btoa(JSON.stringify(localTokenPayload));
           this.setToken(localToken);
           let name: string | undefined;
+          let workoutPlans: string[] = [];
           try {
             const fsUser = await firestoreService.getUserByEmail(userEmail);
             name = fsUser?.name;
+            workoutPlans = Array.isArray(fsUser?.workoutPlans) ? (fsUser!.workoutPlans as string[]) : [];
           } catch {}
-          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name });
+          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name, workoutPlans });
           const result: LoginResponse = {
             user: { id: userEmail, email: userEmail, role: 'athlete', name },
             token: localToken,
@@ -396,11 +408,13 @@ class AuthService {
           const localToken = btoa(JSON.stringify(localTokenPayload));
           this.setToken(localToken);
           let name: string | undefined;
+          let workoutPlans: string[] = [];
           try {
             const fsUser = await firestoreService.getUserByEmail(userEmail);
             name = fsUser?.name;
+            workoutPlans = Array.isArray(fsUser?.workoutPlans) ? (fsUser!.workoutPlans as string[]) : [];
           } catch {}
-          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name });
+          this.setUser({ id: userEmail, email: userEmail, role: 'athlete', name, workoutPlans });
           const result: LoginResponse = {
             user: { id: userEmail, email: userEmail, role: 'athlete', name },
             token: localToken,
@@ -420,15 +434,18 @@ class AuthService {
       // 4) Salva il token e i dati utente
       this.setToken(data.data.token);
       let name: string | undefined;
+      let workoutPlans: string[] = [];
       try {
         const fsUser = await firestoreService.getUserByEmail(data.data.user.email);
         name = fsUser?.name;
+        workoutPlans = Array.isArray(fsUser?.workoutPlans) ? (fsUser!.workoutPlans as string[]) : [];
       } catch {}
       this.setUser({
         id: data.data.user.email,
         email: data.data.user.email,
         role: (data.data.user.role === 'user') ? 'athlete' : (data.data.user.role || 'athlete'),
         name,
+        workoutPlans,
       });
 
       // 5) Restituisci nel formato atteso da chiamanti esistenti
@@ -562,13 +579,15 @@ class AuthService {
       // Se il token è valido, restituisci i dati utente
       const normalizedRole = (data.user.role === 'user') ? 'athlete' : (data.user.role || 'athlete');
       let name: string | undefined;
+      let workoutPlans: string[] = [];
       try {
         const fsUser = await firestoreService.getUserByEmail(data.user.email);
         name = fsUser?.name;
+        workoutPlans = Array.isArray(fsUser?.workoutPlans) ? (fsUser!.workoutPlans as string[]) : [];
       } catch {}
       return {
         valid: true,
-        user: { ...data.user, role: normalizedRole, name },
+        user: { ...data.user, role: normalizedRole, name, workoutPlans },
         message: data.message || 'Token valido'
       } as VerifyResponse;
     } catch (error) {

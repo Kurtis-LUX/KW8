@@ -42,6 +42,8 @@ export const useUsers = () => {
           certificatoMedicoStato: 'non_presente' as const,
           notes: '',
           role: (u.role === 'athlete' || u.role === 'atleta') ? 'athlete' : (u.role === 'coach' ? 'coach' : 'admin'),
+          // In locale includi sempre i piani assegnati, normalizzati
+          workoutPlans: Array.isArray((u as any).workoutPlans) ? (u as any).workoutPlans : [],
           createdAt: now,
           updatedAt: now
         }));

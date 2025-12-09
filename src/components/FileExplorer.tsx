@@ -1994,23 +1994,12 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                             <LayoutGrid size={16} />
                             <span className="text-sm">Compatta</span>
                           </button>
-                          <button
-                            onClick={() => {
-                              setViewMode('list');
-                              closeToolbarDropdown();
-                            }}
-                            className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
-                              viewMode === 'list' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
-                            }`}
-                          >
-                            <List size={16} />
-                            <span className="text-sm">Elenco</span>
-                          </button>
+                          {/* Eliminata la modalità Elenco dal menu */}
                         </div>
                         {/* Colonne PWA per Griglia */}
                         {isStandaloneMobile && viewMode === 'grid' && (
                           <div className="mt-3">
-                            <p className="text-sm font-medium text-gray-700 mb-2">Colonne (PWA)</p>
+                            <p className="text-sm font-medium text-gray-700 mb-2">Colonne</p>
                             <div className="grid grid-cols-2 gap-2">
                               <button
                                 onClick={() => setPwaGridColumns(2)}

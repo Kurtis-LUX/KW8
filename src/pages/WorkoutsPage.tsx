@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Header from '../components/Header';
 import DB, { User, WorkoutPlan } from '../utils/database';
+import { isFirestoreEnabled } from '../utils/database';
+import firestoreService from '../services/firestoreService';
 // Rileva modalità standalone PWA su mobile (senza dipendenze esterne)
 import ProgramCard, { ProgramItem } from '../components/ProgramCard';
 
@@ -55,16 +57,44 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
     }
     try {
       const allPlans = await DB.getWorkoutPlans();
-      const assignedByUserField = new Set(currentUser.workoutPlans || []);
-      const assignedByPlanAssociation = new Set(
-        allPlans
-          .filter(p => Array.isArray((p as any).associatedAthletes))
-          .filter(p => ((p as any).associatedAthletes || []).some((val: string) => val === currentUser?.id || val === currentUser?.email))
-          .map(p => p.id)
-      );
-      const allAssignedIds = new Set<string>([...assignedByUserField, ...assignedByPlanAssociation]);
 
-      const userPlans = allPlans.filter(p => allAssignedIds.has(p.id));
+      // 1) Preferisci i token utente aggiornati dal profilo (Firestore/local)
+      let userTokens: string[] = [];
+      try {
+        if (isFirestoreEnabled()) {
+          const fsUser = await firestoreService.getUserByEmail(currentUser.email);
+          userTokens = Array.isArray(fsUser?.workoutPlans) ? (fsUser!.workoutPlans as string[]) : [];
+        } else {
+          const localUsers = DB.getUsers();
+          const localUser = localUsers.find(u => u.id === currentUser.id || u.email === currentUser.email);
+          userTokens = Array.isArray(localUser?.workoutPlans) ? (localUser!.workoutPlans as string[]) : [];
+        }
+      } catch (e) {
+        console.warn('Impossibile recuperare i token utente aggiornati, uso quelli di sessione:', e);
+        userTokens = Array.isArray((currentUser as any).workoutPlans) ? ((currentUser as any).workoutPlans as string[]) : [];
+      }
+
+      // Supporta token "<planId>|variant:<variantId>"
+      const assignedByTokens = new Map<string, string | undefined>();
+      userTokens.forEach((entry) => {
+        if (typeof entry !== 'string' || entry.trim() === '') return;
+        const idx = entry.indexOf('|variant:');
+        const planId = idx >= 0 ? entry.substring(0, idx) : entry;
+        const variantId = idx >= 0 ? entry.substring(idx + 9) : undefined;
+        assignedByTokens.set(planId, variantId && variantId.length > 0 ? variantId : undefined);
+      });
+
+      let userPlans: WorkoutPlan[] = [];
+      // Combina assegnazioni da token e fallback su associatedAthletes per evitare inconsistenti sessione
+      const tokenIds = new Set(assignedByTokens.keys());
+      const byTokens = tokenIds.size > 0 ? allPlans.filter(p => tokenIds.has(p.id)) : [];
+      const byAssociation = allPlans
+        .filter(p => Array.isArray((p as any).associatedAthletes))
+        .filter(p => ((p as any).associatedAthletes || []).some((val: string) => val === currentUser?.id || val === currentUser?.email));
+      const mergedMap = new Map<string, WorkoutPlan>();
+      [...byTokens, ...byAssociation].forEach(p => mergedMap.set(p.id, p));
+      userPlans = Array.from(mergedMap.values());
+
       // Recupera dettagli cartella per icona/colore corretti
       const folderIds = Array.from(new Set(userPlans.map(p => p.folderId).filter(Boolean))) as string[];
       const folderMap = new Map<string, any>();

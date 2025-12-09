@@ -402,11 +402,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   useEffect(() => {
     if (isStandaloneMobile) {
       document.body.style.paddingBottom = 'calc(72px + env(safe-area-inset-bottom))';
+      // Imposta background grigio per evitare banda bianca in basso su PWA
+      document.body.style.backgroundColor = 'rgb(243 244 246)'; // tailwind gray-100
     } else {
       document.body.style.paddingBottom = '';
+      document.body.style.backgroundColor = '';
     }
     return () => {
       document.body.style.paddingBottom = '';
+      document.body.style.backgroundColor = '';
     };
   }, [isStandaloneMobile]);
 

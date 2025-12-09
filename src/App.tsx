@@ -265,7 +265,18 @@ function App() {
       if (currentPage === 'workout-detail' && selectedPlan) {
         try {
           const plan = await DB.getWorkoutPlanById(selectedPlan);
-          setWorkoutDetailActiveVariantId(plan?.activeVariantId || undefined);
+          // Se l'utente ha un'assegnazione specifica di variante per questa scheda, usala
+          let variantFromUser: string | undefined = undefined;
+          try {
+            const entries = Array.isArray(currentUser?.workoutPlans) ? currentUser!.workoutPlans : [];
+            const match = entries.find(s => typeof s === 'string' && s.startsWith(`${selectedPlan}|variant:`));
+            if (match) {
+              const idx = match.indexOf('|variant:');
+              const v = idx >= 0 ? match.substring(idx + 9) : undefined;
+              variantFromUser = v && v.length > 0 ? v : undefined;
+            }
+          } catch {}
+          setWorkoutDetailActiveVariantId(variantFromUser || plan?.activeVariantId || undefined);
         } catch {
           setWorkoutDetailActiveVariantId(undefined);
         }
@@ -274,7 +285,7 @@ function App() {
       }
     };
     run();
-  }, [currentPage, selectedPlan]);
+  }, [currentPage, selectedPlan, currentUser]);
 
   // Gestione titolo compatto sticky per la Dashboard Coach
   useEffect(() => {

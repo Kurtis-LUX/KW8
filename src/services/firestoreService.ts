@@ -43,6 +43,8 @@ export interface User {
   emergencyContactRelationship?: string;
   notes?: string;
   role: 'admin' | 'coach' | 'athlete';
+  // Elenco dei token di assegnazione schede (es. "<planId>" o "<planId>|variant:<variantId>")
+  workoutPlans?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -197,10 +199,14 @@ class FirestoreService {
         orderBy('name')
       );
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as User[];
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data() as any;
+        return {
+          id: doc.id,
+          ...data,
+          workoutPlans: Array.isArray(data?.workoutPlans) ? data.workoutPlans : []
+        } as User;
+      });
     } catch (error) {
       console.error('Error fetching users:', error);
       return [];
@@ -212,7 +218,12 @@ class FirestoreService {
       const docRef = doc(db, this.collections.users, id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as User;
+        const data = docSnap.data() as any;
+        return {
+          id: docSnap.id,
+          ...data,
+          workoutPlans: Array.isArray(data?.workoutPlans) ? data.workoutPlans : []
+        } as User;
       }
       return null;
     } catch (error) {
@@ -227,7 +238,12 @@ class FirestoreService {
       const snap = await getDocs(q);
       if (!snap.empty) {
         const d = snap.docs[0];
-        return { id: d.id, ...d.data() } as User;
+        const data = d.data() as any;
+        return {
+          id: d.id,
+          ...data,
+          workoutPlans: Array.isArray(data?.workoutPlans) ? data.workoutPlans : []
+        } as User;
       }
       return null;
     } catch (error) {
@@ -241,6 +257,7 @@ class FirestoreService {
       const now = new Date().toISOString();
       const docRef = await addDoc(collection(db, this.collections.users), {
         ...userData,
+        workoutPlans: Array.isArray((userData as any)?.workoutPlans) ? (userData as any).workoutPlans : [],
         createdAt: now,
         updatedAt: now
       });
