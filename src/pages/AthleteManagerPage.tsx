@@ -400,30 +400,68 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                 <div className="text-center">
                   <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">Gestione atleti</h1>
                   <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">Gestisci i profili e le informazioni dei tuoi atleti</p>
-                  {/* Barra di ricerca sotto il titolo, nello stesso contenitore */}
-                  <div className="mt-3 max-w-md mx-auto">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                      <input
-                        type="text"
-                        placeholder="Cerca atleti..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 rounded-full bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 border-none placeholder:text-gray-400"
-                      />
-                    </div>
-                  </div>
+                  {/* Spostata la barra azioni/ricerca fuori dall'header per coerenza con Gestione schede */}
                 </div>
               </div>
 
-              
+
           </div>
           </div>
 
           )}
-          
 
 
+
+          {/* Toolbar azioni, coerente con Gestione schede */}
+          <div className="w-full bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm p-4 mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors"
+                title="Nuovo atleta"
+              >
+                <Plus size={16} />
+                Nuovo
+              </button>
+              <div className="w-px h-6 bg-gray-300" aria-hidden="true"></div>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+                title="Importa atleti"
+              >
+                <Upload size={16} />
+                Importa
+              </button>
+              <div className="w-px h-6 bg-gray-300" aria-hidden="true"></div>
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <Filter size={16} className="text-gray-500" />
+                <label className="sr-only" htmlFor="status-filter">Filtro stato</label>
+                <select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as any)}
+                  className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="all">Tutti</option>
+                  <option value="active">Attivi</option>
+                  <option value="inactive">Inattivi</option>
+                  <option value="suspended">Sospesi</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center">
+              <div className="relative w-[260px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder="Cerca atleti..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 rounded-xl bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-200 placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Lista atleti */}
           <div className="bg-white/70 backdrop-blur rounded-2xl shadow-sm overflow-hidden border border-gray-200">
@@ -551,131 +589,111 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
         </div>
       </div>
 
-      {/* Modal dettagli atleta */}
-      {showDetailModal && selectedAthlete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {isEditing ? 'Modifica Atleta' : 'Dettagli Atleta'}
-                </h2>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Informazioni personali */}
+      {/* Modal dettagli atleta (riutilizza componente Modal per coerenza) */}
+      <Modal isOpen={!!showDetailModal && !!selectedAthlete} onClose={() => setShowDetailModal(false)} title={isEditing ? 'Modifica Atleta' : 'Dettagli Atleta'}>
+        {selectedAthlete && (
+          <div className="space-y-6">
+            {/* Informazioni personali */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Informazioni Personali</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Informazioni Personali</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                      <div className="text-sm text-gray-900">{selectedAthlete.name}</div>
-                    </div>
-                    {selectedAthlete.birthDate && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Età</label>
-                        <div className="text-sm text-gray-900">
-                          {calculateAge(selectedAthlete.birthDate)} anni
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                  <div className="text-sm text-gray-900">{selectedAthlete.name}</div>
                 </div>
-
-                {/* Contatti */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Contatti</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <Mail className="text-gray-400" size={16} />
-                      <span className="text-sm text-gray-900">{selectedAthlete.email}</span>
-                    </div>
-                    {selectedAthlete.phone && (
-                      <div className="flex items-center space-x-3">
-                        <Phone className="text-gray-400" size={16} />
-                        <span className="text-sm text-gray-900">{selectedAthlete.phone}</span>
-                      </div>
-                    )}
-                    {selectedAthlete.address && (
-                      <div className="flex items-center space-x-3">
-                        <MapPin className="text-gray-400" size={16} />
-                        <span className="text-sm text-gray-900">{selectedAthlete.address}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Statistiche */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistiche</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-600">Schede Attive</div>
-                      <div className="text-xl font-bold text-blue-600">{selectedAthlete.activeWorkouts}</div>
-                    </div>
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-600">Sessioni Completate</div>
-                      <div className="text-xl font-bold text-green-600">{selectedAthlete.completedSessions}</div>
-                    </div>
-                    <div className="bg-orange-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-600">Stato</div>
-                      <div className={`text-xl font-bold ${selectedAthlete.status === 'active' ? 'text-green-600' : selectedAthlete.status === 'inactive' ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {getStatusText(selectedAthlete.status)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Contatto di emergenza */}
-                {selectedAthlete.emergencyContact && (
+                {selectedAthlete.birthDate && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Contatto di Emergenza</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-900 font-medium">{selectedAthlete.emergencyContact.name}</div>
-                      <div className="text-sm text-gray-600">{selectedAthlete.emergencyContact.phone}</div>
-                      <div className="text-sm text-gray-600">{selectedAthlete.emergencyContact.relationship}</div>
-                    </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Età</label>
+                    <div className="text-sm text-gray-900">{calculateAge(selectedAthlete.birthDate)} anni</div>
                   </div>
                 )}
-
-                {/* Note */}
-                {selectedAthlete.notes && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Note</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-900">{selectedAthlete.notes}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  Chiudi
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    handleEditAthlete(selectedAthlete!);
-                  }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Modifica
-                </button>
               </div>
             </div>
+
+            {/* Contatti */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Contatti</h3>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Mail className="text-gray-400" size={16} />
+                  <span className="text-sm text-gray-900">{selectedAthlete.email}</span>
+                </div>
+                {selectedAthlete.phone && (
+                  <div className="flex items-center space-x-3">
+                    <Phone className="text-gray-400" size={16} />
+                    <span className="text-sm text-gray-900">{selectedAthlete.phone}</span>
+                  </div>
+                )}
+                {selectedAthlete.address && (
+                  <div className="flex items-center space-x-3">
+                    <MapPin className="text-gray-400" size={16} />
+                    <span className="text-sm text-gray-900">{selectedAthlete.address}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Statistiche */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Statistiche</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Schede Attive</div>
+                  <div className="text-xl font-bold text-blue-600">{selectedAthlete.activeWorkouts}</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Sessioni Completate</div>
+                  <div className="text-xl font-bold text-green-600">{selectedAthlete.completedSessions}</div>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Stato</div>
+                  <div className={`text-xl font-bold ${selectedAthlete.status === 'active' ? 'text-green-600' : selectedAthlete.status === 'inactive' ? 'text-yellow-600' : 'text-red-600'}`}>{getStatusText(selectedAthlete.status)}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Contatto di emergenza */}
+            {selectedAthlete.emergencyContact && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contatto di Emergenza</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-900 font-medium">{selectedAthlete.emergencyContact.name}</div>
+                  <div className="text-sm text-gray-600">{selectedAthlete.emergencyContact.phone}</div>
+                  <div className="text-sm text-gray-600">{selectedAthlete.emergencyContact.relationship}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Note */}
+            {selectedAthlete.notes && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Note</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-sm text-gray-900">{selectedAthlete.notes}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Chiudi
+              </button>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  handleEditAthlete(selectedAthlete);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Modifica
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {/* Modal aggiungi atleta */}
       <Modal isOpen={showAddModal} onClose={closeAllModals} title="Nuovo Atleta">
