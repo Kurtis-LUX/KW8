@@ -1133,23 +1133,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                       <span> • {item.data.variants.length} variant{item.data.variants.length === 1 ? 'e' : 'i'}</span>
                     )}
                   </p>
-                  {/* Status indicator */}
-                  {item.data && 'status' in item.data && (
-                    <div className="flex items-center">
-                      <div 
-                        className={`w-2 h-2 rounded-full ${
-                          item.data.status === 'published' ? 'bg-green-500' : 
-                          item.data.status === 'draft' ? 'bg-yellow-500' : 
-                          'bg-gray-400'
-                        }`}
-                        title={
-                          item.data.status === 'published' ? 'Pubblicata' : 
-                          item.data.status === 'draft' ? 'Bozza' : 
-                          'Archiviata'
-                        }
-                      />
-                    </div>
-                  )}
                 </div>
               )}
             </div>
@@ -1523,16 +1506,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           {item.type === 'file' && item.data && 'createdAt' in item.data && (
             <div className="flex items-center justify-center gap-1 text-xs text-gray-600 mt-[2px]">
               <span>{formatDate((item.data as any).createdAt)}</span>
-              {item.data && 'status' in item.data && (
-                <span
-                  className={`inline-block w-2 h-2 rounded-full ${
-                    (item.data as any).status === 'published' ? 'bg-green-500' :
-                    (item.data as any).status === 'draft' ? 'bg-yellow-500' :
-                    'bg-gray-400'
-                  }`}
-                  title={statusLabel((item.data as any).status)}
-                />
-              )}
             </div>
           )}
           {item.type === 'folder' && (

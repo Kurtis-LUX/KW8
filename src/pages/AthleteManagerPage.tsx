@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Activity, TrendingUp, Mail, Phone, MapPin, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Users, Plus, Search, Filter, Edit3, Trash2, Eye, Calendar, Activity, TrendingUp, Mail, Phone, MapPin, Upload, Download, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import Header from '../components/Header';
 import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 import AthleteForm from '../components/AthleteForm';
+import Modal from '../components/Modal';
 import AthleteImport from '../components/AthleteImport';
 import { User } from '../utils/database';
 import { useUsers, useWorkoutPlans } from '../hooks/useFirestore';
-import { WorkoutPlan } from '../utils/database';
+import { WorkoutPlan, WorkoutVariant } from '../utils/database';
 import type { User as FirestoreUser } from '../services/firestoreService';
 
 interface AthleteManagerPageProps {
@@ -54,6 +55,8 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const isStandaloneMobile = useIsStandaloneMobile();
   const [assignedByAthlete, setAssignedByAthlete] = useState<Record<string, WorkoutPlan[]>>({});
+  const [assignedEntriesByAthlete, setAssignedEntriesByAthlete] = useState<Record<string, { plan: WorkoutPlan; assignedVariants: WorkoutVariant[]; originalAssigned: boolean }[]>>({});
+  const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
 
   // Converte utenti in atleti e calcola le schede assegnate e il conteggio
   useEffect(() => {
@@ -82,6 +85,45 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
       mapping[a.id] = plans;
     });
     setAssignedByAthlete(mapping);
+
+    // Mappatura varianti assegnate per atleta, basata su entries in workoutPlans dell'utente es: "<planId>|variant:<variantId>"
+    const variantByAthlete: Record<string, Record<string, string[]>> = {};
+    athleteUsers.forEach(a => {
+      const u = users.find(u => u.id === a.id || u.name === a.name);
+      const entries = Array.isArray((u as any)?.workoutPlans) ? ((u as any).workoutPlans as string[]) : [];
+      const varMap: Record<string, string[]> = {};
+      entries.forEach(s => {
+        if (typeof s === 'string' && s.includes('|variant:')) {
+          const [planId, variantPart] = s.split('|variant:');
+          const variantId = variantPart?.trim();
+          if (planId && variantId) {
+            if (!varMap[planId]) varMap[planId] = [];
+            if (!varMap[planId].includes(variantId)) varMap[planId].push(variantId);
+          }
+        }
+      });
+      variantByAthlete[a.id] = varMap;
+    });
+
+    // Costruisci elenco assegnazioni per ogni atleta: piano + varianti assegnate
+    const assignedEntries: Record<string, { plan: WorkoutPlan; assignedVariants: WorkoutVariant[]; originalAssigned: boolean }[]> = {};
+    athleteUsers.forEach(a => {
+      const varMap = variantByAthlete[a.id] || {};
+      const planSet = new Set<string>();
+      (mapping[a.id] || []).forEach(p => planSet.add(p.id));
+      Object.keys(varMap).forEach(pid => planSet.add(pid));
+      assignedEntries[a.id] = Array.from(planSet).map(planId => {
+        const plan = workoutPlans.find(p => p.id === planId) || (mapping[a.id] || []).find(p => p.id === planId);
+        if (!plan) {
+          return null as any;
+        }
+        const variantIds = varMap[planId] || [];
+        const assignedVariants = (plan.variants || []).filter(v => variantIds.includes(v.id));
+        const originalAssigned = !!((mapping[a.id] || []).some(p => p.id === planId));
+        return { plan, assignedVariants, originalAssigned };
+      }).filter(Boolean) as { plan: WorkoutPlan; assignedVariants: WorkoutVariant[]; originalAssigned: boolean }[];
+    });
+    setAssignedEntriesByAthlete(assignedEntries);
 
     // Aggiorna conteggi nelle card atleti
     const withCounts = athleteUsers.map(a => ({
@@ -153,14 +195,7 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
     };
   }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-yellow-100 text-yellow-800';
-      case 'suspended': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const toggleMenu = (key: string) => setOpenMenuKey(prev => (prev === key ? null : key));
 
   // Aggiorna elenco quando cambiano associazioni (evento globale)
   useEffect(() => {
@@ -416,22 +451,55 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                         <div className="mt-1 text-xs text-gray-600">
                           {athlete.email}{athlete.phone ? ` • ${athlete.phone}` : ''}
                         </div>
-                        {/* Schede assegnate: conteggio e elenco */}
+                        {/* Schede assegnate: solo elenco (rimosso il testo/etichetta) */}
                         <div className="mt-1">
-                          <div className="text-[11px] text-gray-700">
-                            Schede assegnate: {assignedByAthlete[athlete.id]?.length || 0}
-                          </div>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {(assignedByAthlete[athlete.id] && assignedByAthlete[athlete.id].length > 0)
-                              ? assignedByAthlete[athlete.id].map((plan) => (
-                                  <span key={plan.id} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] ring-1 ring-black/10">
-                                    {plan.name}
-                                  </span>
-                                ))
+                          <div className="mt-1 flex flex-wrap gap-1 relative">
+                            {(assignedEntriesByAthlete[athlete.id] && assignedEntriesByAthlete[athlete.id].length > 0)
+                              ? assignedEntriesByAthlete[athlete.id].flatMap((entry) => {
+                                  const chips: React.ReactNode[] = [];
+                                  const key = `${athlete.id}|${entry.plan.id}`;
+                                  if (entry.originalAssigned) {
+                                    chips.push(
+                                      <div key={`plan-${entry.plan.id}`} className="relative">
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleMenu(key)}
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] ring-1 ring-black/10 hover:bg-gray-200"
+                                          title="Apri varianti assegnate"
+                                        >
+                                          <span>{entry.plan.name}</span>
+                                          <ChevronDown size={12} className="text-gray-600" />
+                                        </button>
+                                        {openMenuKey === key && (
+                                          <div className="absolute z-10 mt-1 left-0 min-w-[160px] bg-white/90 backdrop-blur-md border border-gray-200 rounded-lg shadow-lg p-2">
+                                            {entry.assignedVariants.length > 0 ? (
+                                              entry.assignedVariants.map(v => (
+                                                <div key={v.id} className="px-2 py-1 text-[11px] rounded hover:bg-gray-100 text-gray-800">
+                                                  {v.name}
+                                                </div>
+                                              ))
+                                            ) : (
+                                              <div className="px-2 py-1 text-[11px] text-gray-500">Nessuna variante assegnata</div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (!entry.originalAssigned && entry.assignedVariants.length > 0) {
+                                    entry.assignedVariants.forEach(v => {
+                                      chips.push(
+                                        <span key={`variant-${entry.plan.id}-${v.id}`} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] ring-1 ring-black/10">
+                                          {v.name}
+                                        </span>
+                                      );
+                                    });
+                                  }
+                                  return chips;
+                                })
                               : (
-                                  <span className="text-[11px] text-gray-400">Nessuna scheda</span>
-                                )
-                            }
+                                <span className="text-[11px] text-gray-400">Nessuna scheda</span>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -439,9 +507,6 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
                     <div className="flex items-center gap-3">
                       <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
                         Schede: {athlete.activeWorkouts || 0}
-                      </span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(athlete.status)}`}>
-                        {getStatusText(athlete.status)}
                       </span>
                       <button
                         onClick={() => handleEditAthlete(athlete)}
@@ -613,31 +678,31 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
       )}
 
       {/* Modal aggiungi atleta */}
-      {showAddModal && (
+      <Modal isOpen={showAddModal} onClose={closeAllModals} title="Nuovo Atleta">
         <AthleteForm
-          onSubmit={handleCreateAthlete}
+          onSave={handleCreateAthlete}
           onCancel={closeAllModals}
-          title="Nuovo Atleta"
         />
-      )}
+      </Modal>
 
       {/* Modal modifica atleta */}
-      {showEditModal && selectedAthlete && (
-        <AthleteForm
-          athlete={selectedAthlete}
-          onSubmit={handleUpdateAthlete}
-          onCancel={closeAllModals}
-          title="Modifica Atleta"
-        />
-      )}
+      <Modal isOpen={!!showEditModal && !!selectedAthlete} onClose={closeAllModals} title="Modifica Atleta">
+        {selectedAthlete && (
+          <AthleteForm
+            athlete={selectedAthlete}
+            onSave={handleUpdateAthlete}
+            onCancel={closeAllModals}
+          />
+        )}
+      </Modal>
 
       {/* Modal importa atleti */}
-      {showImportModal && (
+      <Modal isOpen={showImportModal} onClose={closeAllModals} title="Importa Atleti">
         <AthleteImport
           onImport={handleImportAthletes}
           onCancel={closeAllModals}
         />
-      )}
+      </Modal>
     </div>
   );
 };

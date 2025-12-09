@@ -591,7 +591,7 @@ useEffect(() => {
     window.removeEventListener('resize', handler);
   };
 }, [actionsMenuType, updateMenuPosition]);
-  const [workoutStatus, setWorkoutStatus] = useState<'published' | 'draft'>('draft');
+  // Stato bozza/pubblicata rimosso
   const [generatedLink, setGeneratedLink] = useState('');
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [variants, setVariants] = useState<WorkoutVariant[]>([]);
@@ -1959,7 +1959,6 @@ useEffect(() => {
             days: { [activeDayKey]: exercises || [] },
             dayNames: originalDayNames || {},
             category: 'strength' as const,
-            status: workoutStatus || 'draft',
             mediaFiles: { images: [], videos: [], audio: [] },
             tags: [],
             order: 0,
@@ -2053,7 +2052,6 @@ useEffect(() => {
           weeks: weeks,
           weeksStore: updatedOriginalWeeksStore,
           associatedAthletes,
-          status: workoutStatus,
           variants: updatedVariants.map(v => ({
             ...v,
             dayNames: variantDayNamesById[v.id] || (v as any).dayNames || {}
@@ -2079,7 +2077,7 @@ useEffect(() => {
         console.error('Error saving workout:', error);
       }
     }
-  }, [workoutId, workoutTitle, workoutDescription, durationWeeks, exercises, associatedAthletes, workoutStatus, variants, activeVariantId, originalWorkoutTitle, tags, updateWorkoutPlan, weeks, originalWeeksStore, variantWeeksStoreById, activeWeekKey, activeDayKey, originalDays, variantDaysById]);
+  }, [workoutId, workoutTitle, workoutDescription, durationWeeks, exercises, associatedAthletes, variants, activeVariantId, originalWorkoutTitle, tags, updateWorkoutPlan, weeks, originalWeeksStore, variantWeeksStoreById, activeWeekKey, activeDayKey, originalDays, variantDaysById]);
   
   // Trigger auto-save immediately
   const triggerAutoSave = useCallback(() => {
@@ -2300,9 +2298,7 @@ useEffect(() => {
             }
             
             // Carica lo status
-            if (workoutData.status) {
-              setWorkoutStatus(workoutData.status);
-            }
+            // Status rimosso: non carichiamo più bozza/pubblicata
             
             // Carica i dati della durata
             if (workoutData.durationWeeks) {
@@ -2400,7 +2396,7 @@ useEffect(() => {
     // Nota: evitiamo di includere "autoSave" nelle dipendenze per prevenire cicli di re-render
     // dovuti alla ricreazione della callback.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workoutTitle, workoutDescription, exercises, associatedAthletes, workoutStatus, activeVariantId, originalExercises, isLoadingWorkout]);
+  }, [workoutTitle, workoutDescription, exercises, associatedAthletes, activeVariantId, originalExercises, isLoadingWorkout]);
 
   
   const handleAddExercise = () => {
@@ -4284,7 +4280,7 @@ useEffect(() => {
                   <Plus size={18} className="text-green-600" />
               </button>
               {/* Separatore Apple dopo Crea */}
-              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
             {/* Duration Selector rimosso: la durata è sincronizzata con le settimane */}
 
@@ -4403,33 +4399,7 @@ useEffect(() => {
               </div>
               {/* Separatore Apple dopo Tag */}
               <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
-              {/* Clone Workout rimosso */}
-              {/* Workout Status */}
-              <button
-                onClick={() => {
-                  const prev = workoutStatus;
-                  const next = prev === 'published' ? 'draft' : 'published';
-                  setWorkoutStatus(next);
-                  updateWorkoutPlan(workoutId, { status: next })
-                    .then(() => {
-                      setSaveMessage(next === 'published' ? 'Scheda pubblicata' : 'Scheda impostata in bozza');
-                    })
-                    .catch((err) => {
-                      console.error('Errore aggiornando lo status:', err);
-                      setWorkoutStatus(prev);
-                    });
-                }}
-                title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                className="bg-transparent rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition shrink-0"
-                style={{ userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
-              >
-                <div className={`w-3 h-3 rounded-full ${
-                  workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
-                }`}></div>
-              </button>
-              {/* Separatore Apple dopo Stato */}
-              <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+              {/* Clone Workout rimosso - stato rimosso */}
               {/* Associa atleti */}
               <button
                 ref={associateDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
@@ -4516,7 +4486,7 @@ useEffect(() => {
                   </button>
                 </div>
 
-                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
                 {/* Crea esercizio */}
                 <button
@@ -4569,34 +4539,7 @@ useEffect(() => {
 
                 {/* Separatore Apple */}
                 <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
-
-                {/* Stato scheda */}
-                <button
-                  onClick={() => {
-                    const prev = workoutStatus;
-                    const next = prev === 'published' ? 'draft' : 'published';
-                    setWorkoutStatus(next);
-                    updateWorkoutPlan(workoutId, { status: next })
-                      .then(() => {
-                        setSaveMessage(next === 'published' ? 'Scheda pubblicata' : 'Scheda impostata in bozza');
-                      })
-                      .catch((err) => {
-                        console.error('Errore aggiornando lo status:', err);
-                        setWorkoutStatus(prev);
-                      });
-                  }}
-                  title={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                  aria-label={workoutStatus === 'published' ? 'Pubblicata' : 'Bozza'}
-                  className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
-                >
-                  <div className={`w-3 h-3 rounded-full ${
-                    workoutStatus === 'published' ? 'bg-green-400' : 'bg-yellow-400'
-                  }`}></div>
-                </button>
-
-                {/* Separatore Apple */}
-                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+                {/* Stato scheda rimosso */}
 
                 {/* Associa atleti */}
                 <button

@@ -19,7 +19,6 @@ import {
   Target, 
   Star,
   Eye,
-  EyeOff,
   Copy,
   Play,
   Calendar
@@ -121,33 +120,7 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
     onDragStart(program);
   };
   
-  // Funzione per ottenere il colore dello status
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'published':
-        return 'bg-green-100 text-green-800';
-      case 'draft':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'archived':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-blue-100 text-blue-800';
-    }
-  };
-  
-  // Funzione per ottenere il testo dello status
-  const getStatusText = (status?: string) => {
-    switch (status) {
-      case 'published':
-        return 'Pubblicata';
-      case 'draft':
-        return 'Bozza';
-      case 'archived':
-        return 'Archiviata';
-      default:
-        return 'Bozza';
-    }
-  };
+  // Rimosse funzioni di stato (non più usate)
   
   // Funzione per ottenere le stelle della difficoltà
   const renderDifficultyStars = (difficulty?: number) => {
@@ -225,11 +198,7 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
             )}
           </div>
           
-          {program.status && (
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(program.status)}`}>
-              {getStatusText(program.status)}
-            </span>
-          )}
+          {/* Stato rimosso dalla vista lista */}
         </div>
         
         {role === 'coach' && (
@@ -378,28 +347,13 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
       
       {/* Footer con status e azioni (nasconde status lato atleta) */}
       <div className="flex items-center justify-between">
-        {role === 'coach' && program.status && (
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(program.status)}`}>
-            {getStatusText(program.status)}
-          </span>
-        )}
+        {/* Stato rimosso dalla vista griglia */}
         
         {role === 'coach' && (
           <div className={`flex items-center space-x-1 transition-opacity duration-300 ${
             isHovered ? 'opacity-100' : 'opacity-0'
           }`}>
-          {onToggleStatus && (
-            <button
-              onClick={() => {
-                const newStatus = program.status === 'published' ? 'draft' : 'published';
-                onToggleStatus(program.id, newStatus);
-              }}
-              className="p-1 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-all duration-300"
-              title={program.status === 'published' ? 'Metti in bozza' : 'Pubblica'}
-            >
-              {program.status === 'published' ? <EyeOff size={14} /> : <Eye size={14} />}
-            </button>
-          )}
+          {/* Toggle stato rimosso */}
           
           {onPreview && (
             <button
