@@ -599,7 +599,7 @@ function App() {
             <main style={{ paddingTop: (dashboardHeaderHeight || 64) + 8 }}>
               {/* Titolo pagina desktop visibile sotto la header, centrato (come Gestione schede) */}
               {!isStandaloneMobile && (
-                <div className="mb-2 w-full px-4 sm:px-6 lg:px-8">
+                <div className="mb-2 w-full px-6 lg:px-8">
                   <div className="relative flex items-center justify-center">
                     <button
                       onClick={() => handleNavigation('home')}
@@ -613,8 +613,8 @@ function App() {
                   </div>
                 </div>
               )}
-            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
+            <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6 sm:py-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
               <div 
                 className="group rounded-2xl bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm p-4 sm:p-6 cursor-pointer transition-all duration-300 hover:bg-white hover:shadow-md hover:ring-black/20"
                 onClick={() => handleNavigation('workout-manager')}

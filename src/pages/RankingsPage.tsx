@@ -298,6 +298,8 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
     }
   };
 
+  const isStandaloneMobile = useIsStandaloneMobile();
+
   // Gestione stati di caricamento ed errore
   if (loading) {
     return (
@@ -335,8 +337,6 @@ const RankingsPage: React.FC<RankingsPageProps> = ({ onNavigate, currentUser, on
       </div>
     );
   }
-
-  const isStandaloneMobile = useIsStandaloneMobile();
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">

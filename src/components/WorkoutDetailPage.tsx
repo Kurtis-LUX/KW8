@@ -4415,8 +4415,9 @@ useEffect(() => {
 
         {isStandaloneMobile && canEdit && (
           <Portal containerId="pwa-workout-toolbar">
-            <div className="relative w-full flex justify-start max-w-full">
-              <div className="flex flex-nowrap whitespace-nowrap justify-start items-center gap-1.5 p-2 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+            <div className="w-full flex justify-center max-w-full">
+              <div className="max-w-4xl w-full mx-auto">
+                <div className="flex flex-nowrap whitespace-nowrap items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
                 {/* Varianti trigger */}
                 <div className="relative">
                   <button
@@ -4425,7 +4426,7 @@ useEffect(() => {
                     title="Varianti"
                     aria-label="Varianti"
                     className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     {activeVariantId === 'original' ? (
                       <>
@@ -4451,7 +4452,7 @@ useEffect(() => {
                     title="Settimane"
                     aria-label="Settimane"
                     className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Calendar size={16} className="text-cyan-600" />
                     <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
@@ -4468,7 +4469,7 @@ useEffect(() => {
                     title="Allenamenti"
                     aria-label="Allenamenti"
                     className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Dumbbell size={16} className="text-orange-500" />
                     {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
@@ -4505,7 +4506,7 @@ useEffect(() => {
                   title="Crea"
                   aria-label="Crea"
                   className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Plus size={16} className="text-green-600" />
                 </button>
@@ -4520,7 +4521,7 @@ useEffect(() => {
                     title="Tag"
                     aria-label="Tag"
                     className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Tag size={16} className="text-purple-600" />
                   </button>
@@ -4537,7 +4538,7 @@ useEffect(() => {
                   title="Associa"
                   aria-label="Associa"
                   className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Users size={16} className="text-indigo-600" />
                   <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{associatedAthletesCount}</span>
@@ -4974,6 +4975,7 @@ useEffect(() => {
                 </div>
               </Portal>
             )}
+            </div>
           </Portal>
         )}
         {isAssociateDropdownOpen && (

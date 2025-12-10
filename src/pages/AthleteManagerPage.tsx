@@ -270,7 +270,14 @@ const AthleteManagerPage: React.FC<AthleteManagerPageProps> = ({ onNavigate, cur
 
   const openAssignedMenu = (athleteId: string, e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setAssignedMenuOpen({ athleteId, rect });
+    setAssignedMenuOpen(prev => {
+      // Toggle: se il menu è già aperto per questo atleta, chiudilo
+      if (prev.athleteId === athleteId) {
+        return { athleteId: null, rect: null };
+      }
+      // Altrimenti apri per l'atleta cliccato
+      return { athleteId, rect };
+    });
   };
   const closeAssignedMenu = () => setAssignedMenuOpen({ athleteId: null, rect: null });
 

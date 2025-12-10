@@ -191,10 +191,10 @@ const AthleteStatisticsPage: React.FC<AthleteStatisticsPageProps> = ({ onNavigat
       {/* Titolo a comparsa rimosso su richiesta */}
       
       <div className="pt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
           {/* Header con tasto indietro */}
           {!isStandaloneMobile && (
-            <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-4 py-3 mb-6">
+            <div className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-6 py-3 mb-6">
               <button
                 onClick={() => onNavigate('coach-dashboard')}
                 className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"

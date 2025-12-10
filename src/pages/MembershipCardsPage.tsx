@@ -249,6 +249,8 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
     }
   };
 
+  const isStandaloneMobile = useIsStandaloneMobile();
+
   // Gestione stati di caricamento ed errore
   if (loading) {
     return (
@@ -295,10 +297,8 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
   const totalRevenue = cards.reduce((sum, c) => sum + c.totalPaid, 0);
   const expiringSoon = cards.filter(c => isExpiringSoon(c.expiryDate)).length;
 
-  const isStandaloneMobile = useIsStandaloneMobile();
-
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
+    <div className="min-h-screen bg-gray-50" style={{ paddingTop: (headerHeight || 64) + 8 }}>
       <Header onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} isDashboard={true} />
       {/* Titolo a comparsa rimosso su richiesta */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
