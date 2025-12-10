@@ -3749,23 +3749,12 @@ useEffect(() => {
       >
 
         
-        {/* Header Row: su telefono la toolbar va sotto il tasto Indietro */}
-        <div className={`flex flex-col items-start gap-2 ${isStandaloneMobile ? 'mb-0' : 'mb-4 sm:mb-6'} sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center`}>
-          <div className="flex justify-start items-center">
-            {!isStandaloneMobile && (
-              <button
-                onClick={onClose}
-                className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 text-red-600 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm hover:bg-white/80 active:scale-[0.98] shrink-0"
-                title="Torna alla Cartella"
-              >
-                <ChevronLeft size={24} />
-              </button>
-            )}
-          </div>
+        {/* Header Row: su telefono la toolbar va sotto il tasto Indietro (non modificare PWA) */}
+        <div className={`flex flex-col ${isStandaloneMobile ? 'items-start gap-2 mb-0' : 'items-center gap-2 mb-4 sm:mb-6'}`}>
           <div className="min-w-0 flex justify-center items-center">
             {canEdit && !isStandaloneMobile && (
               <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full">
-                <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-1.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+                <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-2 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
                   {/* Varianti dropdown */}
                   <div className="relative">
                 <button
@@ -3774,7 +3763,7 @@ useEffect(() => {
                   title="Varianti"
                   aria-label="Varianti"
                   className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(28px, 6vw, 32px)', height: 'clamp(28px, 6vw, 32px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                       {activeVariantId === 'original' ? (
                         <>
@@ -3890,7 +3879,7 @@ useEffect(() => {
                   title="Settimane"
                   aria-label="Settimane"
                   className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(28px, 6vw, 32px)', height: 'clamp(28px, 6vw, 32px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Calendar size={18} className="text-cyan-600" />
                   <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
@@ -3968,7 +3957,7 @@ useEffect(() => {
                   title="Allenamenti"
                   aria-label="Allenamenti"
                   className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(28px, 6vw, 32px)', height: 'clamp(28px, 6vw, 32px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Dumbbell size={18} className="text-orange-500" />
                   {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
@@ -4426,8 +4415,8 @@ useEffect(() => {
 
         {isStandaloneMobile && canEdit && (
           <Portal containerId="pwa-workout-toolbar">
-            <div className="relative w-full flex justify-center max-w-full">
-              <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-1.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+            <div className="relative w-full flex justify-start max-w-full">
+              <div className="flex flex-nowrap whitespace-nowrap justify-start items-center gap-1.5 p-2 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
                 {/* Varianti trigger */}
                 <div className="relative">
                   <button
@@ -4436,7 +4425,7 @@ useEffect(() => {
                     title="Varianti"
                     aria-label="Varianti"
                     className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     {activeVariantId === 'original' ? (
                       <>
@@ -4462,7 +4451,7 @@ useEffect(() => {
                     title="Settimane"
                     aria-label="Settimane"
                     className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Calendar size={16} className="text-cyan-600" />
                     <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
@@ -4479,7 +4468,7 @@ useEffect(() => {
                     title="Allenamenti"
                     aria-label="Allenamenti"
                     className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Dumbbell size={16} className="text-orange-500" />
                     {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
@@ -4516,12 +4505,12 @@ useEffect(() => {
                   title="Crea"
                   aria-label="Crea"
                   className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Plus size={16} className="text-green-600" />
                 </button>
 
-                <div aria-hidden="true" className="mx-2 h-6 w-px bg-gray-300/80 rounded-full" />
+                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
 
                 {/* Tag trigger */}
                 <div className="relative">
@@ -4531,7 +4520,7 @@ useEffect(() => {
                     title="Tag"
                     aria-label="Tag"
                     className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                   >
                     <Tag size={16} className="text-purple-600" />
                   </button>
@@ -4548,7 +4537,7 @@ useEffect(() => {
                   title="Associa"
                   aria-label="Associa"
                   className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                  style={{ width: 'clamp(30px, 7vw, 36px)', height: 'clamp(30px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
                 >
                   <Users size={16} className="text-indigo-600" />
                   <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{associatedAthletesCount}</span>

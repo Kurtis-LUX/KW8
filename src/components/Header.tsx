@@ -431,7 +431,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
       {/* Rimuovi completamente l'header su Home PWA */}
       {!(isStandaloneMobile && currentPage === 'pwa-home') && (
         <header 
-          className={`fixed top-0 left-0 right-0 z-40 ${currentPage === 'workout-manager' ? '' : 'bg-transparent backdrop-blur-sm'} transition-all duration-300 cursor-pointer`}
+          className={`fixed top-0 left-0 right-0 z-40 ${
+            currentPage === 'workout-manager'
+              ? ''
+              : (isStandaloneMobile && currentPage === 'athlete-manager')
+                ? 'bg-transparent'
+                : 'bg-transparent backdrop-blur-sm'
+          } transition-all duration-300 cursor-pointer`}
           style={{ 
             marginRight: '0px',
             boxSizing: 'border-box',
@@ -772,66 +778,70 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         {isStandaloneMobile && !isHomePage && (currentPage === 'pwa-home' || !!getMobilePageTitle(currentPage)) && (
           <div className="lg:hidden">
             <div className={`container mx-auto px-6 ${currentPage === 'workout-manager' ? 'pb-0' : (((currentPage === 'workout-manager' || currentPage === 'workouts') && isWorkoutDetailOpen) ? 'pb-0' : 'pb-2')}`}>
-              <div className={`w-full relative rounded-2xl px-3 py-2 flex items-center justify-between ${currentPage === 'workout-manager' ? '' : 'bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm'}`}>
-                {/* Back button nascosto su PWA Gestione Schede */}
-                <button
-                  onClick={handleBack}
-                  className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
-                  title="Indietro"
-                  aria-label="Indietro"
-                >
-                  <ChevronLeft size={20} className="block" />
-                </button>
-                <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none">
-                  {currentPage === 'pwa-home' ? (
-                    <h1
-                      className={`text-2xl sm:text-3xl font-bold tracking-wider animate-fadeInSlideUp ${isTypingComplete ? 'animate-pulse' : ''}`}
-                      style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}
+              <div className={`w-full relative rounded-2xl ${(currentPage === 'athlete-manager' || currentPage === 'workout-manager' || currentPage === 'coach-dashboard') ? 'px-0' : 'px-3'} py-2 flex items-center justify-between flex-nowrap ${(currentPage === 'workout-manager' || currentPage === 'athlete-manager' || currentPage === 'coach-dashboard') ? '' : 'bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm'}`}>
+                  <>
+                    {/* Back */}
+                    <button
+                      onClick={handleBack}
+                      className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110 shrink-0"
+                      title="Indietro"
+                      aria-label="Indietro"
                     >
-                      <span style={{ fontFamily: 'Bebas Neue, cursive' }}>
-                        {displayText.split(' ').map((word, index) => {
-                          if (word === 'CROSS' || word === 'YOUR') {
-                            return <span key={index} className="text-white">{word}</span>;
-                          } else if (word === 'LIMITS.') {
-                            return <span key={index} className="text-red-500">{word}</span>;
-                          }
-                          return <span key={index}>{word}</span>;
-                        }).reduce((prev, curr) => (Array.isArray(prev) ? [...prev, ' ', curr] : [prev, ' ', curr]))}
-                      </span>
-                      {!isTypingComplete && <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>}
-                    </h1>
-                  ) : (
-                    <span className="font-sfpro text-base font-semibold text-gray-900 tracking-tight whitespace-nowrap overflow-hidden max-w-[calc(100%-140px)]">
-                      {getMobilePageTitle(currentPage)}
-                    </span>
-                  )}
-                </div>
-                {currentPage === 'workout-manager' ? (
-                  !isWorkoutDetailOpen ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:add'))}
-                        className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
-                        title="Aggiungi"
-                        aria-label="Aggiungi"
-                      >
-                        <Plus size={18} />
-                      </button>
-                      <button
-                        onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:open-menu'))}
-                        className="inline-flex items-center justify-center p-1.5 text-gray-800 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
-                        title="Menu cartella"
-                        aria-label="Menu cartella"
-                      >
-                        <Menu size={18} />
-                      </button>
+                      <ChevronLeft size={20} className="block text-black" />
+                    </button>
+                    {/* Title center */}
+                    <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none">
+                      {currentPage === 'pwa-home' ? (
+                        <h1
+                          className={`text-2xl sm:text-3xl font-bold tracking-wider animate-fadeInSlideUp ${isTypingComplete ? 'animate-pulse' : ''}`}
+                          style={{ fontFamily: 'Bebas Neue, cursive', minHeight: '1.2em' }}
+                        >
+                          <span style={{ fontFamily: 'Bebas Neue, cursive' }}>
+                            {displayText.split(' ').map((word, index) => {
+                              if (word === 'CROSS' || word === 'YOUR') {
+                                return <span key={index} className="text-white">{word}</span>;
+                              } else if (word === 'LIMITS.') {
+                                return <span key={index} className="text-red-500">{word}</span>;
+                              }
+                              return <span key={index}>{word}</span>;
+                            }).reduce((prev, curr) => (Array.isArray(prev) ? [...prev, ' ', curr] : [prev, ' ', curr]))}
+                          </span>
+                          {!isTypingComplete && <span className="animate-pulse" style={{ fontFamily: 'Bebas Neue, cursive' }}>|</span>}
+                        </h1>
+                      ) : (
+                        <span className="font-sfpro text-base font-bold text-gray-900 tracking-tight whitespace-nowrap overflow-hidden max-w-[calc(100%-140px)]">
+                          {getMobilePageTitle(currentPage)}
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <div className="w-8" />
-                  )
-                ) : (
-                  <div className="w-8" />
-                )}
+                    {/* Right side placeholder or actions */}
+                    {currentPage === 'workout-manager' ? (
+                      !isWorkoutDetailOpen ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:add'))}
+                            className="inline-flex items-center justify-center p-1.5 text-red-600 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                            title="Aggiungi"
+                            aria-label="Aggiungi"
+                          >
+                            <Plus size={20} />
+                          </button>
+                          <button
+                            onClick={() => window.dispatchEvent(new Event('kw8:fileexplorer:open-menu'))}
+                            className="inline-flex items-center justify-center p-1.5 text-gray-800 bg-white/70 hover:bg-white/80 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 shadow-sm transition-transform duration-300 hover:scale-110"
+                            title="Menu cartella"
+                            aria-label="Menu cartella"
+                          >
+                            <Menu size={20} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-8" />
+                      )
+                    ) : (
+                      <div className="w-8" />
+                    )}
+                  </>
               </div>
               {/* Contenitori PWA per barra di ricerca e breadcrumb, quando su Gestione schede */}
               {currentPage === 'workout-manager' && !isWorkoutDetailOpen && (
@@ -845,6 +855,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               {currentPage === 'workout-manager' && isWorkoutDetailOpen && (
                 <div className="pt-0">
                   <div id="pwa-workout-toolbar" className="w-full"></div>
+                </div>
+              )}
+
+              {/* Contenitore PWA per barra di ricerca su Gestione atleti */}
+              {currentPage === 'athlete-manager' && (
+                <div className="pt-2">
+                  <div id="pwa-athlete-manager-search" className="w-full"></div>
                 </div>
               )}
 

@@ -300,30 +300,7 @@ const MembershipCardsPage: React.FC<MembershipCardsPageProps> = ({ currentUser, 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       <Header onNavigate={onNavigate} currentUser={currentUser} onLogout={onLogout} isDashboard={true} />
-      {!isStandaloneMobile && (
-        <div
-          className={`fixed left-0 right-0 z-40 transition-all duration-300 ${showCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-          aria-hidden={!showCompactTitle}
-          style={{ top: headerHeight || undefined }}
-        >
-          <div className="container mx-auto px-6 py-2 flex items-center justify-between">
-            <button
-              onClick={() => onNavigate('coach-dashboard')}
-              className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
-              title="Torna alla Dashboard Coach"
-              aria-label="Torna alla Dashboard Coach"
-            >
-              <ChevronLeft size={20} className="block" />
-            </button>
-
-            <div className="text-center flex-1">
-              <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Tesserini Atleti</h2>
-            </div>
-
-            <div className="w-8"></div>
-          </div>
-        </div>
-      )}
+      {/* Titolo a comparsa rimosso su richiesta */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Header compatto - nascosto in PWA standalone */}
         {!isStandaloneMobile && (

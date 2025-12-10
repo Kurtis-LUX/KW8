@@ -317,6 +317,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       inputEl?.focus();
     };
     const handleOpenMenu = () => {
+      // Imposta sempre l'origine come header e toggla il menu
       setMenuOrigin('header');
       toggleToolbarDropdown();
     };
@@ -330,7 +331,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       window.removeEventListener('kw8:fileexplorer:focus-search', handleFocusSearch as EventListener);
       window.removeEventListener('kw8:fileexplorer:open-menu', handleOpenMenu as EventListener);
     };
-  }, [searchTerm]);
+  }, [searchTerm, isToolbarOpen, menuOrigin, closeToolbarDropdown, toggleToolbarDropdown]);
 
   // Gestione back dalla header mobile/PWA: chiude il dettaglio e torna alla cartella
   useEffect(() => {
@@ -1883,8 +1884,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               <div className="relative">
                 <button
                   ref={toolbarTriggerRef}
-                  onClick={toggleToolbarDropdown}
-                  className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 px-4 py-2 rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0 sm:px-4 px-2"
+                  onClick={() => { setMenuOrigin('header'); toggleToolbarDropdown(); }}
+                  className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 p-1.5 rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0"
                 >
                   <Menu size={16} />
                   <span className="hidden sm:inline">Menu</span>
@@ -1992,106 +1993,47 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                       </div>
                       
                       <hr className="my-2" />
- 
-                      {/* Ordina - Menu a tendina interno */}
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowSortSubmenu(!showSortSubmenu)}
-                          className="dropdown-item justify-between w-full"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <SlidersHorizontal size={16} />
-                            <span>Ordina</span>
-                          </div>
-                          <ChevronRight size={14} className={`transition-transform duration-200 ${showSortSubmenu ? 'rotate-90' : ''}`} />
-                        </button>
- 
-                        {showSortSubmenu && (
-                          <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200/60 pl-4 pr-4">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Cartelle</label>
-                              <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Nome</button>
-                                <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Data creazione</button>
-                              </div>
-                            </div>
- 
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Schede</label>
-                              <div className="grid grid-cols-2 gap-2">
-                                <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Nome</button>
-                                <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10'}`}>Data creazione</button>
-                              </div>
+                      {/* Ordina - Sezione senza sottomenu, come Modalità vista */}
+                      <div className="px-4 py-2">
+                        <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2"><SlidersHorizontal size={16} /> <span>Ordina</span></p>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Cartelle</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}>Nome</button>
+                              <button onClick={() => setSortOptions(prev => ({ ...prev, folders: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.folders === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}>Data creazione</button>
                             </div>
                           </div>
-                        )}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Schede</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'name' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'name' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}>Nome</button>
+                              <button onClick={() => setSortOptions(prev => ({ ...prev, workouts: 'date' }))} className={`px-2 py-1 text-xs rounded-xl ${sortOptions.workouts === 'date' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}>Data creazione</button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
- 
+
                       <hr className="my-2" />
-                      
-                      {/* Filtri - Menu a tendina interno */}
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowFiltersSubmenu(!showFiltersSubmenu)}
-                          className="dropdown-item justify-between w-full"
-                        >
-                          <div className="flex items-center space-x-3">
-                            <Filter size={16} />
-                            <span>Filtri</span>
-                          </div>
-                          <ChevronRight size={14} className={`transition-transform duration-200 ${showFiltersSubmenu ? 'rotate-90' : ''}`} />
-                        </button>
-                        
-                        {/* Submenu Filtri */}
-                        {showFiltersSubmenu && (
-                          <div className="ml-4 mt-2 space-y-3 border-l-2 border-gray-200 pl-4 pr-4">
-                            {/* Filtri tipo */}
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Mostra</label>
-                              <div className="space-y-1">
-                                <label className="flex items-center text-sm">
-                                  <input
-                                    type="checkbox"
-                                    checked={filters.showFolders}
-                                    onChange={(e) => setFilters(prev => ({ ...prev, showFolders: e.target.checked }))}
-                                    className="mr-2 text-red-600 focus:ring-red-500"
-                                  />
-                                  <Folder size={14} className="mr-1" />
-                                  Cartelle
-                                </label>
-                                <label className="flex items-center text-sm">
-                                  <input
-                                    type="checkbox"
-                                    checked={filters.showWorkouts}
-                                    onChange={(e) => setFilters(prev => ({ ...prev, showWorkouts: e.target.checked }))}
-                                    className="mr-2 text-red-600 focus:ring-red-500"
-                                  />
-                                  <FileText size={14} className="mr-1" />
-                                  Schede
-                                </label>
-                              </div>
-                            </div>
-                            
-                            {/* Azioni filtri */}
-                            <div className="flex justify-between pt-2">
-                              <button
-                                onClick={() => {
-                                  setSearchTerm('');
-                                  setFilters({ showFolders: false, showWorkouts: false, sortBy: 'name' });
-                                }}
-                                className="px-2 py-1 text-xs text-gray-600 hover:text-gray-900 border border-gray-300 rounded hover:bg-gray-50"
-                              >
-                                Reset
-                              </button>
-                              <button
-                                onClick={() => setShowFiltersSubmenu(false)}
-                                className="px-2 py-1 text-xs text-white bg-red-600 hover:bg-red-700 rounded"
-                              >
-                                Applica
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                      {/* Filtri - Sezione senza sottomenu, come Modalità vista */}
+                      <div className="px-4 py-2">
+                        <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2"><Filter size={16} /> <span>Filtri</span></p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setFilters(prev => ({ ...prev, showFolders: !prev.showFolders }))}
+                            className={`px-2 py-1 text-xs rounded-xl flex items-center justify-center space-x-2 ${filters.showFolders ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}
+                          >
+                            <Folder size={14} />
+                            <span>Cartelle</span>
+                          </button>
+                          <button
+                            onClick={() => setFilters(prev => ({ ...prev, showWorkouts: !prev.showWorkouts }))}
+                            className={`px-2 py-1 text-xs rounded-xl flex items-center justify-center space-x-2 ${filters.showWorkouts ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'}`}
+                          >
+                            <FileText size={14} />
+                            <span>Schede</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -2103,7 +2045,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
              {!isStandaloneMobile && (
                <button
                  onClick={() => setShowCreateModal(true)}
-                 className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white px-4 py-2 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0 sm:px-4 px-2"
+                 className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white p-1.5 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0"
                >
                  <Plus size={16} />
                  <span className="hidden sm:inline">Aggiungi</span>

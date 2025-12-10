@@ -265,7 +265,15 @@ function App() {
       if (currentPage === 'workout-detail' && selectedPlan) {
         try {
           const plan = await DB.getWorkoutPlanById(selectedPlan);
-          // Se l'utente ha un'assegnazione specifica di variante per questa scheda, usala
+          // Leggi variante esplicita dall'URL, se presente, e preferiscila
+          let variantParam: string | undefined = undefined;
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const v = params.get('variant');
+            variantParam = v && v.length > 0 ? v : undefined;
+          } catch {}
+
+          // Se l'utente ha un'assegnazione specifica di variante per questa scheda, usala come fallback
           let variantFromUser: string | undefined = undefined;
           try {
             const entries = Array.isArray(currentUser?.workoutPlans) ? currentUser!.workoutPlans : [];
@@ -276,7 +284,7 @@ function App() {
               variantFromUser = v && v.length > 0 ? v : undefined;
             }
           } catch {}
-          setWorkoutDetailActiveVariantId(variantFromUser || plan?.activeVariantId || undefined);
+          setWorkoutDetailActiveVariantId(variantParam || variantFromUser || plan?.activeVariantId || undefined);
         } catch {
           setWorkoutDetailActiveVariantId(undefined);
         }
@@ -354,8 +362,12 @@ function App() {
       window.history.pushState({}, '', `/workout-card?workout=${linkId}`);
     } else if (page === 'workout-detail' && plan) {
       setSelectedPlan(plan);
+      // Se viene passato un variantId esplicito, usalo come iniziale
+      if (linkId) {
+        setWorkoutDetailActiveVariantId(linkId);
+      }
       setCurrentPage('workout-detail');
-      window.history.pushState({}, '', `/workout-detail?id=${plan}`);
+      window.history.pushState({}, '', `/workout-detail?id=${plan}${linkId ? `&variant=${encodeURIComponent(linkId)}` : ''}`);
     } else if (page === 'coach-home') {
       // Alias: Home Coach indirizza alla Home principale
       setCurrentPage('home');
@@ -583,53 +595,30 @@ function App() {
         <ProtectedRoute requireCoach={true} onUnauthorized={() => handleNavigation('login')}>
           <div className="min-h-screen bg-gray-100">
             <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} isDashboard={true} currentPage={currentPage} />
-            {/* Titolo compatto sticky (stile iOS) sotto l'header principale */}
-            <div
-              className={`fixed left-0 right-0 z-50 transition-all duration-300 ${dashboardShowCompactTitle ? 'opacity-100 translate-y-0 backdrop-blur-sm' : 'opacity-0 -translate-y-2 pointer-events-none'}`}
-              aria-hidden={!dashboardShowCompactTitle}
-              style={{ top: (dashboardHeaderHeight || 64) }}
-            >
-              <div className="container mx-auto px-6 py-2 flex items-center justify-between">
-                <button
-                  onClick={() => handleNavigation('home')}
-                  className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-transparent hover:bg-transparent active:scale-[0.98]"
-                  title="Torna alla Home"
-                  aria-label="Torna alla Home"
-                >
-                  <ChevronLeft size={20} className="block" />
-                </button>
-                <div className="text-center flex-1">
-                  <h2 className="font-sfpro text-base sm:text-lg font-semibold text-gray-900 tracking-tight">Dashboard Coach</h2>
-                </div>
-                <div className="w-8"></div>
-              </div>
-            </div>
-            <div className="pt-20">
-              <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-                <div ref={dashboardTitleRef} className="flex items-center justify-between bg-white/60 backdrop-blur-md rounded-2xl ring-1 ring-black/10 shadow-sm px-3 py-2">
-                  <button
-                    onClick={() => handleNavigation('home')}
-                    className="inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-1.5 text-red-600 bg-white/60 backdrop-blur-sm rounded-2xl ring-1 ring-black/10 hover:bg-white/80 hover:shadow-sm active:scale-[0.98]"
-                    title="Torna alla Home"
-                  >
-                    <ChevronLeft size={20} className="block" />
-                  </button>
-                  
-                  <div className="text-center flex-1">
-                    <h1 className="font-sfpro text-xl sm:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-navy-900 tracking-tight drop-shadow-sm mb-0.5">Dashboard Coach</h1>
-                    <p className="font-sfpro text-[#001f3f]/80 font-medium text-xs sm:text-sm">Gestione schede, programmi e atleti</p>
+            {/* Spazio sotto la header per far iniziare le card appena sotto (PWA e desktop) */}
+            <main style={{ paddingTop: (dashboardHeaderHeight || 64) + 8 }}>
+              {/* Titolo pagina desktop visibile sotto la header, centrato (come Gestione schede) */}
+              {!isStandaloneMobile && (
+                <div className="mb-2 w-full px-4 sm:px-6 lg:px-8">
+                  <div className="relative flex items-center justify-center">
+                    <button
+                      onClick={() => handleNavigation('home')}
+                      className="absolute left-0 inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 bg-white ring-1 ring-black/10 rounded-2xl shadow-sm hover:bg-white active:scale-[0.98] shrink-0"
+                      title="Torna alla Home"
+                      aria-label="Torna alla Home"
+                    >
+                      <ChevronLeft size={20} className="block text-black" />
+                    </button>
+                    <h2 className="font-sfpro text-base sm:text-lg font-bold text-gray-900 tracking-tight text-center">Dashboard Coach</h2>
                   </div>
-                  
-                  <div className="w-8"></div>
                 </div>
-              </div>
-            </div>
-            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+              )}
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
-                <div 
-                  className="group rounded-2xl bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm p-4 sm:p-6 cursor-pointer transition-all duration-300 hover:bg-white hover:shadow-md hover:ring-black/20"
-                  onClick={() => handleNavigation('workout-manager')}
-                >
+              <div 
+                className="group rounded-2xl bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm p-4 sm:p-6 cursor-pointer transition-all duration-300 hover:bg-white hover:shadow-md hover:ring-black/20"
+                onClick={() => handleNavigation('workout-manager')}
+              >
                   <div className="flex items-center mb-3 sm:mb-4">
                     <svg className="w-6 h-6 text-blue-600 mr-3 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -689,6 +678,7 @@ function App() {
                 <DataMigration currentUser={currentUser} />
               </div>
             </div>
+            </main>
           </div>
         </ProtectedRoute>
       </LanguageProvider>
