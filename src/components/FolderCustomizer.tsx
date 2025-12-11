@@ -93,10 +93,10 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
       {/* Anteprima */}
       <div className="flex items-center justify-center p-6 bg-gray-50 rounded-lg">
         <div 
-          className="p-4 rounded-lg shadow-sm"
+          className="p-4 rounded-lg shadow-sm bg-white"
           style={{ backgroundColor: selectedColor + '20', color: selectedColor }}
         >
-          <SelectedIcon size={32} />
+          <SelectedIcon size={36} />
         </div>
       </div>
 
@@ -130,7 +130,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
 
       {/* Selezione Icone */}
       {activeTab === 'icon' && (
-        <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto no-scrollbar">
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto no-scrollbar">
           {AVAILABLE_ICONS.map((icon) => {
             const IconComponent = icon.component;
             const isSelected = selectedIcon === icon.name;
@@ -143,7 +143,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
                   e.stopPropagation();
                   onIconChange(icon.name);
                 }}
-                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 flex items-center justify-center ${
+                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 flex items-center justify-center bg-white ${
                   isSelected
                     ? 'border-red-500 bg-red-50'
                     : 'border-gray-200 hover:border-gray-300'
@@ -151,18 +151,19 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
                 title={icon.label}
               >
                 <IconComponent 
-                  size={28} 
-                  className={isSelected ? 'text-red-600' : 'text-gray-600'}
+                  size={32} 
+                  strokeWidth={2}
+                  style={{ color: isSelected ? '#dc2626' : '#374151' }}
                 />
               </button>
-            );
+          );
           })}
         </div>
       )}
 
       {/* Selezione Colori */}
       {activeTab === 'color' && (
-        <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto no-scrollbar">
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-y-auto no-scrollbar">
           {AVAILABLE_COLORS.map((color) => {
             const isSelected = selectedColor === color.value;
             
@@ -174,7 +175,7 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
                   e.stopPropagation();
                   onColorChange(color.value);
                 }}
-                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 flex items-center justify-center ${
+                className={`p-3 rounded-lg border-2 transition-all hover:scale-105 flex items-center justify-center bg-white ${
                   isSelected
                     ? 'border-gray-800 ring-2 ring-gray-300'
                     : 'border-gray-200 hover:border-gray-300'
@@ -182,11 +183,11 @@ const FolderCustomizer: React.FC<FolderCustomizerProps> = ({
                 title={color.name}
               >
                 <div 
-                  className={`w-6 h-6 rounded-full ${color.bg}`}
+                  className={`w-7 h-7 rounded-full ring-1 ring-black/10`}
                   style={{ backgroundColor: color.value }}
                 />
               </button>
-            );
+          );
           })}
         </div>
       )}

@@ -125,7 +125,7 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
                 e.stopPropagation();
                 onColorChange(color);
               }}
-              className={`w-8 h-8 rounded-full border-2 transition-all ${
+              className={`w-9 h-9 rounded-full border-2 transition-all bg-white ${
                 selectedColor === color
                   ? 'border-gray-800 scale-110'
                   : 'border-gray-300 hover:border-gray-500'
@@ -137,10 +137,10 @@ const WorkoutCustomizer: React.FC<WorkoutCustomizerProps> = ({
         </div>
         
         {/* Anteprima colore */}
-        <div className="mt-3 p-3 rounded-lg border" style={{ backgroundColor: selectedColor + '20' }}>
+        <div className="mt-3 p-3 rounded-lg border bg-white" style={{ backgroundColor: selectedColor + '20' }}>
           <div className="flex items-center space-x-2">
             <div 
-              className="w-4 h-4 rounded"
+              className="w-4 h-4 rounded ring-1 ring-black/10"
               style={{ backgroundColor: selectedColor }}
             />
             <span className="text-sm" style={{ color: selectedColor }}>

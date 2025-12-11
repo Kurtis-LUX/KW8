@@ -851,8 +851,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 </div>
               )}
 
-              {/* Contenitore PWA per toolbar della scheda, visibile quando il dettaglio è aperto */}
-              {currentPage === 'workout-manager' && isWorkoutDetailOpen && (
+              {/* Contenitore PWA per toolbar della scheda, visibile quando il dettaglio è aperto (anche su "Schede") */}
+              {(currentPage === 'workout-manager' || currentPage === 'workouts') && isWorkoutDetailOpen && (
                 <div className="pt-0">
                   <div id="pwa-workout-toolbar" className="w-full"></div>
                 </div>

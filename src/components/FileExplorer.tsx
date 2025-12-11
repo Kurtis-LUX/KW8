@@ -6,7 +6,6 @@ import {
   Grid3X3,
   List,
   Plus,
-  MoreVertical,
   Download,
   Edit3,
   Trash2,
@@ -38,6 +37,7 @@ import WorkoutCustomizer from './WorkoutCustomizer';
 import WorkoutDetailPage from './WorkoutDetailPage';
 import Modal from './Modal';
 import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
+import CustomizationPanel from './CustomizationPanel';
 
 interface FileExplorerProps {
   currentUser: any;
@@ -158,14 +158,35 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     autoAdjust: true
   });
 
+  // Hook per il posizionamento del menu Crea (dedicato)
+  const {
+    position: createPosition,
+    isOpen: isCreateOpen,
+    triggerRef: createTriggerRef,
+    dropdownRef: createDropdownRef,
+    toggleDropdown: toggleCreateDropdown,
+    closeDropdown: closeCreateDropdown
+  } = useDropdownPosition({
+    preferredPosition: 'bottom-right',
+    offset: 8,
+    autoAdjust: true
+  });
+
   // Origine apertura menu cartella e coordinate per apertura su sfondo
   const [menuOrigin, setMenuOrigin] = useState<'header' | 'background' | null>(null);
+  // Origine apertura menu Crea (header o sfondo) e coordinate per apertura su sfondo
+  const [createMenuOrigin, setCreateMenuOrigin] = useState<'header' | 'background' | null>(null);
   const lastBgPointerRef = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     if (!isToolbarOpen) {
       setMenuOrigin(null);
     }
   }, [isToolbarOpen]);
+  useEffect(() => {
+    if (!isCreateOpen) {
+      setCreateMenuOrigin(null);
+    }
+  }, [isCreateOpen]);
 
   // Blocca lo scroll pagina quando il menu cartella è aperto (solo PWA)
   useEffect(() => {
@@ -199,8 +220,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     if (!isStandaloneMobile) return;
     const target = e.target as HTMLElement;
     if (target.closest('.dropdown-menu')) return;
-    // Se menu già aperto, non avviare long‑press
-    if (isToolbarOpen) {
+    // Se un menu è già aperto, non avviare long‑press
+    if (isToolbarOpen || isCreateOpen) {
       e.stopPropagation();
       return;
     }
@@ -217,9 +238,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     clearBgPressTimer();
     bgPressTimerRef.current = window.setTimeout(() => {
       bgLongPressTriggeredRef.current = true;
-      // Apri il menu cartella
-       setMenuOrigin('background');
-      toggleToolbarDropdown();
+      // Apri il menu Crea al punto di pressione
+      setCreateMenuOrigin('background');
+      closeToolbarDropdown();
+      toggleCreateDropdown();
     }, BG_LONG_PRESS_MS);
   };
   const handleBackgroundPointerUp = (e: React.PointerEvent) => {
@@ -306,7 +328,10 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   // Azioni rapide dall'Header (PWA): ascolta eventi globali per aprire ricerca/menu/aggiungi
   useEffect(() => {
     const handleAdd = () => {
-      setShowCreateModal(true);
+      // Apri il menu Crea dedicato dall'header
+      closeToolbarDropdown();
+      setCreateMenuOrigin('header');
+      toggleCreateDropdown();
     };
     const handleFocusSearch = () => {
       openDropdown();
@@ -319,7 +344,12 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     const handleOpenMenu = () => {
       // Imposta sempre l'origine come header e toggla il menu
       setMenuOrigin('header');
-      toggleToolbarDropdown();
+      // Se già aperto, chiudi invece di riaprire (fix toggle)
+      if (isToolbarOpen) {
+        closeToolbarDropdown();
+      } else {
+        toggleToolbarDropdown();
+      }
     };
 
     window.addEventListener('kw8:fileexplorer:add', handleAdd as EventListener);
@@ -606,6 +636,75 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         await loadFolderContent(true);
       }
       
+      setDraggedItem(null);
+    } catch (error) {
+      console.error('Errore durante lo spostamento:', error);
+    } finally {
+      dropInProgressRef.current = false;
+    }
+  };
+
+  // Fallback mobile/PWA: esegue il drop senza evento drag
+  const performDrop = async (targetFolderId: string | null) => {
+    if (dropInProgressRef.current) return;
+    dropInProgressRef.current = true;
+    setDragOverItem(null);
+
+    if (!draggedItem) { dropInProgressRef.current = false; return; }
+
+    try {
+      if (draggedItem.type === 'folder') {
+        // Evita spostamenti non validi: dentro sé stessa o una sua sottocartella
+        if (targetFolderId === draggedItem.id) {
+          dropInProgressRef.current = false;
+          return;
+        }
+        if (targetFolderId) {
+          const folders = await DB.getWorkoutFolders();
+          let currentId: string | null = targetFolderId;
+          let isTargetDescendant = false;
+          while (currentId) {
+            if (currentId === draggedItem.id) { isTargetDescendant = true; break; }
+            const current = folders.find(f => f.id === currentId);
+            currentId = current?.parentId ?? null;
+          }
+          if (isTargetDescendant) {
+            alert('Non puoi spostare una cartella dentro sé stessa o una sua sottocartella.');
+            dropInProgressRef.current = false;
+            return;
+          }
+        }
+        // Sposta cartella
+        const folder = draggedItem.data as WorkoutFolder;
+        const prevParentId = folder.parentId ?? null;
+        const newParentId = targetFolderId ?? null;
+        if ((newParentId ?? null) === (prevParentId ?? null)) {
+          dropInProgressRef.current = false;
+          return;
+        }
+        await DB.saveWorkoutFolder({ ...folder, parentId: targetFolderId });
+        if (prevParentId === (currentFolderId ?? null) && newParentId !== (currentFolderId ?? null)) {
+          setFolderTree(prev => prev.filter(i => i.id !== folder.id));
+        }
+        showToast('Cartella spostata con successo', 2500);
+        await loadFolderContent(true);
+      } else {
+        // Sposta scheda
+        const workout = draggedItem.data as WorkoutPlan;
+        const prevFolderId = (workout.folderId ?? null);
+        const newFolderId = (targetFolderId ?? null);
+        if ((newFolderId ?? null) === (prevFolderId ?? null)) {
+          dropInProgressRef.current = false;
+          return;
+        }
+        await updateWorkoutPlan(workout.id, { folderId: targetFolderId ?? null });
+        if (prevFolderId === (currentFolderId ?? null) && newFolderId !== (currentFolderId ?? null)) {
+          setFolderTree(prev => prev.filter(i => i.id !== workout.id));
+        }
+        showToast('Scheda spostata con successo', 2500);
+        await refetch();
+        await loadFolderContent(true);
+      }
       setDraggedItem(null);
     } catch (error) {
       console.error('Errore durante lo spostamento:', error);
@@ -1002,7 +1101,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       triggerRef: itemMenuTriggerRef,
       dropdownRef: itemMenuDropdownRef,
       openDropdown: openItemMenu,
-      toggleDropdown: toggleItemMenu,
       closeDropdown: closeItemMenu
     } = useDropdownPosition({
       preferredPosition: 'bottom-right',
@@ -1010,16 +1108,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       autoAdjust: true
     });
     
-    const handleItemMenuClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      e.preventDefault();
-      toggleItemMenu();
-    };
-    
     // Long‑press per selezionare, click per aprire
     const LONG_PRESS_MS = 400;
     const pressTimerRef = useRef<number | null>(null);
     const longPressTriggeredRef = useRef(false);
+    const pressStartPosRef = useRef<{ x: number; y: number } | null>(null);
+    const movedDuringPressRef = useRef(false);
+    const mobileDragActiveRef = useRef(false);
     const clearPressTimer = () => {
       if (pressTimerRef.current) {
         window.clearTimeout(pressTimerRef.current);
@@ -1029,29 +1124,88 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     const handlePointerDown = (e: React.PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.menu-button') || target.closest('.dropdown-menu')) return;
+      // Click destro: apri il menu contestuale e non avviare il long‑press
+      if (e.button === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        openItemMenu();
+        return;
+      }
       e.stopPropagation();
+      pressStartPosRef.current = { x: e.clientX, y: e.clientY };
+      movedDuringPressRef.current = false;
       longPressTriggeredRef.current = false;
+      mobileDragActiveRef.current = false;
       clearPressTimer();
       pressTimerRef.current = window.setTimeout(() => {
+        // Segna long‑press, apri il menu su pointerup se non c'è stato movimento
         longPressTriggeredRef.current = true;
-        // Apri direttamente il menu impostazioni con long‑press
-        openItemMenu();
       }, LONG_PRESS_MS);
+      // In PWA cattura il puntatore per ricevere gli eventi move anche fuori dalla card
+      if (isStandaloneMobile) {
+        try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
+      }
     };
     const handlePointerUp = (e: React.PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.menu-button') || target.closest('.dropdown-menu')) return;
       e.stopPropagation();
+      if (e.button === 2) { e.preventDefault(); return; }
+      pressStartPosRef.current = null;
       const wasLongPress = longPressTriggeredRef.current;
       clearPressTimer();
       longPressTriggeredRef.current = false;
-      if (!wasLongPress) {
+      // Rilascia pointer capture su PWA
+      if (isStandaloneMobile) {
+        try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch {}
+      }
+      // Se era attivo il drag mobile, esegui il drop
+      if (isStandaloneMobile && mobileDragActiveRef.current) {
+        mobileDragActiveRef.current = false;
+        const targetKey = dragOverItem;
+        const targetFolderId = targetKey === 'root' ? currentFolderId : (targetKey ?? currentFolderId);
+        performDrop(targetFolderId);
+        return;
+      }
+      if (wasLongPress && !movedDuringPressRef.current) {
+        // Apri menu solo se long‑press senza movimento
+        openItemMenu();
+      } else if (!wasLongPress) {
         handleItemClick(item);
       }
     };
     const handlePointerLeave = () => {
       clearPressTimer();
       longPressTriggeredRef.current = false;
+    };
+    const handlePointerMove = (e: React.PointerEvent) => {
+      const start = pressStartPosRef.current;
+      if (!start) return;
+      const dx = Math.abs(e.clientX - start.x);
+      const dy = Math.abs(e.clientY - start.y);
+      if (dx > 5 || dy > 5) {
+        // Movimento: cancella long‑press per permettere drag & drop
+        clearPressTimer();
+        longPressTriggeredRef.current = false;
+        movedDuringPressRef.current = true;
+        // Avvio drag mobile in PWA
+        if (isStandaloneMobile && !mobileDragActiveRef.current) {
+          mobileDragActiveRef.current = true;
+          setDraggedItem(item);
+        }
+        // Aggiorna la zona di drop simulando l'hover con elementFromPoint
+        if (isStandaloneMobile && mobileDragActiveRef.current) {
+          const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+          const folderEl = el?.closest('[data-folder-id]') as HTMLElement | null;
+          if (folderEl) {
+            const fid = folderEl.getAttribute('data-folder-id');
+            if (fid && dragOverItem !== fid) setDragOverItem(fid);
+          } else {
+            if (dragOverItem !== 'root') setDragOverItem('root');
+          }
+        }
+        pressStartPosRef.current = null;
+      }
     };
     
     return (
@@ -1080,6 +1234,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           onPointerDown={handlePointerDown}
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerLeave}
+          onPointerMove={handlePointerMove}
+          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); openItemMenu(); }}
           onMouseEnter={() => setHoveredItemId(item.id)}
           onMouseLeave={() => { if (hoveredItemId === item.id) setHoveredItemId(null); }}
           draggable
@@ -1181,18 +1337,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           )}
         </div>
 
-        {/* Menu azioni */}
-        {!isStandaloneMobile && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button 
-              ref={itemMenuTriggerRef}
-              className="menu-button p-2 rounded-lg bg-white/60 hover:bg-white border border-gray-200 ring-1 ring-gray-200 backdrop-blur-sm transition-shadow hover:shadow-sm"
-              onClick={handleItemMenuClick}
-            >
-              <MoreVertical size={16} />
-            </button>
-          </div>
-        )}
+        {/* Menu azioni: rimosso il bottone tre puntini, apertura via destro/long‑press */}
         
         {/* Dropdown menu con Portal */}
         {isItemMenuOpen && (
@@ -1278,72 +1423,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     );
   };
 
-  // Pulsante menu per i tile in griglia
-  const TileMenuButton: React.FC<{ item: FolderTreeItem }> = ({ item }) => {
-    const [open, setOpen] = useState(false);
-    const btnRef = useRef<HTMLButtonElement | null>(null);
-    const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
-    const MENU_WIDTH = 176; // w-44
-
-    const toggleOpen = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      setOpen((prev) => {
-        const next = !prev;
-        if (next && btnRef.current) {
-          const r = btnRef.current.getBoundingClientRect();
-          const left = Math.min(Math.max(8, r.right - MENU_WIDTH), window.innerWidth - MENU_WIDTH - 8);
-          const top = Math.min(r.bottom + 8, window.innerHeight - 8 - 160);
-          setCoords({ left, top });
-        }
-        return next;
-      });
-    };
-
-    const close = () => setOpen(false);
-
-    return (
-      <div className="relative">
-        <button
-          ref={btnRef}
-          className="menu-button p-2 rounded-lg bg-white/60 hover:bg-white border border-gray-200 ring-1 ring-gray-200 backdrop-blur-sm transition-shadow hover:shadow-sm"
-          onClick={toggleOpen}
-        >
-          <MoreVertical size={16} />
-        </button>
-        {open && (
-          <Portal>
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
-              className="bg-black/10"
-              onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); close(); }}
-              onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); close(); }}
-            />
-            <div
-              className="dropdown-menu w-44 bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-2"
-              style={{ position: 'fixed', left: coords?.left ?? -9999, top: coords?.top ?? -9999, zIndex: 9999, visibility: coords ? 'visible' : 'hidden' }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={(e) => { e.stopPropagation(); setItemToEdit(item); setShowEditModal(true); close(); }}
-                className="dropdown-item"
-              >
-                <Edit3 size={14} />
-                <span>Modifica</span>
-              </button>
-              <hr className="my-1" />
-              <button
-                onClick={(e) => { e.stopPropagation(); setItemToDelete(item); setShowDeleteModal(true); close(); }}
-                className="dropdown-item text-red-600 hover:bg-red-50"
-              >
-                <Trash2 size={14} />
-                <span>Elimina</span>
-              </button>
-            </div>
-          </Portal>
-        )}
-      </div>
-    );
-  };
+  // Pulsante menu per i tile in griglia: rimosso; apertura via tasto destro o long‑press
 
   // Nuova card stile "Apple Files" per la vista Griglia
   const TileCard = ({ item, isSelected, onSelect }: { item: FolderTreeItem; isSelected: boolean; onSelect: () => void }) => {
@@ -1385,6 +1465,9 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     const LONG_PRESS_MS = 400;
     const pressTimerRef = useRef<number | null>(null);
     const longPressTriggeredRef = useRef(false);
+    const pressStartPosRef = useRef<{ x: number; y: number } | null>(null);
+    const movedDuringPressRef = useRef(false);
+    const mobileDragActiveRef = useRef(false);
     const clearPressTimer = () => {
       if (pressTimerRef.current) {
         window.clearTimeout(pressTimerRef.current);
@@ -1394,6 +1477,13 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     const handlePointerDown = (e: React.PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('.dropdown-menu')) return;
+      // Click destro: apri il menu contestuale e non avviare il long‑press
+      if (e.button === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        openTileMenu();
+        return;
+      }
       // Se il menu è aperto o appena chiuso, non avviare nuovo long‑press
       if (isTileMenuOpen || Date.now() < blockOpenUntilRef.current) {
         e.stopPropagation();
@@ -1407,12 +1497,18 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       (document.documentElement as any).style.webkitUserSelect = 'none';
       (document.body as any).style.webkitUserSelect = 'none';
       longPressTriggeredRef.current = false;
+      pressStartPosRef.current = { x: e.clientX, y: e.clientY };
+      movedDuringPressRef.current = false;
+      mobileDragActiveRef.current = false;
       clearPressTimer();
       pressTimerRef.current = window.setTimeout(() => {
+        // Segna long‑press, apri il menu su pointerup se non c'è stato movimento
         longPressTriggeredRef.current = true;
-        // In PWA, apri il menu impostazioni con pressione prolungata
-        openTileMenu();
       }, LONG_PRESS_MS);
+      // In PWA cattura il puntatore per ricevere gli eventi move anche fuori dalla tile
+      if (isStandaloneMobile) {
+        try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
+      }
     };
     const handlePointerUp = (e: React.PointerEvent) => {
       const target = e.target as HTMLElement;
@@ -1424,10 +1520,30 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       document.body.style.userSelect = '';
       (document.documentElement as any).style.webkitUserSelect = '';
       (document.body as any).style.webkitUserSelect = '';
+      pressStartPosRef.current = null;
       const wasLongPress = longPressTriggeredRef.current;
       clearPressTimer();
       longPressTriggeredRef.current = false;
-      if (!wasLongPress) {
+      // Rilascia pointer capture su PWA
+      if (isStandaloneMobile) {
+        try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch {}
+      }
+      // Se era attivo il drag mobile, esegui il drop simulato
+      if (isStandaloneMobile && mobileDragActiveRef.current) {
+        mobileDragActiveRef.current = false;
+        const targetKey = dragOverItem;
+        const targetFolderId = targetKey === 'root' ? currentFolderId : (targetKey ?? currentFolderId);
+        performDrop(targetFolderId);
+        return;
+      }
+      // Ignora rilascio del tasto destro: il menu è già aperto
+      if (e.button === 2) {
+        return;
+      }
+      if (wasLongPress && !movedDuringPressRef.current) {
+        // Apri menu solo se long‑press senza movimento
+        openTileMenu();
+      } else if (!wasLongPress) {
         handleItemClick(item);
       }
     };
@@ -1439,6 +1555,35 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
       (document.body as any).style.webkitUserSelect = '';
       clearPressTimer();
       longPressTriggeredRef.current = false;
+    };
+    const handlePointerMove = (e: React.PointerEvent) => {
+      const start = pressStartPosRef.current;
+      if (!start) return;
+      const dx = Math.abs(e.clientX - start.x);
+      const dy = Math.abs(e.clientY - start.y);
+      if (dx > 5 || dy > 5) {
+        // Movimento: cancella long‑press per permettere drag & drop
+        clearPressTimer();
+        longPressTriggeredRef.current = false;
+        movedDuringPressRef.current = true;
+        // Avvio drag mobile in PWA
+        if (isStandaloneMobile && !mobileDragActiveRef.current) {
+          mobileDragActiveRef.current = true;
+          setDraggedItem(item);
+        }
+        // Aggiorna la zona di drop simulando l'hover con elementFromPoint
+        if (isStandaloneMobile && mobileDragActiveRef.current) {
+          const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+          const folderEl = el?.closest('[data-folder-id]') as HTMLElement | null;
+          if (folderEl) {
+            const fid = folderEl.getAttribute('data-folder-id');
+            if (fid && dragOverItem !== fid) setDragOverItem(fid);
+          } else {
+            if (dragOverItem !== 'root') setDragOverItem('root');
+          }
+        }
+        pressStartPosRef.current = null;
+      }
     };
 
     const primaryColor = item.type === 'folder'
@@ -1476,6 +1621,8 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
+        onPointerMove={handlePointerMove}
+        onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); openTileMenu(); }}
         draggable
         onDragStart={(e) => { clearPressTimer(); handleDragStart(e, item); }}
         onDragEnd={() => { setDragOverItem(null); }}
@@ -1494,12 +1641,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           </div>
         </div>
 
-        {/* Menu azioni tre puntini (visibile su hover) - solo desktop */}
-        {!isStandaloneMobile && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-            <TileMenuButton item={item} />
-          </div>
-        )}
+        {/* Menu azioni tre puntini rimosso; usa tasto destro o long‑press */}
 
         {/* Testi sotto l'icona, con spaziatura minima alla Apple */}
         <div className="mt-1 text-center px-1 w-full">
@@ -1884,7 +2026,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               <div className="relative">
                 <button
                   ref={toolbarTriggerRef}
-                  onClick={() => { setMenuOrigin('header'); toggleToolbarDropdown(); }}
+                  onClick={() => { setMenuOrigin('header'); if (isToolbarOpen) { closeToolbarDropdown(); } else { toggleToolbarDropdown(); } }}
                   className="flex items-center space-x-2 bg-white/60 backdrop-blur-sm ring-1 ring-black/10 hover:bg-white/80 text-gray-700 p-1.5 rounded-2xl shadow-sm transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0"
                 >
                   <Menu size={16} />
@@ -2041,23 +2183,78 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               </Portal>
             )}
 
-             {/* Pulsante Aggiungi (nascosto in PWA standalone) */}
-             {!isStandaloneMobile && (
-               <button
-                 onClick={() => setShowCreateModal(true)}
-                 className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white p-1.5 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0"
-               >
-                 <Plus size={16} />
-                 <span className="hidden sm:inline">Aggiungi</span>
-               </button>
-             )}
-           </div>
-         </div>
+            {/* Dropdown Crea dedicato, ancorato al bottone Aggiungi (desktop) o all'header (PWA) */}
+            {isCreateOpen && (
+              <Portal>
+                <div
+                  style={{ position: 'fixed', inset: 0, zIndex: 9998, touchAction: 'none' }}
+                  className="bg-black/10"
+                  onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); closeCreateDropdown(); }}
+                  onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); closeCreateDropdown(); }}
+                />
+                {(() => {
+                  const dropdownWidth = 20 * 16; // w-80 => 20rem => 320px
+                  const headerBtnRect = document.querySelector('button[aria-label="Aggiungi"]')?.getBoundingClientRect();
+                  const pointer = lastBgPointerRef.current;
+                  // Default: ancorato al bottone Aggiungi (desktop) o header (PWA)
+                  let left = headerBtnRect ? Math.max(8, headerBtnRect.right - dropdownWidth) : (createPosition?.left ?? -9999);
+                  let top = headerBtnRect ? headerBtnRect.bottom + 8 : (createPosition?.top ?? -9999);
+
+                  // Se apertura da sfondo in PWA, usa coordinate del long‑press
+                  if (isStandaloneMobile && createMenuOrigin === 'background' && pointer) {
+                    left = Math.max(8, Math.min(window.innerWidth - dropdownWidth - 8, pointer.x - dropdownWidth / 2));
+                    top = Math.max(8, pointer.y + 10);
+                  }
+
+                  const rect = createTriggerRef.current?.getBoundingClientRect();
+                  const placement = rect && createPosition ? (createPosition.top >= rect.bottom ? 'bottom' : 'top') : 'bottom';
+                  return (
+                    <div
+                      ref={createDropdownRef}
+                      className="dropdown-menu w-80 max-h-[75vh] overflow-y-auto bg-white/95 backdrop-blur-md border border-gray-200 shadow-lg rounded-xl p-3 relative"
+                      style={{ position: 'fixed', left, top, visibility: 'visible', zIndex: 9999 }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {placement === 'bottom' ? (
+                        <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderBottom: '6px solid rgba(255,255,255,0.95)' }} />
+                      ) : (
+                        <div style={{ position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid rgba(255,255,255,0.95)' }} />
+                      )}
+                      <CreateDropdownPanel
+                        type={createType}
+                        onTypeChange={setCreateType}
+                        onClose={closeCreateDropdown}
+                        onCreate={(t, n, i, c, v) => {
+                          createNewItem(t, n, i, c, v);
+                          closeCreateDropdown();
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
+              </Portal>
+            )}
+
+            {/* Pulsante Aggiungi (nascosto in PWA standalone) */}
+            {!isStandaloneMobile && (
+              <button
+                ref={createTriggerRef}
+                onClick={() => { closeToolbarDropdown(); setCreateMenuOrigin('header'); toggleCreateDropdown(); }}
+                className="flex items-center space-x-2 bg-red-600/90 hover:bg-red-600 text-white p-1.5 rounded-2xl shadow-sm backdrop-blur-sm ring-1 ring-red-300/40 transition-all duration-300 ease-in-out hover:shadow-md active:scale-[0.98] flex-shrink-0"
+                title="Aggiungi"
+                aria-label="Aggiungi"
+              >
+                <Plus size={16} />
+                <span className="hidden sm:inline">Aggiungi</span>
+              </button>
+            )}
+          </div>
+        </div>
         
         {/* Breadcrumb: inline su desktop, in Portal dentro header su PWA */}
         {isStandaloneMobile ? (
           <Portal containerId="pwa-folder-breadcrumb">
-            <div className="flex items-center justify-between">
+            <div className="relative w-full flex items-center justify-between">
               {/* Breadcrumb con pulsante indietro */}
               <div className="flex items-center space-x-3 min-w-0 flex-1">
                 {/* Pulsante freccia indietro */}
@@ -2078,7 +2275,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                 <div className="min-w-0 flex-1">
                   <nav
                     ref={breadcrumbNavRef}
-                    className="flex items-center space-x-2 text-sm overflow-x-auto overflow-y-visible no-scrollbar py-1 px-2 cursor-grab active:cursor-grabbing select-none"
+                    className="flex items-center space-x-2 text-sm overflow-x-auto overflow-y-visible no-scrollbar py-1 cursor-grab active:cursor-grabbing select-none"
                     style={{ touchAction: 'pan-x' }}
                     onMouseDown={onBreadcrumbMouseDown}
                     onMouseMove={onBreadcrumbMouseMove}
@@ -2138,7 +2335,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
               <div className="min-w-0 flex-1">
                 <nav
                   ref={breadcrumbNavRef}
-                  className="flex items-center space-x-2 text-sm overflow-x-auto overflow-y-visible no-scrollbar py-1 px-2 cursor-grab active:cursor-grabbing select-none"
+                  className="flex items-center space-x-2 text-sm overflow-x-auto overflow-y-visible no-scrollbar py-1 cursor-grab active:cursor-grabbing select-none"
                   style={{ touchAction: 'pan-x' }}
                   onMouseDown={onBreadcrumbMouseDown}
                   onMouseMove={onBreadcrumbMouseMove}
@@ -2235,7 +2432,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Cartella vuota</h3>
                     <p className="text-gray-500 mb-4">Inizia creando una nuova cartella o scheda di allenamento.</p>
                     <button
-                      onClick={() => setShowCreateModal(true)}
+                      onClick={() => { closeToolbarDropdown(); toggleCreateDropdown(); }}
                       className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
                     >
                       Crea il primo elemento
@@ -2333,6 +2530,136 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           onDelete={handleDelete}
         />
       )}
+    </div>
+  );
+};
+
+// Pannello dropdown per creare nuovi elementi (menu dedicato "Crea")
+interface CreateDropdownPanelProps {
+  onClose: () => void;
+  onCreate: (type: 'folder' | 'workout', name: string, icon?: string, color?: string, variants?: WorkoutVariant[]) => void;
+  type: 'folder' | 'workout';
+  onTypeChange: (type: 'folder' | 'workout') => void;
+}
+
+const CreateDropdownPanel: React.FC<CreateDropdownPanelProps> = ({ onClose, onCreate, type, onTypeChange }) => {
+  const [name, setName] = useState('');
+  const [selectedIcon, setSelectedIcon] = useState('Folder');
+  const [selectedColor, setSelectedColor] = useState(type === 'folder' ? '#EF4444' : '#3B82F6');
+  const [workoutVariants, setWorkoutVariants] = useState<WorkoutVariant[]>([]);
+  // Personalizzazione inline dentro il pannello
+  const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
+
+  useEffect(() => {
+    setSelectedColor(type === 'folder' ? '#EF4444' : '#3B82F6');
+  }, [type]);
+
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const finalName = name.trim() || (type === 'workout' ? 'Nuova scheda' : 'Nuova Cartella');
+    onCreate(
+      type,
+      finalName,
+      type === 'folder' ? selectedIcon : undefined,
+      selectedColor,
+      type === 'workout' ? workoutVariants : undefined
+    );
+    setName('');
+    setSelectedIcon('Folder');
+    setSelectedColor(type === 'folder' ? '#EF4444' : '#3B82F6');
+    setWorkoutVariants([]);
+    setIsCustomizationOpen(false);
+  };
+
+  // Nessun click-esterno: la personalizzazione resta inline nel pannello
+
+  return (
+    <div className="w-full">
+      {/* Selezione tipo */}
+      <div className="px-4 py-2">
+        <p className="text-sm font-medium text-gray-700 mb-2">Crea</p>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => onTypeChange('folder')}
+            className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+              type === 'folder' ? 'bg-red-100/80 text-red-600 ring-1 ring-red-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
+            }`}
+          >
+            <Folder size={16} />
+            <span className="text-sm">Cartella</span>
+          </button>
+          <button
+            onClick={() => onTypeChange('workout')}
+            className={`flex-1 p-2 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 ${
+              type === 'workout' ? 'bg-blue-100/80 text-blue-600 ring-1 ring-blue-200 shadow-sm' : 'bg-white/60 hover:bg-white/80 ring-1 ring-black/10 shadow-sm'
+            }`}
+          >
+            <FileText size={16} />
+            <span className="text-sm">Scheda</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Form nome e personalizzazione */}
+      <form onSubmit={handleSubmit} className="px-4 py-2 space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Nome {type === 'folder' ? 'cartella' : 'scheda'}</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+            placeholder={`Inserisci il nome della ${type === 'folder' ? 'cartella' : 'scheda'}...`}
+          />
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setIsCustomizationOpen(!isCustomizationOpen)}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg bg-white/60 hover:bg-white/80 ring-1 ring-black/10 text-gray-800"
+            aria-label="Personalizzazione"
+            aria-expanded={isCustomizationOpen}
+          >
+            <span className="inline-flex items-center gap-1">
+              <Palette size={14} />
+              Personalizzazione
+            </span>
+            <ChevronDown size={12} className={`transition-transform ${isCustomizationOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {isCustomizationOpen && (
+            <div
+              className="mt-2 w-full max-h-[60vh] overflow-y-auto overscroll-contain bg-white border border-gray-200 shadow rounded-xl p-4 text-sm text-gray-900"
+            >
+              <CustomizationPanel
+                mode={type}
+                selectedIcon={selectedIcon}
+                selectedColor={selectedColor}
+                onIconChange={setSelectedIcon}
+                onColorChange={setSelectedColor}
+                titlePreview={name}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="flex space-x-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2 px-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+          >
+            Annulla
+          </button>
+          <button
+            type="submit"
+            className="flex-1 py-2 px-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+          >
+            Crea
+          </button>
+        </div>
+      </form>
     </div>
   );
 };

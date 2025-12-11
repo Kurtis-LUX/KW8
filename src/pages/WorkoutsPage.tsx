@@ -5,6 +5,7 @@ import { isFirestoreEnabled } from '../utils/database';
 import firestoreService from '../services/firestoreService';
 // Rileva modalità standalone PWA su mobile (senza dipendenze esterne)
 import ProgramCard, { ProgramItem } from '../components/ProgramCard';
+import { ChevronLeft } from 'lucide-react';
 
 interface WorkoutsPageProps {
   onNavigate: (page: string, plan?: string) => void;
@@ -165,7 +166,9 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
         currentPage={'workouts'}
       />
 
-      <div style={{ paddingTop: isStandaloneMobile ? headerHeight : 80 }}>
+      {/* (Rimosso) Titolo pagina desktop "Le tue schede" e tasto indietro */}
+
+      <div style={{ paddingTop: isStandaloneMobile ? headerHeight : 0 }}>
         <div className="w-full px-4 sm:px-6 lg:px-8 py-5">
           {assignedPrograms.length === 0 ? (
             <div className="max-w-xl mx-auto bg-white rounded-xl shadow-sm ring-1 ring-black/10 p-6 text-center">

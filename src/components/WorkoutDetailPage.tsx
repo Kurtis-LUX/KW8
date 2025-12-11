@@ -52,6 +52,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   // Stato di caricamento per evitare auto-save durante l'inizializzazione
   const [isLoadingWorkout, setIsLoadingWorkout] = useState<boolean>(true);
+  const [headerHeight, setHeaderHeight] = useState<number>(0);
   
   // Refs
   const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
@@ -96,6 +97,25 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 
     return { allowedVariantIds: set, canSeeOriginal: originalAllowed };
   }, [athletes, currentUser?.id, currentUser?.email, currentUser?.workoutPlans, workoutPlans, workoutId]);
+
+  // Misura l'altezza dell'header per posizionare correttamente il titolo desktop
+  useEffect(() => {
+    const headerEl = document.querySelector('header');
+    if (!headerEl) return;
+    const update = () => setHeaderHeight(headerEl.getBoundingClientRect().height);
+    update();
+    const ro = new ResizeObserver(() => update());
+    ro.observe(headerEl);
+    const mo = new MutationObserver(() => update());
+    mo.observe(headerEl, { childList: true, subtree: true });
+    const onOrientation = () => update();
+    window.addEventListener('orientationchange', onOrientation);
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+      window.removeEventListener('orientationchange', onOrientation);
+    };
+  }, []);
   
   
   // Durata scheda (sincronizzata automaticamente con il numero di settimane)
@@ -3731,6 +3751,7 @@ useEffect(() => {
   
   return (
     <div className="bg-gray-100 min-h-screen">
+      {/* (Rimosso) Titolo pagina desktop e tasto indietro sopra la toolbar */}
       {/* Notifica stile Apple (pill) */}
       {saveMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50" role="status" aria-live="polite">
@@ -3741,6 +3762,460 @@ useEffect(() => {
         </div>
       )}
       {/* Barra di navigazione varianti spostata sotto il titolo della scheda */}
+      {canEdit && !isStandaloneMobile && (
+        <div className="w-full px-4 sm:px-6 lg:px-8 mb-4 sm:mb-6">
+          <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full">
+            <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-2 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+              {/* Varianti dropdown */}
+              <div className="relative">
+                <button
+                  ref={variantsDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleVariantsDropdown(e)}
+                  title="Varianti"
+                  aria-label="Varianti"
+                  className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(28px, 6vw, 32px)', height: 'clamp(28px, 6vw, 32px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                >
+                  {activeVariantId === 'original' ? (
+                    <>
+                      <FileText size={18} className="text-blue-600" />
+                      <Star size={10} className="absolute -top-0.5 -right-0.5 text-blue-600" />
+                    </>
+                  ) : (
+                    <>
+                      <FileText size={18} className="text-red-600" />
+                      {(() => { const idx = displayVariants.findIndex(v => v.id === activeVariantId); return idx >= 0 ? (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-red-600">{idx + 1}</span>) : null; })()}
+                    </>
+                  )}
+                </button>
+                {isVariantsDropdownOpen && (
+                  <Portal>
+                    <div
+                      ref={variantsDropdownRef as React.RefObject<HTMLDivElement>}
+                      style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? 0, left: variantsDropdownPosition?.left ?? 0 }}
+                      className="z-50 w-64 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                    >
+                      <div className="mb-1 px-2 text-xs text-gray-500">Seleziona scheda</div>
+                      <div className="space-y-1">
+                        {/* Originale */}
+                        {(!isAthlete || canSeeOriginal) && (
+                          <button
+                            onClick={() => { handleSwitchVariant('original'); closeVariantsDropdown(); }}
+                            onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId('original'); }}
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              if (!canEdit) return;
+                              variantLongPressTriggeredRef.current = false;
+                              variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                              const anchor = e.currentTarget as HTMLElement;
+                              if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current);
+                              variantLongPressTimeoutRef.current = window.setTimeout(() => {
+                                variantLongPressTriggeredRef.current = true;
+                                computeAndSetVariantMenuPosition(anchor);
+                                setOpenVariantMenuId('original');
+                              }, VARIANT_LONG_PRESS_MS);
+                            }}
+                            onPointerUp={() => { if (!canEdit) return; if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }}
+                            onPointerMove={(e) => {
+                              if (!canEdit) return;
+                              const startPos = variantPressStartPosRef.current; if (!startPos) return;
+                              const dx = Math.abs(e.clientX - startPos.x); const dy = Math.abs(e.clientY - startPos.y);
+                              if (dx > 6 || dy > 6) { if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeVariantId === 'original' ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                            title={`Scheda: ${workoutTitle}`}
+                          >
+                            <FileText size={16} className={activeVariantId === 'original' ? 'text-blue-700' : 'text-gray-600'} />
+                            <span>{workoutTitle}</span>
+                          </button>
+                        )}
+                        {/* Varianti */}
+                        {displayVariants.map((variant, index) => (
+                          <button
+                            key={variant.id}
+                            onClick={() => { handleSwitchVariant(variant.id); closeVariantsDropdown(); }}
+                            onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetVariantMenuPosition(e.currentTarget as HTMLElement); setOpenVariantMenuId(variant.id); }}
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              if (!canEdit) return;
+                              variantLongPressTriggeredRef.current = false;
+                              variantPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                              const anchor = e.currentTarget as HTMLElement;
+                              if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current);
+                              variantLongPressTimeoutRef.current = window.setTimeout(() => {
+                                variantLongPressTriggeredRef.current = true;
+                                computeAndSetVariantMenuPosition(anchor);
+                                setOpenVariantMenuId(variant.id);
+                              }, VARIANT_LONG_PRESS_MS);
+                            }}
+                            onPointerUp={() => { if (!canEdit) return; if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }}
+                            onPointerMove={(e) => {
+                              if (!canEdit) return;
+                              const startPos = variantPressStartPosRef.current; if (!startPos) return;
+                              const dx = Math.abs(e.clientX - startPos.x); const dy = Math.abs(e.clientY - startPos.y);
+                              if (dx > 6 || dy > 6) { if (variantLongPressTimeoutRef.current) clearTimeout(variantLongPressTimeoutRef.current); variantLongPressTriggeredRef.current = false; }
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeVariantId === variant.id ? 'bg-red-50 text-red-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                            title={`Variante ${index + 1}: ${variant.name || 'Senza titolo'}`}
+                          >
+                            <FileText size={16} className={activeVariantId === variant.id ? 'text-red-700' : 'text-red-600'} />
+                            <span>Variante {index + 1}{variant.name ? ` — ${variant.name}` : ''}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {canEdit && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => { handleAddVariant(); }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            title="Crea nuova variante"
+                          >
+                            <Plus size={16} className="text-red-600" />
+                            <span>Nuova variante</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </Portal>
+                )}
+              </div>
+              {/* Separatore Apple dopo Varianti */}
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
+
+              {/* Settimane dropdown */}
+              <div className="relative">
+                <button
+                  ref={weeksDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleWeeksDropdown(e)}
+                  title="Settimane"
+                  aria-label="Settimane"
+                  className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(28px, 6vw, 32px)', height: 'clamp(28px, 6vw, 32px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                >
+                  <Calendar size={18} className="text-cyan-600" />
+                  <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{parseInt(activeWeekKey.replace('W',''), 10)}</span>
+                </button>
+                {isWeeksDropdownOpen && (
+                  <Portal>
+                    <div
+                      ref={weeksDropdownRef as React.RefObject<HTMLDivElement>}
+                      style={{ position: 'fixed', top: weeksDropdownPosition?.top ?? 0, left: weeksDropdownPosition?.left ?? 0 }}
+                      className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                    >
+                      <div className="mb-1 px-2 text-xs text-gray-500">Seleziona settimana</div>
+                      <div className="space-y-1">
+                        {weeks.slice().sort((a, b) => {
+                          const na = parseInt(a.replace(/^W/, ''), 10);
+                          const nb = parseInt(b.replace(/^W/, ''), 10);
+                          return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                        }).map((wk) => (
+                          <button
+                            key={wk}
+                            onClick={() => { if (weekLongPressTriggeredRef.current) return; handleSwitchWeek(wk); closeWeeksDropdown(); }}
+                            onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetWeekMenuPosition(e.currentTarget as HTMLElement); setOpenWeekKeyMenu(wk); }}
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              if (!canEdit) return;
+                              weekLongPressTriggeredRef.current = false;
+                              weekPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                              const anchor = e.currentTarget as HTMLElement;
+                              if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current);
+                              weekLongPressTimeoutRef.current = window.setTimeout(() => {
+                                weekLongPressTriggeredRef.current = true;
+                                computeAndSetWeekMenuPosition(anchor);
+                                setOpenWeekKeyMenu(wk);
+                              }, VARIANT_LONG_PRESS_MS);
+                            }}
+                            onPointerUp={() => { if (!canEdit) return; if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current); weekLongPressTriggeredRef.current = false; }}
+                            onPointerMove={(e) => {
+                              if (!canEdit) return;
+                              const start = weekPressStartPosRef.current; if (!start) return;
+                              const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                              if (dx > 6 || dy > 6) { if (weekLongPressTimeoutRef.current) clearTimeout(weekLongPressTimeoutRef.current); weekLongPressTriggeredRef.current = false; }
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeWeekKey === wk ? 'bg-cyan-50 text-cyan-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                            title={`Settimana ${parseInt(wk.replace('W',''), 10)}`}
+                          >
+                            <Calendar size={16} className={activeWeekKey === wk ? 'text-cyan-700' : 'text-gray-600'} />
+                            <span>Settimana {parseInt(wk.replace('W',''), 10)}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {canEdit && weeks.length < 12 && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => { handleAddWeek(); }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            title="Aggiungi settimana"
+                          >
+                            <Plus size={16} className="text-cyan-600" />
+                            <span>Aggiungi settimana</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </Portal>
+                )}
+              </div>
+              {/* Separatore Apple dopo Settimane */}
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
+
+              {/* Giorni dropdown */}
+              <div className="relative">
+                <button
+                  ref={daysDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleDaysDropdown(e)}
+                  title="Allenamenti"
+                  aria-label="Allenamenti"
+                  className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(28px, 6vw, 32px)', height: 'clamp(28px, 6vw, 32px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                >
+                  <Dumbbell size={18} className="text-orange-500" />
+                  {(() => { const n = parseInt(String(activeDayKey).replace(/^G/, ''), 10); return isNaN(n) ? null : (<span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{n}</span>); })()}
+                </button>
+                {isDaysDropdownOpen && (
+                  <Portal>
+                    <div
+                      ref={daysDropdownRef as React.RefObject<HTMLDivElement>}
+                      style={{ position: 'fixed', top: daysDropdownPosition?.top ?? 0, left: daysDropdownPosition?.left ?? 0 }}
+                      className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
+                    >
+                      <div className="mb-1 px-2 text-xs text-gray-500">Seleziona allenamento</div>
+                      <div className="space-y-1">
+                        {(() => {
+                          const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                          const sorted = (keys.length ? keys : ['G1']).slice().sort((a, b) => {
+                            const na = parseInt(String(a).replace(/^G/, ''), 10);
+                            const nb = parseInt(String(b).replace(/^G/, ''), 10);
+                            return (isNaN(na) ? 0 : na) - (isNaN(nb) ? 0 : nb);
+                          });
+                          return sorted.map((dk) => {
+                            const label = getDayDisplayName(dk);
+                              return (
+                                <button
+                                  key={dk}
+                                  onClick={() => { if (dayLongPressTriggeredRef.current) return; handleSwitchDay(dk); closeDaysDropdown(); }}
+                                  onContextMenu={(e) => { e.preventDefault(); if (!canEdit) return; computeAndSetDayMenuPosition(e.currentTarget as HTMLElement); setOpenDayKeyMenu(dk); }}
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    if (!canEdit) return;
+                                    dayLongPressTriggeredRef.current = false;
+                                    dayPressStartPosRef.current = { x: e.clientX, y: e.clientY };
+                                    const anchor = e.currentTarget as HTMLElement;
+                                    if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current);
+                                    dayLongPressTimeoutRef.current = window.setTimeout(() => {
+                                      dayLongPressTriggeredRef.current = true;
+                                      computeAndSetDayMenuPosition(anchor);
+                                      setOpenDayKeyMenu(dk);
+                                    }, VARIANT_LONG_PRESS_MS);
+                                  }}
+                                  onPointerUp={() => { if (!canEdit) return; if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current); dayLongPressTriggeredRef.current = false; }}
+                                  onPointerMove={(e) => {
+                                    if (!canEdit) return;
+                                    const start = dayPressStartPosRef.current; if (!start) return;
+                                    const dx = Math.abs(e.clientX - start.x); const dy = Math.abs(e.clientY - start.y);
+                                    if (dx > 6 || dy > 6) { if (dayLongPressTimeoutRef.current) clearTimeout(dayLongPressTimeoutRef.current); dayLongPressTriggeredRef.current = false; }
+                                  }}
+                                  className={`w-full text-left px-3 py-1.5 text-sm rounded-lg ${activeDayKey === dk ? 'bg-orange-50 text-orange-700' : 'hover:bg-gray-50 text-gray-800'} flex items-center gap-2`}
+                                  title={label}
+                                >
+                                  <Dumbbell size={16} className={activeDayKey === dk ? 'text-orange-700' : 'text-orange-500'} />
+                                  <span>{label}</span>
+                                </button>
+                              );
+                          });
+                        })()}
+                      </div>
+                      {canEdit && (() => {
+                        const keys = activeVariantId === 'original' ? Object.keys(originalDays) : Object.keys(variantDaysById[activeVariantId] || {});
+                        const count = keys.length > 0 ? keys.length : 1;
+                        return count < 10;
+                      })() && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => { handleAddDay(); }}
+                            className="w-full text-left px-3 py-1.5 text-sm rounded-lg bg-white hover:bg-gray-50 text-gray-800 flex items-center gap-2"
+                            title="Aggiungi allenamento"
+                          >
+                            <Plus size={16} className="text-orange-600" />
+                            <span>Aggiungi allenamento</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </Portal>
+                )}
+              </div>
+              {/* Separatore Apple dopo Allenamenti */}
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
+
+              {/* Create Exercise */}
+              <button
+                onClick={() => {
+                  if (showExerciseForm) {
+                    setShowExerciseForm(false);
+                    setEditingExerciseId(null);
+                    setEditingExercise(null);
+                    setCurrentExercise({
+                      id: '',
+                      name: '',
+                      notes: '',
+                      sets: '',
+                      intensity: '',
+                      tut: '',
+                      recovery: '',
+                      videoLink: ''
+                    });
+                    setCurrentSets('');
+                    setCurrentReps('');
+                    setEditingSets('');
+                    setEditingReps('');
+                  } else {
+                    setShowExerciseForm(true);
+                  }
+                }}
+                title="Crea"
+                aria-label="Crea"
+                className="bg-white rounded-md flex items-center justify-center cursor-pointer transition hover:bg-gray-50 shrink-0"
+                style={{ width: 'clamp(32px, 7vw, 36px)', height: 'clamp(32px, 7vw, 36px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+              >
+                <Plus size={18} className="text-green-600" />
+              </button>
+              {/* Separatore Apple dopo Crea */}
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
+
+              {/* Tags button */}
+              <div className="relative">
+                <button
+                  ref={tagsTriggerRef as React.RefObject<HTMLButtonElement>}
+                  onClick={(e) => toggleTagsMenu(e)}
+                  title="Tag"
+                  aria-label="Tag"
+                  className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
+                  style={{ width: 'clamp(26px, 6vw, 30px)', height: 'clamp(26px, 6vw, 30px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+                >
+                  <Tag size={18} className="text-purple-600" />
+                </button>
+                {isTagsMenuOpen && (
+                  <Portal>
+                    <div
+                      ref={tagsDropdownRef as React.RefObject<HTMLDivElement>}
+                      style={{ position: 'fixed', top: tagsMenuPosition?.top ?? 0, left: tagsMenuPosition?.left ?? 0 }}
+                      className="z-50 w-80 max-w-[85vw] bg-white/70 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-3"
+                    >
+                      <div className="mb-2">
+                        <label className="block text-xs text-gray-600 mb-1">Cerca o aggiungi tag (max 10)</label>
+                        <div className="relative flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              value={newTag}
+                              onChange={(e) => { setNewTag(e.target.value); setShowGymTagsList(false); }}
+                              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddTag() } }}
+                              className="w-full pl-8 pr-7 py-1.5 border border-white/30 rounded-full text-xs bg-white/60 backdrop-blur-sm shadow-inner focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all duration-200"
+                              placeholder="Es. forza, mobilità"
+                              maxLength={20}
+                              onFocus={() => setShowTagsDropdown(false)}
+                            />
+                            {newTag.trim() && tags.includes(newTag.trim()) && (
+                              <p className="mt-1 text-xs text-green-600">Questo tag è già stato aggiunto</p>
+                            )}
+                            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                            {newTag && (
+                              <button
+                                type="button"
+                                aria-label="Pulisci"
+                                onClick={() => setNewTag('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              >
+                                <X size={14} />
+                              </button>
+                            )}
+                          </div>
+                          <div className="relative" ref={gymTagsGroupRef}>
+                            <button
+                              type="button"
+                              onClick={() => setShowGymTagsList(!showGymTagsList)}
+                              className="flex items-center justify-between text-xs text-gray-700 bg-white/50 backdrop-blur-sm ring-1 ring-white/30 rounded-full px-2.5 py-1.5 shadow-sm hover:bg-white/60 hover:shadow-md hover:text-purple-700 transition-all duration-200"
+                            >
+                              {showGymTagsList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                            </button>
+                            {showGymTagsList && (
+                              <div className="absolute top-full right-0 z-50 mt-1 bg-white/60 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl ring-1 ring-white/20 w-44 max-h-40 overflow-auto transition-all duration-200">
+                                {PREDEFINED_GYM_TAGS.map((t) => (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => handleToggleTag(t)}
+                                    className={`w-full text-left px-3 py-1.5 rounded-full transition-all duration-150 text-xs ${tags.includes(t) ? 'bg-white/70 text-purple-700 hover:bg-white/80' : 'hover:bg-white/70 hover:text-purple-700'}`}
+                                  >
+                                    <span>{t}</span>
+                                    {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleAddTag()}
+                            className="text-xs bg-gradient-to-b from-purple-600 to-purple-700 text:white px-2.5 py-1.5 rounded-full shadow-md hover:from-purple-600 hover:to-purple-800 transition-all duration-200 disabled:opacity-50"
+                            disabled={!newTag.trim() || tags.includes(newTag.trim()) || tags.length >= 10}
+                            title="Aggiungi tag"
+                            aria-label="Aggiungi tag"
+                          >
+                            +
+                          </button>
+                        </div>
+                        {(() => {
+                          const ALL_TAGS = Array.from(new Set([...PREDEFINED_GYM_TAGS, ...tags]));
+                          const queryActive = newTag.trim().length > 0;
+                          if (!queryActive) return null;
+                          const filtered = ALL_TAGS.filter(t => t.toLowerCase().includes(newTag.toLowerCase())).slice(0, 10);
+                          return (
+                            <div className="mt-2 bg:white/60 backdrop-blur-sm border border-white/30 ring-1 ring-white/20 rounded-2xl h-[120px] overflow-auto transition-all duration-200">
+                              {filtered.length > 0 ? (
+                                filtered.map(t => (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => handleToggleTag(t)}
+                                    className={`w-full text-left px-3 py-1.5 text-xs rounded-full transition-all duration-150 ${tags.includes(t) ? 'bg-white/70 text-purple-700 flex justify-between hover:bg-white/80' : 'hover:bg-white/70 hover:text-purple-700'}`}
+                                  >
+                                    <span>{t}</span>
+                                    {tags.includes(t) && <span className="ml-2 text-[11px] text-green-600">Già aggiunto</span>}
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-xs text-gray-400">Nessun risultato</div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </Portal>
+                )}
+              </div>
+              {/* Separatore Apple dopo Tag */}
+              <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
+
+              {/* Associa atleti */}
+              <button
+                ref={associateDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                onClick={(e) => toggleAssociateDropdown(e)}
+                title="Associa"
+                aria-label="Associa"
+                className="relative bg-transparent rounded-md w-9 h-9 flex items-center justify-center cursor-pointer transition shrink-0"
+                style={{ userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
+              >
+                <Users size={18} className="text-indigo-600" />
+                <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{associatedAthletesCount}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sezione giorni verrà posizionata dentro il contenitore, sopra "Esercizi" */}
 
@@ -3751,7 +4226,7 @@ useEffect(() => {
         
         {/* Header Row: su telefono la toolbar va sotto il tasto Indietro (non modificare PWA) */}
         <div className={`flex flex-col ${isStandaloneMobile ? 'items-start gap-2 mb-0' : 'items-center gap-2 mb-4 sm:mb-6'}`}>
-          <div className="min-w-0 flex justify-center items-center">
+          <div className="min-w-0 flex justify-center items-center hidden">
             {canEdit && !isStandaloneMobile && (
               <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full">
                 <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-2 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
@@ -4405,7 +4880,7 @@ useEffect(() => {
           </div>
           )}
         </div>
-        <div className="hidden sm:flex justify-end items-center">
+        <div className="hidden">
             {/* Placeholder invisibile per bilanciare la centratura */}
             <div className="p-2 opacity-0 pointer-events-none">
               <ChevronLeft size={20} />
@@ -4413,11 +4888,11 @@ useEffect(() => {
           </div>
         </div>
 
-        {isStandaloneMobile && canEdit && (
+        {isStandaloneMobile && (
           <Portal containerId="pwa-workout-toolbar">
             <div className="w-full flex justify-center max-w-full">
               <div className="max-w-4xl w-full mx-auto">
-                <div className="flex flex-nowrap whitespace-nowrap items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+                <div className="flex flex-nowrap whitespace-nowrap items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-[28px] shadow-sm">
                 {/* Varianti trigger */}
                 <div className="relative">
                   <button
