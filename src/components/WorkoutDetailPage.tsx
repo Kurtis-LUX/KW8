@@ -3750,8 +3750,8 @@ useEffect(() => {
   };
   
   return (
-    <div className="bg-gray-100 min-h-screen">
-      {/* (Rimosso) Titolo pagina desktop e tasto indietro sopra la toolbar */}
+        <div className="bg-gray-100 min-h-screen" style={{ paddingTop: isStandaloneMobile ? headerOffsetTop : undefined }}>
+      {/* Titolo pagina interno rimosso su desktop per evitare duplicazioni con il titolo in header */}
       {/* Notifica stile Apple (pill) */}
       {saveMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50" role="status" aria-live="polite">
@@ -3763,9 +3763,9 @@ useEffect(() => {
       )}
       {/* Barra di navigazione varianti spostata sotto il titolo della scheda */}
       {canEdit && !isStandaloneMobile && (
-        <div className="w-full px-4 sm:px-6 lg:px-8 mb-4 sm:mb-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 mb-2">
           <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full">
-            <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-2 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+            <div className="mx-auto w-fit inline-flex flex-nowrap whitespace-nowrap justify-center items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-[28px] shadow-sm">
               {/* Varianti dropdown */}
               <div className="relative">
                 <button
@@ -4889,16 +4889,17 @@ useEffect(() => {
         </div>
 
         {isStandaloneMobile && (
-          <Portal containerId="pwa-workout-toolbar">
-            <div className="w-full flex justify-center max-w-full">
-              <div className="max-w-4xl w-full mx-auto">
-                <div className="flex flex-nowrap whitespace-nowrap items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-[28px] shadow-sm">
+          <Portal containerId="pwa-workout-toolbar-mini" createIfMissing={false}>
+            <div className="w-full flex justify-center">
+              <div className="max-w-4xl mx-auto">
+                {/* Toolbar PWA completa: Varianti, Settimane, Allenamenti, Crea, Tag, Associa */}
+                <div className="mx-auto w-fit inline-flex flex-nowrap justify-center whitespace-nowrap items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-[28px] shadow-sm">
                 {/* Varianti trigger */}
-                <div className="relative">
-                  <button
-                    ref={variantsDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
-                    onClick={(e) => toggleVariantsDropdown(e)}
-                    title="Varianti"
+                  <div className="relative">
+                    <button
+                      ref={variantsDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                      onClick={(e) => toggleVariantsDropdown(e)}
+                      title="Varianti"
                     aria-label="Varianti"
                     className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
                   style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
@@ -4951,73 +4952,11 @@ useEffect(() => {
                   </button>
                 </div>
 
-                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
+                
 
-                {/* Crea esercizio */}
-                <button
-                  onClick={() => {
-                    if (showExerciseForm) {
-                      setShowExerciseForm(false);
-                      setEditingExerciseId(null);
-                      setEditingExercise(null);
-                      setCurrentExercise({
-                        id: '',
-                        name: '',
-                        notes: '',
-                        sets: '',
-                        intensity: '',
-                        tut: '',
-                        recovery: '',
-                        videoLink: ''
-                      });
-                      setCurrentSets('');
-                      setCurrentReps('');
-                      setEditingSets('');
-                      setEditingReps('');
-                    } else {
-                      setShowExerciseForm(true);
-                    }
-                  }}
-                  title="Crea"
-                  aria-label="Crea"
-                  className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
-                >
-                  <Plus size={16} className="text-green-600" />
-                </button>
+                
 
-                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
-
-                {/* Tag trigger */}
-                <div className="relative">
-                  <button
-                    ref={tagsTriggerRef as React.RefObject<HTMLButtonElement>}
-                    onClick={(e) => toggleTagsMenu(e)}
-                    title="Tag"
-                    aria-label="Tag"
-                    className="bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
-                  >
-                    <Tag size={16} className="text-purple-600" />
-                  </button>
-                </div>
-
-                {/* Separatore Apple */}
-                <div aria-hidden="true" className="mx-1 h-4 w-px bg-gray-300/80 rounded-full" />
-                {/* Stato scheda rimosso */}
-
-                {/* Associa atleti */}
-                <button
-                  ref={associateDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
-                  onClick={(e) => toggleAssociateDropdown(e)}
-                  title="Associa"
-                  aria-label="Associa"
-                  className="relative bg-transparent rounded-md flex items-center justify-center cursor-pointer transition shrink-0"
-                  style={{ width: 'clamp(34px, 7.5vw, 40px)', height: 'clamp(34px, 7.5vw, 40px)', userSelect: 'none' as any, WebkitUserSelect: 'none' as any, WebkitTouchCallout: 'none' as any }}
-                >
-                  <Users size={16} className="text-indigo-600" />
-                  <span className="absolute -top-0.5 -right-0.5 text-[10px] leading-none text-gray-700">{associatedAthletesCount}</span>
-                </button>
+                
               </div>
             </div>
             {/* Dropdown PWA: Varianti */}
@@ -5636,6 +5575,88 @@ useEffect(() => {
             </div>
           </Portal>
         )}
+
+        {/* Titolo della scheda sotto la toolbar (solo PWA mobile) */}
+        {isStandaloneMobile && (
+          isEditingTitle && canEdit ? (
+            <div className="relative w-full -mt-2">
+              <input
+                ref={titleInputRef}
+                type="text"
+                value={activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+                onChange={(e) => {
+                  const newTitle = e.target.value;
+                  if (activeVariantId === 'original') {
+                    setWorkoutTitle(newTitle);
+                  } else {
+                    setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: newTitle } : v));
+                  }
+                }}
+                onBlur={handleSaveTitle}
+                onKeyPress={(e) => e.key === 'Enter' && handleSaveTitle()}
+                className={`w-full text-2xl font-bold border-b-2 ${activeVariantId === 'original' ? 'border-blue-500 text-navy-900' : 'border-red-500 text-red-700'} bg-transparent outline-none text-center`}
+              />
+              {(() => {
+                const timeRegex = /\b(\d{1,2}:\d{2}|\d+\s*(min|minuti|m|sec|secondi|s|h|ore))\b/i;
+                const currentTitle = activeVariantId === 'original' ? (workoutTitle || '') : ((variants.find(v => v.id === activeVariantId)?.name) || '');
+                const hasTime = timeRegex.test(currentTitle);
+                if (!hasTime) return null;
+                return (
+                  <button
+                    type="button"
+                    aria-label="Cancella contenuto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (activeVariantId === 'original') {
+                        setWorkoutTitle('');
+                      } else {
+                        setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: '' } : v));
+                      }
+                      setTimeout(() => { try { handleSaveTitle(); } catch {} }, 0);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-white/70 text-red-600 hover:bg-white hover:shadow-sm"
+                  >
+                    <X size={14} />
+                  </button>
+                );
+              })()}
+            </div>
+          ) : (
+            <div className="relative w-full flex justify-center -mt-2">
+              <h1
+                className={`text-2xl font-bold ${canEdit ? 'cursor-pointer' : 'cursor-default'} transition-colors truncate text-center ${activeVariantId === 'original' ? 'text-navy-900 hover:text-navy-800' : 'text-red-700 hover:text-red-800'}`}
+                onClick={() => { if (!canEdit) return; setIsEditingTitle(true); setTimeout(() => { if (titleInputRef.current) { const input = titleInputRef.current; try { const len = input.value.length; input.setSelectionRange(len, len); } catch {} input.focus(); } }, 0); }}
+                title={canEdit ? "Clicca per modificare il titolo" : "Solo visualizzazione"}
+              >
+                {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+              </h1>
+              {(() => {
+                const timeRegex = /\b(\d{1,2}:\d{2}|\d+\s*(min|minuti|m|sec|secondi|s|h|ore))\b/i;
+                const currentTitle = activeVariantId === 'original' ? (workoutTitle || '') : ((variants.find(v => v.id === activeVariantId)?.name) || '');
+                const hasTime = timeRegex.test(currentTitle);
+                if (!hasTime || !canEdit) return null;
+                return (
+                  <button
+                    type="button"
+                    aria-label="Cancella contenuto"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (activeVariantId === 'original') {
+                        setWorkoutTitle('');
+                      } else {
+                        setVariants(variants.map(v => v.id === activeVariantId ? { ...v, name: '' } : v));
+                      }
+                      setTimeout(() => { try { handleSaveTitle(); } catch {} }, 0);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-full bg-white/70 text-red-600 hover:bg-white hover:shadow-sm"
+                  >
+                    <X size={14} />
+                  </button>
+                );
+              })()}
+            </div>
+          )
+        )}
         {/* Menu Tag in PWA */}
         {isStandaloneMobile && canEdit && isTagsMenuOpen && (
           <Portal>
@@ -5727,9 +5748,9 @@ useEffect(() => {
         )}
         {/* Toolbar sopra il titolo: Varianti / Settimane / Allenamenti (desktop, solo atleta) */}
         {!isStandaloneMobile && currentUser?.role === 'athlete' && (
-          <div className="flex justify-center items-center mb-3">
+          <div className="flex justify-center items-center mb-2">
             <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full">
-              <div className="flex flex-nowrap whitespace-nowrap justify-center items-center gap-1 p-1.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-2xl shadow-sm">
+              <div className="mx-auto w-fit inline-flex flex-nowrap whitespace-nowrap justify-center items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-[28px] shadow-sm">
                 {/* Varianti dropdown */}
                 <div className="relative">
                   <button
@@ -6006,7 +6027,7 @@ useEffect(() => {
           </div>
         )}
 
-        {isEditingTitle && canEdit ? (
+        {!isStandaloneMobile && (isEditingTitle && canEdit ? (
           <div className="relative w-full">
             <input
               ref={titleInputRef}
@@ -6083,7 +6104,7 @@ useEffect(() => {
               );
             })()}
           </div>
-        )}
+        ))}
 
         {/* Editable Description (read-only per atleti) */}
         <div className="flex justify-center items-center mb-6">
@@ -6096,7 +6117,7 @@ useEffect(() => {
                 onFocus={() => { if (isEditingTitle) { handleSaveTitle(); } }}
                 onBlur={handleSaveDescription}
                 onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSaveDescription()}
-                placeholder="Aggiungi una descrizione..."
+                placeholder="Nessuna descrizione"
                 className="w-full border-b-2 border-blue-500 bg-transparent outline-none resize-none text-gray-600 text-center"
                 rows={2}
               />
@@ -6122,7 +6143,7 @@ useEffect(() => {
                 {workoutDescription ? (
                   <p className={`text-gray-600 max-w-2xl text-center break-words ${canEdit ? 'transition-colors group-hover:text-blue-600' : ''}`}>{workoutDescription}</p>
                 ) : (
-                  <p className="text-gray-400 italic text-center transition-colors group-hover:text-blue-600">Clicca per aggiungere una descrizione</p>
+                  <p className="text-gray-400 italic text-center transition-colors group-hover:text-blue-600">Nessuna descrizione</p>
                 )}
               </div>
               {(() => {

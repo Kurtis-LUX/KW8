@@ -6,29 +6,15 @@ import firestoreService from '../services/firestoreService';
 // Rileva modalità standalone PWA su mobile (senza dipendenze esterne)
 import ProgramCard, { ProgramItem } from '../components/ProgramCard';
 import { ChevronLeft } from 'lucide-react';
+import useIsStandaloneMobile from '../hooks/useIsStandaloneMobile';
 
 interface WorkoutsPageProps {
   onNavigate: (page: string, plan?: string) => void;
   currentUser: User | null;
 }
 
-const detectStandaloneMobile = (): boolean => {
-  try {
-    // iOS Safari
-    // @ts-ignore
-    if (typeof navigator !== 'undefined' && navigator.standalone) return true;
-    // Standard PWA
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia('(display-mode: standalone)').matches;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-};
-
 const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) => {
-  const isStandaloneMobile = detectStandaloneMobile();
+  const isStandaloneMobile = useIsStandaloneMobile();
   const [headerHeight, setHeaderHeight] = useState<number>(0);
   const [assignedPrograms, setAssignedPrograms] = useState<ProgramItem[]>([]);
 
@@ -166,7 +152,24 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
         currentPage={'workouts'}
       />
 
-      {/* (Rimosso) Titolo pagina desktop "Le tue schede" e tasto indietro */}
+      {/* Titolo pagina desktop + tasto indietro, identico a Gestione schede */}
+      {!isStandaloneMobile && (
+        <div style={{ paddingTop: (headerHeight || 80) + 8 }} className="mb-2">
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div className="relative flex items-center justify-center">
+              <button
+                onClick={() => onNavigate('home')}
+                className="absolute left-0 inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 bg-white ring-1 ring-black/10 rounded-2xl shadow-sm hover:bg-white active:scale-[0.98] shrink-0"
+                title="Torna alla Home"
+                aria-label="Torna alla Home"
+              >
+                <ChevronLeft size={20} className="block text-black" />
+              </button>
+              <h2 className="font-sfpro text-base sm:text-lg font-bold text-gray-900 tracking-tight text-center">Le tue schede</h2>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ paddingTop: isStandaloneMobile ? headerHeight : 0 }}>
         <div className="w-full px-4 sm:px-6 lg:px-8 py-5">

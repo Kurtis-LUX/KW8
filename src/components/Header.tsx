@@ -344,6 +344,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         return 'Dashboard Coach';
       case 'workouts':
         return 'Le tue schede';
+      case 'workout-detail':
+        return 'Le tue schede';
       case 'athlete-manager':
         return 'Gestione atleti';
       default:
@@ -389,6 +391,11 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         return;
       }
     } catch {}
+    // Fallback esplicito per la pagina dettaglio: torna alle "Le tue schede"
+    if (onNavigate && currentPage === 'workout-detail') {
+      onNavigate('workouts');
+      return;
+    }
     if (onNavigate) {
       if (currentPage === 'workout-manager' || currentPage === 'athlete-manager' || currentPage === 'rankings' || currentPage === 'athlete-statistics') {
         onNavigate('coach-dashboard');
@@ -434,9 +441,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           className={`fixed top-0 left-0 right-0 z-40 ${
             currentPage === 'workout-manager'
               ? ''
-              : (isStandaloneMobile && currentPage === 'athlete-manager')
-                ? 'bg-transparent'
-                : 'bg-transparent backdrop-blur-sm'
+              : 'bg-transparent'
           } transition-all duration-300 cursor-pointer`}
           style={{ 
             marginRight: '0px',
@@ -778,7 +783,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
         {isStandaloneMobile && !isHomePage && (currentPage === 'pwa-home' || !!getMobilePageTitle(currentPage)) && (
           <div className="lg:hidden">
             <div className={`container mx-auto px-6 ${currentPage === 'workout-manager' ? 'pb-0' : (((currentPage === 'workout-manager' || currentPage === 'workouts') && isWorkoutDetailOpen) ? 'pb-0' : 'pb-2')}`}>
-              <div className={`w-full relative rounded-2xl ${(currentPage === 'athlete-manager' || currentPage === 'workout-manager' || currentPage === 'coach-dashboard') ? 'px-0' : 'px-3'} py-2 flex items-center justify-between flex-nowrap ${(currentPage === 'workout-manager' || currentPage === 'athlete-manager' || currentPage === 'coach-dashboard') ? '' : 'bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm'}`}>
+              <div className={`w-full relative rounded-2xl ${(currentPage === 'athlete-manager' || currentPage === 'workout-manager' || currentPage === 'coach-dashboard' || currentPage === 'workouts' || currentPage === 'workout-detail') ? 'px-0' : 'px-3'} py-2 flex items-center justify-between flex-nowrap ${(currentPage === 'workout-manager' || currentPage === 'athlete-manager' || currentPage === 'coach-dashboard' || currentPage === 'workouts' || currentPage === 'workout-detail') ? '' : 'bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm'}`}>
                   <>
                     {/* Back */}
                     <button
@@ -814,7 +819,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                         </span>
                       )}
                     </div>
-                    {/* Right side placeholder or actions */}
+                    {/* Azioni lato destro: inline mini toolbar PWA quando il dettaglio è aperto */}
                     {currentPage === 'workout-manager' ? (
                       !isWorkoutDetailOpen ? (
                         <div className="flex items-center gap-1 shrink-0">
@@ -851,10 +856,17 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                 </div>
               )}
 
-              {/* Contenitore PWA per toolbar della scheda, visibile quando il dettaglio è aperto (anche su "Schede") */}
-              {(currentPage === 'workout-manager' || currentPage === 'workouts') && isWorkoutDetailOpen && (
-                <div className="pt-0">
-                  <div id="pwa-workout-toolbar" className="w-full"></div>
+              {/* Mini/Full toolbar PWA posizionata sotto il titolo pagina (senza spazio extra) */}
+              {isStandaloneMobile && (
+                <div className={`pt-0`}>
+                  {/* Full toolbar solo su Gestione schede con dettaglio aperto */}
+                  {(currentPage === 'workout-manager' && isWorkoutDetailOpen) && (
+                    <div id="pwa-workout-toolbar" className="flex justify-center"></div>
+                  )}
+                  {/* Mini toolbar su Workouts e Workout Detail (isolata da Gestione schede) */}
+                  {(currentPage === 'workouts' || currentPage === 'workout-detail') && (
+                    <div id="pwa-workout-toolbar-mini" className="flex justify-center"></div>
+                  )}
                 </div>
               )}
 
@@ -870,6 +882,15 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
           </div>
         )}
         </header>
+      )}
+
+      {/* Mini toolbar container su Desktop: sotto l'header, solo per Workouts/Workout Detail */}
+      {!isStandaloneMobile && (currentPage === 'workouts' || currentPage === 'workout-detail') && (
+        <div className="w-full">
+          <div className="container mx-auto px-6">
+            <div id="pwa-workout-toolbar-mini" className="flex justify-center"></div>
+          </div>
+        </div>
       )}
 
       {/* Bottom Navigation - visibile solo su mobile/tablet e in modalità standalone */}
