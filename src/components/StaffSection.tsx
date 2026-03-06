@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Award, Dumbbell, Zap, Shield, Heart, Users, UserCheck, Medal, Star, Trophy, Certificate } from 'lucide-react';
+import { Dumbbell, Zap, Shield, Heart } from 'lucide-react';
 import { useLanguageContext } from '../contexts/LanguageContext';
 import { getStaffSection } from '../utils/database';
-import Modal from './Modal';
 
 interface StaffMember {
   id: string;
@@ -16,7 +15,6 @@ interface StaffMember {
 
 const StaffSection: React.FC = () => {
   const { t } = useLanguageContext();
-  const [selectedCoach, setSelectedCoach] = useState<number | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
@@ -215,19 +213,7 @@ const StaffSection: React.FC = () => {
     };
   }, []);
 
-  // Gestione chiusura modal con ESC
-  useEffect(() => {
-    const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && selectedCoach !== null) {
-        setSelectedCoach(null);
-      }
-    };
-
-    document.addEventListener('keydown', handleEscKey);
-    return () => {
-      document.removeEventListener('keydown', handleEscKey);
-    };
-  }, [selectedCoach]);
+  
 
   // Blocca lo scroll della pagina quando il modal è aperto e salva/ripristina la posizione
   // (rimosso: Modal gestisce già il blocco dello scroll)
@@ -314,8 +300,8 @@ const StaffSection: React.FC = () => {
                       : 'translate-y-12 opacity-0 scale-90'
                   }`}
                   style={{ transitionDelay: `${300 + index * 150}ms` }}
-                  onClick={() => setSelectedCoach(index)}
-                  onTouchStart={() => {}}
+                  
+                  
                 >
                   <div className={`relative overflow-hidden rounded-xl mb-4 shadow-lg group-hover:shadow-2xl transition-all duration-600 transform ${
                     isVisible 
@@ -361,75 +347,7 @@ const StaffSection: React.FC = () => {
         </div>
       </section>
 
-      {/* Modal Certificazioni */}
-      {selectedCoach !== null && (
-        <Modal isOpen={selectedCoach !== null} onClose={() => setSelectedCoach(null)} hideHeader>
-          {/* Header personalizzato con gradient dinamico */}
-          <div className={`bg-gradient-to-r ${
-            staffMembers[selectedCoach].name === 'Giuseppe Pandolfo' ? 'from-blue-900 to-blue-800' :
-            staffMembers[selectedCoach].name === 'Saverio Di Maria' ? 'from-red-600 to-red-700' :
-            staffMembers[selectedCoach].role.includes('Karate') ? 'from-white to-gray-100' :
-            staffMembers[selectedCoach].role.includes('Yoga') ? 'from-yellow-400 to-yellow-500' :
-            'from-red-600 to-red-700'
-          } ${
-            staffMembers[selectedCoach].role.includes('Karate') ? 'text-black' : 
-            staffMembers[selectedCoach].role.includes('Yoga') ? 'text-black' : 'text-white'
-          } p-4 sm:p-6 relative rounded-t-2xl`}> 
-            <div className="flex items-center space-x-3 sm:space-x-4 pr-8">
-              <img 
-                src={staffMembers[selectedCoach].image} 
-                alt={staffMembers[selectedCoach].name}
-                className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-2 ${
-                  staffMembers[selectedCoach].role.includes('Karate') ? 'border-black' :
-                  staffMembers[selectedCoach].role.includes('Yoga') ? 'border-black' :
-                  'border-white'
-                } shadow-lg`}
-              />
-              <div>
-                <h3 className="text-lg sm:text-xl font-bold">{staffMembers[selectedCoach].name}</h3>
-                <p className="text-xs sm:text-sm opacity-90">{staffMembers[selectedCoach].role}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Contenuto con scroll */}
-          <div className="p-4 sm:p-6 overflow-y-auto max-h-[70vh]">
-            <div className="mb-3">
-              <h4 className="text-base sm:text-lg font-bold text-blue-900 flex items-center">
-                <Award className="mr-2" size={18} />
-                {t.certifications}
-              </h4>
-            </div>
-
-            <div className="space-y-2">
-              {staffMembers[selectedCoach].certifications.map((cert, index) => {
-                const Icon = staffMembers[selectedCoach].icon;
-                const iconColor = 
-                  staffMembers[selectedCoach].name === 'Giuseppe Pandolfo' ? 'text-blue-900' :
-                  staffMembers[selectedCoach].name === 'Saverio Di Maria' ? 'text-red-600' :
-                  staffMembers[selectedCoach].role.includes('Karate') ? 'text-yellow-500' :
-                  staffMembers[selectedCoach].role.includes('Yoga') ? 'text-yellow-600' :
-                  'text-red-600';
-                return (
-                  <div key={index} className="flex items-start space-x-3 p-3 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100 hover:shadow-md transition-all duration-300">
-                    <Icon className={`${iconColor} flex-shrink-0 mt-0.5`} size={16} />
-                    <span className="text-sm text-navy-700 leading-relaxed">{cert}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 rounded-b-2xl">
-            <div className="flex items-center justify-center">
-              <span className="text-xs text-gray-600">
-                Clicca fuori per chiudere o premi ESC
-              </span>
-            </div>
-          </div>
-        </Modal>
-      )}
+      
     </>
   );
 };

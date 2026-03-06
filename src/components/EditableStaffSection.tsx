@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Dumbbell, Heart, Apple, Users, Zap, Shield, Edit, Plus, Trash2, X, Save, RotateCcw, Edit2, Trophy, Target, Star, Award, CheckCircle, Upload } from 'lucide-react';
+import { Dumbbell, Heart, Apple, Users, Zap, Shield, Save, RotateCcw } from 'lucide-react';
 import Modal from './Modal';
 import { getStaffSection, saveStaffSection, subscribeToStaffSection } from '../utils/database';
-import { authService } from '../services/authService';
 
 interface StaffMember {
   id: string;
@@ -500,17 +499,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
       <div className="container mx-auto px-4 relative z-10">
         {/* Header con tasti modifica e aggiungi */}
         <div className="text-center mb-16 relative">
-          {currentUser && (currentUser.role === 'coach' || currentUser.role === 'admin') && (
-            <div className="absolute top-0 right-0 flex gap-2">
-              <button
-                onClick={handleAddCoach}
-                className="flex items-center justify-center p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                title="Aggiungi coach"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-          )}
+          
           
           <div className="flex justify-center mb-6">
             {React.createElement(getIconComponent(sectionData.icon), {
@@ -539,31 +528,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
             
             return (
               <div key={member.id} className="group relative">
-                {/* Pulsanti di modifica ed eliminazione */}
-                {currentUser && (currentUser.role === 'coach' || currentUser.role === 'admin') && (
-                  <div className="absolute top-2 right-2 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditCoach(member);
-                      }}
-                      className="flex items-center justify-center p-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                      title="Modifica coach"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteCoach(member.id);
-                      }}
-                      className="flex items-center justify-center p-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                      title="Elimina coach"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                )}
+                
                 
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
                   <div className="relative h-64 overflow-hidden">
@@ -591,15 +556,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
                       {member.description}
                     </p>
                     
-                    <button
-                      onClick={() => {
-                        setSelectedCoach(member);
-                        setShowCertModal(true);
-                      }}
-                      className="mt-4 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium"
-                    >
-                      Vedi Certificazioni
-                    </button>
+                    
                   </div>
                 </div>
               </div>
@@ -727,350 +684,11 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
         </Modal>
       )}
 
-      {/* Modal Certificazioni */}
-      {showCertModal && selectedCoach && (
-        <Modal isOpen={showCertModal} onClose={() => setShowCertModal(false)} title="Certificazioni">
-              
-              <div className="mb-4">
-                <h4 className="text-lg font-semibold text-gray-800 mb-2">{selectedCoach.name}</h4>
-                <p className="text-sm text-gray-600 mb-4">{selectedCoach.role}</p>
-              </div>
-              
-              <div className="space-y-3">
-                {selectedCoach.certifications.map((cert, index) => (
-                  <div key={index} className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border-l-4 border-blue-500 flex justify-between items-center">
-                    <p className="text-sm font-medium text-gray-800">{cert}</p>
-                    {editingCertifications && currentUser && (currentUser.role === 'coach' || currentUser.role === 'admin') && (
-                      <button
-                        onClick={() => {
-                          const updatedCertifications = selectedCoach.certifications.filter((_, i) => i !== index);
-                          const updatedCoach = { ...selectedCoach, certifications: updatedCertifications };
-                          setSelectedCoach(updatedCoach);
-                          handleUpdateCoachCertifications(updatedCoach);
-                        }}
-                        className="p-1 bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
-                        title="Rimuovi certificazione"
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                
-                {editingCertifications && currentUser && (currentUser.role === 'coach' || currentUser.role === 'admin') && (
-                  <div className="bg-gray-50 p-4 rounded-lg border-2 border-dashed border-gray-300">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newCertification}
-                        onChange={(e) => setNewCertification(e.target.value)}
-                        placeholder="Nuova certificazione"
-                        className="flex-1 p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            handleAddCertification();
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={handleAddCertification}
-                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded transition-colors flex items-center gap-1"
-                      >
-                        <Plus size={16} />
-                        Aggiungi
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {currentUser && (currentUser.role === 'coach' || currentUser.role === 'admin') && (
-                <div className="mt-6 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setEditingCertifications(!editingCertifications);
-                      setNewCertification('');
-                    }}
-                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2 ${
-                      editingCertifications 
-                        ? 'bg-gray-600 hover:bg-gray-700 text-white' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                  >
-                    {editingCertifications ? (
-                      <>
-                        <CheckCircle size={16} />
-                        Termina Modifica
-                      </>
-                    ) : (
-                      <>
-                        <Edit2 size={16} />
-                        Modifica Certificazioni
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-        </Modal>
-      )}
+      
 
-      {/* Modal Aggiungi Coach */}
-      {showAddModal && (
-        <Modal isOpen={showAddModal} onClose={handleCancelAdd} title="Aggiungi Nuovo Coach">
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Informazioni base */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
-                    <input
-                      type="text"
-                      value={newMemberData.name}
-                      onChange={(e) => setNewMemberData({...newMemberData, name: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Ruolo</label>
-                    <input
-                      type="text"
-                      value={newMemberData.role}
-                      onChange={(e) => setNewMemberData({...newMemberData, role: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
-                    <textarea
-                      value={newMemberData.description}
-                      onChange={(e) => setNewMemberData({...newMemberData, description: e.target.value})}
-                      rows={3}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Immagine Coach</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setNewMemberData({...newMemberData, image: event.target?.result as string});
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    {newMemberData.image && (
-                      <div className="mt-2">
-                        <img src={newMemberData.image} alt="Preview" className="w-20 h-20 object-cover rounded-lg" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Stili e colori */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Icona</label>
-                    <select
-                      value={newMemberData.iconName}
-                      onChange={(e) => setNewMemberData({...newMemberData, iconName: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {iconOptions.map(option => (
-                        <option key={option.name} value={option.name}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Colore Nome</label>
-                    <select
-                      value={newMemberData.nameColor}
-                      onChange={(e) => setNewMemberData({...newMemberData, nameColor: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {colorOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Colore Ruolo</label>
-                    <select
-                      value={newMemberData.roleColor}
-                      onChange={(e) => setNewMemberData({...newMemberData, roleColor: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {colorOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 mt-8">
-                <button
-                  onClick={handleSaveNewCoach}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
-                >
-                  <Save size={20} />
-                  Salva Coach
-                </button>
-                <button
-                  onClick={handleCancelAdd}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
-                >
-                  <RotateCcw size={20} />
-                  Annulla
-                </button>
-              </div>
-        </Modal>
-      )}
+      
 
-      {/* Modal Modifica Coach */}
-      {editingMember !== null && editingCoachData && (
-        <Modal isOpen={editingMember !== null} onClose={handleCancelEdit} title="Modifica Coach">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Informazioni base */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
-                    <input
-                      type="text"
-                      value={editingCoachData.name}
-                      onChange={(e) => setEditingCoachData({...editingCoachData, name: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Ruolo</label>
-                    <input
-                      type="text"
-                      value={editingCoachData.role}
-                      onChange={(e) => setEditingCoachData({...editingCoachData, role: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Descrizione</label>
-                    <textarea
-                      value={editingCoachData.description}
-                      onChange={(e) => setEditingCoachData({...editingCoachData, description: e.target.value})}
-                      rows={3}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Immagine Coach</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            setEditingCoachData({...editingCoachData, image: event.target?.result as string});
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    {editingCoachData.image && (
-                      <div className="mt-2">
-                        <img src={editingCoachData.image} alt="Preview" className="w-20 h-20 object-cover rounded-lg" />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Stili e colori */}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Icona</label>
-                    <select
-                      value={editingCoachData.iconName}
-                      onChange={(e) => setEditingCoachData({...editingCoachData, iconName: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {iconOptions.map(option => (
-                        <option key={option.name} value={option.name}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Colore Nome</label>
-                    <select
-                      value={editingCoachData.nameColor}
-                      onChange={(e) => setEditingCoachData({...editingCoachData, nameColor: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {colorOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Colore Ruolo</label>
-                    <select
-                      value={editingCoachData.roleColor}
-                      onChange={(e) => setEditingCoachData({...editingCoachData, roleColor: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      {colorOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Certificazioni (una per riga)</label>
-                    <textarea
-                      value={editingCoachData.certifications.join('\n')}
-                      onChange={(e) => setEditingCoachData({...editingCoachData, certifications: e.target.value.split('\n').filter(cert => cert.trim())})}
-                      rows={4}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Inserisci una certificazione per riga"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 mt-8">
-                <button
-                  onClick={handleSaveEditCoach}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
-                >
-                  <Save size={20} />
-                  Salva Modifiche
-                </button>
-                <button
-                  onClick={handleCancelEdit}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
-                >
-                  <RotateCcw size={20} />
-                  Annulla
-                </button>
-              </div>
-        </Modal>
-      )}
+      
     </section>
   );
 };

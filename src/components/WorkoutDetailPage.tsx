@@ -3792,7 +3792,7 @@ useEffect(() => {
                   <Portal>
                     <div
                       ref={variantsDropdownRef as React.RefObject<HTMLDivElement>}
-                      style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? 0, left: variantsDropdownPosition?.left ?? 0 }}
+                      style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? -9999, left: variantsDropdownPosition?.left ?? -9999 }}
                       className="z-50 w-64 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
                     >
                       <div className="mb-1 px-2 text-xs text-gray-500">Seleziona scheda</div>
@@ -3899,7 +3899,7 @@ useEffect(() => {
                   <Portal>
                     <div
                       ref={weeksDropdownRef as React.RefObject<HTMLDivElement>}
-                      style={{ position: 'fixed', top: weeksDropdownPosition?.top ?? 0, left: weeksDropdownPosition?.left ?? 0 }}
+                      style={{ position: 'fixed', top: weeksDropdownPosition?.top ?? -9999, left: weeksDropdownPosition?.left ?? -9999 }}
                       className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
                     >
                       <div className="mb-1 px-2 text-xs text-gray-500">Seleziona settimana</div>
@@ -3977,7 +3977,7 @@ useEffect(() => {
                   <Portal>
                     <div
                       ref={daysDropdownRef as React.RefObject<HTMLDivElement>}
-                      style={{ position: 'fixed', top: daysDropdownPosition?.top ?? 0, left: daysDropdownPosition?.left ?? 0 }}
+                      style={{ position: 'fixed', top: daysDropdownPosition?.top ?? -9999, left: daysDropdownPosition?.left ?? -9999 }}
                       className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
                     >
                       <div className="mb-1 px-2 text-xs text-gray-500">Seleziona allenamento</div>
@@ -4100,7 +4100,7 @@ useEffect(() => {
                   <Portal>
                     <div
                       ref={tagsDropdownRef as React.RefObject<HTMLDivElement>}
-                      style={{ position: 'fixed', top: tagsMenuPosition?.top ?? 0, left: tagsMenuPosition?.left ?? 0 }}
+                      style={{ position: 'fixed', top: tagsMenuPosition?.top ?? -9999, left: tagsMenuPosition?.left ?? -9999 }}
                       className="z-50 w-80 max-w-[85vw] bg-white/70 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-3"
                     >
                       <div className="mb-2">
@@ -4256,7 +4256,7 @@ useEffect(() => {
                       <Portal>
                         <div
                           ref={variantsDropdownRef as React.RefObject<HTMLDivElement>}
-                          style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? 0, left: variantsDropdownPosition?.left ?? 0 }}
+                      style={{ position: 'fixed', top: variantsDropdownPosition?.top ?? -9999, left: variantsDropdownPosition?.left ?? -9999 }}
                           className="z-50 w-64 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
                         >
                       <div className="mb-1 px-2 text-xs text-gray-500">Seleziona scheda</div>
@@ -4363,7 +4363,7 @@ useEffect(() => {
                   <Portal>
                     <div
                       ref={weeksDropdownRef as React.RefObject<HTMLDivElement>}
-                      style={{ position: 'fixed', top: weeksDropdownPosition?.top ?? 0, left: weeksDropdownPosition?.left ?? 0 }}
+                      style={{ position: 'fixed', top: weeksDropdownPosition?.top ?? -9999, left: weeksDropdownPosition?.left ?? -9999 }}
                       className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
                     >
                       <div className="mb-1 px-2 text-xs text-gray-500">Seleziona settimana</div>
@@ -4441,7 +4441,7 @@ useEffect(() => {
                   <Portal>
                     <div
                       ref={daysDropdownRef as React.RefObject<HTMLDivElement>}
-                      style={{ position: 'fixed', top: daysDropdownPosition?.top ?? 0, left: daysDropdownPosition?.left ?? 0 }}
+                      style={{ position: 'fixed', top: daysDropdownPosition?.top ?? -9999, left: daysDropdownPosition?.left ?? -9999 }}
                       className="z-50 w-56 max-w-[85vw] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
                     >
                       <div className="mb-1 px-2 text-xs text-gray-500">Seleziona allenamento</div>
@@ -4764,7 +4764,7 @@ useEffect(() => {
                   <Portal>
                     <div
                       ref={tagsDropdownRef as React.RefObject<HTMLDivElement>}
-                      style={{ position: 'fixed', top: tagsMenuPosition?.top ?? 0, left: tagsMenuPosition?.left ?? 0 }}
+                      style={{ position: 'fixed', top: tagsMenuPosition?.top ?? -9999, left: tagsMenuPosition?.left ?? -9999 }}
                       className="z-50 w-80 max-w-[85vw] bg-white/70 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-3"
                     >
                       <div className="mb-2">
@@ -5396,7 +5396,7 @@ useEffect(() => {
           <Portal>
             <div
               ref={associateDropdownRef as React.RefObject<HTMLDivElement>}
-              style={{ position: 'fixed', top: associateDropdownPosition?.top ?? 0, left: associateDropdownPosition?.left ?? 0 }}
+              style={{ position: 'fixed', top: associateDropdownPosition?.top ?? -9999, left: associateDropdownPosition?.left ?? -9999 }}
               className="z-50 w-[min(320px,85vw)] bg-white/80 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-2"
             >
               {/* Sezione atleti spostata in alto: la lista schede verrà mostrata sotto */}
@@ -5662,7 +5662,7 @@ useEffect(() => {
           <Portal>
             <div
               ref={tagsDropdownRef as React.RefObject<HTMLDivElement>}
-              style={{ position: 'fixed', top: tagsMenuPosition?.top ?? 0, left: tagsMenuPosition?.left ?? 0 }}
+              style={{ position: 'fixed', top: tagsMenuPosition?.top ?? -9999, left: tagsMenuPosition?.left ?? -9999 }}
               className="z-50 w-80 max-w-[85vw] bg-white/70 backdrop-blur-xl border border-white/30 ring-1 ring-white/20 rounded-2xl shadow-2xl p-3"
             >
               <div className="mb-2">

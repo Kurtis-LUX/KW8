@@ -55,43 +55,18 @@ export const useDragAndDrop = ({ onMoveItem, onError }: UseDragAndDropProps): Us
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
 
   // Verifica se un elemento può essere rilasciato in una zona
-  const canDropItem = useCallback((dragItem: DragItem, dropZone: DropZone): boolean => {
-    // Non può rilasciare su se stesso
-    if (dragItem.id === dropZone.id) {
-      return false;
-    }
-
-    // Non può rilasciare nel proprio genitore corrente
-    if (dragItem.parentId === dropZone.id) {
-      return false;
-    }
-
-    // Verifica se il tipo è accettato
-    if (!dropZone.accepts.includes(dragItem.type)) {
-      return false;
-    }
-
-    // Non può rilasciare una cartella in un suo discendente (prevenzione cicli)
-    // Questa logica dovrebbe essere implementata con accesso all'albero completo
-    // Per ora assumiamo che sia valido
-    return true;
+  const canDropItem = useCallback((_dragItem: DragItem, _dropZone: DropZone): boolean => {
+    return false;
   }, []);
 
   // Gestisce l'inizio del trascinamento
-  const handleDragStart = useCallback((item: TreeItem) => {
-    const dragItem: DragItem = {
-      id: item.id,
-      type: item.type,
-      parentId: item.parentId
-    };
-
+  const handleDragStart = useCallback((_item: TreeItem) => {
     setDragState({
-      isDragging: true,
-      draggedItem: dragItem,
+      isDragging: false,
+      draggedItem: null,
       dragOverZone: null,
       canDrop: false
     });
-
     dragCounter.current = 0;
   }, []);
 
@@ -109,91 +84,38 @@ export const useDragAndDrop = ({ onMoveItem, onError }: UseDragAndDropProps): Us
   }, []);
 
   // Gestisce il passaggio sopra una zona di rilascio
-  const handleDragOver = useCallback((e: React.DragEvent, dropZone: DropZone) => {
+  const handleDragOver = useCallback((e: React.DragEvent, _dropZone: DropZone) => {
     e.preventDefault();
     e.stopPropagation();
-
-    if (!dragState.draggedItem) return;
-
-    const canDrop = canDropItem(dragState.draggedItem, dropZone);
-    
-    setDragState(prev => ({
-      ...prev,
-      dragOverZone: dropZone.id,
-      canDrop
-    }));
-
-    // Cambia il cursore in base alla possibilità di rilascio
-    e.dataTransfer.dropEffect = canDrop ? 'move' : 'none';
-  }, [dragState.draggedItem, canDropItem]);
+    e.dataTransfer.dropEffect = 'none';
+    setDragState(prev => ({ ...prev, dragOverZone: null, canDrop: false }));
+  }, []);
 
   // Gestisce l'entrata in una zona di rilascio
-  const handleDragEnter = useCallback((e: React.DragEvent, dropZone: DropZone) => {
+  const handleDragEnter = useCallback((e: React.DragEvent, _dropZone: DropZone) => {
     e.preventDefault();
     e.stopPropagation();
-    
     dragCounter.current++;
-
-    if (!dragState.draggedItem) return;
-
-    const canDrop = canDropItem(dragState.draggedItem, dropZone);
-    
-    setDragState(prev => ({
-      ...prev,
-      dragOverZone: dropZone.id,
-      canDrop
-    }));
-  }, [dragState.draggedItem, canDropItem]);
+    setDragState(prev => ({ ...prev, dragOverZone: null, canDrop: false }));
+  }, []);
 
   // Gestisce l'uscita da una zona di rilascio
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    dragCounter.current--;
-
-    // Solo se usciamo completamente dalla zona
+    dragCounter.current = Math.max(0, dragCounter.current - 1);
     if (dragCounter.current === 0) {
-      setDragState(prev => ({
-        ...prev,
-        dragOverZone: null,
-        canDrop: false
-      }));
+      setDragState(prev => ({ ...prev, dragOverZone: null, canDrop: false }));
     }
   }, []);
 
   // Gestisce il rilascio
-  const handleDrop = useCallback((e: React.DragEvent, dropZone: DropZone) => {
+  const handleDrop = useCallback((e: React.DragEvent, _dropZone: DropZone) => {
     e.preventDefault();
     e.stopPropagation();
-    
     dragCounter.current = 0;
-
-    if (!dragState.draggedItem) {
-      handleDragEnd();
-      return;
-    }
-
-    const canDrop = canDropItem(dragState.draggedItem, dropZone);
-    
-    if (!canDrop) {
-      onError?.('Non è possibile rilasciare l\'elemento in questa posizione');
-      handleDragEnd();
-      return;
-    }
-
-    try {
-      const success = onMoveItem(dragState.draggedItem.id, dropZone.id);
-      
-      if (!success) {
-        onError?.('Errore durante lo spostamento dell\'elemento');
-      }
-    } catch (error) {
-      onError?.(error instanceof Error ? error.message : 'Errore sconosciuto durante lo spostamento');
-    }
-
     handleDragEnd();
-  }, [dragState.draggedItem, canDropItem, onMoveItem, onError, handleDragEnd]);
+  }, [handleDragEnd]);
 
   // Reset dello stato di trascinamento
   const resetDragState = useCallback(() => {
@@ -222,18 +144,7 @@ export const useDragAndDrop = ({ onMoveItem, onError }: UseDragAndDropProps): Us
 
 // Utilità per creare attributi drag and drop
 export const createDragProps = (item: TreeItem, onDragStart: (item: TreeItem) => void, onDragEnd: () => void) => ({
-  draggable: true,
-  onDragStart: (e: React.DragEvent) => {
-    e.stopPropagation();
-    // Imposta i dati di trasferimento per compatibilità
-    e.dataTransfer.setData('text/plain', item.id);
-    e.dataTransfer.effectAllowed = 'move';
-    onDragStart(item);
-  },
-  onDragEnd: (e: React.DragEvent) => {
-    e.stopPropagation();
-    onDragEnd();
-  }
+  draggable: false
 });
 
 export const createDropProps = (
@@ -250,10 +161,10 @@ export const createDropProps = (
     onDrop: (e: React.DragEvent, dropZone: DropZone) => void;
   }
 ) => ({
-  onDragOver: (e: React.DragEvent) => onDragOver(e, dropZone),
-  onDragEnter: (e: React.DragEvent) => onDragEnter(e, dropZone),
-  onDragLeave: (e: React.DragEvent) => onDragLeave(e),
-  onDrop: (e: React.DragEvent) => onDrop(e, dropZone)
+  onDragOver: (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); },
+  onDragEnter: (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); },
+  onDragLeave: (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); },
+  onDrop: (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); }
 });
 
 export default useDragAndDrop;

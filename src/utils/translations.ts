@@ -83,32 +83,6 @@ export interface Translations {
   mondayFriday: string;
   closed: string;
 
-  // Newsletter Section
-  newsletter: string;
-  newsletterDesc: string;
-  newsletterDescription: string;
-  enterEmail: string;
-  enterValidEmail: string;
-  emailAlreadySubscribed: string;
-  enterYourEmail: string;
-  sending: string;
-  subscribeToNewsletter: string;
-  subscriptionSuccess: string;
-  noSpamPolicy: string;
-  emailPlaceholder: string;
-  subscribe: string;
-  subscribeSuccess: string;
-  subscribeError: string;
-
-  // Trustpilot Section
-  customerReviews: string;
-  whatOurClientsSay: string;
-  excellent: string;
-  reviews: string;
-  joinSatisfiedClients: string;
-  seeAllReviews: string;
-  trustpilotDesc: string;
-
   // Footer
   legal: string;
   termsAndConditions: string;
@@ -281,31 +255,6 @@ export const translations: Record<'it' | 'en', Translations> = {
     mondayFriday: 'Lunedì - Venerdì',
     closed: 'CHIUSO',
 
-    // Newsletter Section
-    newsletter: 'Newsletter',
-    newsletterDesc: 'Rimani aggiornato sulle nostre novità, eventi e offerte speciali.',
-    newsletterDescription: '',
-    enterEmail: 'Inserisci un indirizzo email',
-    enterValidEmail: 'Inserisci un indirizzo email valido',
-    emailAlreadySubscribed: 'Questa email è già iscritta alla newsletter.',
-    enterYourEmail: 'Inserisci la tua email',
-    sending: 'INVIO IN CORSO...',
-    subscribeToNewsletter: 'ISCRIVITI ALLA NEWSLETTER',
-    subscriptionSuccess: 'Perfetto! Ti abbiamo inviato un\'email di benvenuto con tutte le informazioni sulla palestra.',
-    noSpamPolicy: 'Non invieremo spam. Puoi annullare l\'iscrizione in qualsiasi momento.',
-    emailPlaceholder: 'Inserisci la tua email',
-    subscribe: 'Iscriviti',
-    subscribeSuccess: 'Iscrizione avvenuta con successo!',
-    subscribeError: 'Errore durante l\'iscrizione. Riprova.',
-
-    // Trustpilot Section
-    customerReviews: 'Recensioni dei clienti',
-    whatOurClientsSay: 'COSA DICONO I NOSTRI CLIENTI',
-    excellent: 'Eccellente',
-    reviews: 'recensioni',
-    joinSatisfiedClients: 'Unisciti ai nostri clienti soddisfatti!',
-    seeAllReviews: 'Vedi tutte le recensioni',
-    trustpilotDesc: 'Scopri cosa dicono i nostri clienti sulla loro esperienza con noi.',
 
     // Footer
     legal: 'Legale',
@@ -477,31 +426,6 @@ export const translations: Record<'it' | 'en', Translations> = {
     mondayFriday: 'Monday - Friday',
     closed: 'CLOSED',
 
-    // Newsletter Section
-    newsletter: 'Newsletter',
-    newsletterDesc: 'Stay updated on our news, events and special offers.',
-    newsletterDescription: '',
-    enterEmail: 'Enter an email address',
-    enterValidEmail: 'Enter a valid email address',
-    emailAlreadySubscribed: 'This email is already subscribed to the newsletter.',
-    enterYourEmail: 'Enter your email',
-    sending: 'SENDING...',
-    subscribeToNewsletter: 'SUBSCRIBE TO NEWSLETTER',
-    subscriptionSuccess: 'Perfect! We have sent you a welcome email with all the information about the gym.',
-    noSpamPolicy: 'We will not send spam. You can unsubscribe at any time.',
-    emailPlaceholder: 'Enter your email',
-    subscribe: 'Subscribe',
-    subscribeSuccess: 'Successfully subscribed!',
-    subscribeError: 'Error during subscription. Please try again.',
-
-    // Trustpilot Section
-    customerReviews: 'Customer reviews',
-    whatOurClientsSay: 'WHAT OUR CLIENTS SAY',
-    excellent: 'Excellent',
-    reviews: 'reviews',
-    joinSatisfiedClients: 'Join our satisfied clients!',
-    seeAllReviews: 'See all reviews',
-    trustpilotDesc: 'Discover what our customers say about their experience with us.',
 
     // Footer
     legal: 'Legal',

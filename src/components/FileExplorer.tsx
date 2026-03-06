@@ -6,7 +6,6 @@ import {
   Grid3X3,
   List,
   Plus,
-  Download,
   Edit3,
   Trash2,
   Link,
@@ -24,6 +23,7 @@ import {
   CheckCircle,
   Ban,
   Copy,
+  ClipboardPaste,
   X,
   Tag,
   LayoutGrid
@@ -275,6 +275,7 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
   const [showWorkoutDetail, setShowWorkoutDetail] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [clipboardItem, setClipboardItem] = useState<{ type: 'folder' | 'file'; id: string } | null>(null);
   
   // Toast animato stile "Apple"
   const [isToastVisible, setIsToastVisible] = useState(false);
@@ -1058,6 +1059,146 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
     }
   };
 
+  const generateCopyName = async (baseName: string, type: 'folder' | 'workout', parentId?: string) => {
+    const nowItemsFolders = await DB.getWorkoutFolders();
+    const nowItemsPlans = await DB.getWorkoutPlans();
+    const exists = (candidate: string) => {
+      if (type === 'folder') {
+        return nowItemsFolders
+          .filter(f => f.parentId === parentId)
+          .some(f => (f.name || '') === candidate);
+      } else {
+        return nowItemsPlans
+          .filter(p => (p.folderId ?? null) === (parentId ?? null))
+          .some(p => (p.name || '') === candidate);
+      }
+    };
+    let counter = 1;
+    let candidate = `Copia ${counter} di ${baseName}`;
+    while (exists(candidate)) {
+      counter++;
+      candidate = `Copia ${counter} di ${baseName}`;
+    }
+    return candidate;
+  };
+
+  const copyWorkoutToFolder = async (workoutId: string, targetFolderId?: string, preserveName: boolean = false) => {
+    const source = await DB.getWorkoutPlanById(workoutId);
+    if (!source) return false;
+    const now = new Date().toISOString();
+    const name = preserveName ? (source.name || 'Scheda') : await generateCopyName(source.name || 'Scheda', 'workout', targetFolderId);
+    const id = `workout_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const newWorkoutData = {
+      id,
+      name,
+      description: source.description || '',
+      coach: source.coach || 'Coach',
+      startDate: now,
+      duration: source.duration || 30,
+      exercises: Array.isArray(source.exercises) ? JSON.parse(JSON.stringify(source.exercises)) : [],
+      category: source.category || 'strength',
+      status: source.status || 'draft',
+      mediaFiles: source.mediaFiles ? JSON.parse(JSON.stringify(source.mediaFiles)) : { images: [], videos: [], audio: [] },
+      tags: Array.isArray(source.tags) ? JSON.parse(JSON.stringify(source.tags)) : [],
+      order: typeof source.order === 'number' ? source.order : 0,
+      difficulty: source.difficulty || 1,
+      targetMuscles: Array.isArray(source.targetMuscles) ? JSON.parse(JSON.stringify(source.targetMuscles)) : [],
+      folderId: targetFolderId ?? null,
+      color: source.color || '#3B82F6',
+      variants: Array.isArray(source.variants) ? JSON.parse(JSON.stringify(source.variants)) : [],
+      createdAt: now,
+      updatedAt: now
+    };
+    await DB.saveWorkoutPlan(newWorkoutData);
+    try { await refetch(); } catch {}
+    await loadFolderContent(true);
+    showToast('Scheda copiata', 2500);
+    return true;
+  };
+
+  const copyFolderDeep = async (sourceFolderId: string, targetParentId?: string) => {
+    const folders = await DB.getWorkoutFolders();
+    const allPlans = await DB.getWorkoutPlans();
+    const sourceRoot = folders.find(f => f.id === sourceFolderId);
+    if (!sourceRoot) return false;
+    const now = new Date().toISOString();
+    const newRootName = await generateCopyName(sourceRoot.name || 'Cartella', 'folder', targetParentId);
+    const newRootId = `folder_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    const newRoot = {
+      id: newRootId,
+      name: newRootName,
+      icon: sourceRoot.icon || 'Folder',
+      color: sourceRoot.color || '#EF4444',
+      parentId: targetParentId,
+      order: sourceRoot.order || 0,
+      createdAt: now,
+      updatedAt: now,
+      isExpanded: false
+    };
+    await DB.saveWorkoutFolder(newRoot);
+    const idMap = new Map<string, string>();
+    idMap.set(sourceFolderId, newRootId);
+    const queue: string[] = [sourceFolderId];
+    while (queue.length) {
+      const currentOldId = queue.shift() as string;
+      const currentNewParentId = idMap.get(currentOldId) as string;
+      const childFolders = folders.filter(f => (f.parentId ?? null) === currentOldId);
+      for (const child of childFolders) {
+        const newId = `folder_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        const newFolder = {
+          id: newId,
+          name: child.name,
+          icon: child.icon || 'Folder',
+          color: child.color || '#EF4444',
+          parentId: currentNewParentId,
+          order: child.order || 0,
+          createdAt: now,
+          updatedAt: now,
+          isExpanded: false
+        };
+        await DB.saveWorkoutFolder(newFolder);
+        idMap.set(child.id, newId);
+        queue.push(child.id);
+      }
+    }
+    for (const [oldFolderId, newFolderId] of idMap.entries()) {
+      const plans = allPlans.filter(p => (p.folderId ?? null) === oldFolderId);
+      for (const plan of plans) {
+        await copyWorkoutToFolder(plan.id, newFolderId, true);
+      }
+    }
+    await loadFolderContent(true);
+    showToast('Cartella copiata', 2500);
+    return true;
+  };
+
+  const handleCopyItem = (item: FolderTreeItem) => {
+    setClipboardItem({ type: item.type, id: item.id });
+    showToast(item.type === 'folder' ? 'Cartella copiata negli appunti' : 'Scheda copiata negli appunti', 2000);
+  };
+
+  const handlePasteIntoFolder = async (targetFolderId?: string) => {
+    if (!clipboardItem) return;
+    if (clipboardItem.type === 'folder') {
+      await copyFolderDeep(clipboardItem.id, targetFolderId);
+    } else {
+      await copyWorkoutToFolder(clipboardItem.id, targetFolderId);
+    }
+  };
+  
+  const handleDuplicateItem = async (item: FolderTreeItem) => {
+    if (item.type === 'folder') {
+      const folderData = item.data as WorkoutFolder;
+      await copyFolderDeep(item.id, folderData?.parentId);
+      return;
+    }
+    if (item.type === 'file') {
+      const planData = item.data as WorkoutPlan;
+      await copyWorkoutToFolder(item.id, planData?.folderId ?? undefined, false);
+      return;
+    }
+  };
+
   const FolderIcon = ({ item }: { item: FolderTreeItem }) => {
     if (item.type === 'folder' && item.data && 'icon' in item.data) {
       const iconData = AVAILABLE_ICONS.find(icon => icon.name === item.data.icon);
@@ -1188,22 +1329,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         clearPressTimer();
         longPressTriggeredRef.current = false;
         movedDuringPressRef.current = true;
-        // Avvio drag mobile in PWA
-        if (isStandaloneMobile && !mobileDragActiveRef.current) {
-          mobileDragActiveRef.current = true;
-          setDraggedItem(item);
-        }
-        // Aggiorna la zona di drop simulando l'hover con elementFromPoint
-        if (isStandaloneMobile && mobileDragActiveRef.current) {
-          const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-          const folderEl = el?.closest('[data-folder-id]') as HTMLElement | null;
-          if (folderEl) {
-            const fid = folderEl.getAttribute('data-folder-id');
-            if (fid && dragOverItem !== fid) setDragOverItem(fid);
-          } else {
-            if (dragOverItem !== 'root') setDragOverItem('root');
-          }
-        }
         pressStartPosRef.current = null;
       }
     };
@@ -1238,13 +1363,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
           onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); openItemMenu(); }}
           onMouseEnter={() => setHoveredItemId(item.id)}
           onMouseLeave={() => { if (hoveredItemId === item.id) setHoveredItemId(null); }}
-          draggable
-          onDragStart={(e) => { clearPressTimer(); handleDragStart(e, item); }}
-          onDragEnd={() => { setDragOverItem(null); }}
-          onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (dragOverItem !== item.id) { setDragOverItem(item.id); } }}
-          onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : (e.preventDefault(), e.stopPropagation(), (e.dataTransfer.dropEffect = 'none'))}
-          onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
-          onDrop={(e) => item.type === 'folder' ? (e.preventDefault(), e.stopPropagation(), handleDrop(e, item.id)) : (e.preventDefault(), e.stopPropagation())}
         >
         {/* Overlay divieto quando il drop è proibito sulla cartella */}
         {item.type === 'folder' && isDragOver && isForbidden && (
@@ -1381,17 +1499,42 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                 <span>Modifica</span>
               </button>
               
+              
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDownload(item);
+                  handleCopyItem(item);
                   closeItemMenu();
                 }}
                 className="dropdown-item"
               >
-                <Download size={14} />
-                <span>Scarica</span>
+                <Copy size={14} />
+                <span>Copia</span>
               </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDuplicateItem(item);
+                  closeItemMenu();
+                }}
+                className="dropdown-item"
+              >
+                <Copy size={14} />
+                <span>Duplica</span>
+              </button>
+              {clipboardItem && item.type === 'folder' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePasteIntoFolder(item.id);
+                    closeItemMenu();
+                  }}
+                  className="dropdown-item"
+                >
+                  <ClipboardPaste size={14} />
+                  <span>Incolla qui</span>
+                </button>
+              )}
               
               
               <hr className="my-1" />
@@ -1566,22 +1709,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         clearPressTimer();
         longPressTriggeredRef.current = false;
         movedDuringPressRef.current = true;
-        // Avvio drag mobile in PWA
-        if (isStandaloneMobile && !mobileDragActiveRef.current) {
-          mobileDragActiveRef.current = true;
-          setDraggedItem(item);
-        }
-        // Aggiorna la zona di drop simulando l'hover con elementFromPoint
-        if (isStandaloneMobile && mobileDragActiveRef.current) {
-          const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
-          const folderEl = el?.closest('[data-folder-id]') as HTMLElement | null;
-          if (folderEl) {
-            const fid = folderEl.getAttribute('data-folder-id');
-            if (fid && dragOverItem !== fid) setDragOverItem(fid);
-          } else {
-            if (dragOverItem !== 'root') setDragOverItem('root');
-          }
-        }
         pressStartPosRef.current = null;
       }
     };
@@ -1623,13 +1750,6 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
         onPointerLeave={handlePointerLeave}
         onPointerMove={handlePointerMove}
         onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); openTileMenu(); }}
-        draggable
-        onDragStart={(e) => { clearPressTimer(); handleDragStart(e, item); }}
-        onDragEnd={() => { setDragOverItem(null); }}
-        onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); if (dragOverItem !== item.id) { setDragOverItem(item.id); } }}
-        onDragOver={(e) => item.type === 'folder' ? handleDragOver(e, item.id) : (e.preventDefault(), e.stopPropagation(), (e.dataTransfer.dropEffect = 'none'))}
-        onDragLeave={() => { if (dragOverItem === item.id) setDragOverItem(null); }}
-        onDrop={(e) => item.type === 'folder' ? (e.preventDefault(), e.stopPropagation(), handleDrop(e, item.id)) : (e.preventDefault(), e.stopPropagation())}
       >
         {/* Icona centrale */}
         <div className="flex-1 w-full flex items-center justify-center">
@@ -1692,13 +1812,30 @@ const [sortOptions, setSortOptions] = useState({ folders: 'name' as 'name' | 'da
                 <Edit3 size={14} />
                 <span>Modifica</span>
               </button>
+              
               <button
-                onClick={(e) => { e.stopPropagation(); handleDownload(item); closeTileMenu(); }}
+                onClick={(e) => { e.stopPropagation(); handleCopyItem(item); closeTileMenu(); }}
                 className="dropdown-item"
               >
-                <Download size={14} />
-                <span>Scarica</span>
+                <Copy size={14} />
+                <span>Copia</span>
               </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDuplicateItem(item); closeTileMenu(); }}
+                className="dropdown-item"
+              >
+                <Copy size={14} />
+                <span>Duplica</span>
+              </button>
+              {clipboardItem && item.type === 'folder' && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handlePasteIntoFolder(item.id); closeTileMenu(); }}
+                  className="dropdown-item"
+                >
+                  <ClipboardPaste size={14} />
+                  <span>Incolla qui</span>
+                </button>
+              )}
               <hr className="my-1" />
               <button
                 onClick={(e) => { e.stopPropagation(); setItemToDelete(item); setShowDeleteModal(true); closeTileMenu(); }}

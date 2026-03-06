@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User as UserIcon, CreditCard, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Trophy, Link, BarChart3, User, AlignJustify, LogOut, ChevronLeft, Bell, Search, Plus } from 'lucide-react';
+import { Menu, X, User as UserIcon, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Link, User, AlignJustify, LogOut, ChevronLeft, Bell, Search, Plus } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -512,27 +512,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                   >
                     Atleti
                   </button>
-                  <div className="mx-1.5 h-5 w-px bg-black/10" />
-                  <button
-                    onClick={() => handleNavigation('rankings')}
-                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
-                  >
-                    Classifiche
-                  </button>
-                  <div className="mx-1.5 h-5 w-px bg-black/10" />
-                  <button
-                    onClick={() => handleNavigation('membership-cards')}
-                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
-                  >
-                    Tesserini
-                  </button>
-                  <div className="mx-1.5 h-5 w-px bg-black/10" />
-                  <button
-                    onClick={() => handleNavigation('athlete-statistics')}
-                    className="px-3 py-1.5 text-sm font-medium text-gray-800 rounded-full hover:bg-black/5 transition-colors focus:outline-none focus:ring-2 focus:ring-black/10"
-                  >
-                    Statistiche
-                  </button>
+                  
                 </div>
               </React.Fragment>
             ) : (
@@ -1105,36 +1085,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
                       <span>Atleti</span>
                     </button>
                   </li>
-                  {/* 4. Classifiche */}
-                  <li>
-                    <button
-                      onClick={() => handleNavigation('rankings')}
-                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
-                    >
-                      <Trophy size={20} className="sm:w-6 sm:h-6" />
-                      <span>Classifiche</span>
-                    </button>
-                  </li>
-                  {/* 6. Statistiche */}
-                  <li>
-                    <button
-                      onClick={() => handleNavigation('athlete-statistics')}
-                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
-                    >
-                      <BarChart3 size={20} className="sm:w-6 sm:h-6" />
-                      <span>Statistiche</span>
-                    </button>
-                  </li>
-                  {/* 7. Tessere */}
-                  <li>
-                    <button
-                      onClick={() => handleNavigation('membership-cards')}
-                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
-                    >
-                      <CreditCard size={20} className="sm:w-6 sm:h-6" />
-                      <span>Tessere</span>
-                    </button>
-                  </li>
+                  
                 </React.Fragment>
               ) : (
                 // Menu Standard (Home)
