@@ -57,12 +57,14 @@ const SocialSection: React.FC = () => {
     <section ref={sectionRef} className={`py-16 bg-white/80 backdrop-blur-sm transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
       <div className="container mx-auto px-6 font-sfpro">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-semibold text-navy-900 mb-4 animate-fadeInUp tracking-tight">
-            {t.followUs}
-          </h2>
-          <p className="text-navy-700">
-            {t.socialSubtitle}
-          </p>
+          <div className="inline-block bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm rounded-2xl p-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-navy-900 mb-2 uppercase tracking-tight">
+              {t.followUs}
+            </h2>
+            <p className="text-navy-700">
+              {t.socialSubtitle}
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

@@ -279,7 +279,7 @@ const StaffSection: React.FC = () => {
         }`}
       >
         <div className="container mx-auto px-4">
-          <h2 className={`text-4xl md:text-5xl font-bold text-blue-900 text-center mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900 transition-all duration-800 transform ${
+          <h2 className={`text-4xl md:text-5xl font-bold text-blue-900 text-center mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900 transition-all duration-800 transform uppercase ${
             isVisible 
               ? 'translate-y-0 opacity-100 scale-100' 
               : 'translate-y-8 opacity-0 scale-95'
@@ -288,7 +288,7 @@ const StaffSection: React.FC = () => {
           </h2>
           <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">I professionisti che ti guideranno nel tuo percorso</p>
 
-          <div className="grid grid-cols-2 gap-4 md:gap-8 max-w-4xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 max-w-4xl mx-auto">
             {staffMembers.map((member, index) => {
               const Icon = member.icon;
               return (
@@ -309,23 +309,25 @@ const StaffSection: React.FC = () => {
                       : 'rotate-3 scale-95'
                   }`}
                   style={{ transitionDelay: `${500 + index * 150}ms` }}>
-                    <img 
-                      src={member.image} 
-                      alt={member.name}
-                      className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className={`absolute inset-0 transition-opacity duration-500 flex items-center justify-center ${
-                      index === 0 ? 'bg-blue-900 bg-opacity-0 group-hover:bg-opacity-70' :
-                      index === 1 ? 'bg-red-600 bg-opacity-0 group-hover:bg-opacity-70' :
-                      index === 2 ? 'bg-white bg-opacity-0 group-hover:bg-opacity-70' :
-                      'bg-yellow-400 bg-opacity-0 group-hover:bg-opacity-70'
-                    }`}>
-                      <Icon className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                        index === 0 ? 'text-white' :
-                        index === 1 ? 'text-white' :
-                        index === 2 ? 'text-gray-900' :
-                        'text-gray-900'
-                      }`} size={32} />
+                    <div className="relative aspect-[5/4] overflow-hidden">
+                      <img 
+                        src={member.image} 
+                        alt={member.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className={`absolute inset-0 transition-opacity duration-500 flex items-center justify-center ${
+                        index === 0 ? 'bg-blue-900 bg-opacity-0 group-hover:bg-opacity-70' :
+                        index === 1 ? 'bg-red-600 bg-opacity-0 group-hover:bg-opacity-70' :
+                        index === 2 ? 'bg-white bg-opacity-0 group-hover:bg-opacity-70' :
+                        'bg-yellow-400 bg-opacity-0 group-hover:bg-opacity-70'
+                      }`}>
+                        <Icon className={`opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                          index === 0 ? 'text-white' :
+                          index === 1 ? 'text-white' :
+                          index === 2 ? 'text-gray-900' :
+                          'text-gray-900'
+                        }`} size={32} />
+                      </div>
                     </div>
                   </div>
                   

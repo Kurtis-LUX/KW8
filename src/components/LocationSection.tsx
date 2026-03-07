@@ -40,8 +40,12 @@ const LocationSection: React.FC = () => {
       className={`py-16 bg-gradient-to-b from-gray-50 to-gray-100 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
     >
       <div className="container mx-auto px-4">
-        <h2 className="text-4xl font-bold text-center mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.whereAreWe}</h2>
-        <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">Vieni a trovarci nella nostra sede</p>
+        <div className="text-center mb-12">
+          <div className="inline-block bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm rounded-2xl p-4">
+            <h2 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.whereAreWe}</h2>
+            <p className="text-gray-500 mt-2">Vieni a trovarci nella nostra sede</p>
+          </div>
+        </div>
         
         <div className={`max-w-4xl mx-auto mb-12 transition-all duration-1000 transform ${
           isVisible 
@@ -66,15 +70,7 @@ const LocationSection: React.FC = () => {
               title="Mappa interattiva palestra KW8"
               className="transition-all duration-300 hover:brightness-110"
             ></iframe>
-            <div className={`absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-lg shadow-lg transition-all duration-600 transform ${
-              isVisible 
-                ? 'translate-x-0 opacity-100' 
-                : '-translate-x-8 opacity-0'
-            }`}
-            style={{ transitionDelay: '700ms' }}>
-              <p className="text-navy-900 font-semibold text-sm">📍 Palestra KW8</p>
-              <p className="text-navy-700 text-xs">Via Pietro Nenni, 96010, Sortino SR</p>
-            </div>
+
           </div>
         </div>
 

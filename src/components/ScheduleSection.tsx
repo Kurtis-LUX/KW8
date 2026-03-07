@@ -250,12 +250,11 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
       }`}
     >
       <div className="container mx-auto px-4 text-center">
-        <div className={`flex items-center justify-center mb-4 transition-all duration-800 delay-100 transform ${
-          isVisible 
-            ? 'translate-y-0 opacity-100' 
-            : '-translate-y-8 opacity-0'
-        }`}>
-          <h2 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.schedules}</h2>
+        <div className="flex items-center justify-center mb-8">
+          <div className="inline-block bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm rounded-2xl p-4">
+            <h2 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900">{t.schedules}</h2>
+            <p className="text-center text-gray-500 mt-2">Pianifica il tuo allenamento con i nostri orari</p>
+          </div>
           {currentUser && currentUser.role === 'coach' && (
             <div className="ml-4 flex items-center space-x-2">
               {!isEditing ? (
@@ -290,7 +289,6 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
             </div>
           )}
         </div>
-        <p className="text-center text-gray-500 mb-8 max-w-2xl mx-auto">Pianifica il tuo allenamento con i nostri orari</p>
         </div>
         
         {/* Indicatore di caricamento */}
@@ -307,7 +305,7 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
             ? 'translate-x-0 opacity-100' 
             : '-translate-x-10 opacity-0'
         }`}>
-          <div className="bg-gray-50 rounded-xl shadow-lg p-4 mb-4 border border-gray-200">
+          <div className="bg-gray-50 rounded-2xl p-4 mb-4 border border-gray-200">
             <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6 mb-4">
               <div className="flex items-center space-x-2">
                 <Calendar className="text-red-600" size={20} />
@@ -320,7 +318,7 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
             </div>
             
             {/* Stato Attuale e Orari di Oggi */}
-            <div className="flex flex-col sm:flex-row items-center justify-between bg-gray-50 rounded-lg p-3 mb-4 space-y-2 sm:space-y-0">
+            <div className="flex flex-col sm:flex-row items-center justify-between bg-gray-50 rounded-2xl p-3 mb-4 space-y-2 sm:space-y-0">
               <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full font-semibold text-sm ${
                 isCurrentlyOpen() 
                   ? 'bg-green-100 text-green-800' 
@@ -349,7 +347,7 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
             </div>
 
             {/* Orari Settimanali */}
-            <div className={`bg-gray-50 rounded-xl shadow-lg p-4 border border-gray-200 transition-all duration-1000 delay-500 transform ${
+            <div className={`bg-gray-50 rounded-2xl p-4 transition-all duration-1000 delay-500 transform ${
               isVisible 
                 ? 'translate-y-0 opacity-100' 
                 : 'translate-y-10 opacity-0'
@@ -363,7 +361,7 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
                   return (
                     <div 
                       key={day} 
-                      className={`p-3 rounded-lg border-2 transition-all duration-300 ${
+                      className={`p-3 rounded-2xl border-2 transition-all duration-300 ${
                         day === today 
                           ? 'border-red-600 bg-red-50' 
                           : 'border-gray-200 bg-gray-50 hover:border-red-300'
@@ -432,7 +430,7 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
                   return (
                     <div 
                       key={day} 
-                      className={`col-span-2 p-4 rounded-lg border-2 transition-all duration-300 ${
+                      className={`col-span-2 p-4 rounded-2xl border-2 transition-all duration-300 ${
                         day === today 
                           ? 'border-red-600 bg-red-50' 
                           : 'border-gray-200 bg-gray-50 hover:border-red-300'
@@ -506,7 +504,7 @@ const ScheduleSection: React.FC<ScheduleSectionProps> = ({ currentUser }) => {
         }`}>
           <a 
             href="tel:+393338346546" 
-            className="bg-navy-900 hover:bg-navy-800 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl inline-flex items-center space-x-2"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm hover:bg-white hover:ring-black/20 active:scale-[0.98]"
           >
             <span>{t.callNow}</span>
           </a>

@@ -595,8 +595,8 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
           : 'opacity-0 translate-y-8'
       }`}
     >
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
+      <div className="container mx-auto px-4 text-center">
+        <div className="inline-block bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm rounded-2xl p-4 mb-8">
           <h2 className={`text-4xl md:text-5xl font-bold text-navy-900 transition-all duration-800 transform ${
             isVisible 
               ? 'translate-y-0 opacity-100 scale-100' 
@@ -604,6 +604,7 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
           }`}>
             {t.gymAreas || 'LE NOSTRE AREE'}
           </h2>
+          <p className="text-center text-gray-500 mt-2">Gestisci le aree della palestra</p>
           {internalEditMode ? (
             <div className="flex justify-center space-x-4 mt-6">
               <button
@@ -642,12 +643,11 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
         </div>
 
         {areas.length > 0 ? (
-          <div className={`relative max-w-4xl mx-auto transition-all duration-1000 transform ${
+          <div className={`relative transition-all duration-1000 transform ${
             isVisible 
               ? 'translate-y-0 opacity-100 scale-100' 
               : 'translate-y-16 opacity-0 scale-95'
-          }`}
-          style={{ transitionDelay: '300ms' }}>
+          }`}>
             <div 
               ref={carouselRef}
               className="relative overflow-hidden rounded-xl shadow-2xl"
@@ -671,7 +671,7 @@ const EditableGymAreasSection: React.FC<EditableGymAreasSectionProps> = ({ isEdi
                 
                 return (
                   <div key={area.id} className="w-full flex-shrink-0 relative">
-                    <div className="relative h-64 md:h-80 lg:h-96">
+                    <div className="relative h-64 md:h-80 lg:h-[480px]">
                       <img 
                         src={area.image} 
                         alt={area.title}

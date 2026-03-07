@@ -143,25 +143,6 @@ export const useDropdownPosition = ({
     if (event) {
       event.stopPropagation();
     }
-    // Imposta subito una posizione iniziale approssimativa ancorata al trigger
-    if (triggerRef.current) {
-      const triggerRect = triggerRef.current.getBoundingClientRect();
-      const isMobile = window.innerWidth <= 768;
-      const approxWidth = 200; // fallback
-      let top = triggerRect.bottom + offset;
-      let left = triggerRect.left;
-      switch (preferredPosition) {
-        case 'bottom-right':
-        case 'top-right':
-          left = isMobile ? Math.max(8, triggerRect.right - approxWidth) : (triggerRect.right - approxWidth);
-          break;
-        case 'bottom-left':
-        case 'top-left':
-          left = triggerRect.left;
-          break;
-      }
-      setPosition({ top, left });
-    }
     setIsOpen(true);
   }, []);
 

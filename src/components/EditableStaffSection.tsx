@@ -508,7 +508,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
             })}
           </div>
           
-          <h2 className={`text-4xl md:text-5xl font-bold mb-4 ${sectionData.titleColor}`}>
+          <h2 className={`text-4xl md:text-5xl font-bold mb-4 ${sectionData.titleColor} uppercase`}>
             {sectionData.title}
           </h2>
           
@@ -522,7 +522,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
         </div>
 
         {/* Layout dei coach */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mx-auto">
           {staffData.staff.map((member, index) => {
             const IconComponent = getIconComponent(member.iconName);
             
@@ -531,7 +531,7 @@ const EditableStaffSection: React.FC<EditableStaffSectionProps> = ({ currentUser
                 
                 
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-2xl">
-                  <div className="relative h-64 overflow-hidden">
+                  <div className="relative aspect-[5/4] overflow-hidden">
                     <img
                       src={member.image}
                       alt={member.name}

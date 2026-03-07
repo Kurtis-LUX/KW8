@@ -221,22 +221,23 @@ const GymAreasSection: React.FC = () => {
           : 'opacity-0 translate-y-8'
       }`}
     >
-      <div className="container mx-auto px-4">
-        <h2 className={`text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900 text-center mb-4 transition-all duration-800 transform ${
-          isVisible 
-            ? 'translate-y-0 opacity-100 scale-100' 
-            : 'translate-y-8 opacity-0 scale-95'
-        }`}>
-          {t.gymAreas}
-        </h2>
-        <p className="text-center text-gray-500 mb-12 max-w-2xl mx-auto">Scopri le nostre aree specializzate per ogni tipo di allenamento</p>
+      <div className="container mx-auto px-4 text-center">
+        <div className="inline-block bg-white/70 backdrop-blur-md ring-1 ring-black/10 shadow-sm rounded-2xl p-4 mb-12">
+          <h2 className={`text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-900 transition-all duration-800 transform ${
+            isVisible 
+              ? 'translate-y-0 opacity-100 scale-100' 
+              : 'translate-y-8 opacity-0 scale-95'
+          }`}>
+            {t.gymAreas}
+          </h2>
+          <p className="text-center text-gray-500 mt-2">Scopri le nostre aree specializzate per ogni tipo di allenamento</p>
+        </div>
 
-        <div className={`relative max-w-4xl mx-auto transition-all duration-1000 transform ${
+        <div className={`relative transition-all duration-1000 transform ${
           isVisible 
             ? 'translate-y-0 opacity-100 scale-100' 
             : 'translate-y-16 opacity-0 scale-95'
-        }`}
-        style={{ transitionDelay: '300ms' }}>
+        }`}>
           {/* Carousel Container */}
           <div 
             ref={carouselRef}
@@ -293,7 +294,7 @@ const GymAreasSection: React.FC = () => {
                 
                 return (
                   <div key={index} className="w-full flex-shrink-0 relative">
-                    <div className="relative h-96">
+                    <div className="relative h-[480px]">
                       <img 
                         src={area.image} 
                         alt={area.title}
