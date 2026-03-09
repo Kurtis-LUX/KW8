@@ -665,10 +665,10 @@ function App() {
             <h2 className="text-2xl font-bold text-red-600">Accesso negato</h2>
             <p className="mt-4">Devi essere loggato per accedere a questa pagina.</p>
             <button 
-              onClick={() => handleNavigation('login')} 
+              onClick={() => handleNavigation('athlete-auth')} 
               className="mt-4 px-4 py-2 bg-navy-800 text-white rounded hover:bg-navy-700"
             >
-              Accedi come Coach
+              Accedi come Atleta
             </button>
           </div>
         }
@@ -679,7 +679,7 @@ function App() {
   if (currentPage === 'workout-detail') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation(currentUser?.role === 'athlete' ? 'athlete-auth' : 'login')}>
           <div className="min-h-screen bg-gray-100">
             <Header onNavigate={handleNavigation} currentUser={currentUser} onLogout={handleLogout} currentPage={currentPage} />
             <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
@@ -781,7 +781,7 @@ function App() {
   if (currentPage === 'workout-card') {
     return (
       <LanguageProvider>
-        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation('login')}>
+        <ProtectedRoute requireAdmin={false} onUnauthorized={() => handleNavigation(currentUser?.role === 'athlete' ? 'athlete-auth' : 'login')}>
           <WorkoutCardPage />
         </ProtectedRoute>
       </LanguageProvider>

@@ -20,6 +20,16 @@ export const useUsers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const normalizeUsers = useCallback((items: User[]) => {
+    return items.map((u) => ({
+      ...u,
+      role: (u.role === 'atleta' || u.role === 'athlete')
+        ? 'athlete'
+        : (u.role === 'coach' ? 'coach' : 'admin'),
+      workoutPlans: Array.isArray((u as any)?.workoutPlans) ? (u as any).workoutPlans : []
+    })) as User[];
+  }, []);
+
   const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -27,7 +37,7 @@ export const useUsers = () => {
       const firestoreEnabled = isFirestoreEnabled();
       if (firestoreEnabled) {
         const fetchedUsers = await firestoreService.getUsers();
-        setUsers(fetchedUsers);
+        setUsers(normalizeUsers(fetchedUsers));
       } else {
         // Fallback: usa localStorage e normalizza i ruoli a 'athlete'
         const localUsers: LocalUser[] = DB.getUsers();
@@ -47,7 +57,7 @@ export const useUsers = () => {
           createdAt: now,
           updatedAt: now
         }));
-        setUsers(normalized);
+        setUsers(normalizeUsers(normalized as User[]));
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nel caricamento utenti');
@@ -55,7 +65,7 @@ export const useUsers = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [normalizeUsers]);
 
   const createUser = useCallback(async (userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -156,8 +166,30 @@ export const useUsers = () => {
   }, [fetchUsers]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    let unsubscribe: (() => void) | null = null;
+    const setup = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const firestoreEnabled = isFirestoreEnabled();
+        if (firestoreEnabled) {
+          unsubscribe = await firestoreService.subscribeToUsers((nextUsers) => {
+            setUsers(normalizeUsers(nextUsers));
+            setLoading(false);
+          });
+        } else {
+          await fetchUsers();
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Errore nel caricamento utenti');
+        setLoading(false);
+      }
+    };
+    setup();
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [fetchUsers, normalizeUsers]);
 
   return {
     users,

@@ -248,9 +248,8 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
 
   const handleNavigation = (page: string) => {
     if (page === 'workouts' && !currentUser) {
-      // Reindirizza alla pagina di login coach se l'utente tenta di accedere alle schede senza essere loggato
       if (onNavigate) {
-        onNavigate('login');
+        onNavigate('athlete-auth');
       }
     } else {
       if (onNavigate) {
