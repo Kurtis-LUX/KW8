@@ -3769,7 +3769,7 @@ useEffect(() => {
               {/* Varianti dropdown */}
               <div className="relative">
                 <button
-                  ref={variantsDropdownTriggerRef as React.RefObject<HTMLButtonElement>}
+                  ref={el => (variantsDropdownTriggerRef.current = el)}
                   onClick={(e) => toggleVariantsDropdown(e)}
                   title="Varianti"
                   aria-label="Varianti"

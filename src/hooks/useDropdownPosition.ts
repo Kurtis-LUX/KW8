@@ -142,6 +142,7 @@ export const useDropdownPosition = ({
   const openDropdown = useCallback((event?: React.MouseEvent) => {
     if (event) {
       event.stopPropagation();
+      triggerRef.current = event.currentTarget as HTMLElement;
     }
     setIsOpen(true);
   }, []);
