@@ -23,9 +23,13 @@ export const useUsers = () => {
   const normalizeUsers = useCallback((items: User[]) => {
     return items.map((u) => ({
       ...u,
-      role: (u.role === 'atleta' || u.role === 'athlete')
-        ? 'athlete'
-        : (u.role === 'coach' ? 'coach' : 'admin'),
+      role: (() => {
+        const rawRole = String((u as any)?.role || '').toLowerCase().trim();
+        if (rawRole === 'coach') return 'coach';
+        if (rawRole === 'admin') return 'admin';
+        if (rawRole === 'athlete' || rawRole === 'atleta' || rawRole === 'user' || rawRole === '') return 'athlete';
+        return 'athlete';
+      })(),
       workoutPlans: Array.isArray((u as any)?.workoutPlans) ? (u as any).workoutPlans : []
     })) as User[];
   }, []);
@@ -51,7 +55,13 @@ export const useUsers = () => {
           birthDate: u.birthDate,
           certificatoMedicoStato: 'non_presente' as const,
           notes: '',
-          role: (u.role === 'athlete' || u.role === 'atleta') ? 'athlete' : (u.role === 'coach' ? 'coach' : 'admin'),
+          role: (() => {
+            const rawRole = String((u as any)?.role || '').toLowerCase().trim();
+            if (rawRole === 'coach') return 'coach';
+            if (rawRole === 'admin') return 'admin';
+            if (rawRole === 'athlete' || rawRole === 'atleta' || rawRole === 'user' || rawRole === '') return 'athlete';
+            return 'athlete';
+          })(),
           // In locale includi sempre i piani assegnati, normalizzati
           workoutPlans: Array.isArray((u as any).workoutPlans) ? (u as any).workoutPlans : [],
           createdAt: now,
