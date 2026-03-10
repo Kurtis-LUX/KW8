@@ -252,6 +252,16 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
     setShowRegistration(true);
   };
 
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void handleEmailLogin();
+  };
+
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void handleRegister();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#ff3b30] via-[#3b264a] to-[#0a1535] flex items-center justify-center p-4 relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -299,7 +309,7 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
         )}
 
         <div className="space-y-4">
-          <div className="space-y-3">
+          <form className="space-y-3" onSubmit={handleLoginSubmit}>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
@@ -345,8 +355,7 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
             </div>
             <div className="flex gap-3">
               <button
-                type="button"
-                onClick={handleEmailLogin}
+                type="submit"
                 disabled={loading}
                 className="flex-1 px-4 py-2 bg-navy-800 text-white rounded-2xl hover:bg-navy-700 disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -361,7 +370,7 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
                 Registrati
               </button>
             </div>
-          </div>
+          </form>
         </div>
 
         {/* Sezione registrazione */}
@@ -369,7 +378,7 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
           <div className="mt-6 p-4 bg-white/90 ring-1 ring-black/10 rounded-2xl shadow-sm">
             <h3 className="text-lg font-semibold text-navy-900 mb-2">Registrazione Atleti</h3>
             <p className="text-sm text-gray-600 mb-3">Crea un nuovo account atleta usando i dati richiesti.</p>
-            <div className="space-y-3">
+            <form className="space-y-3" onSubmit={handleRegisterSubmit}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nome</label>
@@ -489,8 +498,7 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
               </div>
               <div className="flex gap-3">
                 <button
-                  type="button"
-                  onClick={handleRegister}
+                  type="submit"
                   disabled={isRegisterDisabled}
                   className="px-4 py-2 bg-navy-800 text-white rounded-2xl hover:bg-navy-700 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
@@ -504,7 +512,7 @@ const AthleteAuthPage: React.FC<AthleteAuthPageProps> = ({ onAuthSuccess, onNavi
                   Annulla
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         )}
 

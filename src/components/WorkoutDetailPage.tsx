@@ -44,6 +44,18 @@ interface WorkoutDetailPageProps {
   initialActiveVariantId?: string;
 }
 
+interface AthleteSetProgressEntry {
+  weight: string;
+  reps: string;
+}
+
+interface AthleteExerciseProgressEntry {
+  sets: AthleteSetProgressEntry[];
+  completed?: boolean;
+  completedAt?: string;
+  updatedAt?: string;
+}
+
 const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClose, folderPath, initialActiveVariantId }) => {
   const [workoutTitle, setWorkoutTitle] = useState('Nuova scheda');
   const [workoutDescription, setWorkoutDescription] = useState('');
@@ -63,16 +75,25 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
 
   // Ruoli utente per gestire permessi di modifica
   const currentUser = authService.getCurrentUser();
+  const currentUserRole = String(currentUser?.role || '').toLowerCase();
   const canEdit = currentUser?.role === 'coach' || currentUser?.role === 'admin';
-  const isAthlete = (currentUser?.role === 'athlete' || currentUser?.role === 'atleta');
+  const isAthlete = (currentUserRole === 'athlete' || currentUserRole === 'atleta' || currentUserRole === 'user');
   // Hook Firestore per gestire i piani di allenamento e gli utenti (spostato sopra per calcolo permessi varianti)
   const { workoutPlans, loading, error, updateWorkoutPlan } = useWorkoutPlans();
   const { users: athletes, loading: athletesLoading, updateUser } = useUsers();
+  const [athleteProgressDrafts, setAthleteProgressDrafts] = useState<Record<string, AthleteExerciseProgressEntry>>({});
+  const [savingProgressKey, setSavingProgressKey] = useState<string | null>(null);
+  const [runningTimerKey, setRunningTimerKey] = useState<string | null>(null);
+  const [recoveryCountdownByKey, setRecoveryCountdownByKey] = useState<Record<string, number>>({});
+  const [athleteNavigationStep, setAthleteNavigationStep] = useState<'overview' | 'weeks' | 'days' | 'workout'>('overview');
+  const hasAppliedQueryNavigationRef = useRef(false);
+  const athleteRecord = useMemo(
+    () => (athletes || []).find(u => u.id === currentUser?.id || u.email === currentUser?.email),
+    [athletes, currentUser?.id, currentUser?.email]
+  );
   // Varianti consentite per l'atleta corrente (solo quelle assegnate):
   // Usa i token più aggiornati disponibili: record utente da Firestore/local, sessione corrente e fallback su associatedAthletes del piano.
   const { allowedVariantIds, canSeeOriginal } = useMemo(() => {
-    // Trova il record utente corrente nella lista utenti caricata
-    const athleteRecord = (athletes || []).find(u => u.id === currentUser?.id || u.email === currentUser?.email);
     const tokens = ((athleteRecord?.workoutPlans ?? currentUser?.workoutPlans) ?? []) as string[];
     const set = new Set<string>();
     let originalAllowed = false;
@@ -96,7 +117,7 @@ const WorkoutDetailPage: React.FC<WorkoutDetailPageProps> = ({ workoutId, onClos
     }
 
     return { allowedVariantIds: set, canSeeOriginal: originalAllowed };
-  }, [athletes, currentUser?.id, currentUser?.email, currentUser?.workoutPlans, workoutPlans, workoutId]);
+  }, [athleteRecord?.workoutPlans, currentUser?.id, currentUser?.email, currentUser?.workoutPlans, workoutPlans, workoutId]);
 
   // Misura l'altezza dell'header per posizionare correttamente il titolo desktop
   useEffect(() => {
@@ -3748,9 +3769,433 @@ useEffect(() => {
     setIsDragging(false);
     dragInitiatedRef.current = false;
   };
+
+  const getAthleteProgressStore = useCallback(() => {
+    const fromFirestore = (athleteRecord as any)?.athleteProgress;
+    const fromSession = (currentUser as any)?.athleteProgress;
+    if (fromFirestore && typeof fromFirestore === 'object') return fromFirestore as Record<string, AthleteExerciseProgressEntry>;
+    if (fromSession && typeof fromSession === 'object') return fromSession as Record<string, AthleteExerciseProgressEntry>;
+    return {} as Record<string, AthleteExerciseProgressEntry>;
+  }, [athleteRecord, currentUser]);
+
+  const parseSeriesCount = useCallback((setsValue?: string) => {
+    const raw = String(setsValue || '').trim();
+    if (!raw) return 1;
+    const xPattern = raw.match(/(\d+)\s*[xX]/);
+    const parsed = xPattern ? parseInt(xPattern[1], 10) : parseInt(raw, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) return 1;
+    return Math.min(parsed, 20);
+  }, []);
+
+  const buildExerciseProgressKey = useCallback((exerciseId?: string) => {
+    const safeExerciseId = String(exerciseId || '').trim();
+    if (!safeExerciseId) return '';
+    return [workoutId, activeVariantId, activeWeekKey, activeDayKey, safeExerciseId].join('::');
+  }, [workoutId, activeVariantId, activeWeekKey, activeDayKey]);
+
+  const alignProgressSets = useCallback((entry: AthleteExerciseProgressEntry | undefined, targetCount: number) => {
+    const source = Array.isArray(entry?.sets) ? entry!.sets : [];
+    const nextSets: AthleteSetProgressEntry[] = Array.from({ length: targetCount }).map((_, idx) => ({
+      weight: source[idx]?.weight ?? '',
+      reps: source[idx]?.reps ?? ''
+    }));
+    return {
+      sets: nextSets,
+      completed: !!entry?.completed,
+      completedAt: entry?.completedAt,
+      updatedAt: entry?.updatedAt
+    } as AthleteExerciseProgressEntry;
+  }, []);
+
+  const parseRecoveryToSeconds = useCallback((value?: string) => {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return 60;
+    const mmss = raw.match(/^(\d{1,2}):(\d{2})$/);
+    if (mmss) {
+      const m = parseInt(mmss[1], 10);
+      const s = parseInt(mmss[2], 10);
+      if (!Number.isNaN(m) && !Number.isNaN(s)) return (m * 60) + s;
+    }
+    const minMatch = raw.match(/(\d+)\s*(m|min|mins|minute|minuti)/);
+    const secMatch = raw.match(/(\d+)\s*(s|sec|secs|second|secondi)/);
+    if (minMatch || secMatch) {
+      const mins = minMatch ? parseInt(minMatch[1], 10) : 0;
+      const secs = secMatch ? parseInt(secMatch[1], 10) : 0;
+      const total = (Number.isNaN(mins) ? 0 : mins * 60) + (Number.isNaN(secs) ? 0 : secs);
+      return total > 0 ? total : 60;
+    }
+    const numeric = parseInt(raw.replace(/[^\d]/g, ''), 10);
+    if (!Number.isNaN(numeric) && numeric > 0) return numeric;
+    return 60;
+  }, []);
+
+  const athleteProgressStore = useMemo(() => getAthleteProgressStore(), [getAthleteProgressStore]);
+  const mergedAthleteProgressStore = useMemo(
+    () => ({ ...athleteProgressStore, ...athleteProgressDrafts }),
+    [athleteProgressStore, athleteProgressDrafts]
+  );
+
+  const parseNumericKey = useCallback((value: string, prefix: string) => {
+    const numeric = parseInt(String(value).replace(new RegExp(`^${prefix}`), ''), 10);
+    return Number.isNaN(numeric) ? 0 : numeric;
+  }, []);
+
+  const sortedWeekKeys = useMemo(
+    () => [...weeks].sort((a, b) => parseNumericKey(a, 'W') - parseNumericKey(b, 'W')),
+    [weeks, parseNumericKey]
+  );
+
+  const activeWeeksStore = useMemo(
+    () => (activeVariantId === 'original' ? (originalWeeksStore || {}) : (variantWeeksStoreById[activeVariantId] || {})),
+    [activeVariantId, originalWeeksStore, variantWeeksStoreById]
+  );
+
+  const getDayKeysForWeek = useCallback((weekKey: string) => {
+    const daysMap = activeWeeksStore[weekKey] || {};
+    const keys = Object.keys(daysMap);
+    if (!keys.length) return ['G1'];
+    return [...keys].sort((a, b) => parseNumericKey(a, 'G') - parseNumericKey(b, 'G'));
+  }, [activeWeeksStore, parseNumericKey]);
+
+  const getExercisesForWeekDay = useCallback((weekKey: string, dayKey: string) => {
+    const daysMap = activeWeeksStore[weekKey] || {};
+    return (daysMap[dayKey] || []) as Exercise[];
+  }, [activeWeeksStore]);
+
+  const getExerciseProgressEntry = useCallback((weekKey: string, dayKey: string, exercise: Exercise) => {
+    const exId = String(exercise?.id || '').trim();
+    if (!exId) return undefined;
+    const progressKey = [workoutId, activeVariantId, weekKey, dayKey, exId].join('::');
+    return mergedAthleteProgressStore[progressKey];
+  }, [workoutId, activeVariantId, mergedAthleteProgressStore]);
+
+  const isExerciseCompletedInDay = useCallback((weekKey: string, dayKey: string, exercise: Exercise) => {
+    return !!getExerciseProgressEntry(weekKey, dayKey, exercise)?.completed;
+  }, [getExerciseProgressEntry]);
+
+  const isDayCompleted = useCallback((weekKey: string, dayKey: string) => {
+    const dayExercises = getExercisesForWeekDay(weekKey, dayKey);
+    if (!dayExercises.length) return false;
+    return dayExercises.every((exercise) => isExerciseCompletedInDay(weekKey, dayKey, exercise));
+  }, [getExercisesForWeekDay, isExerciseCompletedInDay]);
+
+  const isWeekCompleted = useCallback((weekKey: string) => {
+    const dayKeys = getDayKeysForWeek(weekKey);
+    const dayKeysWithExercises = dayKeys.filter((dayKey) => getExercisesForWeekDay(weekKey, dayKey).length > 0);
+    if (!dayKeysWithExercises.length) return false;
+    return dayKeysWithExercises.every((dayKey) => isDayCompleted(weekKey, dayKey));
+  }, [getDayKeysForWeek, getExercisesForWeekDay, isDayCompleted]);
+
+  const isProgramCompleted = useMemo(() => {
+    const weeksWithWorkouts = sortedWeekKeys.filter((weekKey) => getDayKeysForWeek(weekKey).some((dayKey) => getExercisesForWeekDay(weekKey, dayKey).length > 0));
+    if (!weeksWithWorkouts.length) return false;
+    return weeksWithWorkouts.every((weekKey) => isWeekCompleted(weekKey));
+  }, [sortedWeekKeys, getDayKeysForWeek, getExercisesForWeekDay, isWeekCompleted]);
+
+  const workoutStats = useMemo(() => {
+    let total = 0;
+    let completed = 0;
+    sortedWeekKeys.forEach((weekKey) => {
+      getDayKeysForWeek(weekKey).forEach((dayKey) => {
+        const dayExercises = getExercisesForWeekDay(weekKey, dayKey);
+        if (!dayExercises.length) return;
+        total += 1;
+        if (isDayCompleted(weekKey, dayKey)) completed += 1;
+      });
+    });
+    return { completed, total };
+  }, [sortedWeekKeys, getDayKeysForWeek, getExercisesForWeekDay, isDayCompleted]);
+
+  const nextWorkoutPreview = useMemo(() => {
+    for (const weekKey of sortedWeekKeys) {
+      const dayKeys = getDayKeysForWeek(weekKey);
+      for (const dayKey of dayKeys) {
+        const dayExercises = getExercisesForWeekDay(weekKey, dayKey);
+        if (!dayExercises.length) continue;
+        if (!isDayCompleted(weekKey, dayKey)) {
+          return {
+            weekKey,
+            dayKey,
+            exercisesCount: dayExercises.length,
+            dayName: getDayDisplayName(dayKey)
+          };
+        }
+      }
+    }
+    const fallbackWeek = sortedWeekKeys[0] || activeWeekKey;
+    const fallbackDay = getDayKeysForWeek(fallbackWeek)[0] || activeDayKey;
+    return {
+      weekKey: fallbackWeek,
+      dayKey: fallbackDay,
+      exercisesCount: getExercisesForWeekDay(fallbackWeek, fallbackDay).length,
+      dayName: getDayDisplayName(fallbackDay)
+    };
+  }, [sortedWeekKeys, getDayKeysForWeek, getExercisesForWeekDay, isDayCompleted, getDayDisplayName, activeWeekKey, activeDayKey]);
+
+  useEffect(() => {
+    if (!isAthlete || hasAppliedQueryNavigationRef.current || !weeks.length) return;
+    const params = new URLSearchParams(window.location.search);
+    const targetWeek = params.get('week');
+    const targetDay = params.get('day');
+    if (!targetWeek && !targetDay) {
+      hasAppliedQueryNavigationRef.current = true;
+      return;
+    }
+    if (targetWeek && weeks.includes(targetWeek) && targetWeek !== activeWeekKey) {
+      handleSwitchWeek(targetWeek);
+    }
+    const selectedWeek = targetWeek && weeks.includes(targetWeek) ? targetWeek : activeWeekKey;
+    const dayKeys = getDayKeysForWeek(selectedWeek);
+    if (targetDay && dayKeys.includes(targetDay) && targetDay !== activeDayKey) {
+      handleSwitchDay(targetDay);
+    }
+    setAthleteNavigationStep('workout');
+    hasAppliedQueryNavigationRef.current = true;
+  }, [isAthlete, weeks, activeWeekKey, activeDayKey, handleSwitchWeek, handleSwitchDay, getDayKeysForWeek]);
+
+  useEffect(() => {
+    if (!isAthlete) return;
+    const progressStore = getAthleteProgressStore();
+    setAthleteProgressDrafts((prev) => {
+      const next = { ...prev };
+      exercises.forEach((exercise) => {
+        const key = buildExerciseProgressKey(exercise.id);
+        if (!key) return;
+        const targetCount = parseSeriesCount(exercise.sets);
+        const fromStore = progressStore[key] as AthleteExerciseProgressEntry | undefined;
+        const base = next[key] || fromStore;
+        next[key] = alignProgressSets(base, targetCount);
+      });
+      return next;
+    });
+  }, [isAthlete, exercises, buildExerciseProgressKey, parseSeriesCount, alignProgressSets, getAthleteProgressStore]);
+
+  useEffect(() => {
+    if (!runningTimerKey) return;
+    const timer = window.setInterval(() => {
+      setRecoveryCountdownByKey((prev) => {
+        const current = prev[runningTimerKey] ?? 0;
+        if (current <= 1) {
+          window.clearInterval(timer);
+          setRunningTimerKey(null);
+          setSaveMessage('Recupero terminato');
+          return { ...prev, [runningTimerKey]: 0 };
+        }
+        return { ...prev, [runningTimerKey]: current - 1 };
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [runningTimerKey]);
+
+  const handleAthleteProgressFieldChange = useCallback((exercise: Exercise, setIndex: number, field: 'weight' | 'reps', value: string) => {
+    const key = buildExerciseProgressKey(exercise.id);
+    if (!key) return;
+    setAthleteProgressDrafts((prev) => {
+      const targetCount = parseSeriesCount(exercise.sets);
+      const current = alignProgressSets(prev[key], targetCount);
+      const updatedSets = current.sets.map((row, idx) => idx === setIndex ? { ...row, [field]: value } : row);
+      return {
+        ...prev,
+        [key]: { ...current, sets: updatedSets }
+      };
+    });
+  }, [buildExerciseProgressKey, parseSeriesCount, alignProgressSets]);
+
+  const handleSaveAthleteProgress = useCallback(async (exercise: Exercise) => {
+    if (!isAthlete) return;
+    const key = buildExerciseProgressKey(exercise.id);
+    if (!key) return;
+    const userId = athleteRecord?.id || currentUser?.id;
+    if (!userId) {
+      setSaveMessage('Utente atleta non trovato');
+      return;
+    }
+    const draft = athleteProgressDrafts[key];
+    if (!draft) return;
+    setSavingProgressKey(key);
+    try {
+      const targetCount = parseSeriesCount(exercise.sets);
+      const normalized = alignProgressSets(draft, targetCount);
+      const updatedStore = {
+        ...athleteProgressStore,
+        [key]: {
+          ...normalized,
+          updatedAt: new Date().toISOString()
+        }
+      };
+      await updateUser(userId, { athleteProgress: updatedStore } as any);
+      setSaveMessage('Progressi salvati');
+    } catch (err) {
+      console.error('Errore nel salvataggio progressi atleta:', err);
+      setSaveMessage('Errore nel salvataggio progressi');
+    } finally {
+      setSavingProgressKey(null);
+    }
+  }, [isAthlete, buildExerciseProgressKey, athleteRecord?.id, currentUser?.id, athleteProgressDrafts, parseSeriesCount, alignProgressSets, updateUser, athleteProgressStore]);
+
+  const handleToggleExerciseCompleted = useCallback(async (exercise: Exercise) => {
+    if (!isAthlete) return;
+    const key = buildExerciseProgressKey(exercise.id);
+    if (!key) return;
+    const userId = athleteRecord?.id || currentUser?.id;
+    if (!userId) return;
+    setSavingProgressKey(key);
+    try {
+      const targetCount = parseSeriesCount(exercise.sets);
+      const base = alignProgressSets(athleteProgressDrafts[key] || athleteProgressStore[key], targetCount);
+      const toggledCompleted = !base.completed;
+      const updatedEntry: AthleteExerciseProgressEntry = {
+        ...base,
+        completed: toggledCompleted,
+        completedAt: toggledCompleted ? new Date().toISOString() : undefined,
+        updatedAt: new Date().toISOString()
+      };
+      const updatedStore = {
+        ...athleteProgressStore,
+        [key]: updatedEntry
+      };
+      setAthleteProgressDrafts((prev) => ({ ...prev, [key]: updatedEntry }));
+      await updateUser(userId, { athleteProgress: updatedStore } as any);
+      setSaveMessage(toggledCompleted ? 'Esercizio completato' : 'Esercizio riaperto');
+    } catch (err) {
+      console.error('Errore aggiornando completamento esercizio:', err);
+      setSaveMessage('Errore aggiornando completamento');
+    } finally {
+      setSavingProgressKey(null);
+    }
+  }, [isAthlete, buildExerciseProgressKey, athleteRecord?.id, currentUser?.id, parseSeriesCount, alignProgressSets, athleteProgressDrafts, athleteProgressStore, updateUser]);
+
+  const handleMarkAllExercisesCompleted = useCallback(async () => {
+    if (!isAthlete || !exercises.length) return;
+    const userId = athleteRecord?.id || currentUser?.id;
+    if (!userId) return;
+    setSavingProgressKey('__all__');
+    try {
+      const now = new Date().toISOString();
+      const updatedDrafts: Record<string, AthleteExerciseProgressEntry> = {};
+      exercises.forEach((exercise) => {
+        const key = buildExerciseProgressKey(exercise.id);
+        if (!key) return;
+        const targetCount = parseSeriesCount(exercise.sets);
+        const base = alignProgressSets(athleteProgressDrafts[key] || athleteProgressStore[key], targetCount);
+        updatedDrafts[key] = {
+          ...base,
+          completed: true,
+          completedAt: now,
+          updatedAt: now
+        };
+      });
+      const updatedStore = {
+        ...athleteProgressStore,
+        ...updatedDrafts
+      };
+      setAthleteProgressDrafts((prev) => ({ ...prev, ...updatedDrafts }));
+      await updateUser(userId, { athleteProgress: updatedStore } as any);
+      setSaveMessage('Allenamento completato');
+    } catch (err) {
+      console.error('Errore completando allenamento:', err);
+      setSaveMessage('Errore nel completamento allenamento');
+    } finally {
+      setSavingProgressKey(null);
+    }
+  }, [isAthlete, exercises, athleteRecord?.id, currentUser?.id, buildExerciseProgressKey, parseSeriesCount, alignProgressSets, athleteProgressDrafts, athleteProgressStore, updateUser]);
+
+  const handleStartRecoveryTimer = useCallback((exercise: Exercise) => {
+    const key = buildExerciseProgressKey(exercise.id);
+    if (!key) return;
+    const seconds = parseRecoveryToSeconds(exercise.recovery);
+    setRecoveryCountdownByKey((prev) => ({ ...prev, [key]: seconds }));
+    setRunningTimerKey(key);
+  }, [buildExerciseProgressKey, parseRecoveryToSeconds]);
+
+  const formatCountdown = useCallback((totalSeconds: number) => {
+    const safe = Math.max(0, totalSeconds || 0);
+    const mm = Math.floor(safe / 60).toString().padStart(2, '0');
+    const ss = Math.floor(safe % 60).toString().padStart(2, '0');
+    return `${mm}:${ss}`;
+  }, []);
+
+  const renderAthleteProgressSection = useCallback((exercise: Exercise) => {
+    if (!isAthlete) return null;
+    const key = buildExerciseProgressKey(exercise.id);
+    if (!key) return null;
+    const targetCount = parseSeriesCount(exercise.sets);
+    const progressEntry = alignProgressSets(athleteProgressDrafts[key] || athleteProgressStore[key], targetCount);
+    const timerSeconds = recoveryCountdownByKey[key] ?? parseRecoveryToSeconds(exercise.recovery);
+    const timerRunning = runningTimerKey === key;
+    const isCompleted = !!progressEntry.completed;
+    return (
+      <div className={`mt-3 rounded-xl ring-1 p-3 ${isCompleted ? 'bg-green-50/80 ring-green-200' : 'bg-gray-50/80 ring-black/10'}`} onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-semibold text-gray-800">Serie</p>
+          <span className={`text-xs font-semibold ${isCompleted ? 'text-green-700' : 'text-gray-500'}`}>{isCompleted ? 'Completato' : 'Da completare'}</span>
+        </div>
+        <div className="space-y-2">
+          {progressEntry.sets.map((setRow, idx) => (
+            <div key={`${key}-set-${idx}`} className="rounded-lg bg-white ring-1 ring-black/10 p-2">
+              <div className="text-xs text-gray-600 mb-1">Serie {idx + 1}</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Peso (Kg)</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={setRow.weight}
+                    onChange={(e) => handleAthleteProgressFieldChange(exercise, idx, 'weight', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Ripetizioni</label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={setRow.reps}
+                    onChange={(e) => handleAthleteProgressFieldChange(exercise, idx, 'reps', e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleSaveAthleteProgress(exercise)}
+            disabled={savingProgressKey === key}
+            className="px-3 py-2 rounded-xl bg-navy-800 text-white text-sm hover:bg-navy-700 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {savingProgressKey === key ? 'Salvataggio...' : 'Salva progressi'}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleStartRecoveryTimer(exercise)}
+            className="px-3 py-2 rounded-xl bg-white ring-1 ring-black/10 text-gray-800 text-sm hover:bg-gray-50"
+          >
+            Timer
+          </button>
+          <button
+            type="button"
+            onClick={() => handleToggleExerciseCompleted(exercise)}
+            disabled={savingProgressKey === key}
+            className={`px-3 py-2 rounded-xl text-sm ${isCompleted ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-white ring-1 ring-black/10 text-gray-800 hover:bg-gray-50'} disabled:opacity-60 disabled:cursor-not-allowed`}
+          >
+            {isCompleted ? 'Segnato completato' : 'Segna completato'}
+          </button>
+          <span className={`text-sm font-semibold ${timerRunning ? 'text-red-600' : 'text-gray-700'}`}>{formatCountdown(timerSeconds)}</span>
+        </div>
+      </div>
+    );
+  }, [isAthlete, buildExerciseProgressKey, parseSeriesCount, alignProgressSets, athleteProgressDrafts, recoveryCountdownByKey, parseRecoveryToSeconds, runningTimerKey, handleAthleteProgressFieldChange, handleSaveAthleteProgress, savingProgressKey, handleStartRecoveryTimer, formatCountdown, handleToggleExerciseCompleted, athleteProgressStore]);
+  const desktopAthleteTopOffset = (!isStandaloneMobile && isAthlete)
+    ? Math.max(8, (headerHeight || 80) - 16)
+    : 0;
   
   return (
-        <div className="bg-gray-100 min-h-screen" style={{ paddingTop: isStandaloneMobile ? headerOffsetTop : undefined }}>
+        <div className="bg-gray-100 min-h-screen" style={{ paddingTop: isStandaloneMobile ? headerOffsetTop : desktopAthleteTopOffset }}>
       {/* Titolo pagina interno rimosso su desktop per evitare duplicazioni con il titolo in header */}
       {/* Notifica stile Apple (pill) */}
       {saveMessage && (
@@ -3758,6 +4203,21 @@ useEffect(() => {
           <div className={`flex items-center gap-2 px-4 py-2 rounded-full bg-white/95 backdrop-blur-sm shadow-md ring-1 ring-gray-200 transform transition-all duration-300 ease-out ${isToastExiting ? 'opacity-0 -translate-y-2 scale-95' : isToastEntering ? 'opacity-0 translate-y-2 scale-95' : 'opacity-100 translate-y-0 scale-100'}`}>
             <CheckCircle size={18} className="text-green-600" />
             <span className="text-gray-700 text-sm font-medium">{saveMessage}</span>
+          </div>
+        </div>
+      )}
+      {!isStandaloneMobile && isAthlete && (
+        <div className="w-full px-4 sm:px-6 lg:px-8 mb-2">
+          <div className="relative flex items-center justify-center">
+            <button
+              onClick={onClose}
+              className="absolute left-0 inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 bg-white ring-1 ring-black/10 rounded-2xl shadow-sm hover:bg-white active:scale-[0.98] shrink-0"
+              title="Torna alle schede"
+              aria-label="Torna alle schede"
+            >
+              <ChevronLeft size={20} className="block text-black" />
+            </button>
+            <h2 className="font-sfpro text-base sm:text-lg font-bold text-gray-900 tracking-tight text-center">Le tue schede</h2>
           </div>
         </div>
       )}
@@ -5747,7 +6207,7 @@ useEffect(() => {
           </Portal>
         )}
         {/* Toolbar sopra il titolo: Varianti / Settimane / Allenamenti (desktop, solo atleta) */}
-        {!isStandaloneMobile && currentUser?.role === 'athlete' && (
+        {!isStandaloneMobile && isAthlete && athleteNavigationStep === 'workout' && (
           <div className="flex justify-center items-center mb-2">
             <div ref={toolbarRef} className="relative w-full flex justify-center max-w-full">
               <div className="mx-auto w-fit inline-flex flex-nowrap whitespace-nowrap justify-center items-center gap-2 p-2.5 bg-white/70 backdrop-blur-sm ring-1 ring-black/10 rounded-[28px] shadow-sm">
@@ -6831,8 +7291,120 @@ useEffect(() => {
         
         {/* Liste di selezione spostate nella toolbar: varianti, settimane, giornate */}
         
+        {isAthlete && (
+          <div className="mt-4 mb-6 space-y-4">
+            {athleteNavigationStep === 'overview' && (
+              <>
+                <div className="rounded-2xl bg-white/80 backdrop-blur-sm ring-1 ring-black/10 p-4 shadow-sm">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle size={18} className="text-green-600" />
+                    <h3 className="text-base font-semibold text-gray-900">Statistiche</h3>
+                  </div>
+                  <p className="text-sm text-gray-700">
+                    Allenamenti completati: <span className="font-semibold">{workoutStats.completed}</span> / <span className="font-semibold">{workoutStats.total}</span>
+                  </p>
+                </div>
+                <div
+                  onClick={() => setAthleteNavigationStep('weeks')}
+                  className={`w-full text-left rounded-2xl backdrop-blur-sm ring-1 p-4 shadow-sm transition cursor-pointer ${isProgramCompleted ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white/80 ring-black/10 hover:bg-white'}`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Folder size={18} className={isProgramCompleted ? 'text-green-700' : 'text-blue-600'} />
+                    <h3 className="text-base font-semibold text-gray-900">Scheda</h3>
+                    {isProgramCompleted && <span className="text-xs font-semibold text-green-700">Completa</span>}
+                  </div>
+                  <p className="text-sm text-gray-700">Prossimo allenamento: <span className="font-semibold">{nextWorkoutPreview.dayName}</span></p>
+                  <p className="text-sm text-gray-700">Esercizi: <span className="font-semibold">{nextWorkoutPreview.exercisesCount}</span></p>
+                  <p className="text-sm text-gray-700 mb-3">Settimana: <span className="font-semibold">{parseNumericKey(nextWorkoutPreview.weekKey, 'W')}</span></p>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (nextWorkoutPreview.weekKey !== activeWeekKey) handleSwitchWeek(nextWorkoutPreview.weekKey);
+                      if (nextWorkoutPreview.dayKey !== activeDayKey) handleSwitchDay(nextWorkoutPreview.dayKey);
+                      setAthleteNavigationStep('workout');
+                    }}
+                    className="px-3 py-2 rounded-xl bg-navy-800 text-white text-sm hover:bg-navy-700"
+                  >
+                    Accesso veloce al prossimo allenamento
+                  </button>
+                </div>
+              </>
+            )}
+
+            {athleteNavigationStep === 'weeks' && (
+              <div className="rounded-2xl bg-white/80 backdrop-blur-sm ring-1 ring-black/10 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={18} className="text-cyan-600" />
+                    <h3 className="text-base font-semibold text-gray-900">Settimane</h3>
+                  </div>
+                  <button type="button" onClick={() => setAthleteNavigationStep('overview')} className="text-sm text-gray-600 hover:text-gray-900">Indietro</button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {sortedWeekKeys.map((weekKey) => (
+                    <button
+                      key={weekKey}
+                      type="button"
+                      onClick={() => {
+                        if (weekKey !== activeWeekKey) handleSwitchWeek(weekKey);
+                        setAthleteNavigationStep('days');
+                      }}
+                      className={`text-left rounded-xl ring-1 p-3 ${isWeekCompleted(weekKey) ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white ring-black/10 hover:bg-gray-50'}`}
+                    >
+                      <p className="font-semibold text-gray-900">Settimana {parseNumericKey(weekKey, 'W')}</p>
+                      <p className="text-xs text-gray-600">Allenamenti: {getDayKeysForWeek(weekKey).filter((dk) => getExercisesForWeekDay(weekKey, dk).length > 0).length}</p>
+                      <p className={`text-xs font-semibold ${isWeekCompleted(weekKey) ? 'text-green-700' : 'text-gray-600'}`}>{isWeekCompleted(weekKey) ? 'Completata' : 'Da completare'}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {athleteNavigationStep === 'days' && (
+              <div className="rounded-2xl bg-white/80 backdrop-blur-sm ring-1 ring-black/10 p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Dumbbell size={18} className="text-orange-500" />
+                    <h3 className="text-base font-semibold text-gray-900">Allenamenti - Settimana {parseNumericKey(activeWeekKey, 'W')}</h3>
+                  </div>
+                  <button type="button" onClick={() => setAthleteNavigationStep('weeks')} className="text-sm text-gray-600 hover:text-gray-900">Indietro</button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {getDayKeysForWeek(activeWeekKey).map((dayKey) => (
+                    <button
+                      key={dayKey}
+                      type="button"
+                      onClick={() => {
+                        if (dayKey !== activeDayKey) handleSwitchDay(dayKey);
+                        setAthleteNavigationStep('workout');
+                      }}
+                      className={`text-left rounded-xl ring-1 p-3 ${isDayCompleted(activeWeekKey, dayKey) ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white ring-black/10 hover:bg-gray-50'}`}
+                    >
+                      <p className="font-semibold text-gray-900">{getDayDisplayName(dayKey)}</p>
+                      <p className="text-xs text-gray-600">Esercizi: {getExercisesForWeekDay(activeWeekKey, dayKey).length}</p>
+                      <p className={`text-xs font-semibold ${isDayCompleted(activeWeekKey, dayKey) ? 'text-green-700' : 'text-gray-600'}`}>
+                        {isDayCompleted(activeWeekKey, dayKey) ? 'Completato' : 'Da completare'}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Exercises List */}
+        {(!isAthlete || athleteNavigationStep === 'workout') && (
         <div className="mt-6 mb-8">
+          {isAthlete && (
+            <div className="mb-3 flex items-center justify-between">
+              <button type="button" onClick={() => setAthleteNavigationStep('days')} className="text-sm text-gray-600 hover:text-gray-900">
+                ← Torna agli allenamenti
+              </button>
+              <span className="text-xs text-gray-500">Settimana {parseNumericKey(activeWeekKey, 'W')} · {getDayDisplayName(activeDayKey)}</span>
+            </div>
+          )}
           <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight flex items-center">
             <Dumbbell size={22} className="mr-2 text-gray-700" />
             Esercizi
@@ -6976,6 +7548,7 @@ useEffect(() => {
                               </p>
                             )}
                           </div>
+                          {renderAthleteProgressSection(leader)}
                           {canEdit && openExerciseContextId === leader.id && actionsMenuType === 'exercise' && actionsMenuPosition && (
                             <Portal>
                               <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
@@ -7128,6 +7701,7 @@ useEffect(() => {
                                   </p>
                                 )}
                               </div>
+                              {renderAthleteProgressSection(follower)}
                           {canEdit && openExerciseContextId === follower.id && actionsMenuType === 'exercise' && actionsMenuPosition && (
                             <Portal>
                               <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
@@ -7275,6 +7849,7 @@ useEffect(() => {
                             </p>
                           )}
                         </div>
+                        {renderAthleteProgressSection(exercise)}
                         {canEdit && openExerciseContextId === exercise.id && actionsMenuType === 'exercise' && actionsMenuPosition && (
                           <Portal>
                             <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} className="bg-black/10" onClick={closeActionsMenu} />
@@ -7336,6 +7911,18 @@ useEffect(() => {
                 }
                 return rendered;
               })()}
+              {isAthlete && exercises.length > 0 && (
+                <div className="pt-2 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleMarkAllExercisesCompleted}
+                    disabled={savingProgressKey === '__all__'}
+                    className="px-4 py-2 rounded-2xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {savingProgressKey === '__all__' ? 'Salvataggio...' : 'Segna tutti gli esercizi completati'}
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-gray-500 text-center py-8">
@@ -7343,6 +7930,7 @@ useEffect(() => {
             </div>
           )}
         </div>
+        )}
       </div>
       
       {/* Link Generation Modal */}

@@ -49,6 +49,14 @@ export interface ProgramItem {
   icon?: string;
   durationWeeks?: number;
   trainingDays?: number;
+  completedWorkouts?: number;
+  totalWorkouts?: number;
+  nextWorkoutName?: string;
+  nextWorkoutExercises?: number;
+  nextWorkoutWeek?: number;
+  nextWorkoutDayKey?: string;
+  assignedVariantId?: string;
+  isProgramComplete?: boolean;
 }
 
 interface ProgramCardProps {
@@ -69,6 +77,7 @@ interface ProgramCardProps {
   // Nuove opzioni per uso lato atleta
   role?: 'coach' | 'athlete';
   onOpen?: (program: ProgramItem) => void;
+  onOpenNext?: (program: ProgramItem) => void;
 }
 
 // Componente ProgramCard
@@ -88,7 +97,8 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
   isDragging = false,
   showDetails = true,
   role = 'coach',
-  onOpen
+  onOpen,
+  onOpenNext
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   
@@ -254,7 +264,7 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
       onClick={() => {
         if (role === 'athlete' && onOpen) onOpen(program);
       }}
-      className={`bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all duration-300 ${role === 'coach' ? 'cursor-move' : 'cursor-pointer'} group relative ${
+      className={`${role === 'athlete' ? 'bg-white/80 backdrop-blur-xl ring-1 ring-black/10 rounded-2xl shadow-[0_10px_28px_rgba(0,0,0,0.08)] hover:shadow-[0_14px_34px_rgba(0,0,0,0.10)]' : 'bg-white border border-gray-200 rounded-lg hover:shadow-lg'} p-4 transition-all duration-300 ${role === 'coach' ? 'cursor-move' : 'cursor-pointer'} group relative ${
         isDragging ? 'opacity-50' : ''
       }`}
       style={{ marginLeft: `${level * 20}px` }}
@@ -270,20 +280,64 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
       {/* Header della card */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: accentBg }}>
+          <div className={`w-12 h-12 flex items-center justify-center ${role === 'athlete' ? 'rounded-2xl' : 'rounded-lg'}`} style={{ backgroundColor: accentBg }}>
             <IconComp size={24} style={{ color: accentColor }} />
           </div>
           
           <div className="flex-1">
-            <h4 className="font-semibold text-navy-900 mb-1 pr-8">{program.title}</h4>
+            <h4 className={`pr-8 ${role === 'athlete' ? 'font-sfpro text-[18px] leading-[1.15] font-semibold tracking-[-0.01em] text-gray-950 mb-1' : 'font-semibold text-navy-900 mb-1'}`}>{program.title}</h4>
             {showDetails && (role === 'athlete' || !!program.description) && (
-              <p className="text-sm text-gray-600 line-clamp-2">
+              <p className={`${role === 'athlete' ? 'text-[13px] leading-relaxed text-gray-600 line-clamp-2 max-w-[95%]' : 'text-sm text-gray-600 line-clamp-2'}`}>
                 {program.description?.trim() || (role === 'athlete' ? 'Nessuna descrizione' : '')}
               </p>
             )}
           </div>
         </div>
       </div>
+
+      {role === 'athlete' && (
+        <div className="space-y-3 mb-4">
+          <div className="rounded-2xl bg-white/80 backdrop-blur-sm ring-1 ring-black/10 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Activity size={15} className="text-green-600" />
+              <span className="text-sm font-semibold text-gray-900">Statistiche</span>
+            </div>
+            <p className="text-xs text-gray-700">
+              Allenamenti completati: <span className="font-semibold">{program.completedWorkouts ?? 0}</span> / <span className="font-semibold">{program.totalWorkouts ?? 0}</span>
+            </p>
+          </div>
+          <div className={`rounded-2xl backdrop-blur-sm ring-1 p-3 ${program.isProgramComplete ? 'bg-green-50/90 ring-green-300' : 'bg-white/80 ring-black/10'}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <Book size={15} className={program.isProgramComplete ? 'text-green-700' : 'text-blue-600'} />
+              <span className="text-sm font-semibold text-gray-900">Scheda</span>
+              {program.isProgramComplete && <span className="text-[11px] font-semibold text-green-700">Completa</span>}
+            </div>
+            <p className="text-xs text-gray-700">
+              Prossimo allenamento: <span className="font-semibold">{program.nextWorkoutName || 'Allenamento 1'}</span>
+            </p>
+            <p className="text-xs text-gray-700">
+              Esercizi: <span className="font-semibold">{program.nextWorkoutExercises ?? 0}</span>
+            </p>
+            <p className="text-xs text-gray-700">
+              Settimana: <span className="font-semibold">{program.nextWorkoutWeek ?? 1}</span>
+            </p>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onOpenNext) {
+                  onOpenNext(program);
+                  return;
+                }
+                if (onOpen) onOpen(program);
+              }}
+              className="mt-2 px-3 py-1.5 rounded-xl bg-navy-800 text-white text-xs hover:bg-navy-700 transition-colors"
+            >
+              Accedi al prossimo allenamento
+            </button>
+          </div>
+        </div>
+      )}
       
       {/* Dettagli del programma (mostra meta solo lato coach) */}
       {showDetails && (
@@ -395,7 +449,7 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
       </div>
       
       {/* Data di creazione/modifica */}
-      {showDetails && (program.createdAt || program.updatedAt) && (
+      {showDetails && role === 'coach' && (program.createdAt || program.updatedAt) && (
         <div className="mt-3 pt-3 border-t border-gray-100">
           <div className="text-xs text-gray-500">
             {program.updatedAt && (

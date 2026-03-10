@@ -189,6 +189,11 @@ const AthleteRegisterPage: React.FC<AthleteRegisterPageProps> = ({ onAuthSuccess
     }
   };
 
+  const handleRegisterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    void handleRegister();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#ff3b30] via-[#3b264a] to-[#0a1535] flex items-center justify-center p-4 relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -236,7 +241,7 @@ const AthleteRegisterPage: React.FC<AthleteRegisterPageProps> = ({ onAuthSuccess
         )}
 
         {/* Form registrazione */}
-        <div className="space-y-3">
+        <form className="space-y-3" onSubmit={handleRegisterSubmit}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700">Nome</label>
@@ -385,8 +390,7 @@ const AthleteRegisterPage: React.FC<AthleteRegisterPageProps> = ({ onAuthSuccess
           </div>
           <div className="flex gap-3">
             <button
-              type="button"
-              onClick={handleRegister}
+              type="submit"
               disabled={isRegisterDisabled}
               className="flex-1 px-4 py-2 bg-navy-800 text-white rounded-2xl hover:bg-navy-700 disabled:opacity-60 disabled:cursor-not-allowed"
             >
@@ -400,7 +404,7 @@ const AthleteRegisterPage: React.FC<AthleteRegisterPageProps> = ({ onAuthSuccess
               Torna al login
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
