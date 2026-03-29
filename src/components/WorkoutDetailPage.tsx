@@ -4001,6 +4001,19 @@ useEffect(() => {
     });
   }, [buildExerciseProgressKey, parseSeriesCount, alignProgressSets]);
 
+  const persistAthleteProgressPatch = useCallback(async (
+    userId: string,
+    patch: Record<string, AthleteExerciseProgressEntry>
+  ) => {
+    const updatedStore = {
+      ...athleteProgressStore,
+      ...athleteProgressDrafts,
+      ...patch
+    };
+    setAthleteProgressDrafts((prev) => ({ ...prev, ...patch }));
+    await updateUser(userId, { athleteProgress: updatedStore } as any);
+  }, [athleteProgressStore, athleteProgressDrafts, updateUser]);
+
   const handleSaveAthleteProgress = useCallback(async (exercise: Exercise) => {
     if (!isAthlete) return;
     const key = buildExerciseProgressKey(exercise.id);
@@ -4016,14 +4029,11 @@ useEffect(() => {
     try {
       const targetCount = parseSeriesCount(exercise.sets);
       const normalized = alignProgressSets(draft, targetCount);
-      const updatedStore = {
-        ...athleteProgressStore,
-        [key]: {
-          ...normalized,
-          updatedAt: new Date().toISOString()
-        }
+      const updatedEntry: AthleteExerciseProgressEntry = {
+        ...normalized,
+        updatedAt: new Date().toISOString()
       };
-      await updateUser(userId, { athleteProgress: updatedStore } as any);
+      await persistAthleteProgressPatch(userId, { [key]: updatedEntry });
       setSaveMessage('Progressi salvati');
     } catch (err) {
       console.error('Errore nel salvataggio progressi atleta:', err);
@@ -4031,7 +4041,7 @@ useEffect(() => {
     } finally {
       setSavingProgressKey(null);
     }
-  }, [isAthlete, buildExerciseProgressKey, athleteRecord?.id, currentUser?.id, athleteProgressDrafts, parseSeriesCount, alignProgressSets, updateUser, athleteProgressStore]);
+  }, [isAthlete, buildExerciseProgressKey, athleteRecord?.id, currentUser?.id, athleteProgressDrafts, parseSeriesCount, alignProgressSets, persistAthleteProgressPatch]);
 
   const handleToggleExerciseCompleted = useCallback(async (exercise: Exercise) => {
     if (!isAthlete) return;
@@ -4050,12 +4060,7 @@ useEffect(() => {
         completedAt: toggledCompleted ? new Date().toISOString() : undefined,
         updatedAt: new Date().toISOString()
       };
-      const updatedStore = {
-        ...athleteProgressStore,
-        [key]: updatedEntry
-      };
-      setAthleteProgressDrafts((prev) => ({ ...prev, [key]: updatedEntry }));
-      await updateUser(userId, { athleteProgress: updatedStore } as any);
+      await persistAthleteProgressPatch(userId, { [key]: updatedEntry });
       setSaveMessage(toggledCompleted ? 'Esercizio completato' : 'Esercizio riaperto');
     } catch (err) {
       console.error('Errore aggiornando completamento esercizio:', err);
@@ -4063,7 +4068,7 @@ useEffect(() => {
     } finally {
       setSavingProgressKey(null);
     }
-  }, [isAthlete, buildExerciseProgressKey, athleteRecord?.id, currentUser?.id, parseSeriesCount, alignProgressSets, athleteProgressDrafts, athleteProgressStore, updateUser]);
+  }, [isAthlete, buildExerciseProgressKey, athleteRecord?.id, currentUser?.id, parseSeriesCount, alignProgressSets, athleteProgressDrafts, athleteProgressStore, persistAthleteProgressPatch]);
 
   const handleMarkAllExercisesCompleted = useCallback(async () => {
     if (!isAthlete || !exercises.length) return;
@@ -4085,12 +4090,7 @@ useEffect(() => {
           updatedAt: now
         };
       });
-      const updatedStore = {
-        ...athleteProgressStore,
-        ...updatedDrafts
-      };
-      setAthleteProgressDrafts((prev) => ({ ...prev, ...updatedDrafts }));
-      await updateUser(userId, { athleteProgress: updatedStore } as any);
+      await persistAthleteProgressPatch(userId, updatedDrafts);
       setSaveMessage('Allenamento completato');
     } catch (err) {
       console.error('Errore completando allenamento:', err);
@@ -4098,7 +4098,7 @@ useEffect(() => {
     } finally {
       setSavingProgressKey(null);
     }
-  }, [isAthlete, exercises, athleteRecord?.id, currentUser?.id, buildExerciseProgressKey, parseSeriesCount, alignProgressSets, athleteProgressDrafts, athleteProgressStore, updateUser]);
+  }, [isAthlete, exercises, athleteRecord?.id, currentUser?.id, buildExerciseProgressKey, parseSeriesCount, alignProgressSets, athleteProgressDrafts, athleteProgressStore, persistAthleteProgressPatch]);
 
   const handleStartRecoveryTimer = useCallback((exercise: Exercise) => {
     const key = buildExerciseProgressKey(exercise.id);
@@ -4208,16 +4208,18 @@ useEffect(() => {
       )}
       {!isStandaloneMobile && isAthlete && (
         <div className="w-full px-4 sm:px-6 lg:px-8 mb-2">
-          <div className="relative flex items-center justify-center">
-            <button
-              onClick={onClose}
-              className="absolute left-0 inline-flex items-center justify-center transition-all duration-300 transform hover:scale-110 p-2 bg-white ring-1 ring-black/10 rounded-2xl shadow-sm hover:bg-white active:scale-[0.98] shrink-0"
-              title="Torna alle schede"
-              aria-label="Torna alle schede"
-            >
-              <ChevronLeft size={20} className="block text-black" />
-            </button>
-            <h2 className="font-sfpro text-base sm:text-lg font-bold text-gray-900 tracking-tight text-center">Le tue schede</h2>
+          <div className="mx-auto w-full max-w-3xl rounded-[28px] bg-white/80 backdrop-blur-xl ring-1 ring-black/10 px-3 sm:px-4 py-2.5">
+            <div className="relative flex items-center justify-center min-h-[40px]">
+              <button
+                onClick={onClose}
+                className="absolute left-0 inline-flex items-center justify-center transition-all duration-300 p-2 bg-white/85 backdrop-blur-xl ring-1 ring-black/10 rounded-full hover:bg-white active:scale-[0.98] shrink-0"
+                title="Torna alle schede"
+                aria-label="Torna alle schede"
+              >
+                <ChevronLeft size={19} className="block text-gray-900" />
+              </button>
+              <h2 className="font-sfpro text-lg sm:text-xl font-semibold text-gray-900 tracking-[-0.01em] text-center">Le tue schede</h2>
+            </div>
           </div>
         </div>
       )}
@@ -6037,7 +6039,7 @@ useEffect(() => {
         )}
 
         {/* Titolo della scheda sotto la toolbar (solo PWA mobile) */}
-        {isStandaloneMobile && (
+        {isStandaloneMobile && !isAthlete && (
           isEditingTitle && canEdit ? (
             <div className="relative w-full -mt-2">
               <input
@@ -6486,8 +6488,20 @@ useEffect(() => {
             </div>
           </div>
         )}
+        {isAthlete && (
+          <div className="mb-6 flex justify-center">
+            <div className="w-full max-w-3xl rounded-[30px] bg-white/80 backdrop-blur-xl ring-1 ring-black/10 shadow-[0_14px_36px_rgba(0,0,0,0.10)] px-5 py-5 sm:px-7">
+              <h1 className={`text-center font-sfpro text-[26px] sm:text-[30px] leading-tight font-semibold tracking-[-0.015em] ${activeVariantId === 'original' ? 'text-gray-900' : 'text-red-700'}`}>
+                {activeVariantId === 'original' ? workoutTitle : (variants.find(v => v.id === activeVariantId)?.name || '')}
+              </h1>
+              <p className="mt-2 text-center text-[14px] sm:text-[15px] leading-relaxed text-gray-600 max-w-2xl mx-auto break-words">
+                {workoutDescription?.trim() ? workoutDescription : 'Nessuna descrizione'}
+              </p>
+            </div>
+          </div>
+        )}
 
-        {!isStandaloneMobile && (isEditingTitle && canEdit ? (
+        {!isAthlete && !isStandaloneMobile && (isEditingTitle && canEdit ? (
           <div className="relative w-full">
             <input
               ref={titleInputRef}
@@ -6567,6 +6581,7 @@ useEffect(() => {
         ))}
 
         {/* Editable Description (read-only per atleti) */}
+        {!isAthlete && (
         <div className="flex justify-center items-center mb-6">
           {isEditingDescription && canEdit ? (
             <div className="relative w-full max-w-2xl">
@@ -6624,6 +6639,7 @@ useEffect(() => {
             </div>
           )}
         </div>
+        )}
 
         {/* Tags sotto la descrizione */}
         {tags && tags.length > 0 && (
@@ -7292,10 +7308,10 @@ useEffect(() => {
         {/* Liste di selezione spostate nella toolbar: varianti, settimane, giornate */}
         
         {isAthlete && (
-          <div className="mt-4 mb-6 space-y-4">
+          <div className="mt-3 mb-6 space-y-4">
             {athleteNavigationStep === 'overview' && (
               <>
-                <div className="rounded-2xl bg-white/80 backdrop-blur-sm ring-1 ring-black/10 p-4 shadow-sm">
+                <div className="rounded-[24px] bg-white/80 backdrop-blur-xl ring-1 ring-black/10 p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <CheckCircle size={18} className="text-green-600" />
                     <h3 className="text-base font-semibold text-gray-900">Statistiche</h3>
@@ -7306,7 +7322,7 @@ useEffect(() => {
                 </div>
                 <div
                   onClick={() => setAthleteNavigationStep('weeks')}
-                  className={`w-full text-left rounded-2xl backdrop-blur-sm ring-1 p-4 shadow-sm transition cursor-pointer ${isProgramCompleted ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white/80 ring-black/10 hover:bg-white'}`}
+                  className={`w-full text-left rounded-[24px] backdrop-blur-xl ring-1 p-4 transition cursor-pointer ${isProgramCompleted ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white/80 ring-black/10 hover:bg-white'}`}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Folder size={18} className={isProgramCompleted ? 'text-green-700' : 'text-blue-600'} />
@@ -7324,7 +7340,7 @@ useEffect(() => {
                       if (nextWorkoutPreview.dayKey !== activeDayKey) handleSwitchDay(nextWorkoutPreview.dayKey);
                       setAthleteNavigationStep('workout');
                     }}
-                    className="px-3 py-2 rounded-xl bg-navy-800 text-white text-sm hover:bg-navy-700"
+                    className="px-3 py-1.5 rounded-full bg-navy-800 text-white text-sm hover:bg-navy-700 transition"
                   >
                     Accesso veloce al prossimo allenamento
                   </button>
@@ -7333,13 +7349,13 @@ useEffect(() => {
             )}
 
             {athleteNavigationStep === 'weeks' && (
-              <div className="rounded-2xl bg-white/80 backdrop-blur-sm ring-1 ring-black/10 p-4 shadow-sm">
+              <div className="rounded-[24px] bg-white/80 backdrop-blur-xl ring-1 ring-black/10 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Calendar size={18} className="text-cyan-600" />
                     <h3 className="text-base font-semibold text-gray-900">Settimane</h3>
                   </div>
-                  <button type="button" onClick={() => setAthleteNavigationStep('overview')} className="text-sm text-gray-600 hover:text-gray-900">Indietro</button>
+                  <button type="button" onClick={() => setAthleteNavigationStep('overview')} className="px-3 py-1.5 rounded-full bg-white/90 ring-1 ring-black/10 text-sm text-gray-700 hover:text-gray-900 hover:bg-white transition">Indietro</button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {sortedWeekKeys.map((weekKey) => (
@@ -7350,7 +7366,7 @@ useEffect(() => {
                         if (weekKey !== activeWeekKey) handleSwitchWeek(weekKey);
                         setAthleteNavigationStep('days');
                       }}
-                      className={`text-left rounded-xl ring-1 p-3 ${isWeekCompleted(weekKey) ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white ring-black/10 hover:bg-gray-50'}`}
+                      className={`text-left rounded-2xl ring-1 p-3.5 transition ${isWeekCompleted(weekKey) ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white/90 ring-black/10 hover:bg-white'}`}
                     >
                       <p className="font-semibold text-gray-900">Settimana {parseNumericKey(weekKey, 'W')}</p>
                       <p className="text-xs text-gray-600">Allenamenti: {getDayKeysForWeek(weekKey).filter((dk) => getExercisesForWeekDay(weekKey, dk).length > 0).length}</p>
@@ -7362,13 +7378,13 @@ useEffect(() => {
             )}
 
             {athleteNavigationStep === 'days' && (
-              <div className="rounded-2xl bg-white/80 backdrop-blur-sm ring-1 ring-black/10 p-4 shadow-sm">
+              <div className="rounded-[24px] bg-white/80 backdrop-blur-xl ring-1 ring-black/10 p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <Dumbbell size={18} className="text-orange-500" />
                     <h3 className="text-base font-semibold text-gray-900">Allenamenti - Settimana {parseNumericKey(activeWeekKey, 'W')}</h3>
                   </div>
-                  <button type="button" onClick={() => setAthleteNavigationStep('weeks')} className="text-sm text-gray-600 hover:text-gray-900">Indietro</button>
+                  <button type="button" onClick={() => setAthleteNavigationStep('weeks')} className="px-3 py-1.5 rounded-full bg-white/90 ring-1 ring-black/10 text-sm text-gray-700 hover:text-gray-900 hover:bg-white transition">Indietro</button>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {getDayKeysForWeek(activeWeekKey).map((dayKey) => (
@@ -7379,7 +7395,7 @@ useEffect(() => {
                         if (dayKey !== activeDayKey) handleSwitchDay(dayKey);
                         setAthleteNavigationStep('workout');
                       }}
-                      className={`text-left rounded-xl ring-1 p-3 ${isDayCompleted(activeWeekKey, dayKey) ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white ring-black/10 hover:bg-gray-50'}`}
+                      className={`text-left rounded-2xl ring-1 p-3.5 transition ${isDayCompleted(activeWeekKey, dayKey) ? 'bg-green-50/90 ring-green-300 hover:bg-green-50' : 'bg-white/90 ring-black/10 hover:bg-white'}`}
                     >
                       <p className="font-semibold text-gray-900">{getDayDisplayName(dayKey)}</p>
                       <p className="text-xs text-gray-600">Esercizi: {getExercisesForWeekDay(activeWeekKey, dayKey).length}</p>
@@ -7396,19 +7412,39 @@ useEffect(() => {
 
         {/* Exercises List */}
         {(!isAthlete || athleteNavigationStep === 'workout') && (
-        <div className="mt-6 mb-8">
+        <div className="mt-3 mb-8">
           {isAthlete && (
-            <div className="mb-3 flex items-center justify-between">
-              <button type="button" onClick={() => setAthleteNavigationStep('days')} className="text-sm text-gray-600 hover:text-gray-900">
-                ← Torna agli allenamenti
-              </button>
-              <span className="text-xs text-gray-500">Settimana {parseNumericKey(activeWeekKey, 'W')} · {getDayDisplayName(activeDayKey)}</span>
+            <div className="mb-4 rounded-[24px] bg-white/80 backdrop-blur-xl ring-1 ring-black/10 px-3 py-3 sm:px-4 sm:py-4">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setAthleteNavigationStep('days')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 ring-1 ring-black/10 text-sm text-gray-700 hover:text-gray-900 hover:bg-white transition"
+                >
+                  <ChevronLeft size={16} className="text-gray-700" />
+                  <span>Torna agli allenamenti</span>
+                </button>
+                <span className="inline-flex items-center rounded-full bg-white/90 ring-1 ring-black/10 px-3 py-1 text-xs font-medium text-gray-600">
+                  Settimana {parseNumericKey(activeWeekKey, 'W')}
+                </span>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-orange-50 ring-1 ring-orange-200">
+                  <Dumbbell size={16} className="text-orange-600" />
+                </span>
+                <div>
+                  <p className="font-sfpro text-lg font-semibold tracking-[-0.01em] text-gray-900">Esercizi</p>
+                  <p className="text-sm text-gray-600">{getDayDisplayName(activeDayKey)}</p>
+                </div>
+              </div>
             </div>
           )}
-          <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight flex items-center">
-            <Dumbbell size={22} className="mr-2 text-gray-700" />
-            Esercizi
-          </h3>
+          {!isAthlete && (
+            <h3 className="text-2xl md:text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-blue-600 tracking-tight flex items-center">
+              <Dumbbell size={22} className="mr-2 text-gray-700" />
+              Esercizi
+            </h3>
+          )}
           {exercises.length > 0 ? (
             <div className="space-y-4">
               {isSupersetMode && supersetAnchorExerciseId && (

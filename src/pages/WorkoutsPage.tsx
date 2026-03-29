@@ -261,16 +261,18 @@ const WorkoutsPage: React.FC<WorkoutsPageProps> = ({ onNavigate, currentUser }) 
       {!isStandaloneMobile && (
         <div style={{ paddingTop: (headerHeight || 80) + 10 }} className="mb-3">
           <div className="w-full px-4 sm:px-6 lg:px-8">
-            <div className="relative flex items-center justify-center">
-              <button
-                onClick={() => onNavigate('home')}
-                className="absolute left-0 inline-flex items-center justify-center transition-all duration-300 p-2.5 bg-white/85 backdrop-blur-xl ring-1 ring-black/10 rounded-full shadow-[0_6px_18px_rgba(0,0,0,0.08)] hover:bg-white active:scale-[0.98] shrink-0"
-                title="Torna alla Home"
-                aria-label="Torna alla Home"
-              >
-                <ChevronLeft size={19} className="block text-gray-900" />
-              </button>
-              <h2 className="font-sfpro text-lg sm:text-xl font-semibold text-gray-900 tracking-[-0.01em] text-center">Le tue schede</h2>
+            <div className="mx-auto w-full max-w-3xl rounded-[28px] bg-white/80 backdrop-blur-xl ring-1 ring-black/10 shadow-[0_10px_28px_rgba(0,0,0,0.10)] px-3 sm:px-4 py-2.5">
+              <div className="relative flex items-center justify-center min-h-[40px]">
+                <button
+                  onClick={() => onNavigate('home')}
+                  className="absolute left-0 inline-flex items-center justify-center transition-all duration-300 p-2 bg-white/85 backdrop-blur-xl ring-1 ring-black/10 rounded-full shadow-[0_6px_18px_rgba(0,0,0,0.08)] hover:bg-white active:scale-[0.98] shrink-0"
+                  title="Torna alla Home"
+                  aria-label="Torna alla Home"
+                >
+                  <ChevronLeft size={19} className="block text-gray-900" />
+                </button>
+                <h2 className="font-sfpro text-lg sm:text-xl font-semibold text-gray-900 tracking-[-0.01em] text-center">Le tue schede</h2>
+              </div>
             </div>
           </div>
         </div>
