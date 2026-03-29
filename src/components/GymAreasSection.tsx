@@ -31,6 +31,21 @@ const GymAreasSection: React.FC = () => {
     Compass
   };
 
+  const getDesktopCoherentIconName = (areaId: string): string => {
+    switch (areaId) {
+      case 'sala-pesi':
+        return 'Cpu';
+      case 'crosstraining':
+        return 'Layers';
+      case 'karate':
+        return 'Compass';
+      case 'yoga':
+        return 'Aperture';
+      default:
+        return 'Dumbbell';
+    }
+  };
+
   // Carica le aree dal database e sottoscrive agli aggiornamenti
   useEffect(() => {
     const loadAreas = async () => {
@@ -40,7 +55,9 @@ const GymAreasSection: React.FC = () => {
           // Converte le aree dal database al formato del componente
           const convertedAreas = savedAreas.map(area => ({
             ...area,
-            icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
+            icon: availableIcons[area.iconName as keyof typeof availableIcons] ||
+                  availableIcons[getDesktopCoherentIconName(area.id) as keyof typeof availableIcons] ||
+                  Dumbbell
           }));
           setAreas(convertedAreas);
         } else {
@@ -80,9 +97,7 @@ const GymAreasSection: React.FC = () => {
           // Salva le aree predefinite nel database per future visualizzazioni
           const areasToSave = defaultAreas.map(area => ({
             ...area,
-            iconName: area.icon === Dumbbell ? 'Dumbbell' : 
-                     area.icon === Zap ? 'Zap' : 
-                     area.icon === Shield ? 'Shield' : 'Heart',
+            iconName: getDesktopCoherentIconName(area.id),
             overlayColor: area.id === 'sala-pesi' ? 'rgba(30, 58, 138, 0.7)' :
                          area.id === 'crosstraining' ? 'rgba(220, 38, 38, 0.3)' :
                          area.id === 'karate' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(255, 255, 255, 0.3)',
@@ -115,7 +130,9 @@ const GymAreasSection: React.FC = () => {
       if (updatedAreas.length > 0) {
         const convertedAreas = updatedAreas.map(area => ({
           ...area,
-          icon: availableIcons[area.iconName as keyof typeof availableIcons] || Dumbbell
+          icon: availableIcons[area.iconName as keyof typeof availableIcons] ||
+                availableIcons[getDesktopCoherentIconName(area.id) as keyof typeof availableIcons] ||
+                Dumbbell
         }));
         setAreas(convertedAreas);
       }

@@ -5349,7 +5349,7 @@ useEffect(() => {
         </div>
 
         {isStandaloneMobile && (
-          <Portal containerId="pwa-workout-toolbar-mini" createIfMissing={false}>
+          <Portal containerId={canEdit ? 'pwa-workout-toolbar' : 'pwa-workout-toolbar-mini'} createIfMissing={false}>
             <div className="w-full flex justify-center">
               <div className="max-w-4xl mx-auto">
                 {/* Toolbar PWA completa: Varianti, Settimane, Allenamenti, Crea, Tag, Associa */}

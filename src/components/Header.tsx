@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Menu, X, User as UserIcon, MapPin, Users, FileText, Mail, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Link, User, AlignJustify, LogOut, ChevronLeft, Bell, Search, Plus } from 'lucide-react';
+import { Menu, X, User as UserIcon, MapPin, Users, FileText, BookOpen, Globe, Clock, Phone, Dumbbell, Settings, Home, Link, User, AlignJustify, LogOut, ChevronLeft, Bell, Search, Plus } from 'lucide-react';
 import RulesSection from './RulesSection';
 
 import { useLanguageContext } from '../contexts/LanguageContext';
@@ -32,6 +32,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
   const [isBottomVisible, setIsBottomVisible] = useState(true);
   const lastScrollYRef = useRef<number>(0);
   const scrollTickRef = useRef<number | null>(null);
+  const lockedScrollYRef = useRef<number>(0);
   const [headerOpacity, setHeaderOpacity] = useState(1);
   const [displayText, setDisplayText] = useState('');
   const [isTypingComplete, setIsTypingComplete] = useState(false);
@@ -60,36 +61,44 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Blocca lo scroll della pagina quando il menu mobile è aperto
+  // Blocca lo scroll della pagina quando il menu mobile è aperto mantenendo la posizione corrente
   useEffect(() => {
     if (isMenuOpen) {
+      lockedScrollYRef.current = window.scrollY || window.pageYOffset || 0;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${lockedScrollYRef.current}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
     } else {
+      const restoreY = lockedScrollYRef.current || 0;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
       document.body.style.overflow = 'unset';
+      if (restoreY > 0) {
+        window.scrollTo({ top: restoreY, left: 0, behavior: 'auto' });
+      }
     }
     
     // Cleanup quando il componente viene smontato
     return () => {
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
       document.body.style.overflow = 'unset';
     };
   }, [isMenuOpen]);
 
-  // Header fade-out on scroll (disabilitato in modalità PWA standalone)
+  // Header sempre visibile durante lo scroll
   useEffect(() => {
-    if (isStandaloneMobile) {
-      setHeaderOpacity(1);
-      return;
-    }
-    const onScroll = () => {
-      const y = (document.scrollingElement?.scrollTop ?? window.scrollY ?? 0);
-      const fadeDistance = 220; // px to fully fade
-      const opacity = Math.max(0, Math.min(1, 1 - y / fadeDistance));
-      setHeaderOpacity(opacity);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [isStandaloneMobile]);
+    setHeaderOpacity(1);
+  }, []);
 
   // Typing animation for PWA header title
   useEffect(() => {
@@ -204,46 +213,53 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
     closeMenuAnimated();
   };
 
-  const scrollToSection = (sectionId: string) => {
-    // Controlla se l'elemento esiste già nella pagina corrente
-    const element = document.getElementById(sectionId);
-    
-    if (element) {
-      // Se l'elemento esiste, fai scroll direttamente senza navigare
-      element.scrollIntoView({ behavior: 'smooth' });
-      closeMenuAnimated();
-    } else if (onNavigate) {
-      // Solo se l'elemento non esiste, naviga alla home e poi fai scroll
-      onNavigate('home');
-      setTimeout(() => {
-        const element = document.getElementById(sectionId);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-      closeMenuAnimated();
+  const runAfterMenuClose = (fn: () => void) => {
+    if (!isMenuOpen) {
+      fn();
+      return;
     }
+    closeMenuAnimated();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        fn();
+      });
+    });
+  };
+
+  const scrollToSection = (sectionId: string) => {
+    const target = () => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      } else if (onNavigate) {
+        onNavigate('home');
+        setTimeout(() => {
+          const homeElement = document.getElementById(sectionId);
+          if (homeElement) {
+            homeElement.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 140);
+      }
+    };
+    runAfterMenuClose(target);
   };
 
   const scrollToFooter = () => {
-    // Controlla se il footer esiste già nella pagina corrente
-    const footer = document.querySelector('footer');
-    
-    if (footer) {
-      // Se il footer esiste, fai scroll direttamente senza navigare
-      footer.scrollIntoView({ behavior: 'smooth' });
-      closeMenuAnimated();
-    } else if (onNavigate) {
-      // Solo se il footer non esiste, naviga alla home e poi fai scroll
-      onNavigate('home');
-      setTimeout(() => {
-        const footer = document.querySelector('footer');
-        if (footer) {
-          footer.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-      closeMenuAnimated();
-    }
+    const target = () => {
+      const footer = document.querySelector('footer');
+      if (footer) {
+        footer.scrollIntoView({ behavior: 'smooth' });
+      } else if (onNavigate) {
+        onNavigate('home');
+        setTimeout(() => {
+          const homeFooter = document.querySelector('footer');
+          if (homeFooter) {
+            homeFooter.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 140);
+      }
+    };
+    runAfterMenuClose(target);
   };
 
   const handleNavigation = (page: string) => {
@@ -1089,17 +1105,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigate, currentUser, onLogout, isDa
               ) : (
                 // Menu Standard (Home)
                 <React.Fragment>
-                  {/* 1. Informazioni */}
-                  <li>
-                    <button
-                      onClick={() => scrollToSection('informazioni')}
-                      className="inline-flex items-center space-x-3 sm:space-x-4 text-gray-800 transition-colors duration-200 text-lg sm:text-xl font-semibold w-full text-left py-3 px-4 hover:bg-black/5"
-                    >
-                      <Mail size={20} className="sm:w-6 sm:h-6" />
-                      <span>{t.header.information}</span>
-                    </button>
-                  </li>
-                {/* 2. Orari */}
+                {/* 1. Orari */}
                 <li>
                   <button
                     onClick={() => scrollToSection('orari')}
