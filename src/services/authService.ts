@@ -116,7 +116,7 @@ class AuthService {
       this.googleSigninInFlight = true;
       console.log('🔍 Inizio Google Sign-In, URL:', `${this.FUNCTIONS_BASE_URL}/google-signin`);
       
-      const response = await fetch(`${this.FUNCTIONS_BASE_URL}/google-signin`, {
+      let response = await fetch(`${this.FUNCTIONS_BASE_URL}/google-signin`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -387,7 +387,7 @@ class AuthService {
           const result: LoginResponse = {
             user: { id: userEmail, email: userEmail, role: 'athlete', name },
             token: localToken,
-            message: `Login effettuato (fallback locale): ${errorMessage}`,
+            message: `Login effettuato (fallback locale): ${jsonError instanceof Error ? jsonError.message : 'JSON Error'}`,
             expiresIn: '7d',
           };
           return result;
